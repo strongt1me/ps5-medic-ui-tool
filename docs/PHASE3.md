@@ -1,6 +1,6 @@
 # Phase 3 – Vollbild-UI
 
-Stand 8. Nov. 2026. Der plattformunabhängige Teil steht und ist am PC getestet. **Auf der Konsole läuft die UI noch nicht.** Die Architektur-Entscheidung steht jetzt fest (siehe „Korrektur" unten); offen ist nur noch der Bildschirm-/Eingabe-Adapter.
+Stand 8. Nov. 2026. Der plattformunabhängige Teil steht und ist am PC getestet. `make ps5-ui` baut `build-ps5/ps5medicui.elf` (SDL2 + Pad-Anbindung, siehe unten) – **auf der Konsole ist das noch nicht gelaufen.**
 
 ## Was schon da ist (`ui/`)
 - `Canvas` (1920×1080, ARGB, Kantenglättung), Controller-Symbole als Vektorformen, PNG-Ausgabe für Vorschau und Tests.
@@ -32,16 +32,36 @@ Die Sandbox – und damit der Lapy/etaHEN-Umweg – gilt nur für echte Titles, 
 
 **Spätere Option (Phase 4, optional):** Für einen echten Bibliotheks-Eintrag ließe sich ein winziger Title-„Starter" vorschalten, der nur `sceSystemServiceLoadExec` aufruft und sofort in den eigentlichen Payload wechselt – das Muster nutzt `strongt1me/ps5-usb-formatierer` bereits (`usb_format/app/title/starter.c`, C statt C++, minimale Importliste). Nicht nötig für die MVP-UI.
 
-## Offen: VideoOut- und Pad-Anbindung
+## VideoOut- und Pad-Anbindung: SDL2
 
-Für den eigentlichen Bildschirm/Eingabe-Code gibt es zwei Wege:
-1. **SDL2** über `ps5-payload-dev/SDL` (pacbrew-Paket `ps5-payload-sdl2`, GPL/LGPL, selbe Organisation wie das SDK). Das ist der in `CLAUDE.md` genannte Plan-B-Ansatz. Vorteil: fertige, getestete VideoOut-Implementierung, kein Nachbau der rohen `sceVideoOut*`-Aufrufe aus dem Gedächtnis. Nachteil: Build aus Quelle (CMake, `ps5-payload-libsamplerate` als Abhängigkeit), lokal noch nicht versucht.
-2. **Rohe `sceVideoOut*`/`scePad*`-Syscalls** von Hand, wie es z. B. `ps5-native-app-boilerplate` vormacht. Das wäre schneller, aber die genauen Struktur-Layouts (reservierte Felder, Pixelformat-Konstanten) müssten zuverlässig verifiziert werden statt aus der Erinnerung übernommen – sonst drohen schwer zu findende Fehler, die sich nur auf der echten Konsole zeigen.
+Entscheidung: **SDL2** über [`ps5-payload-dev/SDL`](https://github.com/ps5-payload-dev/SDL) (zlib-Lizenz, selbe Organisation wie das SDK) statt rohe `sceVideoOut*`/`scePad*`-Syscalls von Hand – fertige, getestete VideoOut-Implementierung statt Struktur-Layouts aus der Erinnerung nachzubauen.
 
-Empfehlung: **SDL2**, weil es schon im Projekt vorgesehen ist (`CLAUDE.md`) und das Risiko falscher Low-Level-Annahmen entfällt.
+**SDL2 für die PS5 bauen** (einmalig, nicht Teil von `make ps5-ui`, kein Netzzugriff beim normalen Bauen nötig):
+```bash
+source "$PS5_PAYLOAD_SDK/toolchain/prospero.sh"
+
+# 1. libsamplerate 0.2.2 (BSD-2-Clause) -- Abhaengigkeit von SDL2s Audiopfad
+wget https://github.com/libsndfile/libsamplerate/releases/download/0.2.2/libsamplerate-0.2.2.tar.xz
+tar -xf libsamplerate-0.2.2.tar.xz && cd libsamplerate-0.2.2
+./configure --prefix="$PREFIX" --host=x86_64-pc-freebsd --enable-static --disable-shared
+make && make install && cd ..
+
+# 2. SDL2 (ps5-payload-dev-Fork, zlib-Lizenz)
+git clone https://github.com/ps5-payload-dev/SDL.git && cd SDL
+"$CMAKE" -DCMAKE_BUILD_TYPE=Release -DSDL_OPENGL=YES -DSDL_LOADSO=YES -B build -S .
+"$MAKE" -C build && "$MAKE" -C build install
+
+"$PS5_PAYLOAD_SDK/bin/prospero-cross-fix-root"
+```
+Landet in `$PS5_PAYLOAD_SDK/target/user/homebrew/{include,lib}` – das Makefile findet es dort automatisch (`PS5_HOMEBREW`). Am 8. Nov. 2026 so gebaut und erfolgreich mit `ps5medicui.elf` gelinkt; auf der Konsole noch nicht getestet.
+
+**`ps5/ui_main.cpp`:** SDL-Fenster (1920×1080, Vollbild) ↔ `Canvas::data()` per `SDL_CreateRGBSurfaceWithFormatFrom`/`SDL_BlitSurface`, `SDL_GameController` ↔ `Button` (Tastenbelegung aus `SDL_ps5joystick.c`: a=Kreuz, b=Kreis, x=Viereck, y=Dreieck, start=Options, Schultertasten/Steuerkreuz direkt). `LocalService` mit `Ps5Platform(writable=true)`, Takt ~30 Bilder/s. Regeln aus denselben zwei Kandidatenpfaden wie der Diagnose-Payload.
+
+```bash
+make ps5-ui
+make deploy-ui PS5_HOST=<ip>   # ps5medicui.elf + rules.json nach /data/homebrew/PS5MEDIC/
+```
 
 ## Nächste Schritte
-1. `ps5-payload-sdl2` bauen (pacbrew) oder eine fertige Kopie finden.
-2. `ps5/ui_main.cpp`: SDL2-Fenster/Surface ↔ `Canvas::data()`, `SDL_GameController`/`SDL_PollEvent` ↔ `Button`, `LocalService` mit `Ps5Platform`.
-3. Konsolentest: startet der Payload per Payload Manager, zeigt er das Bild, reagiert der Controller.
-4. `CLAUDE.md` „Privilegien"-Abschnitt an den Payload-Ansatz anpassen.
+1. Konsolentest: startet der Payload per Payload Manager, zeigt er das Bild, reagiert der DualSense.
+2. `CLAUDE.md` „Privilegien"-Abschnitt ist bereits auf den Payload-Ansatz angepasst (siehe Abschnitt „Korrektur" oben) – hier nur noch der Hinweis, falls beim Konsolentest etwas abweicht.

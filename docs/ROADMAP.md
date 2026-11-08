@@ -24,10 +24,10 @@ Jede Phase endet mit lauffähigem Stand + kurzem Status an Marc.
 3. **Snapshot-Export auf der Konsole:** Medic kann den eigenen Zustand als Fixture-Ordner nach `/data/ps5medic/snapshots/` schreiben → per FTP holen → am PC testen.
 
 ## Phase 3 – Vollbild-UI
-> Stand: Der plattformunabhängige Teil (Canvas, Schrift, de/en-Texte, neun Bildschirme, Service-Schnittstelle, PNG-Vorschau) steht und ist getestet. PS5 Medic wird als Payload gebaut, nicht als Sony-Title – kein Jailbreak-Request nötig. Offen ist die VideoOut/Pad-Anbindung (SDL2 vorgeschlagen) – siehe `docs/PHASE3.md`.
-1. Titel mit `new-title.py` aus dem Template erzeugen, Design wählen.
-2. Screens: Start, Check-up läuft, Befundliste, Detail, Reparieren (Vorschau → Bestätigen), Verlauf/Undo, Einstellungen (Sprache).
-3. Controller-Belegung laut SPEC, Strings in `i18n/de.json` und `en.json`.
+> Stand: Der plattformunabhängige Teil (Canvas, Schrift, de/en-Texte, neun Bildschirme, Service-Schnittstelle, PNG-Vorschau) steht und ist getestet. PS5 Medic wird als Payload gebaut, nicht als Sony-Title – kein Jailbreak-Request nötig. `make ps5-ui` baut `ps5medicui.elf` mit SDL2 (VideoOut/Pad) und `LocalService`; auf der Konsole noch nicht getestet – siehe `docs/PHASE3.md`.
+1. ~~Titel mit `new-title.py` aus dem Template erzeugen~~ entfällt (kein Sony-Title, siehe `docs/PHASE3.md`).
+2. Screens: Start, Check-up läuft, Befundliste, Detail, Reparieren (Vorschau → Bestätigen), Verlauf/Undo, Einstellungen (Sprache). – erledigt.
+3. Controller-Belegung laut SPEC, Strings in `i18n/de.json` und `en.json`. – erledigt.
 
 ## Phase 4 – Bericht & Release
 1. Markdown-Bericht + Anonymisierung + QR-Code.
