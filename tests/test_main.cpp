@@ -119,6 +119,64 @@ static void platform_tests() {
     CHECK(medic::make_snapshot_platform(fx + "_gibt_es_nicht")->procs().running().empty(), "fehlender Snapshot = leerer Zustand");
 }
 
+// Die Fakten der Regeln A2, A4, C1, C2 selbst (nicht nur das Ergebnis der Regeln): Grenzfaelle und fehlende Quellen.
+static void new_fact_tests() {
+    auto facts_of = [](const char* fixture) {
+        return medic::collect_all(*medic::make_snapshot_platform(std::string(MEDIC_SOURCE_DIR) + "/tests/fixtures/" + fixture));
+    };
+    auto num = [](const medic::Facts& f, const char* k) -> long {
+        const json* v = f.get(k);
+        return v && v->is_number() ? v->get<long>() : -1;
+    };
+    auto str = [](const medic::Facts& f, const char* k) -> std::string {
+        const json* v = f.get(k);
+        return v && v->is_string() ? v->get<std::string>() : std::string("<fehlt>");
+    };
+
+    {  // A2: Sekunden zwischen Konsolenstart und dem fruehesten Prozess der Jailbreak-Kette
+        auto f = facts_of("a2_pos");
+        CHECK(num(f, "jb.seconds_after_boot") == 45 && str(f, "jb.first_process") == "elfldr", "A2: 45 s nach dem Start, erster Prozess elfldr");
+        auto g = facts_of("a2_neg");
+        CHECK(num(g, "jb.seconds_after_boot") == 187 && str(g, "jb.first_process") == "kstuff", "A2: der fruehste Prozess zaehlt, auch wenn elfldr spaeter startet");
+        CHECK(!facts_of("a2_neg_noboot").get("jb.seconds_after_boot"), "A2: ohne Konsolenstart kein Fakt");
+        CHECK(!facts_of("a2_neg_nostarts").get("jb.seconds_after_boot"), "A2: ohne Startzeiten der Prozesse kein Fakt");
+    }
+    {  // A4: Port 9021 nur mit eindeutiger Antwort; ohne Angabe fehlt der Fakt
+        CHECK(str(facts_of("a4_pos"), "net.port_9021") == "closed", "A4: Port zu");
+        CHECK(str(facts_of("a4_neg"), "net.port_9021") == "open", "A4: Port offen");
+        CHECK(!facts_of("a3_neg").get("net.port_9021"), "A4: ohne Angabe im Snapshot kein Fakt");
+    }
+    {  // C1: Version aus dem Log (letzte Startzeile), sonst aus der Plugin-Datei
+        auto f = facts_of("c1_pos");
+        CHECK(str(f, "ps5theme.version") == "1.45" && str(f, "ps5theme.source") == "log", "C1: Version aus dem Log");
+        auto p = facts_of("c1_pos_plugin");
+        CHECK(str(p, "ps5theme.version") == "1.40" && str(p, "ps5theme.source") == "plugin", "C1: Version aus der Plugin-Datei");
+        CHECK(str(facts_of("c1_neg_updated"), "ps5theme.version") == "1.55", "C1: die letzte Startzeile gilt");
+        CHECK(str(facts_of("c1_neg_release"), "ps5theme.version") == "1.23", "C1: Format [ps5-theme] 1.23 starting");
+        CHECK(!facts_of("a3_neg").get("ps5theme.version"), "C1: ohne ps5-theme kein Fakt");
+    }
+    {  // C2: nur Apps mit grosser Reservierung und kleinem Inhalt
+        auto f = facts_of("c2_pos");
+        const json* v = f.get("apps.oversized");
+        CHECK(v && v->is_array() && v->size() == 1, "C2: ein verdaechtige App");
+        if (v && v->is_array() && v->size() == 1) {
+            const json& a = (*v)[0];
+            // eboot.bin (2048) + icon0.png (512) + param.json (ein paar hundert Byte)
+            CHECK(a["titleid"] == "PPSA98427" && a["name"] == "CD Player" && a["reserved_mib"] == 16384 && a["content_bytes"] > 2560 &&
+                      a["content_bytes"] < 3584,
+                  "C2: Titel, Name, Reservierung und Inhaltsgroesse");
+        }
+        auto neg = facts_of("c2_neg");
+        const json* none = neg.get("apps.oversized");
+        CHECK(none && none->is_array() && none->empty(), "C2: 256 MiB sind unauffaellig");
+    }
+    {  // C3: freier Platz in Prozent
+        auto c3 = facts_of("c3_pos");
+        const json* m = c3.get("storage.mounts");
+        CHECK(m && m->is_array() && !m->empty() && (*m)[0]["free_pct"].get<double>() < 5.0, "C3: Fakt free_pct unter 5 %");
+    }
+}
+
 static void fixture_tests() {
     const fs::path root = fs::path(MEDIC_SOURCE_DIR) / "tests" / "fixtures";
     auto rules = medic::load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
@@ -168,6 +226,7 @@ static void fixture_tests() {
 int main() {
     unit_tests();
     platform_tests();
+    new_fact_tests();
     fixture_tests();
     fix_tests();
     ui_tests();

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <map>
 #include <regex>
 #include <set>
@@ -46,6 +47,14 @@ std::vector<std::string> split_lines(const std::string& text) {
         out.push_back(std::move(line));
     }
     return out;
+}
+
+// Namen klein geschrieben und ohne ".elf": geladene Payloads erscheinen auf der Konsole als "kstuff.elf",
+// "shadowmountplus.elf" (erster Konsolenlauf), die Regeln vergleichen den Namen ohne Endung.
+std::string normalize_proc_name(const std::string& n) {
+    std::string name = lower(n);
+    if (name.size() > 4 && name.compare(name.size() - 4, 4, ".elf") == 0) name.resize(name.size() - 4);
+    return name;
 }
 
 // ---- ShadowMount+ -------------------------------------------------------
@@ -264,16 +273,147 @@ void collect_firmware(const Platform& p, Facts& f) {
     f.set("fw.model", p.sys().model());
 }
 
-// Namen klein geschrieben und ohne ".elf": geladene Payloads erscheinen auf der Konsole als "kstuff.elf",
-// "shadowmountplus.elf" (erster Konsolenlauf), die Regeln vergleichen den Namen ohne Endung.
 void collect_processes(const Platform& p, Facts& f) {
     json arr = json::array();
-    for (auto& n : p.procs().running()) {
-        std::string name = lower(n);
-        if (name.size() > 4 && name.compare(name.size() - 4, 4, ".elf") == 0) name.resize(name.size() - 4);
-        arr.push_back(std::move(name));
-    }
+    for (auto& n : p.procs().running()) arr.push_back(normalize_proc_name(n));
     f.set("proc.running", std::move(arr));
+}
+
+// net.port_9021 ("open"/"closed", fehlt wenn unbekannt), jb.seconds_after_boot, jb.first_process.
+// "Jailbreak-Start" = der frueheste Prozess der Jailbreak-Kette (Loader, etaHEN, kstuff, ShadowMount+); die Startzeit
+// kommt aus der Prozessliste, der Konsolenstart aus der Plattform. Ohne beides fehlt der Fakt (Regel feuert nicht).
+void collect_system(const Platform& p, Facts& f) {
+    switch (p.sys().local_port_state(9021)) {
+        case PortState::Open: f.set("net.port_9021", "open"); break;
+        case PortState::Closed: f.set("net.port_9021", "closed"); break;
+        case PortState::Unknown: break;
+    }
+
+    const std::int64_t boot = p.sys().boot_epoch();
+    if (boot <= 0) return;
+    static const std::set<std::string> kChain = {"elfldr", "etahen", "kstuff", "shadowmountplus"};
+    std::int64_t first = 0;
+    std::string first_name;
+    for (const auto& i : p.procs().running_info()) {
+        if (i.start_epoch <= 0) continue;
+        const std::string name = normalize_proc_name(i.name);
+        if (!kChain.count(name)) continue;
+        if (first == 0 || i.start_epoch < first) {
+            first = i.start_epoch;
+            first_name = name;
+        }
+    }
+    if (first == 0) return;
+    f.set("jb.seconds_after_boot", std::max<std::int64_t>(0, first - boot));
+    f.set("jb.first_process", first_name);
+}
+
+namespace {
+
+constexpr std::size_t kMaxPluginBytes = 8u << 20;
+
+// Das Plugin schreibt beim Start "ps5-theme 1.23 starting" (im Log mit Zeitstempel davor, im Programm fest eingebaut,
+// teils als "[ps5-theme] 1.23 starting"). Version im Format Haupt.Neben mit zwei Nebenstellen. Leer = nichts gefunden.
+std::string find_ps5theme_version(const std::string& text, bool want_last) {
+    static const std::string kTag = "ps5-theme", kStarting = " starting";
+    auto digit = [&](std::size_t i) { return i < text.size() && std::isdigit(static_cast<unsigned char>(text[i])); };
+    std::string found;
+    for (std::size_t pos = text.find(kTag); pos != std::string::npos; pos = text.find(kTag, pos + kTag.size())) {
+        std::size_t i = pos + kTag.size();
+        if (i < text.size() && text[i] == ']') ++i;
+        if (i >= text.size() || text[i] != ' ') continue;
+        while (i < text.size() && text[i] == ' ') ++i;
+        const std::size_t major = i;
+        while (digit(i)) ++i;
+        if (i == major || i - major > 3 || i >= text.size() || text[i] != '.') continue;
+        const std::size_t minor = ++i;
+        while (digit(i)) ++i;
+        if (i - minor != 2 || text.compare(i, kStarting.size(), kStarting) != 0) continue;
+        found = text.substr(major, i - major);
+        if (!want_last) break;
+    }
+    return found;
+}
+
+constexpr std::int64_t kOversizedReserveMiB = 4096;      // downloadDataSize (MiB) ab hier verdaechtig
+constexpr std::uint64_t kSmallContentBytes = 1ull << 30; // darunter gilt der Inhalt als "klein"
+constexpr std::size_t kMaxContentEntries = 20000;
+
+// Prueft, ob der Inhalt unter `dir` kleiner als `limit` ist. false = gross oder nicht sicher bestimmbar
+// (zu viele Eintraege, zu tief): dann wird nichts gemeldet.
+bool content_below(const IFileSystem& fs, const std::string& dir, std::uint64_t limit, std::uint64_t& sum, std::size_t& entries, int depth) {
+    if (depth > 8) return false;
+    for (const auto& e : fs.list_dir(dir)) {
+        if (++entries > kMaxContentEntries) return false;
+        if (e.is_dir) {
+            if (!content_below(fs, join_path(dir, e.name), limit, sum, entries, depth + 1)) return false;
+        } else {
+            sum += e.size;
+            if (sum >= limit) return false;
+        }
+    }
+    return true;
+}
+
+std::string app_title_name(const json& param, const std::string& fallback) {
+    if (!param.contains("localizedParameters") || !param["localizedParameters"].is_object()) return fallback;
+    const json& lp = param["localizedParameters"];
+    std::vector<std::string> langs;
+    if (lp.contains("defaultLanguage") && lp["defaultLanguage"].is_string()) langs.push_back(lp["defaultLanguage"].get<std::string>());
+    langs.push_back("en-US");
+    for (const auto& l : langs)
+        if (lp.contains(l) && lp[l].is_object() && lp[l].contains("titleName") && lp[l]["titleName"].is_string())
+            return lp[l]["titleName"].get<std::string>();
+    return fallback;
+}
+
+}  // namespace
+
+// ps5theme.version / ps5theme.source: laufende Version laut Log ("log"), sonst die Version der Plugin-Datei ("plugin").
+void collect_plugins(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    std::string version, source, text;
+    for (const char* log : {"/data/ps5-theme/logs/log.txt", "/data/ps5-theme/logs/log.1.txt"}) {
+        if (!fs.read_file(log, text)) continue;
+        if (text.size() > kMaxLogBytes) text.erase(0, text.size() - kMaxLogBytes);
+        version = find_ps5theme_version(text, /*want_last=*/true);
+        if (!version.empty()) {
+            source = "log";
+            break;
+        }
+    }
+    if (version.empty() && fs.read_range("/data/etaHEN/plugins/ps5-theme.plugin", 0, kMaxPluginBytes, text)) {
+        version = find_ps5theme_version(text, /*want_last=*/false);
+        source = "plugin";
+    }
+    if (version.empty()) return;
+    f.set("ps5theme.version", version);
+    f.set("ps5theme.source", source);
+}
+
+// apps.oversized[]: installierte Apps, die laut param.json (downloadDataSize in MiB) mehrere GiB reservieren, obwohl
+// ihre Dateien zusammen unter 1 GiB bleiben. Gepruft wird nur dann, wenn die Reservierung gross genug ist.
+void collect_apps(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    json arr = json::array();
+    for (const auto& app : fs.list_dir("/user/app")) {
+        if (!app.is_dir) continue;
+        const std::string dir = join_path("/user/app", app.name);
+        std::string text;
+        if (!fs.read_file(join_path(dir, "sce_sys/param.json"), text)) continue;
+        const json param = json::parse(text, nullptr, false);
+        if (!param.is_object() || !param.contains("downloadDataSize")) continue;
+        const json& v = param["downloadDataSize"];
+        std::int64_t mib = 0;
+        if (v.is_number_integer()) mib = v.get<std::int64_t>();
+        else if (v.is_string()) mib = std::strtoll(v.get<std::string>().c_str(), nullptr, 10);
+        if (mib < kOversizedReserveMiB) continue;
+        std::uint64_t sum = 0;
+        std::size_t entries = 0;
+        if (!content_below(fs, dir, kSmallContentBytes, sum, entries, 0)) continue;
+        arr.push_back({{"titleid", app.name}, {"name", app_title_name(param, app.name)}, {"reserved_mib", mib}, {"content_bytes", sum}});
+    }
+    f.set("apps.oversized", std::move(arr));
 }
 
 void collect_storage(const Platform& p, Facts& f) {
@@ -376,8 +516,11 @@ Facts collect_all(const Platform& p) {
     collect_firmware(p, f);
     collect_components(p, f);
     collect_processes(p, f);
+    collect_system(p, f);
     collect_storage(p, f);
     collect_shadowmount(p, f);
+    collect_plugins(p, f);
+    collect_apps(p, f);
     return f;
 }
 

@@ -314,6 +314,96 @@
       "fix": null,
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
+    },
+    {
+      "id": "hen.jb_too_early",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "jb.seconds_after_boot", "lt": "60" }
+        ]
+      },
+      "text": {
+        "de": "Der erste Prozess der Jailbreak-Kette (Loader, etaHEN, kstuff oder ShadowMount+) wurde weniger als 60 Sekunden nach dem Einschalten gestartet. Laut einem Community-Hinweis zu kstuff-lite sollte man nach dem Einschalten etwa eine Minute warten, bevor man den Jailbreak ausführt, weil dann noch Hintergrundprozesse laufen. Das ist ein Ratschlag, keine bestätigte Fehlerursache.",
+        "en": "The first process of the jailbreak chain (loader, etaHEN, kstuff or ShadowMount+) started less than 60 seconds after power-on. A community hint for kstuff-lite says to wait about a minute after power-on before jailbreaking, because background processes are still running. This is advice, not a confirmed cause of failures."
+      },
+      "evidence": "jb.seconds_after_boot",
+      "fix": null,
+      "source": "https://github.com/EchoStretch/kstuff-lite/issues/94",
+      "verified": "community"
+    },
+    {
+      "id": "payload.port_9021_closed",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "net.port_9021", "eq": "closed" },
+          { "not": { "fact": "proc.running", "contains": "elfldr" } },
+          { "not": { "fact": "proc.running", "contains": "etahen" } }
+        ]
+      },
+      "text": {
+        "de": "Port 9021 nimmt keine Verbindungen an, und weder elfldr noch etaHEN läuft: Es ist kein ELF-Loader aktiv, Payloads lassen sich so nicht an die Konsole senden. Den Loader über den Autoloader bzw. den Jailbreak neu starten (hängt vom verwendeten Autoloader ab).",
+        "en": "Port 9021 does not accept connections and neither elfldr nor etaHEN is running: no ELF loader is active, so payloads cannot be sent to the console. Restart the loader through your autoloader or the jailbreak (depends on the autoloader you use)."
+      },
+      "evidence": "net.port_9021",
+      "fix": null,
+      "source": "https://github.com/ps5-payload-dev/elfldr",
+      "verified": "todo"
+    },
+    {
+      "id": "plugin.ps5theme_old_overlay",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "ps5theme.version", "gt": "1.30" },
+          { "fact": "ps5theme.version", "lt": "1.53" }
+        ]
+      },
+      "text": {
+        "de": "Es ist ein ps5-theme-Testbuild installiert (Version zwischen den Releases 1.30 und 1.53). Laut den Release-Notes von 1.53 konnte in solchen frühen Testbuilds ein zurückgebliebenes Overlay den Start aller Spiele und Apps verhindern (Fehler CE-105733-9). Auf ps5-theme 1.53 oder neuer aktualisieren.",
+        "en": "A ps5-theme test build is installed (a version between the releases 1.30 and 1.53). According to the 1.53 release notes, an overlay left behind in such early test builds could stop every game and app from starting (error CE-105733-9). Update to ps5-theme 1.53 or newer."
+      },
+      "evidence": "ps5theme.version",
+      "fix": null,
+      "source": "https://github.com/Blaze414/ps5-theme/releases/tag/v1.53",
+      "verified": "todo"
+    },
+    {
+      "id": "storage.oversized_reservation",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "apps.oversized[].titleid", "exists": true }
+        ]
+      },
+      "text": {
+        "de": "Eine Homebrew-App reserviert mehrere GB Speicher (param.json: downloadDataSize), obwohl ihre Dateien zusammen weniger als 1 GB groß sind. Ein bekanntes Beispiel war CD Player vor Version 1.1.2 (16 GiB statt 256 MiB). Die neue Version einfach drüberzukopieren verkleinert die Reservierung nicht: App in den PS5-Speichereinstellungen entfernen und die aktuelle Version neu installieren (Einstellungen und Cover-Bilder können dabei verloren gehen).",
+        "en": "A homebrew app reserves several GB of storage (param.json: downloadDataSize) although its files add up to less than 1 GB. A known example was CD Player before version 1.1.2 (16 GiB instead of 256 MiB). Copying the new version over the old one does not shrink the reservation: remove the app in the PS5 storage settings and install the current version again (settings and cover art may be lost)."
+      },
+      "evidence": "apps.oversized[].name",
+      "fix": null,
+      "source": "https://prosperostore.net/app/PPSA98427/",
+      "verified": "todo"
+    },
+    {
+      "id": "storage.low_space_data",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "storage.mounts[].mount", "eq": "/data" },
+          { "fact": "storage.mounts[].total", "gt": "0" },
+          { "fact": "storage.mounts[].free_pct", "lt": "5" }
+        ]
+      },
+      "text": {
+        "de": "Auf /data sind weniger als 5 % Speicher frei. Mounts, Logs, Backups und Installationen können dann scheitern. Platz schaffen: nicht mehr benötigte Homebrew-Dateien und alte Backups unter /data/ps5medic/backups prüfen.",
+        "en": "Less than 5% of /data is free. Mounts, logs, backups and installations can fail. Free up space: check homebrew files you no longer need and old backups under /data/ps5medic/backups."
+      },
+      "evidence": "storage.mounts[].free_pct",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo"
     }
   ]
 }

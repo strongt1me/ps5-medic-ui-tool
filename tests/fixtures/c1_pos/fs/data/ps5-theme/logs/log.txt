@@ -1,0 +1,2 @@
+[12:00:01] ps5-theme 1.45 starting
+[12:00:02] ready

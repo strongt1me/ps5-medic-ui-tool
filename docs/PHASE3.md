@@ -83,4 +83,4 @@ Der Start geht auch ohne Make: im websrv-Launcher (`http://<ip>:8080`) erscheint
 ## Nächste Schritte
 1. Start ohne PC: Eintrag im Launcher reicht; websrv muss dafür laufen (im Autoloader der Test-Konsole als `websrv`-ELF vorhanden, nach einem Neustart prüfen).
 2. Phase 4: Bericht (□ in der UI fehlt noch), Anonymisierung, QR-Code, README, Release. Die „PPSA-Ordner/param.json"-Installation aus dem Plan entfällt: der Launcher-Eintrag (`ps5/homebrew/`) ersetzt sie.
-3. Fehlende Regeln laut Roadmap: A2, A4, C1–C3.
+3. ~~Fehlende Regeln A2, A4, C1–C3~~ erledigt (22 Regeln, siehe `docs/RULES.md`, „Nachtrag").

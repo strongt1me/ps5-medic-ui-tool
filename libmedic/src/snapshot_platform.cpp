@@ -3,6 +3,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 
@@ -23,14 +24,24 @@ class SnapshotProcs final : public IProcessList {
 public:
     explicit SnapshotProcs(const fs::path& root) {
         auto j = load_json_or_null(root / "procs.json");
-        if (j.is_array())
-            for (auto& v : j)
-                if (v.is_string()) names_.push_back(v.get<std::string>());
+        if (!j.is_array()) return;
+        for (auto& v : j) {
+            if (v.is_string()) {
+                infos_.push_back({v.get<std::string>(), 0});
+            } else if (v.is_object() && v.contains("name") && v["name"].is_string()) {
+                infos_.push_back({v["name"].get<std::string>(), v.value("start", std::int64_t{0})});
+            }
+        }
     }
-    std::vector<std::string> running() const override { return names_; }
+    std::vector<std::string> running() const override {
+        std::vector<std::string> names;
+        for (auto& i : infos_) names.push_back(i.name);
+        return names;
+    }
+    std::vector<ProcInfo> running_info() const override { return infos_; }
 
 private:
-    std::vector<std::string> names_;
+    std::vector<ProcInfo> infos_;
 };
 
 class SnapshotSys final : public ISystemInfo {
@@ -40,6 +51,14 @@ public:
         if (!j.is_object()) return;
         fw_ = j.value("fw", std::string());
         model_ = j.value("model", std::string());
+        boot_ = j.value("boot", std::int64_t{0});
+        if (j.contains("ports") && j["ports"].is_object()) {
+            for (auto& [port, open] : j["ports"].items()) {
+                if (!open.is_boolean()) continue;
+                const long n = std::strtol(port.c_str(), nullptr, 10);
+                if (n > 0 && n < 65536) ports_[static_cast<int>(n)] = open.get<bool>() ? PortState::Open : PortState::Closed;
+            }
+        }
         if (j.contains("storage") && j["storage"].is_array()) {
             for (auto& s : j["storage"]) {
                 if (!s.is_object()) continue;
@@ -62,8 +81,15 @@ public:
     std::string model() const override { return model_; }
     std::vector<StorageInfo> storage() const override { return storage_; }
     std::map<std::string, std::map<std::string, std::string>> components() const override { return components_; }
+    std::int64_t boot_epoch() const override { return boot_; }
+    PortState local_port_state(int port) const override {
+        auto it = ports_.find(port);
+        return it == ports_.end() ? PortState::Unknown : it->second;
+    }
 
 private:
+    std::int64_t boot_ = 0;
+    std::map<int, PortState> ports_;
     std::string fw_, model_;
     std::vector<StorageInfo> storage_;
     std::map<std::string, std::map<std::string, std::string>> components_;

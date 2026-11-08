@@ -12,9 +12,9 @@ Regeln immer **versionsgebunden** formulieren – die Szene ändert sich wöchen
 | ID | Erkennung | Klartext / Empfehlung | Fix | Quelle | Status |
 |---|---|---|---|---|---|
 | A1 `hen.etahen_with_kstufflite_latest_fw` | etaHEN **und** kstuff-lite laufen gleichzeitig auf einer FW, für die nur kstuff-lite vorgesehen ist | Auf der neuesten JB-Firmware kein etaHEN, sondern kstuff-lite nutzen. Reihenfolge: Jailbreak → kstuff-lite → ShadowMount+. | Hinweis | [kstuff-lite #94](https://github.com/EchoStretch/kstuff-lite/issues/94) | community |
-| A2 `hen.jb_too_early` | Uptime < 60 s beim JB-Start (aus Log-Zeitstempeln) | Nach dem Einschalten ca. 1 Minute warten, bevor der Jailbreak läuft. | Hinweis | [kstuff-lite #94](https://github.com/EchoStretch/kstuff-lite/issues/94) | community |
+| A2 `hen.jb_too_early` | Erster Prozess der Jailbreak-Kette (elfldr, etaHEN, kstuff, ShadowMount+) startet < 60 s nach dem Konsolenstart (Prozess-Startzeit minus `kern.boottime`) | Nach dem Einschalten ca. 1 Minute warten, bevor der Jailbreak läuft. Nur ein Rat, keine bestätigte Ursache. | Hinweis | [kstuff-lite #94](https://github.com/EchoStretch/kstuff-lite/issues/94) | community |
 | A3 `hen.etahen_double_load` | zwei etaHEN-Prozesse | Keine zweite etaHEN-Kopie über eine laufende laden; vorher neu starten. | Hinweis | [etahen-13.60 Releases](https://github.com/GronedWaffel/etahen-13.60/releases) | doc |
-| A4 `payload.port_9021_closed` | elfldr-Prozess fehlt / Port 9021 nicht offen | Kein ELF-Loader aktiv → Payloads können nicht gesendet werden. Abhängig vom Autoloader. | Hinweis | eigene Erfahrung (Unified JB) | todo |
+| A4 `payload.port_9021_closed` | Verbindung zu 127.0.0.1:9021 wird abgelehnt **und** weder elfldr noch etaHEN läuft | Kein ELF-Loader aktiv → Payloads können nicht gesendet werden. Abhängig vom Autoloader. | Hinweis | [elfldr](https://github.com/ps5-payload-dev/elfldr) (Port 9021) | todo |
 
 ## B. ShadowMount+ (SM+)
 
@@ -40,9 +40,9 @@ Regeln immer **versionsgebunden** formulieren – die Szene ändert sich wöchen
 
 | ID | Erkennung | Klartext / Empfehlung | Fix | Quelle | Status |
 |---|---|---|---|---|---|
-| C1 `plugin.ps5theme_old_overlay` | ps5-theme-Version älter als 1.23 + Fehler CE-105733-9 | Alte ps5-theme-Testbuilds verhinderten jeden App-Start; aktualisieren. | Hinweis | [ps5-theme 1.53](https://github.com/Blaze414/ps5-theme/releases/tag/v1.53) | todo (Versionsgrenze prüfen) |
-| C2 `storage.oversized_reservation` | Homebrew-App belegt mehrere GB, obwohl die Dateien klein sind | Überdimensionierte Speicherreservierung; App über die PS5-Speichereinstellungen entfernen und neu installieren. | Hinweis | [CD Player 1.1.2](https://prosperostore.net/app/PPSA98427/) | doc |
-| C3 `storage.low_space_data` | `/data` < 5 % frei | Wenig Platz: Mounts, Logs und Installationen können scheitern. | Hinweis | allgemein | todo |
+| C1 `plugin.ps5theme_old_overlay` | ps5-theme-Version **zwischen 1.30 und 1.53** (Testbuilds; gelesen aus `/data/ps5-theme/logs/log.txt`, sonst aus `/data/etaHEN/plugins/ps5-theme.plugin`) | Frühe Testbuilds konnten ein Overlay zurücklassen, das jeden App-Start verhinderte (CE-105733-9); auf 1.53 oder neuer aktualisieren. | Hinweis | [ps5-theme 1.53](https://github.com/Blaze414/ps5-theme/releases/tag/v1.53) | todo |
+| C2 `storage.oversized_reservation` | `/user/app/<ID>/sce_sys/param.json` mit `downloadDataSize` ≥ 4096 MiB, aber Dateien der App zusammen < 1 GiB (nur live auswertbar) | Überdimensionierte Speicherreservierung; App über die PS5-Speichereinstellungen entfernen und neu installieren. | Hinweis | [CD Player 1.1.2](https://prosperostore.net/app/PPSA98427/) | todo |
+| C3 `storage.low_space_data` | `/data` < 5 % frei | Wenig Platz: Mounts, Logs und Installationen können scheitern. | Hinweis | eigene Heuristik | todo |
 
 ## Erweiterung
 1. Wissensbasis des Windows-Doctors (MIT) sichten: [knowledge_base.json](https://github.com/asomimlrxd/PS5-Jailbreak-Doctor/blob/main/knowledge_base.json) und [FONTES_PT.md](https://github.com/asomimlrxd/PS5-Jailbreak-Doctor/blob/main/FONTES_PT.md). Passende Regeln übernehmen (Lizenzhinweis in `THIRD_PARTY.md`).
@@ -50,7 +50,7 @@ Regeln immer **versionsgebunden** formulieren – die Szene ändert sich wöchen
 3. Eigene Fälle von der FW-4.03-Konsole als Fixtures sichern.
 
 ## Umsetzungsstand und Abweichungen (Phase 0, Stand 8. Nov. 2026)
-Umgesetzt in `knowledge/rules.json` mit je einem Positiv- und Negativ-Fixture: **A1, A3, B1–B15**. A2, A4, C1–C3 folgen.
+Umgesetzt in `knowledge/rules.json` mit je einem Positiv- und Negativ-Fixture: **A1–A4, B1–B15, C1–C3** (22 Regeln; A2, A4, C1–C3 seit dem 8. Nov., siehe „Nachtrag: A2, A4, C1–C3").
 
 Beim Abgleich mit dem aktuellen SM+-README (drakmor/ShadowMountPlus) gefunden:
 - **config.ini hat Sektionen** (`[scan] path=`, `[scan] depth`, `[general] debug`, `[fakelib] enabled`). Der Collector versteht Sektionen und die älteren flachen Schlüssel (`scanpath`, `scan_depth`, `debug`, `backport_fakelib`). Defaults laut README: Tiefe 1, `debug` an. Ob `[fakelib] enabled` standardmässig an ist (B5), steht nicht im README – Annahme „an“ stammt aus dieser Datei.
@@ -80,3 +80,12 @@ Quelle: `README.md`, `config.ini.example` und der Payload-Manager-Quelltext aus 
 - **B15**: `image_sector=<datei>:<grösse>` in `autotune.ini` ist dokumentiert (SM+ schreibt es, wenn die Cluster-Grösse nicht zur Sektorgrösse passt) → `doc`.
 - **B14** bleibt `todo`: „Register failed“ wird im README als Benachrichtigung genannt.
 - **B5-Fix**: Die Autoload-Listen (`/data/ps5_autoloader/autoload.txt`, Payload Manager: `/data/pldmgr/autoload.txt`) kennen keine Kommentare: `!<ms>` ist eine Wartezeit, jede andere Zeile ein Dateiname. Der Fix **entfernt** den BackPork-Eintrag (Original im Backup, `undo` stellt es wieder her) statt ihn mit `#` zu markieren. Der Pfad der Liste hängt vom Autoloader ab; beide sind in der Whitelist.
+
+## Nachtrag: A2, A4, C1–C3 (8. Nov. 2026)
+Die fünf letzten Regeln brauchten neue Fakten. Dafür kennt die Plattform jetzt Prozess-Startzeiten (`ProcInfo`), den Konsolenstart (`boot_epoch`) und einen Port-Test (`local_port_state`); Snapshots und Export tragen sie mit (`procs.json`-Objekte `{"name","start"}`, `system.json` `boot` und `ports`).
+
+- **A2**: Die Quelle ist schwach. Im Issue rät ein Community-Mitglied, „a min or so" zu warten, ohne gemessene Zeit und ohne nachgewiesene Ursache (gleichzeitig wurden DNS und Cookies geändert). Die Regel ist deshalb nur ein Hinweis (`info`, `community`). Das Log von ShadowMount+ hat nur Uhrzeiten (`[15:12:42]`), keine Uptime; darum rechnet die Regel mit Prozess-Startzeiten statt mit Log-Zeitstempeln. Auf der Test-Konsole: Jailbreak-Kette 188 s nach dem Start (kstuff zuerst), die Regel feuert dort nicht.
+- **A4**: Die Prüfung ist eine Verbindung auf 127.0.0.1:9021 ohne Daten. Nur „Verbindung abgelehnt" zählt als geschlossen; Zeitüberschreitung (Loader beschäftigt) bleibt unbekannt, dann fehlt der Fakt. Zusätzlich darf weder `elfldr` noch `etaHEN` laufen (etaHEN bringt seinen eigenen Loader mit). Auf der Test-Konsole: Port offen. Status bleibt `todo`; der „geschlossen"-Fall ist nur am PC (Fixtures) getestet.
+- **C1**: Die Grenze „älter als 1.23" aus der ersten Recherche ist **nicht belegt**: 1.23 ist die Version, ab der sich das Plugin selbst aktualisiert. Laut den Release-Notes von 1.53 stammt der Fehler CE-105733-9 aus „earlier test builds" des Icon-Features, das mit 1.53 erschien. Veröffentlicht sind 1.30 und 1.53, die Regel meldet daher Versionen **zwischen 1.30 und 1.53** (die davor erschienenen Versionen 1.22 bis 1.30 dürften nicht betroffen sein, weil das Icon-Feature erst mit 1.53 erschien; das ist eine Ableitung). Der Fehlercode selbst ist aus einem Snapshot nicht erkennbar. Die Version kommt aus dem Log (`ps5-theme 1.23 starting`; das Format ist aus den Zeichenketten des Plugins abgeleitet, ein echtes Log lag nicht vor) oder fest eingebaut aus der Plugin-Datei (an einer echten `ps5-theme.plugin` 1.23 geprüft). Auf der Test-Konsole ist ps5-theme nicht installiert. Status `todo`.
+- **C2**: Die Quelle (Release-Notes CD Player 1.1.2) nennt nur die Größen (16 GiB statt 256 MiB). Dass die Reservierung in `param.json` als `downloadDataSize` (MiB) steht, ist eine Ableitung: die Werte der Test-Konsole passen (256 bei BFpilot und USB-Formatierer, 64, 0). Ein überdimensionierter Fall war nicht reproduzierbar (CD Player ist nicht installiert). Gemeldet wird nur, wenn die Reservierung ≥ 4096 MiB ist **und** die Dateien der App zusammen unter 1 GiB bleiben; ist der Inhalt größer oder nicht sicher bestimmbar (über 20 000 Einträge), bleibt die Regel still. Der Snapshot-Export lässt `/user/app` weg (er kennt keine Dateigrößen), aus einem Export kann deshalb kein C2-Befund entstehen; ein Test sichert das ab. Status `todo`.
+- **C3**: Die Schwelle 5 % ist eine eigene Heuristik ohne Quelle (Verweis auf dieses Repo, weil das Schema eine URL verlangt). Nur `/data` zählt; volle USB-Laufwerke lösen nichts aus (Fixture `c3_neg`).

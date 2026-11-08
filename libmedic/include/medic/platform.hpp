@@ -41,11 +41,24 @@ public:
     virtual bool remove_empty_dir(const std::string& path) = 0;
 };
 
+struct ProcInfo {
+    std::string name;
+    std::int64_t start_epoch = 0;  // Startzeit in Sekunden seit 1970, 0 = unbekannt
+};
+
 class IProcessList {
 public:
     virtual ~IProcessList() = default;
     virtual std::vector<std::string> running() const = 0;  // Prozessnamen
+    // Wie running(), zusaetzlich mit Startzeit. Standard: ohne Startzeiten.
+    virtual std::vector<ProcInfo> running_info() const {
+        std::vector<ProcInfo> v;
+        for (auto& n : running()) v.push_back({n, 0});
+        return v;
+    }
 };
+
+enum class PortState { Unknown, Closed, Open };
 
 struct StorageInfo {
     std::string mount;
@@ -62,6 +75,14 @@ public:
     // Bekannte Komponenten mit Eigenschaften: {"kstuff": {"version": "1.10", "origin": "echostretch"}, ...}.
     // Vorlaeufig: auf der Konsole ist die Quelle noch zu klaeren (ROADMAP Phase 2).
     virtual std::map<std::string, std::map<std::string, std::string>> components() const = 0;
+    // Zeitpunkt des letzten Konsolenstarts (Sekunden seit 1970), 0 = unbekannt.
+    virtual std::int64_t boot_epoch() const { return 0; }
+    // Nimmt ein lokaler TCP-Port Verbindungen an? Unknown, wenn die Plattform das nicht pruefen kann
+    // oder die Antwort nicht eindeutig war (Zeitueberschreitung zaehlt nicht als geschlossen).
+    virtual PortState local_port_state(int port) const {
+        (void)port;
+        return PortState::Unknown;
+    }
 };
 
 // Buendelt die drei Interfaces.
@@ -76,9 +97,10 @@ struct Platform {
 
 // PC-Implementierung: liest einen Fixture-Ordner
 //   <root>/fs/...        simuliert das PS5-Dateisystem ("/data/..." -> <root>/fs/data/...)
-//   <root>/procs.json    ["etaHEN", "shadowmountplus", ...]
+//   <root>/procs.json    ["etaHEN", "shadowmountplus", ...]; Eintraege duerfen Objekte sein: {"name":"kstuff.elf","start":1794060758}
 //   <root>/system.json   {"fw":"4.03","model":"...","storage":[{"mount":"/data","total":..,"free":..}],
-//                         "components":{"kstuff":{"version":"1.10","origin":"echostretch"},"smp":{"version":"1.7"}}}
+//                         "components":{"kstuff":{"version":"1.10","origin":"echostretch"},"smp":{"version":"1.7"}},
+//                         "boot":1794060571, "ports":{"9021":true}}   (boot und ports sind optional)
 // Fehlende Dateien sind erlaubt (leerer Zustand).
 // writable=true erlaubt Schreibzugriffe (fs_rw) direkt im Ordner -- Fixtures vorher kopieren!
 std::unique_ptr<Platform> make_snapshot_platform(const std::string& root_dir, bool writable = false);

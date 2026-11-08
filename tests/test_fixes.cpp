@@ -386,7 +386,8 @@ void plan_content_tests() {
 json comparable_facts(const Facts& f) {
     json out = json::object();
     for (const char* k : {"smp.titles", "smp.deep_sources", "smp.hidden_sources", "smp.mounts", "smp.images", "smp.scan_roots", "smp.fakelib_enabled",
-                          "smp.debug", "smp.scan_depth", "proc.running", "fw.version", "kstuff.version", "kstuff.origin", "smp.version"}) {
+                          "smp.debug", "smp.scan_depth", "proc.running", "fw.version", "kstuff.version", "kstuff.origin", "smp.version",
+                          "net.port_9021", "jb.seconds_after_boot", "jb.first_process", "ps5theme.version", "storage.mounts"}) {
         const json* v = f.get(k);
         if (!v) continue;
         out[k] = *v;
@@ -396,9 +397,14 @@ json comparable_facts(const Facts& f) {
     return out;
 }
 
+// Nur live auswertbare Regeln: storage.oversized_reservation vergleicht Reservierung und Dateigroesse, der Export
+// enthaelt aber nur leere Dateien und laesst /user/app weg (siehe snapshot_export.cpp).
+constexpr const char* kLiveOnlyRule = "storage.oversized_reservation";
+
 std::string findings_summary(const std::vector<Finding>& fs_) {
     std::string s;
     for (auto& f : fs_) {
+        if (f.rule_id == kLiveOnlyRule) continue;
         s += f.rule_id + "|" + f.fix + "|";
         for (auto& e : f.evidence) s += e + ";";
         s += "\n";
@@ -421,6 +427,8 @@ void export_tests() {
         Facts f2 = collect_all(*p2);
         CHECK(comparable_facts(f1) == comparable_facts(f2), "Export " + name + ": Fakten nach Round-Trip gleich");
         CHECK(findings_summary(evaluate(rules(), f1)) == findings_summary(evaluate(rules(), f2)), "Export " + name + ": Befunde nach Round-Trip gleich");
+        for (auto& finding : evaluate(rules(), f2))
+            CHECK(finding.rule_id != kLiveOnlyRule, "Export " + name + ": aus dem Export entsteht kein Befund " + kLiveOnlyRule);
         std::error_code ec;
         fs::remove_all(out, ec);
     }

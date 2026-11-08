@@ -160,8 +160,13 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
     for (const auto& s : p.sys().storage()) sys["storage"].push_back({{"mount", s.mount}, {"total", s.total_bytes}, {"free", s.free_bytes}});
     for (const auto& [name, props] : p.sys().components())
         for (const auto& [k, v] : props) sys["components"][name][k] = v;
+    if (const auto boot = p.sys().boot_epoch(); boot > 0) sys["boot"] = boot;
+    if (const auto* v = facts.get("net.port_9021"); v && v->is_string()) sys["ports"]["9021"] = v->get<std::string>() == "open";
     json procs = json::array();
-    for (const auto& n : p.procs().running()) procs.push_back(n);
+    for (const auto& i : p.procs().running_info()) {
+        if (i.start_epoch > 0) procs.push_back({{"name", i.name}, {"start", i.start_epoch}});
+        else procs.push_back(i.name);
+    }
     {
         std::ofstream a(dest / "system.json", std::ios::binary), b(dest / "procs.json", std::ios::binary);
         a << sys.dump(2) << "\n";
@@ -177,6 +182,12 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
                           "/data/shadowmount/manual.lst", "/data/ps5_autoloader/autoload.txt", "/data/pldmgr/autoload.txt"})
         ex.copy_text(f, /*tail=*/false);
     ex.copy_text("/data/shadowmount/debug.log", /*tail=*/true);
+
+    // ps5-theme: nur die erkannte Version als Startzeile (das echte Log kann Pfade eigener Bilder enthalten).
+    // /user/app wird bewusst nicht exportiert: der Befund storage.oversized_reservation vergleicht Reservierung und
+    // Dateigroesse, und der Export enthaelt nur leere Dateien. Aus einem Export darf deshalb kein solcher Befund entstehen.
+    if (const auto* v = facts.get("ps5theme.version"); v && v->is_string())
+        ex.write("/data/ps5-theme/logs/log.txt", "ps5-theme " + v->get<std::string>() + " starting\n");
 
     // Scanpfade (wirksame und Standard, damit auch "versteckte" Spiele sichtbar bleiben) und gemountete Images
     std::vector<std::string> roots = strings_of(facts, "smp.scan_roots");
