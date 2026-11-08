@@ -9,7 +9,7 @@ Schrift: Die UI enthält vorgerenderte Glyphen aus [DejaVu Sans](https://dejavu-
 
 Geplant (Phase 5): `knowledge_base.json` aus [PS5-Jailbreak-Doctor](https://github.com/asomimlrxd/PS5-Jailbreak-Doctor) (MIT, asomimlrxd) – bei Übernahme hier mit Namensnennung eintragen.
 
-Nicht im Repo, nur zum Bauen benötigt: [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) (GPLv3, John Törnblom) für `make ps5`. Der gebaute ELF linkt gegen dessen Laufzeit-Bibliotheken; vor einer Veröffentlichung die Lizenzfolgen prüfen.
+Nicht im Repo, nur zum Bauen benötigt: [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) (GPLv3, John Törnblom) für `make ps5`. Der gebaute ELF linkt gegen dessen Laufzeit-Bibliotheken; deshalb steht PS5 Medic selbst unter GPL-3.0-or-later (siehe `LICENSE`). Die oben genannten Komponenten (MIT, zlib, BSD-2-Clause, DejaVu) sind damit vereinbar.
 
 Kachel-Starter (`title/`): `title/title.ld` und `title/symbols.map` stammen aus [ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) (GPL-3.0-or-later, BlackBearReloaded; der Kopf der Datei nennt das). `make title` nutzt dessen Werkzeug `ps5-native-tool` und kopiert den signierten Laufzeit-Shim `libc.prx` aus einem lokalen Checkout; beides liegt nicht im Repo, und der Titel ist nicht Teil von `make dist` (siehe `docs/TITLE.md`).
 

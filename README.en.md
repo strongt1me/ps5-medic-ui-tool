@@ -104,6 +104,8 @@ A new rule needs: an entry in `knowledge/rules.json` with a source, a positive a
 
 ## License and credits
 
-The license of PS5 Medic itself is **not decided yet** (the author decides before the first public release; among other things it has to be clarified how the GPLv3 runtime libraries of the ps5-payload-sdk affect the finished ELF). Third-party components and their licenses: [THIRD_PARTY.md](THIRD_PARTY.md).
+PS5 Medic is licensed under the **GNU General Public License, version 3 or (at your option) any later version** (GPL-3.0-or-later). The license text is in [LICENSE](LICENSE); every own source file carries an SPDX line. This includes the rule database `knowledge/rules.json`. Reason: the finished ELF links against the GPLv3 runtime libraries of the ps5-payload-sdk. The third-party components (MIT, zlib, BSD-2-Clause, DejaVu) are compatible with the GPL-3.0 and are listed with their licenses in [THIRD_PARTY.md](THIRD_PARTY.md).
+
+The repository is **private** and there is no public release (author's decision, 8 Nov 2026). Anyone who passes on a package from `make dist` must also offer the matching source code under the GPL.
 
 PS5 Medic is a community project and not affiliated with Sony. Use it at your own risk.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // PS5-Plattform: echtes Dateisystem, Prozessliste per sysctl, Firmware und Modell ueber ps5-payload-sdk.
 // Nur mit dem PS5-Toolchain-Build (make ps5) uebersetzbar.
 #pragma once

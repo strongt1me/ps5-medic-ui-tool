@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // PS5 Medic -- Vollbild-UI (Phase 3).
 // Laeuft als Payload ueber elfldr/Payload Manager (kein Sony-Title, keine Sandbox, kein Jailbreak-Request --
 // Begruendung: docs/PHASE3.md, Abschnitt "Korrektur"). Zeichnet medic::ui::App per SDL2 (ps5-payload-dev/SDL,

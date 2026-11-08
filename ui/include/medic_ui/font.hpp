@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Schrift (vorgerenderte DejaVu-Glyphen) und Textumbruch. Eingabetext ist UTF-8; unbekannte Zeichen erscheinen als "?".
 #pragma once
 #include "medic_ui/canvas.hpp"

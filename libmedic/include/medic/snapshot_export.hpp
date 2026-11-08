@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Snapshot-Export: schreibt den vom Medic gesehenen Zustand in einen Fixture-Ordner
 // (system.json, procs.json, fs/...), den `medic-cli check <ordner>` am PC wieder einliest.
 //

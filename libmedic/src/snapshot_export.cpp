@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/snapshot_export.hpp"
 
 #include <nlohmann/json.hpp>

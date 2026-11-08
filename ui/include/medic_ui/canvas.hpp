@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Software-Zeichenflaeche (32-Bit ARGB) fuer die Vollbild-UI. Plattformunabhaengig: Am PC wird sie als PNG
 // geschrieben (Vorschau, Tests), auf der Konsole spaeter in den VideoOut-Framebuffer kopiert.
 #pragma once

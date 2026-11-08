@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Tests fuer das manuelle Regel-Update (libmedic/src/rule_update.cpp).
 #include "check.hpp"
 #include "medic/platform.hpp"

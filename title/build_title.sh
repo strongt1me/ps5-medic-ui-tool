@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Baut den PS5-Medic-Starter (FAKE42007) als nativen PS5-Titel (Kachel unter "Medien"), in WSL oder Linux.
 # Gleiche Kette wie der BFpilot-Starter und ps5-native-app-boilerplate/tools/build.sh:
 #   1. title/starter.c mit clang-18 und den Zielflags des SDK 0.45 uebersetzen

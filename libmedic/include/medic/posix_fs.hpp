@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Dateisystem-Zugriff ueber std::filesystem, gespiegelt unter einem Basisordner.
 //   base = "/"            -> echtes Dateisystem (PS5, Pfade wie "/data/shadowmount/config.ini")
 //   base = "<snap>/fs"    -> Fixture-Ordner am PC (SnapshotPlatform)

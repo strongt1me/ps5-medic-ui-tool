@@ -47,7 +47,7 @@ Zeilen, die schon als Evidenz eines Befunds im Bericht stehen, fallen weg. Gleic
 
 ## Offen
 
-- **Beiträge** auf GBAtemp/Discord: nur der Entwurf liegt vor.
-- **GitHub-Release** und Lizenz (siehe `docs/PHASE4.md`). Der Link im Entwurf und der Issue-Vorlage setzt ein öffentliches Repository voraus.
+- **Beiträge** auf GBAtemp/Discord: entfallen vorerst, das Projekt bleibt privat (Entscheidung vom 8. Nov. 2026). Der Entwurf in `docs/TESTER.md` bleibt als Vorlage.
+- **GitHub-Release:** entfällt, Repository privat. Lizenz: GPL-3.0-or-later (siehe `docs/PHASE4.md`). Die Issue-Vorlage hat nur in einem Repository mit Issues einen Sinn.
 - **Download von Regeln** mit Signatur, falls gewünscht (siehe oben).
 - **Tester-Fixtures** entstehen erst, wenn es Berichte gibt.

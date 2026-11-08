@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Texte (Deutsch/Englisch) aus ui/i18n/*.json. Die JSON-Dateien sind eingebettet (tools/embed_i18n.py).
 #pragma once
 #include <initializer_list>

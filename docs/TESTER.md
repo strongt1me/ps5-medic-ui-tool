@@ -53,7 +53,7 @@ PS5 Medic lädt **nie** etwas aus dem Netz. Ein Regel-Update ist eine Datei, die
 
 Die Prüfsumme schützt vor beschädigten oder abgeschnittenen Kopien. Sie schützt **nicht** vor einer absichtlich untergeschobenen Datei samt passender Prüfsumme; wer Dateien auf deine Konsole legen kann, kann ohnehin mehr. Nimm Regeldateien nur aus dem Release des Projekts.
 
-## Entwurf für einen Aufruf in Foren oder auf Discord (nicht veröffentlicht)
+## Entwurf für einen Aufruf in Foren oder auf Discord (nicht veröffentlicht, bleibt Vorlage: das Repository ist privat)
 
 > **PS5 Medic sucht Tester (FW 7.x bis 13.60)**
 >

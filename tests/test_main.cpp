@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Minimaler Test-Runner ohne Fremdabhaengigkeiten.
 //  1. Unit-Tests (Versionsvergleich, Operatoren, Schema-Pruefung, Pfadschutz)
 //  2. Fixture-Tests: jeder Ordner in tests/fixtures/ wird mit knowledge/rules.json geprueft;

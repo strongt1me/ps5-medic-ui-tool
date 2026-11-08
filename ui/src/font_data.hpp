@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Intern: Aufbau der erzeugten Schriftdaten (font_data.cpp, siehe tools/gen_font.py).
 #pragma once
 #include <cstddef>

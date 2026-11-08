@@ -1,6 +1,6 @@
 # Phase 4 – Bericht und Release
 
-Stand 8. Nov. 2026. Bericht, Anonymisierung, QR-Code, □-Taste, READMEs und `make dist` stehen und sind getestet. **Auf der Konsole noch nicht bestätigt:** ob der QR-Code vom Fernseher mit einem Handy lesbar ist. **Offen (Entscheidung des Autors):** Lizenz des Projekts und die Veröffentlichung auf GitHub; beides wurde nicht angefasst.
+Stand 8. Nov. 2026. Bericht, Anonymisierung, QR-Code, □-Taste, READMEs und `make dist` stehen und sind getestet. **Auf der Konsole noch nicht bestätigt:** ob der QR-Code vom Fernseher mit einem Handy lesbar ist. **Entschieden (8. Nov. 2026):** Lizenz GPL-3.0-or-later; das Repository bleibt privat, kein öffentliches Release.
 
 ## Bericht
 
@@ -49,7 +49,7 @@ Encoder: [Nayukis QR-Code-Generator](https://www.nayuki.io/page/qr-code-generato
 - README auf Deutsch und Englisch.
 - Entfallen: der „PPSA-Ordner mit `param.json`" aus dem ursprünglichen Plan; der Launcher-Eintrag (`ps5/homebrew/`) ersetzt ihn.
 
-**Vor einer Veröffentlichung zu entscheiden:**
-1. **Lizenz** von PS5 Medic. Die README nennt sie ausdrücklich als offen. Zu klären ist, wie die GPLv3-Laufzeitbibliotheken des ps5-payload-sdk den ausgelieferten ELF betreffen (siehe `THIRD_PARTY.md`).
-2. Ob und wann das GitHub-Release `strongt1me/ps5-medic` angelegt wird. Die Release-Dateien liegen nach `make dist` bereit.
-3. Die Lizenztexte der im ELF enthaltenen Fremdkomponenten (SDL2/zlib, libsamplerate/BSD-2, nlohmann und qrcodegen/MIT, DejaVu): `THIRD_PARTY.md` nennt sie, ob die Namensnennung für die jeweilige Lizenz im Paket ausreicht, ist mit der Lizenzentscheidung zu prüfen.
+**Entscheidungen des Autors (8. Nov. 2026):**
+1. **Lizenz:** GPL-3.0-or-later (`LICENSE`, SPDX-Zeile in jeder eigenen Quelldatei). Der ELF linkt gegen die GPLv3-Laufzeitbibliotheken des ps5-payload-sdk; die Fremdkomponenten (MIT, zlib, BSD-2, DejaVu) sind damit vereinbar (`THIRD_PARTY.md`).
+2. **Kein öffentliches Release:** Das Repository `strongt1me/ps5-medic` bleibt privat. `make dist` baut weiter ein Paket für einzelne Tester; wer es weitergibt, muss nach der GPL den Quelltext anbieten.
+3. Die Lizenztexte der Fremdkomponenten im Paket: `THIRD_PARTY.md` nennt sie mit Lizenz; `make dist` legt `LICENSE` bei.

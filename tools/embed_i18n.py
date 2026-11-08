@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Bettet ui/i18n/de.json und en.json als Rohstring in ui/src/i18n_embedded.cpp ein.
 
 Die JSON-Dateien bleiben die Quelle. Ein Test vergleicht die eingebetteten Texte mit den Dateien,
@@ -11,7 +12,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
 def main():
-    out = ["// GENERIERT von tools/embed_i18n.py aus ui/i18n/*.json -- nicht von Hand aendern.",
+    out = ["// SPDX-License-Identifier: GPL-3.0-or-later",
+           "// GENERIERT von tools/embed_i18n.py aus ui/i18n/*.json -- nicht von Hand aendern.",
            '#include "medic_ui/i18n.hpp"', "", "namespace medic::ui {", ""]
     for lang, name in (("de", "kDeJson"), ("en", "kEnJson")):
         text = (ROOT / "ui/i18n" / f"{lang}.json").read_text(encoding="utf-8")

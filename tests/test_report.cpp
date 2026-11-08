@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Tests fuer Bericht, Anonymisierung und QR-Code.
 #include "check.hpp"
 #include "medic/collectors.hpp"

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Erzeugt ui/src/font_data.cpp: vorgerenderte Glyphen (8-Bit-Alpha) aus DejaVu Sans.
 
 DejaVu steht unter einer freizuegigen Lizenz (Bitstream Vera + Public Domain), siehe THIRD_PARTY.md.

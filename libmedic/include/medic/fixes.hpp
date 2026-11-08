@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Fix-Engine: plan -> (Nutzer bestaetigt) -> apply -> optional undo.
 //
 // Sicherheitsmodell (docs/ARCHITECTURE.md, CLAUDE.md):

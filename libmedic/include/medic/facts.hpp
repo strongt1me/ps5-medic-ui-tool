@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Fakten-Store: ein verschachteltes JSON-Dokument.
 //   fw.version, proc.running[], smp.config.<key>, smp.images[].{name,ext,path}, ...
 // Pfade in Regeln: Punkt-getrennt, "[]" markiert ein Array, ueber das die Regel iteriert.

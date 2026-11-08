@@ -37,7 +37,7 @@ Den Titel in den PS5-Speichereinstellungen entfernen und den Ordner `/data/homeb
 
 - `title/title.ld` ist aus `ps5-native-app-boilerplate/tooling/native/ps5-pie.ld` übernommen (GPL-3.0-or-later, BlackBearReloaded) und unverändert aus dem BFpilot-Starter kopiert; der Kopf der Datei nennt das.
 - Zum Titel gehört `sce_module/libc.prx`, der **signierte Laufzeit-Shim des Boilerplates**. Er liegt weder im Repo noch im Release-Paket (`make dist`), sondern wird beim Bauen aus dem Boilerplate-Checkout kopiert.
-- Deshalb ist der Titel **nicht Teil von `make dist`**. Ob und wie er mit der Lizenz von PS5 Medic weitergegeben werden darf, ist zusammen mit der Lizenzentscheidung (`docs/PHASE4.md`) zu klären.
+- Deshalb ist der Titel **nicht Teil von `make dist`**. PS5 Medic steht unter GPL-3.0-or-later wie das Boilerplate, `starter.c` und das Bauskript sind damit lizenzgleich. Der Titel bleibt trotzdem aus dem Paket: `libc.prx` ist ein fremder, signierter Shim, den wir nicht weitergeben.
 
 ## Bekannte Eigenheiten
 

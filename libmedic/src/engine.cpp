@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Apply-/Undo-Phase der Fix-Engine: Whitelist, Backups, Journal.
 #include "medic/fixes.hpp"
 #include "medic/sha256.hpp"

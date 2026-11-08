@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Manuelles Regel-Update ohne Netzwerk.
 //
 // Ablauf: Der Nutzer legt eine neue rules.json und deren SHA-256 (rules.json.sha256, Format wie `sha256sum`) nach

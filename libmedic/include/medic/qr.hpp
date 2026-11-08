@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // QR-Code fuer den Bericht. Encoder: Nayukis QR-Code-Generator (MIT, third_party/qrcodegen).
 #pragma once
 #include <cstdint>

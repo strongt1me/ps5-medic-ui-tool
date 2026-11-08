@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Eingabe-Abstraktion. Der PS5-Adapter bildet spaeter ScePad-Tasten darauf ab (Kreuz/Kreis ggf. tauschbar).
 #pragma once
 

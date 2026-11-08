@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "ps5_platform.hpp"
 
 #include "medic/fwver.hpp"

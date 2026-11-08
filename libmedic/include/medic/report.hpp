@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Bericht: Markdown fuer Foren/Issues, Kurzfassung fuer den QR-Code, Anonymisierung.
 // Alle Texte, die diese Funktionen liefern, sind bereits anonymisiert (IP-/MAC-Adressen, Benutzer- und Konto-IDs,
 // Seriennummern werden durch Platzhalter ersetzt). Dateinamen und Pfade bleiben erhalten: sie sind meist die Evidenz.

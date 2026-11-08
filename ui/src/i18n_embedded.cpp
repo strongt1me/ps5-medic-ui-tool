@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // GENERIERT von tools/embed_i18n.py aus ui/i18n/*.json -- nicht von Hand aendern.
 #include "medic_ui/i18n.hpp"
 

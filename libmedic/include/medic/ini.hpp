@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Minimal-invasive Bearbeitung einer ShadowMount+-config.ini: nur die betroffene Zeile aendert sich,
 // Kommentare, Reihenfolge und Zeilenenden bleiben erhalten.
 #pragma once

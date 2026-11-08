@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Schnittstelle zwischen UI und Medic-Kern. Die UI kennt nur dieses Interface; dahinter steckt entweder der Kern im
 // selben Prozess (LocalService: PC-Vorschau, Tests, Payload) oder spaeter eine Verbindung zu einem privilegierten
 // Dienst auf der Konsole (die Titel-App darf /data und /mnt nicht selbst lesen, siehe docs/PHASE3.md).

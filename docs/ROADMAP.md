@@ -30,16 +30,16 @@ Jede Phase endet mit lauffähigem Stand + kurzem Status an Marc.
 3. Controller-Belegung laut SPEC, Strings in `i18n/de.json` und `en.json`. – erledigt.
 
 ## Phase 4 – Bericht & Release
-> Stand: Bericht, Anonymisierung, QR-Code, □-Taste, READMEs und `make dist` sind fertig und getestet (siehe `docs/PHASE4.md`). Offen: QR-Code am Fernseher mit dem Handy prüfen, Lizenz festlegen, GitHub-Release anlegen (Entscheidung des Autors).
+> Stand: Bericht, Anonymisierung, QR-Code, □-Taste, READMEs und `make dist` sind fertig und getestet (siehe `docs/PHASE4.md`). Lizenz GPL-3.0-or-later; kein öffentliches Release, das Repository bleibt privat (Entscheidung vom 8. Nov. 2026).
 1. Markdown-Bericht + Anonymisierung + QR-Code. – erledigt.
 2. ~~`param.json`, Icon, PPSA-Ordner~~ entfällt: Launcher-Eintrag `ps5/homebrew/` (siehe `docs/PHASE3.md`). Installation per FTP nach `/data/homebrew/PS5MEDIC/`.
-3. README (DE/EN), `THIRD_PARTY.md` – erledigt. GitHub-Release `strongt1me/ps5-medic` – offen.
+3. README (DE/EN), `THIRD_PARTY.md` – erledigt. GitHub-Release – entfällt (Repository privat).
 
 ## Phase 5 – Community
-> Stand: Regel-Update (als Datei-Update ohne Netz), unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung sind fertig und getestet (siehe `docs/PHASE5.md`). Offen und Sache des Autors: Beiträge in Foren, GitHub-Release, ein Download von Regeln mit Signatur.
+> Stand: Regel-Update (als Datei-Update ohne Netz), unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung sind fertig und getestet (siehe `docs/PHASE5.md`). Foren-Beiträge und GitHub-Release entfallen (Repository privat). Der signierte Regel-Download kommt als Nächstes.
 1. Regel-Update (manuell, SHA-256). – erledigt (Datei auf die Konsole legen, in PS5 Medic prüfen und installieren; kein Download, Begründung in `docs/PHASE5.md`).
 2. „Unbekannte Fehlerzeilen“ sammeln → Issue-Vorlage. – erledigt (Abschnitt im Bericht, `.github/ISSUE_TEMPLATE/problem.md`).
-3. Tester mit FW 7.x–13.60 suchen (GBAtemp, Discord), Fixtures einsammeln. – Anleitung und Entwurf des Aufrufs in `docs/TESTER.md`; Veröffentlichen und Einsammeln stehen aus.
+3. Tester mit FW 7.x–13.60 suchen (GBAtemp, Discord), Fixtures einsammeln. – Anleitung und Entwurf des Aufrufs in `docs/TESTER.md`; wird nicht veröffentlicht (Repository privat), Tester nur persönlich.
 
 ## Erster Prompt für Claude Code
 > Lies CLAUDE.md und docs/*. Starte mit Phase 0, Schritte 1–3. Lege für Regel B2 und B8 je ein Positiv- und Negativ-Fixture an und zeige mir danach die Ausgabe von `medic-cli check` für alle Fixtures.

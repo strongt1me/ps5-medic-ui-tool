@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Erzeugt ps5/homebrew/sce_sys/icon0.png (512x512): dunkelblaue Kachel mit weissem Kreuz. Aufruf: python3 tools/gen_icon.py"""
 import pathlib
 

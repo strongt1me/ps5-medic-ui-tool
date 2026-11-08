@@ -104,6 +104,8 @@ Eine neue Regel braucht: einen Eintrag in `knowledge/rules.json` mit Quelle, ein
 
 ## Lizenz und Danksagung
 
-Die Lizenz von PS5 Medic selbst ist **noch nicht festgelegt** (Entscheidung des Autors vor der ersten Veröffentlichung; zu klären ist u. a., wie die GPLv3-Laufzeitbibliotheken des ps5-payload-sdk den fertigen ELF betreffen). Verwendete Fremdkomponenten und ihre Lizenzen: [THIRD_PARTY.md](THIRD_PARTY.md).
+PS5 Medic steht unter der **GNU General Public License, Version 3 oder (nach Wahl) jeder späteren** (GPL-3.0-or-later). Der Lizenztext liegt in [LICENSE](LICENSE), jede eigene Quelldatei trägt eine SPDX-Zeile. Das gilt auch für die Regeldatenbank `knowledge/rules.json`. Grund: Der fertige ELF linkt gegen die GPLv3-Laufzeitbibliotheken des ps5-payload-sdk. Die Fremdkomponenten (MIT, zlib, BSD-2-Clause, DejaVu) sind mit der GPL-3.0 vereinbar und stehen mit ihren Lizenzen in [THIRD_PARTY.md](THIRD_PARTY.md).
+
+Das Repository ist **privat**, es gibt kein öffentliches Release (Entscheidung des Autors, 8. Nov. 2026). Wer ein Paket aus `make dist` weitergibt, muss nach der GPL auch den Quelltext dazu anbieten.
 
 PS5 Medic ist ein Community-Projekt und nicht mit Sony verbunden. Die Nutzung geschieht auf eigene Verantwortung.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // SHA-256 ohne Fremdabhaengigkeit (FIPS 180-4). Fuer Journal und Backup-Pruefung.
 #pragma once
 #include <cstddef>

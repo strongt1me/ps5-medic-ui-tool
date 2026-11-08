@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Vollbild-App: Bildschirme, Eingabe und Darstellung. Plattformunabhaengig (rendert auf eine Canvas, 1920x1080).
 // Ablauf: handle() fuer jede Taste, update() einmal pro Bild, render() zeichnet den aktuellen Bildschirm.
 //

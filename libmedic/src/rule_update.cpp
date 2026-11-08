@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/rule_update.hpp"
 
 #include "medic/rules.hpp"

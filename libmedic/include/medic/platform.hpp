@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Plattform-Schnittstellen. Der Kern kennt nur diese Interfaces (siehe docs/ARCHITECTURE.md).
 // Alle Pfade sind virtuelle, absolute PS5-Pfade (z. B. "/data/shadowmount/config.ini").
 #pragma once

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Einfacher Zeilen-Diff (LCS) fuer config.ini und Autoload-Listen (Vorschau in CLI und UI).
 #pragma once
 #include <string>

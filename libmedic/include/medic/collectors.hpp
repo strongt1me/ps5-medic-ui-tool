@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Collectors sammeln Fakten. Sie lesen nur und kennen keine Regeln.
 #pragma once
 #include "medic/facts.hpp"

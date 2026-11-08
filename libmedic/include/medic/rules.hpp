@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Regel-Engine: laedt knowledge/rules.json, prueft sie und wertet sie gegen Fakten aus.
 #pragma once
 #include "medic/facts.hpp"

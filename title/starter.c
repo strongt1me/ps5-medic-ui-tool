@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * PS5 Medic als Kachel unter "Medien" (FAKE42007).
  *

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # PS5 Medic
 #   make host     medic-cli und Tests fuer Linux/WSL
 #   make test     Unit- und Regel-Tests gegen alle Fixtures
@@ -96,7 +97,7 @@ launch-ui: deploy-ui
 	curl -s -m 15 "http://$(PS5_HOST):$(PS5_WEB_PORT)/hbldr?path=/data/homebrew/PS5MEDIC/ps5medicui.elf&cwd=/data/homebrew/PS5MEDIC&pipe=1" || test $$? -eq 28
 	@echo "Gestartet. Protokoll: ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/ui.log"
 
-# Release-Paket: Ordner PS5MEDIC (kommt nach /data/homebrew/), README, Drittanbieter-Liste und Pruefsummen, dazu ein Zip.
+# Paket: Ordner PS5MEDIC (kommt nach /data/homebrew/), LICENSE, README, Drittanbieter-Liste und Pruefsummen, dazu ein Zip.
 VERSION := $(shell sed -n 's/.*kMedicVersion = "\(.*\)";/\1/p' libmedic/include/medic/report.hpp)
 DIST_NAME := ps5-medic-$(VERSION)
 DIST_DIR := dist/$(DIST_NAME)
@@ -110,10 +111,10 @@ dist: ps5 ps5-ui
 	cp knowledge/rules.json $(DIST_DIR)/PS5MEDIC/rules.json
 	cp ps5/homebrew/homebrew.js $(DIST_DIR)/PS5MEDIC/homebrew.js
 	cp ps5/homebrew/sce_sys/icon0.png $(DIST_DIR)/PS5MEDIC/sce_sys/icon0.png
-	cp README.md README.en.md THIRD_PARTY.md docs/TESTER.md $(DIST_DIR)/
+	cp LICENSE README.md README.en.md THIRD_PARTY.md docs/TESTER.md $(DIST_DIR)/
 	cd $(DIST_DIR) && find . -type f ! -name SHA256SUMS.txt | sort | xargs sha256sum > SHA256SUMS.txt
 	cd dist && python3 -m zipfile -c $(DIST_NAME).zip $(DIST_NAME)
-	@echo "Fertig: dist/$(DIST_NAME).zip (Ordner PS5MEDIC nach /data/homebrew/ kopieren). Lizenz und Veroeffentlichung sind noch offen, siehe README."
+	@echo "Fertig: dist/$(DIST_NAME).zip (Ordner PS5MEDIC nach /data/homebrew/ kopieren). Lizenz GPL-3.0-or-later; bei Weitergabe den Quelltext anbieten."
 
 # Kachel unter "Medien": ein winziger Starter-Titel (title/), der websrv bittet, die UI zu starten. Siehe docs/TITLE.md.
 title:

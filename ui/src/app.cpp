@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic_ui/app.hpp"
 
 #include "medic_ui/font.hpp"

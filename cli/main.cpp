@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // medic-cli
 //   check   <snapshot-dir> [--rules f] [--json] [--lang de|en]
 //   fix     <snapshot-dir> <regel-id> [--keep pfad] [--apply --yes] [--rules f] [--lang de|en]

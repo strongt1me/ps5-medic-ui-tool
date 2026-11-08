@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Firmware-Version aus dem Rohwert von kernel_get_fw_version() (ps5-payload-sdk).
 // Annahme (noch auf der Konsole zu bestaetigen): Hex-Ziffern als Dezimalzahl, 0xMMmm0000 -> "M.mm",
 // z. B. 0x04030000 -> "4.03", 0x13600000 -> "13.60". Unplausible Werte ergeben "0x<hex>", damit der Rohwert sichtbar bleibt.

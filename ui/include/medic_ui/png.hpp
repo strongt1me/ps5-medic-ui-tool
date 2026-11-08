@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Minimaler PNG-Schreiber (unkomprimiert) fuer Vorschau und Tests. scale_down = ganzzahliger Verkleinerungsfaktor.
 #pragma once
 #include "medic_ui/canvas.hpp"

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // PS5 Medic -- Diagnose-Payload (Phase 2).
 // Laeuft als ELF ueber elfldr/Payload Manager auf der Konsole. Tut ausschliesslich Folgendes:
 //   1. Zustand sammeln (nur lesen) und die Regeln auswerten
