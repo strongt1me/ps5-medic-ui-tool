@@ -170,6 +170,15 @@ static void new_fact_tests() {
         const json* none = neg.get("apps.oversized");
         CHECK(none && none->is_array() && none->empty(), "C2: 256 MiB sind unauffaellig");
     }
+    {  // SM+-Version aus dem Log-Anfang, wenn das Log laenger ist als die gelesenen letzten Zeilen (Konsole nach Stunden)
+        auto f = facts_of("b3_pos_longlog");
+        const json* lines = f.get("smp.log.lines");
+        bool banner_in_tail = false;
+        if (lines && lines->is_array())
+            for (auto& l : *lines) banner_in_tail = banner_in_tail || (l.is_string() && l.get<std::string>().find("ShadowMount+ v") != std::string::npos);
+        CHECK(lines && lines->is_array() && lines->size() == 2000 && !banner_in_tail, "SM+-Version: im gelesenen Log-Ende steht die Startzeile nicht mehr");
+        CHECK(str(f, "smp.version") == "1.7beta3", "SM+-Version: kommt aus dem Anfang des Logs");
+    }
     {  // C3: freier Platz in Prozent
         auto c3 = facts_of("c3_pos");
         const json* m = c3.get("storage.mounts");

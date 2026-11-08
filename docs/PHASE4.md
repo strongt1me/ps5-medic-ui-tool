@@ -37,6 +37,12 @@ Encoder: [Nayukis QR-Code-Generator](https://www.nayuki.io/page/qr-code-generato
 
 **Unabhängig geprüft:** Die gerenderten PNGs der UI (`make preview`) wurden mit OpenCV (`QRCodeDetector`) dekodiert und ergaben genau die Kurzfassung (151 und 265 Zeichen). Tests prüfen zusätzlich Suchmuster, Taktmuster, festes dunkles Modul und das Verhalten bei zu langem Text.
 
+## Erster Berichtslauf auf der Konsole (8. Nov. 2026)
+
+□ in der Befundliste, ◯ zurück: `ui.log` zeigt „Bildschirm: Bericht", die Datei `report_<Zeit>.md` lag unter `/data/ps5medic/reports/`, der QR-Code wurde mit einem Handy gescannt. Dabei fielen am echten Bericht zwei Mängel auf, beide behoben und getestet:
+- **Leere Mountpunkte** (`/mnt/usb1` … `/mnt/ext0` ohne Laufwerk) meldeten die Größe eines winzigen Dateisystems („0,0 GB, 80 %") und füllten den Speicher-Abschnitt. Der Bericht listet nur Laufwerke ab 1 GB.
+- **ShadowMount+ „Version unbekannt"**, obwohl bekannt: Das `debug.log` war nach Stunden länger als die gelesenen letzten 2000 Zeilen, die Startzeile mit der Version steht nur am Anfang. Der Collector prüft jetzt zusätzlich die ersten 16 KiB (Fixture `b3_pos_longlog`). Grenze: Wurde SM+ ohne Log-Rotation neu gestartet, kann die Version vom Log-Anfang älter sein als die laufende.
+
 ## Release
 
 - `make dist` baut `dist/ps5-medic-<Version>/` (Ordner `PS5MEDIC` für `/data/homebrew/`, READMEs, `THIRD_PARTY.md`, `SHA256SUMS.txt`) und ein Zip. Nur lokal, `dist/` ist in `.gitignore`.

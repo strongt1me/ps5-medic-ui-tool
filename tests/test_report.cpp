@@ -82,7 +82,8 @@ ReportInput sample_input() {
     in.facts.set("smp.version", "1.7beta11");
     in.facts.set("proc.running", json::array({"elfldr", "kstuff", "shadowmountplus", "scesysavcontrol", "kstuff"}));
     in.facts.set("storage.mounts", json::array({{{"mount", "/data"}, {"total", 2000000000000ull}, {"free", 1350000000000ull}},
-                                                {{"mount", "/mnt/usb9"}, {"total", 0}, {"free", 0}}}));
+                                                {{"mount", "/mnt/usb9"}, {"total", 0}, {"free", 0}},
+                                                {{"mount", "/mnt/usb1"}, {"total", 65536}, {"free", 52000}}}));
     TxnInfo t;
     t.txn = "20261108T180341Z";
     t.fix = "move_duplicate_titleid";
@@ -102,7 +103,8 @@ void report_tests_content() {
     CHECK(has(de, "kstuff: 1.10 (drakmor)") && has(de, "ShadowMount+: 1.7beta11"), "Bericht DE: Versionen");
     CHECK(has(de, "Laufende Payloads: elfldr, kstuff, shadowmountplus\n"), "Bericht DE: nur bekannte Payloads, ohne Doppelte");
     CHECK(!has(de, "scesysavcontrol"), "Bericht DE: Systemprozesse nicht aufgelistet");
-    CHECK(has(de, "Speicher /data: 1350.0 GB frei von 2000.0 GB (68 %)") && !has(de, "usb9"), "Bericht DE: Speicher, leere Laufwerke weg");
+    CHECK(has(de, "Speicher /data: 1350.0 GB frei von 2000.0 GB (68 %)") && !has(de, "usb9") && !has(de, "usb1"),
+          "Bericht DE: Speicher, leere und winzige Mountpunkte weg");
     CHECK(has(de, "## Befunde (2)") && has(de, "### [KRITISCH] smp.a") && has(de, "### [HINWEIS] hen.b"), "Bericht DE: Befunde mit Schweregrad");
     CHECK(has(de, "Deutscher Text smp.a") && !has(de, "English text"), "Bericht DE: Text in der gewaehlten Sprache");
     CHECK(has(de, "Evidenz (path): `/mnt/usb0/homebrew/Rennspiel (5).ffpfsc`"), "Bericht DE: Evidenz mit Faktname im Code-Format, Dateiname bleibt");

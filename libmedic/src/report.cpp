@@ -343,7 +343,9 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
     if (auto p = known_payloads(f); !p.empty()) o << "- " << (de ? "Laufende Payloads: " : "Running payloads: ") << join(p, ", ") << "\n";
     if (const json* m = f.get("storage.mounts"); m && m->is_array())
         for (const auto& s : *m) {
-            if (!s.is_object() || !s.contains("total") || !s["total"].is_number() || s["total"].get<double>() <= 0) continue;
+            // Leere Mountpunkte (/mnt/usb1 ohne Laufwerk, /mnt/ext0) melden auf der Konsole die Groesse eines winzigen
+            // Dateisystems (auf der Test-Konsole "0,0 GB, 80 %"): nur Laufwerke ab 1 GB zaehlen.
+            if (!s.is_object() || !s.contains("total") || !s["total"].is_number() || s["total"].get<double>() < 1e9) continue;
             const double total = s["total"].get<double>(), free_b = s.contains("free") && s["free"].is_number() ? s["free"].get<double>() : 0;
             char pct[16];
             std::snprintf(pct, sizeof pct, "%.0f", 100.0 * free_b / total);

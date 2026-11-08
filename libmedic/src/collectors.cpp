@@ -494,19 +494,30 @@ void collect_shadowmount(const Platform& p, Facts& f) {
 
     // ShadowMount+ schreibt beim Start "ShadowMount+ v1.7beta11 ... FW: 12.00" ins debug.log (erster Konsolenlauf).
     // Dient als Versionsquelle, solange die Plattform keine Komponenten-Version liefert; die juengste Startzeile gilt.
+    // Auf einer laenger laufenden Konsole ist das Log laenger als die gelesenen letzten Zeilen, die Startzeile steht dann
+    // nur noch am Anfang der Datei (am 8. Nov. so auf der Test-Konsole): deshalb zusaetzlich die ersten 16 KiB pruefen.
     if (!f.get("smp.version")) {
         static const std::regex re(R"(ShadowMount\+ v([0-9][0-9A-Za-z.\-]*))");
-        const json* lines = f.get("smp.log.lines");
-        if (lines && lines->is_array())
-            for (auto it = lines->rbegin(); it != lines->rend(); ++it) {
+        auto latest_in = [&](const std::vector<std::string>& lines) {
+            for (auto it = lines.rbegin(); it != lines.rend(); ++it) {
                 std::smatch m;
-                const std::string line = it->get<std::string>();
-                if (!std::regex_search(line, m, re)) continue;
+                if (!std::regex_search(*it, m, re)) continue;
                 std::string v = m[1].str();
                 while (!v.empty() && (v.back() == '.' || v.back() == '-')) v.pop_back();
-                if (!v.empty()) f.set("smp.version", v);
-                break;
+                if (!v.empty()) return v;
             }
+            return std::string();
+        };
+        std::vector<std::string> tail;
+        if (const json* lines = f.get("smp.log.lines"); lines && lines->is_array())
+            for (const auto& l : *lines)
+                if (l.is_string()) tail.push_back(l.get<std::string>());
+        std::string v = latest_in(tail);
+        if (v.empty()) {
+            std::string head;
+            if (fs.read_range(join_path(kSmpDir, "debug.log"), 0, 16384, head)) v = latest_in(split_lines(head));
+        }
+        if (!v.empty()) f.set("smp.version", v);
     }
     collect_mounts(fs, f);
 }
