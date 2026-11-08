@@ -34,6 +34,7 @@ CheckResult LocalService::run_check() {
     r.model = p_.sys().model();
     r.rules_version = rules_.db_version;
     r.findings = medic::evaluate(rules_, facts_);
+    last_findings_ = r.findings;
     return r;
 }
 
@@ -55,6 +56,26 @@ std::vector<medic::TxnInfo> LocalService::history() { return medic::history(p_);
 
 medic::UndoResult LocalService::undo(const std::string& txn) {
     return medic::undo_txn(p_, medic::policy_from_facts(facts_), txn, clock_());
+}
+
+ReportResult LocalService::make_report(medic::ReportLang lang) {
+    ReportResult r;
+    const std::string ts = clock_();
+    medic::ReportInput in = medic::make_report_input(p_, facts_, rules_, last_findings_, ts);
+
+    // Der einzige Schreibzugriff ausserhalb der Fix-Engine: eine Markdown-Datei in /data/ps5medic/reports/.
+    const std::string path = medic::report_path_for(ts);
+    if (!p_.fs_rw() || path.empty()) {
+        r.error = "no_write";
+    } else if (!p_.fs_rw()->write_file(path, medic::build_report(in, lang))) {
+        r.error = "write_failed";
+    } else {
+        r.saved = true;
+        r.path = path;
+        in.saved_path = path;
+    }
+    r.qr_text = medic::build_report_compact(in, lang, kQrMaxBytes, &r.truncated);
+    return r;
 }
 
 }  // namespace medic::ui

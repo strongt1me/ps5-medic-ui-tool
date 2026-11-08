@@ -25,8 +25,16 @@ struct FakeService : IMedicService {
     ApplyResult apply_result{true, "T1", ""};
     std::vector<TxnInfo> hist;
     UndoResult undo_result{true, ""};
-    int checks = 0, plans = 0, applies = 0, undos = 0;
+    int checks = 0, plans = 0, applies = 0, undos = 0, reports = 0;
     std::string last_undo;
+    ReportResult report_result{true, "/data/ps5medic/reports/report_T.md", "", "PS5 Medic 0.4.0 test\n3 Befund(e):\n[KRITISCH] a.crit\n [HINWEIS] c.info\n", false};
+    ReportLang last_report_lang = ReportLang::De;
+
+    ReportResult make_report(ReportLang lang) override {
+        ++reports;
+        last_report_lang = lang;
+        return report_result;
+    }
 
     CheckResult run_check() override {
         ++checks;
@@ -290,6 +298,43 @@ void screen_flow_tests() {
     CHECK(app.screen() == App::Screen::Findings && svc.checks == 1 && app.finding_count() == 3, "Flow: Check liefert die Befunde");
     app.render(cv);
 
+    // Bericht (Quadrat): nur in der Befundliste; ausser dort legt keine Taste einen Bericht an
+    CHECK(svc.reports == 0, "Flow: bis hierher wurde kein Bericht angelegt");
+    press(app, {Button::Cross, Button::Square});
+    CHECK(app.screen() == App::Screen::Detail && svc.reports == 0, "Flow: Quadrat in den Details legt keinen Bericht an");
+    press(app, {Button::Circle, Button::Square});
+    CHECK(app.screen() == App::Screen::Report && svc.reports == 1 && svc.last_report_lang == ReportLang::De, "Flow: Quadrat in der Liste oeffnet den Bericht (Deutsch)");
+    app.render(cv);
+    {  // QR-Code ist gezeichnet: genau schwarze und weisse Flaechen rechts
+        bool white = false, black = false;
+        for (int y = 150; y < 950; y += 3)
+            for (int x = 1036; x < 1824; x += 3) {
+                white = white || cv.at(x, y) == rgb(255, 255, 255);
+                black = black || cv.at(x, y) == rgb(0, 0, 0);
+            }
+        CHECK(white && black, "Flow: der Bericht zeigt einen QR-Code (schwarz auf weiss)");
+    }
+    for (auto b : {Button::Cross, Button::Triangle, Button::Square, Button::L1, Button::R1, Button::Options, Button::Left, Button::Right, Button::Up, Button::Down})
+        app.handle(b);
+    CHECK(app.screen() == App::Screen::Report && svc.reports == 1 && svc.applies == 0 && svc.undos == 0, "Flow: im Bericht tut nur Kreis etwas");
+    press(app, {Button::Circle});
+    CHECK(app.screen() == App::Screen::Findings, "Flow: Kreis geht aus dem Bericht zur Liste");
+    svc.report_result.saved = false;
+    svc.report_result.path.clear();
+    svc.report_result.error = "no_write";
+    svc.report_result.truncated = true;
+    press(app, {Button::Square});
+    CHECK(app.screen() == App::Screen::Report && svc.reports == 2, "Flow: Bericht ohne Schreibzugriff laesst sich anzeigen");
+    app.render(cv);
+    svc.report_result.error = "write_failed";
+    press(app, {Button::Circle, Button::Square});
+    app.render(cv);
+    svc.report_result.qr_text = std::string(5000, 'x');  // passt in keinen QR-Code
+    press(app, {Button::Circle, Button::Square});
+    CHECK(app.screen() == App::Screen::Report, "Flow: zu langer QR-Text bricht die Anzeige nicht");
+    app.render(cv);
+    press(app, {Button::Circle});
+
     // Auswahl
     press(app, {Button::Up});
     CHECK(app.selected() == 0, "Flow: Auswahl bleibt oben");
@@ -516,6 +561,70 @@ void end_to_end_tests() {
     CHECK(tree(t.dir) == before, "E2E: nach dem Rueckgaengigmachen ist der Dateibaum wieder wie vorher");
 }
 
+std::set<std::string> full_tree(const fs::path& root) {  // anders als tree(): auch /data/ps5medic
+    std::set<std::string> t;
+    for (auto& e : fs::recursive_directory_iterator(root)) t.insert(fs::relative(e.path(), root).generic_string());
+    return t;
+}
+
+void report_service_tests() {
+    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+    auto clock = [] { return std::string("20261108T130000Z"); };
+    const std::string report_file = "fs/data/ps5medic/reports/report_20261108T130000Z.md";
+
+    {  // schreibbar: genau eine Datei im Berichtsordner, sonst bleibt alles wie es war
+        TempCopy t("b2_pos");
+        const auto before = full_tree(t.dir);
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+        LocalService svc(*platform, rules, clock);
+        svc.run_check();
+        const ReportResult r = svc.make_report(ReportLang::En);
+        CHECK(r.saved && r.error.empty() && r.path == "/data/ps5medic/reports/report_20261108T130000Z.md", "Bericht: gespeichert unter dem Zeitstempel-Namen");
+        const std::string content = fs::exists(t.dir / report_file) ? slurp(t.dir / report_file) : std::string();
+        CHECK(content.find("# PS5 Medic – Report") != std::string::npos && content.find("smp.parentheses_in_pfs_name") != std::string::npos &&
+                  content.find("Firmware: 4.03") != std::string::npos,
+              "Bericht: Datei enthaelt Kopf, Befund und Firmware (Englisch)");
+        std::vector<std::string> added;
+        for (auto& p : full_tree(t.dir))
+            if (!before.count(p)) added.push_back(p);
+        const bool only_reports = std::all_of(added.begin(), added.end(), [](const std::string& p) {
+            return p == "fs/data/ps5medic" || p.rfind("fs/data/ps5medic/reports", 0) == 0;
+        });
+        CHECK(only_reports && std::find(added.begin(), added.end(), report_file) != added.end(), "Bericht: es kommt nur eine Datei unter /data/ps5medic/reports/ hinzu");
+        CHECK(r.qr_text.find("Report: /data/ps5medic/reports/report_20261108T130000Z.md") != std::string::npos && !r.truncated, "Bericht: QR-Text nennt die Datei");
+        CHECK(r.qr_text.find("smp.parentheses_in_pfs_name") != std::string::npos, "Bericht: QR-Text nennt die Befunde");
+    }
+    {  // nur lesend (z. B. PC-Vorschau): nichts wird geschrieben, den QR-Text gibt es trotzdem
+        TempCopy t("b2_pos");
+        const auto before = full_tree(t.dir);
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/false);
+        LocalService svc(*platform, rules, clock);
+        svc.run_check();
+        const ReportResult r = svc.make_report(ReportLang::De);
+        CHECK(!r.saved && r.error == "no_write" && r.path.empty() && !r.qr_text.empty() && full_tree(t.dir) == before, "Bericht: ohne Schreibzugriff wird nichts geschrieben");
+        CHECK(r.qr_text.find("Bericht:") == std::string::npos, "Bericht: kein Dateipfad im QR-Text, wenn nichts gespeichert wurde");
+    }
+    {  // kaputte Uhr: kein Pfad, nichts geschrieben (der Pfad entsteht nur aus einem gueltigen Zeitstempel)
+        TempCopy t("b2_pos");
+        const auto before = full_tree(t.dir);
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+        LocalService svc(*platform, rules, [] { return std::string("../../etc/x"); });
+        svc.run_check();
+        const ReportResult r = svc.make_report(ReportLang::De);
+        CHECK(!r.saved && r.path.empty() && full_tree(t.dir) == before, "Bericht: ungueltiger Zeitstempel schreibt nichts");
+    }
+    {  // UI: englische Oberflaeche -> englischer Bericht; auch ohne Befunde moeglich
+        FakeService svc;
+        svc.result.fw = "12.00";
+        App app(svc, Lang::En);
+        Canvas cv(App::kWidth, App::kHeight);
+        run_check_via_ui(app, cv);
+        press(app, {Button::Square});
+        CHECK(app.screen() == App::Screen::Report && svc.reports == 1 && svc.last_report_lang == ReportLang::En, "Bericht: Englisch und ohne Befunde");
+        app.render(cv);
+    }
+}
+
 }  // namespace
 
 void ui_tests() {
@@ -526,4 +635,5 @@ void ui_tests() {
     screen_flow_tests();
     edge_tests();
     end_to_end_tests();
+    report_service_tests();
 }

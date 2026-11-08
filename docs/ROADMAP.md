@@ -30,9 +30,10 @@ Jede Phase endet mit lauffähigem Stand + kurzem Status an Marc.
 3. Controller-Belegung laut SPEC, Strings in `i18n/de.json` und `en.json`. – erledigt.
 
 ## Phase 4 – Bericht & Release
-1. Markdown-Bericht + Anonymisierung + QR-Code.
-2. `param.json`, Icon, PPSA-Ordner; Installation per FTP nach `/data/homebrew/`.
-3. README (DE/EN), `THIRD_PARTY.md`, GitHub-Release `strongt1me/ps5-medic`.
+> Stand: Bericht, Anonymisierung, QR-Code, □-Taste, READMEs und `make dist` sind fertig und getestet (siehe `docs/PHASE4.md`). Offen: QR-Code am Fernseher mit dem Handy prüfen, Lizenz festlegen, GitHub-Release anlegen (Entscheidung des Autors).
+1. Markdown-Bericht + Anonymisierung + QR-Code. – erledigt.
+2. ~~`param.json`, Icon, PPSA-Ordner~~ entfällt: Launcher-Eintrag `ps5/homebrew/` (siehe `docs/PHASE3.md`). Installation per FTP nach `/data/homebrew/PS5MEDIC/`.
+3. README (DE/EN), `THIRD_PARTY.md` – erledigt. GitHub-Release `strongt1me/ps5-medic` – offen.
 
 ## Phase 5 – Community
 1. Regel-Update (manuell, SHA-256).

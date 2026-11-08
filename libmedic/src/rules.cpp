@@ -367,6 +367,7 @@ std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts) {
         if (!hit) continue;
 
         f.rule_id = r.id;
+        f.evidence_path = r.evidence_path;
         f.severity = r.severity;
         f.text_de = r.text_de;
         f.text_en = r.text_en;

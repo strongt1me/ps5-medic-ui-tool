@@ -144,6 +144,7 @@ const char* screen_name(App::Screen s) {
         case App::Screen::History: return "Verlauf";
         case App::Screen::UndoConfirm: return "Rueckgaengig-Frage";
         case App::Screen::Settings: return "Einstellungen";
+        case App::Screen::Report: return "Bericht";
     }
     return "?";
 }

@@ -2,9 +2,11 @@
 // Ablauf: handle() fuer jede Taste, update() einmal pro Bild, render() zeichnet den aktuellen Bildschirm.
 //
 // Sicherheitsregel: Geschrieben wird nur ueber IMedicService::apply_fix/undo, und nur nach der Bestaetigung
-// (Kreuz) auf dem Vorschau- bzw. Rueckgaengig-Bildschirm.
+// (Kreuz) auf dem Vorschau- bzw. Rueckgaengig-Bildschirm. Einzige Ausnahme: die Quadrat-Taste in der Befundliste
+// legt einen Bericht nach /data/ps5medic/reports/ ab (IMedicService::make_report); sonst loest keine Taste Schreiben aus.
 #pragma once
 #include "medic/diff.hpp"
+#include "medic/qr.hpp"
 #include "medic_ui/canvas.hpp"
 #include "medic_ui/i18n.hpp"
 #include "medic_ui/input.hpp"
@@ -17,7 +19,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
 
@@ -44,6 +46,7 @@ private:
     void begin_fix(int index, Screen origin);
     void move_selection(int& sel, int& top, int count, int visible, int delta);
     void open_history();
+    void open_report();
 
     void draw_chrome(Canvas& c) const;
     void draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::string>>& hints) const;
@@ -56,6 +59,7 @@ private:
     void draw_history(Canvas& c) const;
     void draw_undo_confirm(Canvas& c) const;
     void draw_settings(Canvas& c) const;
+    void draw_report(Canvas& c) const;
 
     std::string finding_text(const medic::Finding& f) const;
     std::string fix_name(const std::string& id) const;
@@ -86,6 +90,10 @@ private:
     std::vector<medic::TxnInfo> hist_;
     int hist_sel_ = 0, hist_top_ = 0;
     medic::TxnInfo undo_target_;
+
+    ReportResult report_;
+    medic::QrCode qr_;       // einmal beim Oeffnen kodiert, nicht in jedem Bild
+    bool qr_ok_ = false;
 };
 
 }  // namespace medic::ui

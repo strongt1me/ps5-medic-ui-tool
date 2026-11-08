@@ -37,6 +37,7 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 - `make test` → Unit- + Regel-Tests gegen alle Fixtures.
 - `make ps5` → baut den PS5-Payload (ELF, über elfldr/Payload Manager gestartet – kein Sony-Title mit PPSA-Ordner).
 - `make deploy` → per FTP (Port 2121) nach `/data/homebrew/PS5MEDIC/`.
+- `make launch-ui` → UI hochladen und über websrv starten; `make dist` → Release-Ordner und Zip unter `dist/`; `medic-cli report <snapshot> --qr` → Bericht am PC.
 
 ## Arbeitsweise für Claude Code
 - Erst Phase 0 aus `docs/ROADMAP.md` (Host-Kern + Fixtures), **dann** die PS5-Oberfläche.

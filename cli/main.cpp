@@ -4,11 +4,14 @@
 //   undo    <snapshot-dir> <txn>
 //   history <snapshot-dir>
 //   export  <snapshot-dir> <zielordner>   (Snapshot erneut schreiben, z. B. zum Pruefen des Exports)
+//   report  <snapshot-dir> [--out datei] [--qr] [--rules f] [--lang de|en]   (Bericht als Markdown; --qr: Kurzfassung als QR-Code im Terminal)
 // "fix" ohne --apply zeigt nur den Plan (Dry-Run). Mit --apply wird DIREKT im Snapshot-Ordner geschrieben -- Kopie benutzen!
 #include "medic/collectors.hpp"
 #include "medic/diff.hpp"
 #include "medic/fixes.hpp"
 #include "medic/platform.hpp"
+#include "medic/qr.hpp"
+#include "medic/report.hpp"
 #include "medic/rules.hpp"
 #include "medic/snapshot_export.hpp"
 
@@ -16,6 +19,7 @@
 #include <chrono>
 #include <cstring>
 #include <ctime>
+#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -31,7 +35,8 @@ void usage() {
                  "  medic-cli fix     <snapshot-ordner> <regel-id> [--keep <pfad>] [--apply --yes] [--rules <rules.json>] [--lang de|en]\n"
                  "  medic-cli undo    <snapshot-ordner> <txn>\n"
                  "  medic-cli history <snapshot-ordner>\n"
-                 "  medic-cli export  <snapshot-ordner> <zielordner>\n";
+                 "  medic-cli export  <snapshot-ordner> <zielordner>\n"
+                 "  medic-cli report  <snapshot-ordner> [--out <datei>] [--qr] [--rules <rules.json>] [--lang de|en]\n";
 }
 
 const char* label(medic::Severity s) {
@@ -68,8 +73,8 @@ void print_diff(const std::string& old_text, const std::string& new_text) {
 }
 
 struct Args {
-    std::string dir, rules = MEDIC_DEFAULT_RULES, lang = "de", rule_id, keep, txn;
-    bool json = false, apply = false, yes = false;
+    std::string dir, rules = MEDIC_DEFAULT_RULES, lang = "de", rule_id, keep, txn, out;
+    bool json = false, apply = false, yes = false, qr = false;
 };
 
 bool parse_flags(int argc, char** argv, int from, Args& a) {
@@ -78,6 +83,8 @@ bool parse_flags(int argc, char** argv, int from, Args& a) {
         if (s == "--json") a.json = true;
         else if (s == "--apply") a.apply = true;
         else if (s == "--yes") a.yes = true;
+        else if (s == "--qr") a.qr = true;
+        else if (s == "--out" && i + 1 < argc) a.out = argv[++i];
         else if (s == "--rules" && i + 1 < argc) a.rules = argv[++i];
         else if (s == "--lang" && i + 1 < argc) a.lang = argv[++i];
         else if (s == "--keep" && i + 1 < argc) a.keep = argv[++i];
@@ -205,6 +212,40 @@ int cmd_export(const Args& a) {
     return 0;
 }
 
+int cmd_report(const Args& a) {
+    auto rules = medic::load_rules_from_file(a.rules);
+    auto platform = medic::make_snapshot_platform(a.dir);
+    medic::Facts facts = medic::collect_all(*platform);
+    const auto lang = a.lang == "de" ? medic::ReportLang::De : medic::ReportLang::En;
+    const std::string ts = utc_timestamp();
+    medic::ReportInput in = medic::make_report_input(*platform, facts, rules, medic::evaluate(rules, facts), ts);
+    if (!a.out.empty()) in.saved_path = medic::report_path_for(ts);  // so wuerde der Pfad auf der Konsole heissen
+
+    const std::string report = medic::build_report(in, lang);
+    if (!a.out.empty()) {
+        std::ofstream f(a.out, std::ios::binary | std::ios::trunc);
+        f << report;
+        if (!f) {
+            std::cerr << "Fehler: " << a.out << " nicht schreibbar\n";
+            return 2;
+        }
+        std::cout << "Bericht geschrieben: " << a.out << " (" << report.size() << " Byte)\n";
+    } else if (!a.qr) {
+        std::cout << report;
+    }
+    if (a.qr) {
+        bool truncated = false;
+        const std::string compact = medic::build_report_compact(in, lang, 640, &truncated);
+        medic::QrCode qr;
+        if (!medic::qr_encode(compact, qr)) {
+            std::cerr << "Fehler: Kurzfassung passt nicht in einen QR-Code\n";
+            return 2;
+        }
+        std::cout << medic::qr_to_text(qr) << "\n" << compact << (truncated ? "(gekuerzt)\n" : "");
+    }
+    return 0;
+}
+
 int cmd_history(const Args& a) {
     auto platform = medic::make_snapshot_platform(a.dir);
     auto h = medic::history(*platform);
@@ -235,7 +276,8 @@ int main(int argc, char** argv) {
         (cmd == "fix" ? a.rule_id : a.txn) = argv[3];  // fuer export: Zielordner in a.txn
         flags_from = 4;
     }
-    if ((cmd != "check" && cmd != "fix" && cmd != "undo" && cmd != "history" && cmd != "export") || !parse_flags(argc, argv, flags_from, a)) {
+    if ((cmd != "check" && cmd != "fix" && cmd != "undo" && cmd != "history" && cmd != "export" && cmd != "report") ||
+        !parse_flags(argc, argv, flags_from, a)) {
         usage();
         return 2;
     }
@@ -244,6 +286,7 @@ int main(int argc, char** argv) {
         if (cmd == "fix") return cmd_fix(a);
         if (cmd == "undo") return cmd_undo(a);
         if (cmd == "export") return cmd_export(a);
+        if (cmd == "report") return cmd_report(a);
         return cmd_history(a);
     } catch (const std::exception& e) {
         std::cerr << "Fehler: " << e.what() << "\n";

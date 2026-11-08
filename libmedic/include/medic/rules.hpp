@@ -29,6 +29,7 @@ struct Finding {
     Severity severity = Severity::Info;
     std::string text_de, text_en;
     std::vector<std::string> evidence;
+    std::string evidence_path;  // Fakt, aus dem die Evidenz stammt (Beschriftung im Bericht)
     std::string fix;
     nlohmann::json fix_params = nlohmann::json::object();
     std::string source;

@@ -4,6 +4,7 @@
 #pragma once
 #include "medic/fixes.hpp"
 #include "medic/platform.hpp"
+#include "medic/report.hpp"
 #include "medic/rules.hpp"
 
 #include <functional>
@@ -17,6 +18,17 @@ struct CheckResult {
     std::vector<medic::Finding> findings;
 };
 
+struct ReportResult {
+    bool saved = false;      // voller Bericht liegt unter `path`
+    std::string path;        // leer, wenn nicht gespeichert
+    std::string error;       // Kennung, warum nicht gespeichert: "no_write" | "write_failed" (leer bei Erfolg)
+    std::string qr_text;     // Kurzfassung fuer den QR-Code (anonymisiert)
+    bool truncated = false;  // die Kurzfassung laesst Befunde weg
+};
+
+// Groesse der Kurzfassung im QR-Code: bis Version 20 (97 Module) bleibt er vom Sofa aus mit dem Handy lesbar.
+constexpr std::size_t kQrMaxBytes = 640;
+
 class IMedicService {
 public:
     virtual ~IMedicService() = default;
@@ -27,6 +39,9 @@ public:
     virtual std::string read_text(const std::string& path) = 0;  // fuer die Diff-Vorschau; leer, wenn nicht lesbar
     virtual std::vector<medic::TxnInfo> history() = 0;
     virtual medic::UndoResult undo(const std::string& txn) = 0;
+    // Bericht zum letzten Check-up: schreibt ihn (nur) nach /data/ps5medic/reports/ und liefert die QR-Kurzfassung.
+    // Die UI ruft das nur auf Quadrat-Taste auf.
+    virtual ReportResult make_report(medic::ReportLang lang) = 0;
 };
 
 // Kern im selben Prozess. `clock` liefert Zeitstempel fuer Backups/Journal (Standard: UTC "YYYYMMDDTHHMMSSZ").
@@ -39,11 +54,13 @@ public:
     std::string read_text(const std::string& path) override;
     std::vector<medic::TxnInfo> history() override;
     medic::UndoResult undo(const std::string& txn) override;
+    ReportResult make_report(medic::ReportLang lang) override;
 
 private:
     medic::Platform& p_;
     medic::RuleSet rules_;
     medic::Facts facts_;
+    std::vector<medic::Finding> last_findings_;
     std::function<std::string()> clock_;
 };
 

@@ -6,6 +6,7 @@
 #   make deploy    ps5medic.elf + Regeln per FTP (Port 2121) auf die Konsole legen   (PS5_HOST=<ip> noetig)
 #   make deploy-ui ps5medicui.elf + Regeln + Launcher-Eintrag per FTP auf die Konsole legen (PS5_HOST=<ip> noetig)
 #   make launch-ui deploy-ui und danach per websrv (/hbldr, Port 8080) im App-Kontext starten (Pad geht nur so)
+#   make dist      Release-Ordner und Zip unter dist/ bauen (nur lokal, es wird nichts veroeffentlicht)
 #
 # SDK: PS5_PAYLOAD_SDK zeigt auf den Ordner mit bin/, target/, toolchain/ (Standard: ~/ps5-sdk/PS5_PAYLOAD_SDK).
 # SDL2 fuer ps5-ui liegt im selben SDK-Sysroot unter target/user/homebrew/ (dort von `make deps` o.ae. installiert,
@@ -23,7 +24,7 @@ PS5_CXX := $(PS5_PAYLOAD_SDK)/bin/prospero-clang++
 # der sie nicht benutzt, und erspart eine zweite CXXFLAGS-Variable je Ziel.
 PS5_CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Ilibmedic/include -Ithird_party -Ips5 -Iui/include -Iui/src -I$(PS5_HOMEBREW)/include
 
-PS5_CORE_SRCS := $(wildcard libmedic/src/*.cpp) ps5/ps5_platform.cpp
+PS5_CORE_SRCS := $(wildcard libmedic/src/*.cpp) third_party/qrcodegen/qrcodegen.cpp ps5/ps5_platform.cpp
 # png.cpp bleibt aussen vor: nur fuer die PC-Vorschau (medic-ui-preview) gebraucht, nicht auf der Konsole.
 PS5_UI_SRCS := ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp ui/src/i18n.cpp ui/src/i18n_embedded.cpp \
                ui/src/app.cpp ui/src/local_service.cpp
@@ -35,7 +36,7 @@ PS5_UI_ELF := $(PS5_BUILD)/ps5medicui.elf
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
 
-.PHONY: host test clean ps5 ps5-ui deploy deploy-ui launch-ui preview
+.PHONY: host test clean ps5 ps5-ui deploy deploy-ui launch-ui preview dist
 
 # UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
 SNAP ?=
@@ -53,7 +54,7 @@ test: host
 	$(BUILD)/medic-tests
 
 clean:
-	rm -rf $(BUILD) $(PS5_BUILD)
+	rm -rf $(BUILD) $(PS5_BUILD) dist
 
 ps5: $(PS5_ELF)
 ps5-ui: $(PS5_UI_ELF)
@@ -92,3 +93,22 @@ launch-ui: deploy-ui
 	@curl -sf -m 5 http://$(PS5_HOST):$(PS5_WEB_PORT)/version > /dev/null || { echo "websrv antwortet nicht auf http://$(PS5_HOST):$(PS5_WEB_PORT) -- websrv.elf zuerst starten (Payload Manager oder Port 9021)"; exit 1; }
 	curl -s -m 15 "http://$(PS5_HOST):$(PS5_WEB_PORT)/hbldr?path=/data/homebrew/PS5MEDIC/ps5medicui.elf&cwd=/data/homebrew/PS5MEDIC&pipe=1" || test $$? -eq 28
 	@echo "Gestartet. Protokoll: ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/ui.log"
+
+# Release-Paket: Ordner PS5MEDIC (kommt nach /data/homebrew/), README, Drittanbieter-Liste und Pruefsummen, dazu ein Zip.
+VERSION := $(shell sed -n 's/.*kMedicVersion = "\(.*\)";/\1/p' libmedic/include/medic/report.hpp)
+DIST_NAME := ps5-medic-$(VERSION)
+DIST_DIR := dist/$(DIST_NAME)
+
+dist: ps5 ps5-ui
+	@test -n "$(VERSION)" || { echo "Version nicht gefunden (kMedicVersion in libmedic/include/medic/report.hpp)"; exit 1; }
+	rm -rf $(DIST_DIR) dist/$(DIST_NAME).zip
+	mkdir -p $(DIST_DIR)/PS5MEDIC/sce_sys
+	cp $(PS5_UI_ELF) $(DIST_DIR)/PS5MEDIC/ps5medicui.elf
+	cp $(PS5_ELF) $(DIST_DIR)/PS5MEDIC/ps5medic.elf
+	cp knowledge/rules.json $(DIST_DIR)/PS5MEDIC/rules.json
+	cp ps5/homebrew/homebrew.js $(DIST_DIR)/PS5MEDIC/homebrew.js
+	cp ps5/homebrew/sce_sys/icon0.png $(DIST_DIR)/PS5MEDIC/sce_sys/icon0.png
+	cp README.md README.en.md THIRD_PARTY.md $(DIST_DIR)/
+	cd $(DIST_DIR) && find . -type f ! -name SHA256SUMS.txt | sort | xargs sha256sum > SHA256SUMS.txt
+	cd dist && python3 -m zipfile -c $(DIST_NAME).zip $(DIST_NAME)
+	@echo "Fertig: dist/$(DIST_NAME).zip (Ordner PS5MEDIC nach /data/homebrew/ kopieren). Lizenz und Veroeffentlichung sind noch offen, siehe README."

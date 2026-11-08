@@ -108,6 +108,12 @@ void App::open_history() {
     screen_ = Screen::History;
 }
 
+void App::open_report() {
+    report_ = svc_.make_report(lang_ == Lang::De ? medic::ReportLang::De : medic::ReportLang::En);
+    qr_ok_ = medic::qr_encode(report_.qr_text, qr_);
+    screen_ = Screen::Report;
+}
+
 void App::begin_fix(int index, Screen origin) {
     if (index < 0 || index >= static_cast<int>(result_.findings.size())) return;
     const medic::Finding& f = result_.findings[static_cast<std::size_t>(index)];
@@ -146,6 +152,7 @@ void App::handle(Button b) {
                 if (result_.findings.empty()) start_check();
                 else screen_ = Screen::Detail;
             } else if (b == Button::Triangle) begin_fix(sel_, Screen::Findings);
+            else if (b == Button::Square) open_report();
             else if (b == Button::Circle) screen_ = Screen::Start;
             break;
         case Screen::Detail:
@@ -192,6 +199,9 @@ void App::handle(Button b) {
             if (b == Button::Left || b == Button::Right || b == Button::Cross) lang_ = lang_ == Lang::De ? Lang::En : Lang::De;
             else if (b == Button::Circle) screen_ = Screen::Start;
             break;
+        case Screen::Report:
+            if (b == Button::Circle) screen_ = Screen::Findings;
+            break;
     }
 }
 
@@ -221,6 +231,7 @@ void App::render(Canvas& c) const {
         case Screen::History: draw_history(c); break;
         case Screen::UndoConfirm: draw_undo_confirm(c); break;
         case Screen::Settings: draw_settings(c); break;
+        case Screen::Report: draw_report(c); break;
     }
 }
 
@@ -314,7 +325,7 @@ void App::draw_findings(Canvas& c) const {
         c.fill_round_rect(M, 300, W - 2 * M, 320, 24, kPanel);
         title().draw(c, M + 60, 372, S("findings.empty"), kOk);
         body().draw(c, M + 60, 460, S("findings.empty_sub"), kDim, W - 2 * M - 120);
-        draw_hints(c, {{PadGlyph::Cross, S("common.retest")}, {PadGlyph::Circle, S("common.back")}});
+        draw_hints(c, {{PadGlyph::Cross, S("common.retest")}, {PadGlyph::Square, S("common.report")}, {PadGlyph::Circle, S("common.back")}});
         return;
     }
 
@@ -360,8 +371,57 @@ void App::draw_findings(Canvas& c) const {
 
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}};
     if (const auto* f = current_finding(); f && !f->fix.empty()) hints.emplace_back(PadGlyph::Triangle, S(is_hint_fix(f->fix) ? "common.guide" : "common.repair"));
+    hints.emplace_back(PadGlyph::Square, S("common.report"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
+}
+
+void App::draw_report(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    title().draw(c, M, 132, S("report.title"), kText);
+
+    // Links: Status und Hinweise
+    const int px0 = M, py0 = 230, pw = 880, pad = 36, tw = pw - 2 * pad;
+    c.fill_round_rect(px0, py0, pw, 700, 20, kPanel);
+    int y = py0 + 30;
+    auto paragraph = [&](const Font& f, const std::string& text, Color col, int max_lines) {
+        const auto lines = wrap_text(f, text, tw, max_lines);
+        for (const auto& l : lines) {
+            f.draw(c, px0 + pad, y, l, col);
+            y += f.line_height() + 4;
+        }
+        y += 22;
+    };
+    if (report_.saved) paragraph(body(), S.fmt("report.saved", {{"path", report_.path}}), kOk, 3);
+    else paragraph(body(), S(std::string("report.err.") + (report_.error.empty() ? "write_failed" : report_.error)), kWarn, 5);
+    paragraph(body(), S("report.scan"), kText, 4);
+    if (report_.truncated) paragraph(small(), S("report.truncated"), kWarn, 3);
+    paragraph(small(), S("report.anon"), kDim, 5);
+
+    // Rechts: QR-Code (schwarz auf weiss mit Ruhezone von 4 Modulen, wie fuer Scanner noetig)
+    const int ax = 1036, ay = 150, aw = 788, ah = 800;
+    if (!qr_ok_) {
+        c.fill_round_rect(ax, ay + 80, aw, 240, 20, kPanel);
+        body().draw(c, ax + pad, ay + 140, S("report.qr_failed"), kWarn, aw - 2 * pad);
+    } else {
+        const int quiet = 4, modules = qr_.size + 2 * quiet;
+        const int px = std::clamp(std::min(aw, ah) / modules, 3, 9);
+        const int side = modules * px, ox = ax + (aw - side) / 2, oy = ay + (ah - side) / 2;
+        const Color white = rgb(255, 255, 255), black = rgb(0, 0, 0);
+        c.fill_rect(ox, oy, side, side, white);
+        for (int row = 0; row < qr_.size; ++row)
+            for (int col = 0; col < qr_.size;) {
+                if (!qr_.dark(col, row)) {
+                    ++col;
+                    continue;
+                }
+                int run = 1;
+                while (qr_.dark(col + run, row)) ++run;
+                c.fill_rect(ox + (quiet + col) * px, oy + (quiet + row) * px, run * px, px, black);
+                col += run;
+            }
+    }
+    draw_hints(c, {{PadGlyph::Circle, S("common.back")}});
 }
 
 void App::draw_detail(Canvas& c) const {

@@ -53,6 +53,9 @@ int main(int argc, char** argv) {
         shot("02_running");
         app.update();
         shot("03_findings");
+        app.handle(Button::Square);  // Bericht (die Vorschau-Plattform ist nur lesend: nichts wird gespeichert, den QR-Code gibt es trotzdem)
+        shot("03b_report");
+        app.handle(Button::Circle);
         const int n = static_cast<int>(app.finding_count());
         for (int i = 0; i < std::min(n, 3); ++i) {
             app.handle(Button::Cross);
