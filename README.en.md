@@ -13,13 +13,14 @@ It runs as a full-screen app directly on the console and is operated with the Du
 - **Check-up**: 22 rules (jailbreak chain and HEN, ShadowMount+, plugins and storage). The result is a list with severity, plain-language explanation, evidence (file/line/value) and source. The catalog is in [docs/RULES.md](docs/RULES.md) (German).
 - **Repair** (5 fixes): rename an image (parentheses), set a ShadowMount+ option, remove BackPork from the autoload list, move a duplicate copy of the same TITLE_ID, guidance for nested images. A preview shows exactly what will change first.
 - **Undo**: every repair is listed in the history and can be taken back.
-- **Report**: the □ button in the findings list writes a Markdown report to `/data/ps5medic/reports/` and shows a short version as a **QR code** (scan it with your phone, copy the text, paste it into a forum or an issue). IP and MAC addresses, user and account IDs and serial numbers are removed; file and folder names stay in, please check before sharing.
+- **Report**: the □ button in the findings list writes a Markdown report to `/data/ps5medic/reports/` and shows a short version as a **QR code** (scan it with your phone, copy the text, paste it into a forum or an issue). IP and MAC addresses, user and account IDs and serial numbers are removed; file and folder names stay in, please check before sharing. Error-like log lines that match no rule appear as **Unknown error lines** in the report: material for new rules.
+- **Rule update**: Settings, Rule update. Put a new `rules.json` with its SHA-256 checksum on the console via FTP or a USB copy; PS5 Medic verifies it and installs it after ✕ (with backup and roll-back). Nothing is downloaded from the network.
 - German and English (Settings).
 
 ## Safety
 
 - **Never deletes**, only moves or renames. Files that change are backed up first (`/data/ps5medic/backups/`), and every change is recorded in the journal (`/data/ps5medic/journal.jsonl`).
-- **No writing without ✕**: a repair or an undo only happens after you confirm on the preview. The only other write is the report (□).
+- **No writing without ✕**: a repair or an undo only happens after you confirm on the preview. Other writes: the report (□) and the rule update (✕ on the offer).
 - Writes are limited to a whitelist (ShadowMount+ folder, autoload lists, your own scan paths, `/data/ps5medic`). Never under `/system`, `/system_ex` or `/dev`.
 - **No outbound network access.** (The check whether the ELF loader answers on port 9021 only goes to `127.0.0.1`.)
 - No exploits, no firmware changes, no features to obtain, unlock or distribute games, keys or firmware. PS5 Medic repairs the **environment**, not content.
@@ -81,6 +82,8 @@ medic-cli history|undo|export ...
 
 ## Contributing
 
+**Testers wanted** (other firmwares and setups): [docs/TESTER.md](docs/TESTER.md) (German, with an English summary). Report problems with the issue template and paste the report (□).
+
 A new rule needs: an entry in `knowledge/rules.json` with a source, a positive and a negative fixture under `tests/fixtures/`, and an `expect.json`. The tests enforce both. Fixtures are **synthetic**: real file and game names do not belong in the repository.
 
 ## Documentation
@@ -92,7 +95,8 @@ A new rule needs: an entry in `knowledge/rules.json` with a source, a positive a
 | `docs/ARCHITECTURE.md` | Modules, data flow, rule format, safety (German) |
 | `docs/RULES.md` | Rule catalog (22 rules) with sources, status and deviations (German) |
 | `docs/ROADMAP.md` | Phases 0-5 (German) |
-| `docs/PHASE2.md`, `PHASE3.md`, `PHASE4.md` | Console and snapshot, UI and app context, report and release (German) |
+| `docs/PHASE2.md` to `PHASE5.md` | Console and snapshot, UI and app context, report and release, rule update and community (German) |
+| `docs/TESTER.md` | Contributing as a tester (German, English summary) |
 | `knowledge/` | Rules (`rules.json`) and JSON schema |
 
 ## License and credits

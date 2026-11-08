@@ -16,3 +16,4 @@ extern int g_fail, g_pass;
 void fix_tests();  // tests/test_fixes.cpp
 void ui_tests();   // tests/test_ui.cpp
 void report_tests();  // tests/test_report.cpp
+void update_tests();  // tests/test_update.cpp

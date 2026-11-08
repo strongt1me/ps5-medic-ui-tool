@@ -108,7 +108,7 @@ dist: ps5 ps5-ui
 	cp knowledge/rules.json $(DIST_DIR)/PS5MEDIC/rules.json
 	cp ps5/homebrew/homebrew.js $(DIST_DIR)/PS5MEDIC/homebrew.js
 	cp ps5/homebrew/sce_sys/icon0.png $(DIST_DIR)/PS5MEDIC/sce_sys/icon0.png
-	cp README.md README.en.md THIRD_PARTY.md $(DIST_DIR)/
+	cp README.md README.en.md THIRD_PARTY.md docs/TESTER.md $(DIST_DIR)/
 	cd $(DIST_DIR) && find . -type f ! -name SHA256SUMS.txt | sort | xargs sha256sum > SHA256SUMS.txt
 	cd dist && python3 -m zipfile -c $(DIST_NAME).zip $(DIST_NAME)
 	@echo "Fertig: dist/$(DIST_NAME).zip (Ordner PS5MEDIC nach /data/homebrew/ kopieren). Lizenz und Veroeffentlichung sind noch offen, siehe README."

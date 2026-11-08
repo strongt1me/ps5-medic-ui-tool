@@ -114,6 +114,21 @@ void App::open_report() {
     screen_ = Screen::Report;
 }
 
+void App::open_rules_update() {
+    offer_ = svc_.check_rule_update();
+    update_stage_ = UpdateStage::Offer;
+    screen_ = Screen::RulesUpdate;
+}
+
+// Nach einer Installation oder einem Rollback gelten andere Regeln: die bisherigen Befunde sind veraltet.
+void App::finish_rules_change(bool ok) {
+    update_stage_ = ok ? UpdateStage::DoneOk : UpdateStage::DoneFail;
+    if (!ok) return;
+    has_result_ = false;
+    result_ = CheckResult{};
+    sel_ = top_ = 0;
+}
+
 void App::begin_fix(int index, Screen origin) {
     if (index < 0 || index >= static_cast<int>(result_.findings.size())) return;
     const medic::Finding& f = result_.findings[static_cast<std::size_t>(index)];
@@ -196,8 +211,39 @@ void App::handle(Button b) {
             } else if (b == Button::Circle) screen_ = Screen::History;
             break;
         case Screen::Settings:
-            if (b == Button::Left || b == Button::Right || b == Button::Cross) lang_ = lang_ == Lang::De ? Lang::En : Lang::De;
+            if (b == Button::Up) settings_sel_ = 0;
+            else if (b == Button::Down) settings_sel_ = 1;
+            else if (settings_sel_ == 0 && (b == Button::Left || b == Button::Right || b == Button::Cross)) lang_ = lang_ == Lang::De ? Lang::En : Lang::De;
+            else if (settings_sel_ == 1 && b == Button::Cross) open_rules_update();
             else if (b == Button::Circle) screen_ = Screen::Start;
+            break;
+        case Screen::RulesUpdate:
+            switch (update_stage_) {
+                case UpdateStage::Offer:
+                    if (b == Button::Cross && offer_.state == medic::RuleUpdateOffer::State::Ready) {
+                        update_result_ = svc_.install_rule_update();
+                        update_was_rollback_ = false;
+                        finish_rules_change(update_result_.ok);
+                    } else if (b == Button::Triangle && offer_.can_rollback) {
+                        update_stage_ = UpdateStage::ConfirmRollback;
+                    } else if (b == Button::Circle) {
+                        screen_ = Screen::Settings;
+                    }
+                    break;
+                case UpdateStage::ConfirmRollback:
+                    if (b == Button::Cross) {
+                        update_result_ = svc_.rollback_rule_update();
+                        update_was_rollback_ = true;
+                        finish_rules_change(update_result_.ok);
+                    } else if (b == Button::Circle) {
+                        update_stage_ = UpdateStage::Offer;
+                    }
+                    break;
+                case UpdateStage::DoneOk:
+                case UpdateStage::DoneFail:
+                    if (b == Button::Cross || b == Button::Circle) screen_ = Screen::Settings;
+                    break;
+            }
             break;
         case Screen::Report:
             if (b == Button::Circle) screen_ = Screen::Findings;
@@ -232,6 +278,7 @@ void App::render(Canvas& c) const {
         case Screen::UndoConfirm: draw_undo_confirm(c); break;
         case Screen::Settings: draw_settings(c); break;
         case Screen::Report: draw_report(c); break;
+        case Screen::RulesUpdate: draw_rules_update(c); break;
     }
 }
 
@@ -632,7 +679,7 @@ void App::draw_undo_confirm(Canvas& c) const {
 void App::draw_settings(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     title().draw(c, M, 130, S("settings.title"), kText);
-    card(c, M, 230, W - 2 * M, 150, true);
+    card(c, M, 230, W - 2 * M, 150, settings_sel_ == 0);
     body().draw(c, M + 40, 262, S("settings.language"), kText);
     small().draw(c, M + 40, 316, S("settings.note"), kDim);
     int x = W - M - 40;
@@ -645,8 +692,74 @@ void App::draw_settings(Canvas& c) const {
         body().draw(c, x + 28, 262 + (56 - body().line_height()) / 2, name, on ? rgb(255, 255, 255) : kDim);
         x -= 16;
     }
-    if (has_result_ && !result_.rules_version.empty()) small().draw(c, M + 8, 420, S.fmt("settings.rules", {{"v", result_.rules_version}}), kDim);
-    draw_hints(c, {{PadGlyph::LeftRight, S("common.toggle")}, {PadGlyph::Circle, S("common.back")}});
+    card(c, M, 410, W - 2 * M, 150, settings_sel_ == 1);
+    body().draw(c, M + 40, 442, S("settings.rules_update"), kText);
+    small().draw(c, M + 40, 496, S("settings.rules_update_sub"), kDim);
+    if (has_result_ && !result_.rules_version.empty()) small().draw(c, M + 8, 590, S.fmt("settings.rules", {{"v", result_.rules_version}}), kDim);
+    if (settings_sel_ == 0) draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::LeftRight, S("common.toggle")}, {PadGlyph::Circle, S("common.back")}});
+    else draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}, {PadGlyph::Circle, S("common.back")}});
+}
+
+void App::draw_rules_update(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    title().draw(c, M, 130, S("update.title"), kText);
+    const int pad = 40, pw = W - 2 * M, tw = pw - 2 * pad;
+    c.fill_round_rect(M, 230, pw, 500, 20, kPanel);
+    int y = 262;
+    auto paragraph = [&](const Font& f, const std::string& text, Color col, int max_lines) {
+        for (const auto& l : wrap_text(f, text, tw, max_lines)) {
+            f.draw(c, M + pad, y, l, col);
+            y += f.line_height() + 4;
+        }
+        y += 22;
+    };
+    // Fehlertext: bekannte Kennung (Fehler oder Ablehnung), sonst allgemein
+    auto reason_text = [&](const std::string& code) {
+        for (const char* prefix : {"update.error.", "update.rejected."})
+            if (S.has(prefix + code)) return S(prefix + code);
+        return S("update.failed");
+    };
+
+    paragraph(small(), S.fmt("update.current", {{"v", offer_.old_version.empty() ? "?" : offer_.old_version}, {"n", std::to_string(offer_.old_rule_count)}}), kDim, 1);
+
+    std::vector<std::pair<PadGlyph, std::string>> hints;
+    switch (update_stage_) {
+        case UpdateStage::Offer:
+            if (offer_.state == medic::RuleUpdateOffer::State::None) {
+                paragraph(body(), S("update.none"), kText, 2);
+                paragraph(small(), S("update.howto"), kDim, 5);
+            } else if (offer_.state == medic::RuleUpdateOffer::State::Ready) {
+                paragraph(body(), S.fmt("update.ready", {{"v", offer_.new_version}, {"n", std::to_string(offer_.new_rule_count)}}), kOk, 2);
+                paragraph(small(), S.fmt("update.sha", {{"sha", offer_.sha256.substr(0, 16)}}), kDim, 2);
+                paragraph(small(), S("update.backup_note"), kDim, 3);
+                hints.emplace_back(PadGlyph::Cross, S("update.install"));
+            } else {
+                paragraph(body(), reason_text(offer_.reason), kWarn, 4);
+                if (!offer_.detail.empty()) paragraph(small(), offer_.detail, kDim, 3);
+            }
+            if (offer_.can_rollback) {
+                paragraph(small(), S.fmt("update.can_rollback", {{"v", offer_.installed_version}}), kDim, 3);
+                hints.emplace_back(PadGlyph::Triangle, S("update.rollback"));
+            }
+            hints.emplace_back(PadGlyph::Circle, S("common.back"));
+            break;
+        case UpdateStage::ConfirmRollback:
+            paragraph(body(), S("update.confirm_rollback"), kText, 4);
+            hints = {{PadGlyph::Cross, S("update.rollback")}, {PadGlyph::Circle, S("common.cancel")}};
+            break;
+        case UpdateStage::DoneOk:
+            paragraph(body(), S.fmt(update_was_rollback_ ? "update.rolled_back" : "update.installed", {{"v", update_result_.new_version}}), kOk, 2);
+            paragraph(small(), S("update.next"), kDim, 2);
+            if (!update_result_.backup_path.empty()) paragraph(small(), S.fmt("update.backup_path", {{"path", update_result_.backup_path}}), kDim, 3);
+            hints = {{PadGlyph::Cross, S("common.back")}};
+            break;
+        case UpdateStage::DoneFail:
+            paragraph(body(), S("update.failed"), kWarn, 2);
+            paragraph(small(), reason_text(update_result_.error), kDim, 4);
+            hints = {{PadGlyph::Cross, S("common.back")}};
+            break;
+    }
+    draw_hints(c, hints);
 }
 
 }  // namespace medic::ui

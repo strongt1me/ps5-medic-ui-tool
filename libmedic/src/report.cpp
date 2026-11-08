@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <regex>
 #include <set>
 #include <sstream>
 
@@ -292,6 +293,47 @@ std::string evidence_label(const std::string& path) {
     return seg;
 }
 
+bool looks_like_failure(const std::string& line) {
+    static const std::regex words(R"(\b(failed|failure|panic|fatal|cannot|can't|unable|denied|corrupt(ed)?|timed out|aborted|exception|invalid)\b)",
+                                  std::regex::icase);
+    static const std::regex code(R"(\berror\s*[:=]\s*(-?[1-9][0-9]*|0[xX][0-9a-fA-F]*[1-9a-fA-F]))", std::regex::icase);
+    static const std::regex upper(R"(\bERROR\b)");
+    return std::regex_search(line, words) || std::regex_search(line, code) || std::regex_search(line, upper);
+}
+
+// Ohne Uhrzeit am Anfang, Zahlen und Kennungen (>= 6 Hex-Zeichen mit mindestens einer Ziffer) als '#': so bilden Zeilen, die
+// sich nur darin unterscheiden, eine Gruppe.
+std::string normalize_log_line(const std::string& line) {
+    std::size_t i = 0;
+    if (!line.empty() && line[0] == '[') {
+        const auto e = line.find(']');
+        if (e != std::string::npos && e <= 10) i = e + 1;
+    }
+    while (i < line.size() && line[i] == ' ') ++i;
+    std::string out;
+    while (i < line.size()) {
+        if (std::isalnum(static_cast<unsigned char>(line[i]))) {
+            std::size_t j = i;
+            while (j < line.size() && std::isalnum(static_cast<unsigned char>(line[j]))) ++j;
+            const std::string tok = line.substr(i, j - i);
+            const bool hex = std::all_of(tok.begin(), tok.end(), [](unsigned char c) { return std::isxdigit(c) != 0; });
+            const bool digit = std::any_of(tok.begin(), tok.end(), [](unsigned char c) { return std::isdigit(c) != 0; });
+            const bool prefixed_hex = tok.size() > 2 && tok[0] == '0' && (tok[1] == 'x' || tok[1] == 'X') &&
+                                      std::all_of(tok.begin() + 2, tok.end(), [](unsigned char c) { return std::isxdigit(c) != 0; });
+            if (prefixed_hex || (tok.size() >= 6 && hex && digit)) out += '#';
+            else
+                for (char c : tok) out += std::isdigit(static_cast<unsigned char>(c)) ? '#' : c;
+            i = j;
+        } else {
+            out += line[i++];
+        }
+    }
+    std::string collapsed;
+    for (char c : out)
+        if (!(c == '#' && !collapsed.empty() && collapsed.back() == '#')) collapsed += c;
+    return collapsed;
+}
+
 std::string md_code(std::string s) {
     std::replace(s.begin(), s.end(), '`', '\'');
     return "`" + one_line(clip(s, 240)) + "`";
@@ -304,6 +346,34 @@ std::string anonymize(const std::string& text) {
     return mask_account_hex(mask_ipv4(mask_ipv6(mask_mac(mask_user_home(mask_key_values(text))))));
 }
 
+std::vector<UnknownLine> unknown_error_lines(const Facts& facts, const std::vector<Finding>& findings, std::size_t max_groups) {
+    const json* lines = facts.get("smp.log.lines");
+    if (!lines || !lines->is_array()) return {};
+
+    std::set<std::string> explained;  // Zeilen, die schon als Evidenz eines Befunds im Bericht stehen
+    for (const auto& f : findings)
+        if (f.evidence_path == "smp.log.lines") explained.insert(f.evidence.begin(), f.evidence.end());
+
+    std::vector<UnknownLine> groups;
+    std::vector<std::string> keys;
+    for (const auto& l : *lines) {
+        if (!l.is_string()) continue;
+        const std::string line = l.get<std::string>();
+        if (explained.count(line) || !looks_like_failure(line)) continue;
+        const std::string key = normalize_log_line(line);
+        const auto it = std::find(keys.begin(), keys.end(), key);
+        if (it == keys.end()) {
+            keys.push_back(key);
+            groups.push_back({line, 1});
+        } else {
+            ++groups[static_cast<std::size_t>(it - keys.begin())].count;
+        }
+    }
+    std::stable_sort(groups.begin(), groups.end(), [](const UnknownLine& a, const UnknownLine& b) { return a.count > b.count; });
+    if (groups.size() > max_groups) groups.resize(max_groups);
+    return groups;
+}
+
 ReportInput make_report_input(const Platform& p, const Facts& facts, const RuleSet& rules, std::vector<Finding> findings,
                               const std::string& timestamp) {
     ReportInput in;
@@ -313,6 +383,7 @@ ReportInput make_report_input(const Platform& p, const Facts& facts, const RuleS
     in.findings = std::move(findings);
     in.facts = facts;
     in.history = history(p);
+    in.unknown_lines = unknown_error_lines(facts, in.findings);
     return in;
 }
 
@@ -365,6 +436,16 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
         o << "- " << (de ? "Quelle: " : "Source: ") << x.source << " (" << verified_text(x.verified, de) << ")\n\n";
     }
 
+    if (!in.unknown_lines.empty()) {
+        o << (de ? "## Unbekannte Fehlerzeilen (" : "## Unknown error lines (") << in.unknown_lines.size() << ")\n\n";
+        o << (de ? "Diese Zeilen im ShadowMount+-Log sehen nach Fehlern aus, passen aber zu keiner Regel. Wenn etwas nicht funktioniert, "
+                   "gehören sie in ein Issue des Projekts; daraus können neue Regeln entstehen.\n\n"
+                 : "These lines in the ShadowMount+ log look like errors but match no rule. If something does not work, they belong in an "
+                   "issue of the project; new rules can come from them.\n\n");
+        for (const auto& u : in.unknown_lines) o << "- " << u.count << "× " << md_code(u.example) << "\n";
+        o << "\n";
+    }
+
     if (!in.history.empty()) {
         o << (de ? "## Reparaturen dieser Konsole\n\n" : "## Repairs on this console\n\n");
         for (const auto& t : in.history) o << "- " << t.txn << ": " << t.fix << " (" << t.rule << ") – " << state_text(t.state, de) << "\n";
@@ -395,6 +476,9 @@ std::string build_report_compact(const ReportInput& in, ReportLang lang, std::si
     if (!versions.empty()) head += line(versions);
     head += line(in.findings.empty() ? (de ? "Keine Befunde" : "No findings")
                                      : std::to_string(in.findings.size()) + (de ? " Befund(e):" : " finding(s):"));
+
+    if (!in.unknown_lines.empty())
+        head += line(std::to_string(in.unknown_lines.size()) + (de ? " unbekannte Fehlerzeile(n) im Bericht" : " unknown error line(s) in the report"));
 
     std::string foot;
     if (!in.saved_path.empty()) foot = line((de ? "Bericht: " : "Report: ") + in.saved_path);

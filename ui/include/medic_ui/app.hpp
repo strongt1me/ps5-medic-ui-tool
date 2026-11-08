@@ -4,6 +4,7 @@
 // Sicherheitsregel: Geschrieben wird nur ueber IMedicService::apply_fix/undo, und nur nach der Bestaetigung
 // (Kreuz) auf dem Vorschau- bzw. Rueckgaengig-Bildschirm. Einzige Ausnahme: die Quadrat-Taste in der Befundliste
 // legt einen Bericht nach /data/ps5medic/reports/ ab (IMedicService::make_report); sonst loest keine Taste Schreiben aus.
+// Das Regel-Update (Einstellungen) schreibt ebenfalls nur nach Kreuz auf dem Angebot bzw. auf der Rueckfrage.
 #pragma once
 #include "medic/diff.hpp"
 #include "medic/qr.hpp"
@@ -19,7 +20,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
 
@@ -47,6 +48,8 @@ private:
     void move_selection(int& sel, int& top, int count, int visible, int delta);
     void open_history();
     void open_report();
+    void open_rules_update();
+    void finish_rules_change(bool ok);
 
     void draw_chrome(Canvas& c) const;
     void draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::string>>& hints) const;
@@ -60,6 +63,7 @@ private:
     void draw_undo_confirm(Canvas& c) const;
     void draw_settings(Canvas& c) const;
     void draw_report(Canvas& c) const;
+    void draw_rules_update(Canvas& c) const;
 
     std::string finding_text(const medic::Finding& f) const;
     std::string fix_name(const std::string& id) const;
@@ -90,6 +94,14 @@ private:
     std::vector<medic::TxnInfo> hist_;
     int hist_sel_ = 0, hist_top_ = 0;
     medic::TxnInfo undo_target_;
+
+    int settings_sel_ = 0;  // 0 Sprache, 1 Regel-Update
+
+    enum class UpdateStage { Offer, ConfirmRollback, DoneOk, DoneFail };
+    medic::RuleUpdateOffer offer_;
+    medic::RuleUpdateResult update_result_;
+    UpdateStage update_stage_ = UpdateStage::Offer;
+    bool update_was_rollback_ = false;
 
     ReportResult report_;
     medic::QrCode qr_;       // einmal beim Oeffnen kodiert, nicht in jedem Bild

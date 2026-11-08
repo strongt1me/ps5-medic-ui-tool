@@ -5,9 +5,11 @@
 #include "medic/fixes.hpp"
 #include "medic/platform.hpp"
 #include "medic/report.hpp"
+#include "medic/rule_update.hpp"
 #include "medic/rules.hpp"
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -42,6 +44,12 @@ public:
     // Bericht zum letzten Check-up: schreibt ihn (nur) nach /data/ps5medic/reports/ und liefert die QR-Kurzfassung.
     // Die UI ruft das nur auf Quadrat-Taste auf.
     virtual ReportResult make_report(medic::ReportLang lang) = 0;
+    // Manuelles Regel-Update aus einer Datei (siehe libmedic/include/medic/rule_update.hpp). check schreibt nichts; install und
+    // rollback schreiben und werden von der UI nur nach ausdruecklicher Bestaetigung (Kreuz) aufgerufen. Nach Erfolg gelten die
+    // neuen bzw. wiederhergestellten Regeln sofort fuer den naechsten Check-up.
+    virtual medic::RuleUpdateOffer check_rule_update() = 0;
+    virtual medic::RuleUpdateResult install_rule_update() = 0;
+    virtual medic::RuleUpdateResult rollback_rule_update() = 0;
 };
 
 // Kern im selben Prozess. `clock` liefert Zeitstempel fuer Backups/Journal (Standard: UTC "YYYYMMDDTHHMMSSZ").
@@ -55,12 +63,18 @@ public:
     std::vector<medic::TxnInfo> history() override;
     medic::UndoResult undo(const std::string& txn) override;
     ReportResult make_report(medic::ReportLang lang) override;
+    medic::RuleUpdateOffer check_rule_update() override;
+    medic::RuleUpdateResult install_rule_update() override;
+    medic::RuleUpdateResult rollback_rule_update() override;
 
 private:
     medic::Platform& p_;
     medic::RuleSet rules_;
     medic::Facts facts_;
     std::vector<medic::Finding> last_findings_;
+    std::optional<medic::RuleSet> rules_before_install_;  // fuer den Rollback, wenn es vorher keine Datei im Wissensordner gab
+
+    bool reload_rules();
     std::function<std::string()> clock_;
 };
 

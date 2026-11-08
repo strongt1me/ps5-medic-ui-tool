@@ -76,6 +76,10 @@ int main(int argc, char** argv) {
         app.handle(Button::Down);
         app.handle(Button::Cross);  // Einstellungen
         shot("07_settings");
+        app.handle(Button::Down);
+        shot("07b_settings_rules_update");
+        app.handle(Button::Cross);  // Regel-Update (zeigt das Angebot, installiert nichts)
+        shot("08_rules_update");
         std::cout << shots << " Bilder in " << out.string() << "\n";
     } catch (const std::exception& e) {
         std::cerr << "Fehler: " << e.what() << "\n";

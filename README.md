@@ -13,13 +13,14 @@ Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedien
 - **Check-up**: 22 Regeln (Jailbreak-Kette und HEN, ShadowMount+, Plugins und Speicher), Ergebnis als Liste mit Schweregrad, Klartext, Evidenz (Datei/Zeile/Wert) und Quelle. Der Katalog steht in [docs/RULES.md](docs/RULES.md).
 - **Reparieren** (5 Fixes): Image umbenennen (Klammern), ShadowMount+-Einstellung setzen, BackPork aus der Autoload-Liste nehmen, doppelte Kopie derselben TITLE_ID verschieben, Anleitung bei verschachtelten Images. Vorher zeigt die Vorschau genau, was geändert wird.
 - **Rückgängig**: Jede Reparatur steht im Verlauf und lässt sich zurücknehmen.
-- **Bericht**: Taste □ in der Befundliste schreibt einen Markdown-Bericht nach `/data/ps5medic/reports/` und zeigt eine Kurzfassung als **QR-Code** (mit dem Handy scannen, Text kopieren, ins Forum oder in ein Issue einfügen). IP- und MAC-Adressen, Benutzer- und Konto-IDs sowie Seriennummern werden entfernt; Datei- und Ordnernamen bleiben drin, bitte vor dem Teilen prüfen.
+- **Bericht**: Taste □ in der Befundliste schreibt einen Markdown-Bericht nach `/data/ps5medic/reports/` und zeigt eine Kurzfassung als **QR-Code** (mit dem Handy scannen, Text kopieren, ins Forum oder in ein Issue einfügen). IP- und MAC-Adressen, Benutzer- und Konto-IDs sowie Seriennummern werden entfernt; Datei- und Ordnernamen bleiben drin, bitte vor dem Teilen prüfen. Fehlerartige Logzeilen, die zu keiner Regel passen, stehen als **Unbekannte Fehlerzeilen** im Bericht: Stoff für neue Regeln.
+- **Regel-Update**: Einstellungen, Regel-Update. Neue `rules.json` samt SHA-256-Prüfsumme per FTP oder USB-Kopie auf die Konsole legen, PS5 Medic prüft sie und installiert sie nach ✕ (mit Backup und Rückgängig). Es wird nichts aus dem Netz geladen.
 - Deutsch und Englisch (Einstellungen).
 
 ## Sicherheit
 
 - **Nie löschen**, nur verschieben oder umbenennen. Dateien, die geändert werden, werden vorher gesichert (`/data/ps5medic/backups/`), jede Änderung steht im Journal (`/data/ps5medic/journal.jsonl`).
-- **Kein Schreiben ohne ✕**: Reparatur und Rückgängig passieren erst nach ausdrücklicher Bestätigung auf der Vorschau. Die einzige weitere Schreibaktion ist der Bericht (□).
+- **Kein Schreiben ohne ✕**: Reparatur und Rückgängig passieren erst nach ausdrücklicher Bestätigung auf der Vorschau. Weitere Schreibaktionen: der Bericht (□) und das Regel-Update (✕ auf dem Angebot).
 - Schreibzugriffe nur in einer Whitelist (ShadowMount+-Ordner, Autoload-Listen, die eigenen Scanpfade, `/data/ps5medic`). Nie unter `/system`, `/system_ex` oder `/dev`.
 - **Kein Netzwerkzugriff nach außen.** (Der Test, ob der ELF-Loader auf Port 9021 antwortet, geht nur an `127.0.0.1`.)
 - Keine Exploits, keine Firmware-Änderungen, keine Funktionen zum Beschaffen, Entsperren oder Verteilen von Spielen, Keys oder Firmware. PS5 Medic repariert die **Umgebung**, nicht Inhalte.
@@ -81,6 +82,8 @@ medic-cli history|undo|export ...
 
 ## Mitmachen
 
+**Tester gesucht** (andere Firmwares und Setups): [docs/TESTER.md](docs/TESTER.md). Probleme melden mit der Issue-Vorlage, den Bericht (□) einfügen.
+
 Eine neue Regel braucht: einen Eintrag in `knowledge/rules.json` mit Quelle, ein Positiv- und ein Negativ-Fixture unter `tests/fixtures/` und `expect.json`. Die Tests erzwingen beides. Fixtures sind **synthetisch**: echte Datei- und Spielnamen gehören nicht ins Repo.
 
 ## Dokumentation
@@ -92,7 +95,8 @@ Eine neue Regel braucht: einen Eintrag in `knowledge/rules.json` mit Quelle, ein
 | `docs/ARCHITECTURE.md` | Module, Datenfluss, Regel-Format, Sicherheit |
 | `docs/RULES.md` | Regelkatalog (22 Regeln) mit Quellen, Status und Abweichungen |
 | `docs/ROADMAP.md` | Phasen 0–5 |
-| `docs/PHASE2.md`, `PHASE3.md`, `PHASE4.md` | Konsole und Snapshot, Oberfläche und App-Kontext, Bericht und Release |
+| `docs/PHASE2.md` bis `PHASE5.md` | Konsole und Snapshot, Oberfläche und App-Kontext, Bericht und Release, Regel-Update und Community |
+| `docs/TESTER.md` | Mitmachen als Tester |
 | `knowledge/` | Regeln (`rules.json`) und JSON-Schema |
 
 ## Lizenz und Danksagung

@@ -58,6 +58,41 @@ medic::UndoResult LocalService::undo(const std::string& txn) {
     return medic::undo_txn(p_, medic::policy_from_facts(facts_), txn, clock_());
 }
 
+bool LocalService::reload_rules() {
+    std::string text;
+    if (!p_.fs().read_file(medic::kRulesPath, text)) return false;
+    try {
+        rules_ = medic::load_rules_from_string(text);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+medic::RuleUpdateOffer LocalService::check_rule_update() {
+    medic::RuleUpdateOffer o = medic::check_rule_update(p_.fs(), rules_.db_version);
+    o.old_rule_count = rules_.rules.size();
+    return o;
+}
+
+medic::RuleUpdateResult LocalService::install_rule_update() {
+    const medic::RuleSet before = rules_;
+    medic::RuleUpdateResult r = medic::install_rule_update(p_, rules_.db_version, clock_());
+    if (r.ok) {
+        rules_before_install_ = before;
+        reload_rules();
+    }
+    return r;
+}
+
+medic::RuleUpdateResult LocalService::rollback_rule_update() {
+    medic::RuleUpdateResult r = medic::rollback_rule_update(p_, clock_());
+    if (!r.ok) return r;
+    if (!r.backup_path.empty()) reload_rules();                     // die bisherige Datei ist wieder aktiv
+    else if (rules_before_install_) rules_ = *rules_before_install_;  // es galten die mitgelieferten Regeln
+    return r;
+}
+
 ReportResult LocalService::make_report(medic::ReportLang lang) {
     ReportResult r;
     const std::string ts = clock_();

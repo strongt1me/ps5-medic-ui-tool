@@ -3,6 +3,7 @@
 #include "check.hpp"
 #include "medic_ui/app.hpp"
 #include "medic_ui/font.hpp"
+#include "medic/sha256.hpp"
 #include "medic_ui/png.hpp"
 
 #include <algorithm>
@@ -16,6 +17,7 @@
 namespace fs = std::filesystem;
 using namespace medic;
 using namespace medic::ui;
+using json = nlohmann::json;
 
 namespace {
 
@@ -29,6 +31,23 @@ struct FakeService : IMedicService {
     std::string last_undo;
     ReportResult report_result{true, "/data/ps5medic/reports/report_T.md", "", "PS5 Medic 0.4.0 test\n3 Befund(e):\n[KRITISCH] a.crit\n [HINWEIS] c.info\n", false};
     ReportLang last_report_lang = ReportLang::De;
+
+    RuleUpdateOffer offer;
+    RuleUpdateResult install_result{true, "", "2026.12.01", "/data/ps5medic/knowledge/backups/rules_T.json"};
+    RuleUpdateResult rollback_result{true, "", "2026.11.08", "/data/ps5medic/knowledge/backups/rules_rolledback_T.json"};
+    int update_checks = 0, installs = 0, rollbacks = 0;
+    RuleUpdateOffer check_rule_update() override {
+        ++update_checks;
+        return offer;
+    }
+    RuleUpdateResult install_rule_update() override {
+        ++installs;
+        return install_result;
+    }
+    RuleUpdateResult rollback_rule_update() override {
+        ++rollbacks;
+        return rollback_result;
+    }
 
     ReportResult make_report(ReportLang lang) override {
         ++reports;
@@ -567,6 +586,178 @@ std::set<std::string> full_tree(const fs::path& root) {  // anders als tree(): a
     return t;
 }
 
+// ---- Regel-Update ------------------------------------------------------------
+
+void rules_update_flow_tests() {
+    Strings::missing().clear();
+    Canvas cv(App::kWidth, App::kHeight);
+    using State = RuleUpdateOffer::State;
+    const std::initializer_list<Button> others = {Button::Triangle, Button::Square, Button::L1, Button::R1, Button::Options, Button::Left, Button::Right, Button::Up, Button::Down};
+
+    for (Lang l : {Lang::De, Lang::En}) {
+        FakeService svc;
+        svc.result.fw = "12.00";
+        svc.result.rules_version = "2026.11.08";
+        svc.result.findings = {mk_finding("a.crit", Severity::Critical, true)};
+        svc.offer.old_version = "2026.11.08";
+        svc.offer.old_rule_count = 22;
+        App app(svc, l);
+        run_check_via_ui(app, cv);
+        press(app, {Button::Circle, Button::Down, Button::Down, Button::Cross});  // Start: Einstellungen ist der dritte Eintrag
+        CHECK(app.screen() == App::Screen::Settings, "Update-Flow: Einstellungen");
+        app.render(cv);
+        press(app, {Button::Down});
+        app.render(cv);
+        press(app, {Button::Cross});
+        CHECK(app.screen() == App::Screen::RulesUpdate && svc.update_checks == 1 && app.lang() == l, "Update-Flow: Kreuz auf Regel-Update oeffnet den Bildschirm (Sprache bleibt)");
+
+        // keine Datei: nichts kann ausgeloest werden
+        app.render(cv);
+        for (auto b : others) app.handle(b);
+        app.handle(Button::Cross);
+        CHECK(app.screen() == App::Screen::RulesUpdate && svc.installs == 0 && svc.rollbacks == 0, "Update-Flow: ohne Datei tut keine Taste etwas ausser Kreis");
+        press(app, {Button::Circle});
+        CHECK(app.screen() == App::Screen::Settings, "Update-Flow: Kreis geht zu den Einstellungen");
+
+        // abgelehnt: jeder Grund wird dargestellt
+        svc.offer.state = State::Rejected;
+        for (const char* reason : {"no_rules_file", "no_checksum", "checksum_mismatch", "invalid_rules", "not_newer", "too_large", "unreadable"}) {
+            svc.offer.reason = reason;
+            svc.offer.detail = std::string(reason) == "invalid_rules" ? "rule 'x': 'severity' fehlt" : "";
+            press(app, {Button::Cross});
+            app.render(cv);
+            press(app, {Button::Cross});  // Kreuz auf einem abgelehnten Angebot installiert nichts
+            CHECK(app.screen() == App::Screen::RulesUpdate && svc.installs == 0, std::string("Update-Flow: abgelehnt (") + reason + ") laesst sich nicht installieren");
+            press(app, {Button::Circle});
+        }
+
+        // bereit: nur Kreuz installiert
+        svc.offer.state = State::Ready;
+        svc.offer.reason.clear();
+        svc.offer.detail.clear();
+        svc.offer.new_version = "2026.12.01";
+        svc.offer.new_rule_count = 24;
+        svc.offer.sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        press(app, {Button::Cross});
+        app.render(cv);
+        for (auto b : others) app.handle(b);
+        CHECK(app.screen() == App::Screen::RulesUpdate && svc.installs == 0, "Update-Flow: bereit, aber nur das Kreuz installiert");
+        press(app, {Button::Cross});
+        CHECK(svc.installs == 1 && app.finding_count() == 0, "Update-Flow: Kreuz installiert, die alten Befunde gelten nicht mehr");
+        app.render(cv);
+        press(app, {Button::Cross});
+        CHECK(app.screen() == App::Screen::Settings, "Update-Flow: nach der Installation zurueck zu den Einstellungen");
+        press(app, {Button::Circle});
+        app.render(cv);  // Start: kein Ergebnis mehr
+
+        // Installation scheitert: Meldung, Befunde bleiben
+        FakeService fail;
+        fail.result = svc.result;
+        fail.offer = svc.offer;
+        fail.install_result = {false, "write_failed", "", ""};
+        App app2(fail, l);
+        run_check_via_ui(app2, cv);
+        press(app2, {Button::Circle, Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross, Button::Cross});
+        CHECK(fail.installs == 1 && app2.screen() == App::Screen::RulesUpdate, "Update-Flow: Fehlschlag wird angezeigt");
+        app2.render(cv);
+        press(app2, {Button::Cross});
+        CHECK(app2.screen() == App::Screen::Settings, "Update-Flow: nach dem Fehlschlag zurueck");
+        fail.install_result.error = "voellig_unbekannt";  // unbekannte Kennung: allgemeiner Text
+        press(app2, {Button::Cross, Button::Cross});
+        app2.render(cv);
+
+        // Rollback: erst Rueckfrage, dann nur Kreuz
+        svc.offer = RuleUpdateOffer{};
+        svc.offer.old_version = "2026.12.01";
+        svc.offer.can_rollback = true;
+        svc.offer.installed_version = "2026.12.01";
+        press(app, {Button::Cross, Button::Cross});  // Start steht auf Einstellungen, dort auf Regel-Update
+        app.render(cv);
+        press(app, {Button::Triangle});
+        CHECK(svc.rollbacks == 0, "Update-Flow: Dreieck fragt nur nach, setzt nichts zurueck");
+        app.render(cv);
+        press(app, {Button::Circle});
+        press(app, {Button::Triangle});
+        for (auto b : {Button::Square, Button::Triangle, Button::L1, Button::R1, Button::Options, Button::Left, Button::Right, Button::Up, Button::Down}) app.handle(b);
+        CHECK(svc.rollbacks == 0, "Update-Flow: in der Rueckfrage setzt nur das Kreuz zurueck");
+        press(app, {Button::Cross});
+        CHECK(svc.rollbacks == 1, "Update-Flow: Kreuz in der Rueckfrage setzt zurueck");
+        app.render(cv);
+        press(app, {Button::Cross});
+
+        svc.rollback_result = {false, "nothing_to_roll_back", "", ""};
+        press(app, {Button::Cross, Button::Triangle, Button::Cross});
+        app.render(cv);
+        CHECK(app.screen() == App::Screen::RulesUpdate, "Update-Flow: Rollback-Fehlschlag wird angezeigt");
+    }
+    CHECK(Strings::missing().empty(), "Update-Flow: alle gezeichneten Texte existieren in beiden Sprachen");
+}
+
+void rules_update_service_tests() {
+    const std::string kPath = std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json";
+    const RuleSet rules = load_rules_from_file(kPath);
+    json nj = json::parse(slurp(kPath));
+    nj["db_version"] = "2026.12.01";
+    const std::string new_text = nj.dump(2) + "\n";
+    auto spit = [](const fs::path& p, const std::string& t) {
+        fs::create_directories(p.parent_path());
+        std::ofstream(p, std::ios::binary | std::ios::trunc) << t;
+    };
+    auto clock = [] { return std::string("20261109T100000Z"); };
+    auto put_update = [&](const fs::path& dir) {
+        spit(dir / "fs/data/ps5medic/knowledge/update/rules.json", new_text);
+        spit(dir / "fs/data/ps5medic/knowledge/update/rules.json.sha256", sha256_hex(new_text) + "  rules.json\n");
+    };
+
+    {  // ohne Datei im Wissensordner (es galten die mitgelieferten Regeln): Installation und Rollback ueber die UI
+        TempCopy t("b2_pos");
+        put_update(t.dir);
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+        LocalService svc(*platform, rules, clock);
+        const auto offer = svc.check_rule_update();
+        CHECK(offer.state == RuleUpdateOffer::State::Ready && offer.new_version == "2026.12.01" && offer.old_version == rules.db_version && offer.old_rule_count == rules.rules.size(),
+              "Update-E2E: Angebot kennt alte und neue Regeln");
+        CHECK(svc.run_check().rules_version == rules.db_version, "Update-E2E: vorher gelten die alten Regeln");
+
+        App app(svc);
+        Canvas cv(App::kWidth, App::kHeight);
+        press(app, {Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross});
+        CHECK(app.screen() == App::Screen::RulesUpdate, "Update-E2E: Einstellungen -> Regel-Update");
+        app.render(cv);
+        press(app, {Button::Cross});
+        app.render(cv);
+        CHECK(slurp(t.dir / "fs/data/ps5medic/knowledge/rules.json") == new_text, "Update-E2E: Kreuz installiert die neue Datei");
+        CHECK(svc.run_check().rules_version == "2026.12.01", "Update-E2E: die neuen Regeln gelten sofort");
+
+        press(app, {Button::Cross, Button::Down, Button::Cross});  // zurueck, wieder oeffnen
+        CHECK(svc.check_rule_update().can_rollback, "Update-E2E: Rollback ist moeglich");
+        press(app, {Button::Triangle, Button::Cross});
+        CHECK(!fs::exists(t.dir / "fs/data/ps5medic/knowledge/rules.json"), "Update-E2E: Rollback legt die Datei beiseite");
+        CHECK(svc.run_check().rules_version == rules.db_version, "Update-E2E: nach dem Rollback gelten wieder die alten Regeln");
+    }
+    {  // mit vorhandener Datei im Wissensordner
+        TempCopy t("b2_pos");
+        spit(t.dir / "fs/data/ps5medic/knowledge/rules.json", slurp(kPath));
+        put_update(t.dir);
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+        LocalService svc(*platform, rules, clock);
+        CHECK(svc.install_rule_update().ok && svc.run_check().rules_version == "2026.12.01", "Update-E2E: Installation mit vorhandener Datei");
+        const auto rb = svc.rollback_rule_update();
+        CHECK(rb.ok && slurp(t.dir / "fs/data/ps5medic/knowledge/rules.json") == slurp(kPath) && svc.run_check().rules_version == rules.db_version,
+              "Update-E2E: Rollback stellt die vorherige Datei wieder her, die Regeln gelten sofort");
+    }
+    {  // abgelehnt: die Regeln bleiben, nichts wird geschrieben
+        TempCopy t("b2_pos");
+        put_update(t.dir);
+        spit(t.dir / "fs/data/ps5medic/knowledge/update/rules.json.sha256", std::string(64, '0') + "\n");
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+        LocalService svc(*platform, rules, clock);
+        const auto r = svc.install_rule_update();
+        CHECK(!r.ok && r.error == "checksum_mismatch" && svc.run_check().rules_version == rules.db_version && !fs::exists(t.dir / "fs/data/ps5medic/knowledge/rules.json"),
+              "Update-E2E: falsche Pruefsumme -> keine Installation, alte Regeln bleiben");
+    }
+}
+
 void report_service_tests() {
     const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
     auto clock = [] { return std::string("20261108T130000Z"); };
@@ -636,4 +827,6 @@ void ui_tests() {
     edge_tests();
     end_to_end_tests();
     report_service_tests();
+    rules_update_flow_tests();
+    rules_update_service_tests();
 }

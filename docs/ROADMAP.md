@@ -36,9 +36,10 @@ Jede Phase endet mit lauffähigem Stand + kurzem Status an Marc.
 3. README (DE/EN), `THIRD_PARTY.md` – erledigt. GitHub-Release `strongt1me/ps5-medic` – offen.
 
 ## Phase 5 – Community
-1. Regel-Update (manuell, SHA-256).
-2. „Unbekannte Fehlerzeilen“ sammeln → Issue-Vorlage.
-3. Tester mit FW 7.x–13.60 suchen (GBAtemp, Discord), Fixtures einsammeln.
+> Stand: Regel-Update (als Datei-Update ohne Netz), unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung sind fertig und getestet (siehe `docs/PHASE5.md`). Offen und Sache des Autors: Beiträge in Foren, GitHub-Release, ein Download von Regeln mit Signatur.
+1. Regel-Update (manuell, SHA-256). – erledigt (Datei auf die Konsole legen, in PS5 Medic prüfen und installieren; kein Download, Begründung in `docs/PHASE5.md`).
+2. „Unbekannte Fehlerzeilen“ sammeln → Issue-Vorlage. – erledigt (Abschnitt im Bericht, `.github/ISSUE_TEMPLATE/problem.md`).
+3. Tester mit FW 7.x–13.60 suchen (GBAtemp, Discord), Fixtures einsammeln. – Anleitung und Entwurf des Aufrufs in `docs/TESTER.md`; Veröffentlichen und Einsammeln stehen aus.
 
 ## Erster Prompt für Claude Code
 > Lies CLAUDE.md und docs/*. Starte mit Phase 0, Schritte 1–3. Lege für Regel B2 und B8 je ein Positiv- und Negativ-Fixture an und zeige mir danach die Ausgabe von `medic-cli check` für alle Fixtures.

@@ -157,6 +157,66 @@ void compact_tests() {
     CHECK(report_path_for("../x").empty() && report_path_for("").empty() && report_path_for("a/b").empty(), "Berichtspfad: ungueltige Zeitstempel abgelehnt");
 }
 
+void unknown_lines_tests() {
+    Facts f;
+    f.set("smp.log.lines", json::array({
+        "[15:12:42] ShadowMount+ v1.7beta11 started",
+        "[18:49:25]   [LINK] image source cache update failed: /mnt/usb0/homebrew/Rennspiel 5.ffpfsc -> /mnt/shadowmnt/PPSA11112_a0a12b93",
+        "[20:38:44]   [LINK] image source cache update failed: /mnt/usb0/homebrew/Rennspiel 5.ffpfsc -> /mnt/shadowmnt/PPSA11112_547c406a",
+        "[20:38:45]   [IMG][LVD] unmount complete: source=/mnt/usb0/homebrew/X.exfat unit=3 error=0",
+        "[20:38:46]   [MDBG] monitoring game errors: PPSA11112 pid=212 for up to 30 seconds",
+        "[20:38:47]   [MDBG] game error monitoring expired: PPSA11112 pid=212",
+        "[20:38:48]   [IMG] mount: error=22 for /mnt/usb0/a.exfat",
+        "[20:38:49]   [IMG] mount: error=0x16 for /mnt/usb0/a.exfat",
+        "[20:38:50]   [LINK] nullfs mounted: /mnt/shadowmnt/Jump-and-Run 4_be3f4f -> /system_ex/app/PPSA01234",
+        "[20:38:51]   ERROR: could not open config",
+        "[20:38:52]   Register failed for PPSA11112",
+        "[20:38:53]   write FAILED (Timed Out) on /data/x",
+    }));
+    Finding explained;
+    explained.rule_id = "smp.register_failed";
+    explained.evidence_path = "smp.log.lines";
+    explained.evidence = {"[20:38:52]   Register failed for PPSA11112"};
+    Finding other_fact;  // Evidenz aus einem anderen Fakt erklaert keine Logzeile
+    other_fact.rule_id = "x";
+    other_fact.evidence_path = "proc.running";
+    other_fact.evidence = {"[20:38:51]   ERROR: could not open config"};
+
+    const auto u = unknown_error_lines(f, {explained, other_fact});
+    CHECK(u.size() == 4, "Unbekannte Zeilen: vier Gruppen (Cache-Fehler, Mount-Fehler, ERROR, Timeout)");
+    if (u.size() == 4) {
+        CHECK(u[0].count == 2 && has(u[0].example, "image source cache update failed") && has(u[0].example, "[18:49:25]"),
+              "Unbekannte Zeilen: gleichartige Zeilen (nur Kennung verschieden) bilden eine Gruppe, haeufigste zuerst, erste Zeile als Beispiel");
+        CHECK(u[1].count == 2 && has(u[1].example, "error=22"), "Unbekannte Zeilen: error=22 und error=0x16 sind Fehlerwerte, dieselbe Gruppe");
+        CHECK(has(u[2].example, "ERROR: could not open config") && u[2].count == 1, "Unbekannte Zeilen: grossgeschriebenes ERROR zaehlt, Evidenz aus anderem Fakt erklaert nichts");
+        CHECK(has(u[3].example, "Timed Out"), "Unbekannte Zeilen: Fehlerwoerter ohne Beachtung der Gross-/Kleinschreibung");
+    }
+    std::string all;
+    for (const auto& x : u) all += x.example + "\n";
+    CHECK(!has(all, "error=0\n") && !has(all, "monitoring game errors") && !has(all, "game error monitoring") && !has(all, "Jump-and-Run") &&
+              !has(all, "Register failed") && !has(all, "ShadowMount+ v1.7beta11"),
+          "Unbekannte Zeilen: error=0, 'game error', Spieltitel, schon erklaerte Zeilen und Startzeile zaehlen nicht");
+
+    Facts many;
+    json arr = json::array();
+    for (int i = 0; i < 30; ++i) arr.push_back("[10:00:00] step " + std::string(static_cast<std::size_t>(i + 1), 'x') + " failed");  // 30 verschiedene Zeilen
+    many.set("smp.log.lines", arr);
+    CHECK(unknown_error_lines(many, {}).size() == 10 && unknown_error_lines(many, {}, 3).size() == 3, "Unbekannte Zeilen: Obergrenze der Gruppen");
+    CHECK(unknown_error_lines(Facts{}, {}).empty(), "Unbekannte Zeilen: ohne Log keine");
+
+    ReportInput in = sample_input();
+    in.unknown_lines = u;
+    in.saved_path = "/data/ps5medic/reports/report_20261108T190500Z.md";
+    const std::string de = build_report(in, ReportLang::De), en = build_report(in, ReportLang::En);
+    CHECK(has(de, "## Unbekannte Fehlerzeilen (4)") && has(de, "- 2× `[18:49:25]   [LINK] image source cache update failed:"), "Bericht DE: Abschnitt mit Anzahl und Beispielzeile");
+    CHECK(has(en, "## Unknown error lines (4)") && has(en, "belong in an issue"), "Bericht EN: Abschnitt");
+    CHECK(has(de, "/mnt/shadowmnt/PPSA11112_a0a12b93") && !has(de, "192.168"), "Bericht: Beispielzeile bleibt unveraendert, Anonymisierung gilt trotzdem");
+    CHECK(has(build_report_compact(in, ReportLang::De, 640), "4 unbekannte Fehlerzeile(n) im Bericht") && has(build_report_compact(in, ReportLang::En, 640), "4 unknown error line(s) in the report"),
+          "Kurzfassung: Hinweis auf die unbekannten Zeilen");
+    ReportInput none = sample_input();
+    CHECK(!has(build_report(none, ReportLang::De), "Unbekannte Fehlerzeilen") && !has(build_report_compact(none, ReportLang::De, 640), "unbekannte"), "Ohne unbekannte Zeilen kein Abschnitt");
+}
+
 void from_fixture_test() {
     const std::string fx = std::string(MEDIC_SOURCE_DIR) + "/tests/fixtures/b2_pos";
     auto p = make_snapshot_platform(fx);
@@ -212,6 +272,7 @@ void report_tests() {
     anonymize_tests();
     report_tests_content();
     compact_tests();
+    unknown_lines_tests();
     from_fixture_test();
     qr_tests();
 }

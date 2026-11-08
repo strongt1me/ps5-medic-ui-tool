@@ -18,6 +18,7 @@ add_library(medic STATIC
   libmedic/src/engine.cpp
   libmedic/src/diff.cpp
   libmedic/src/report.cpp
+  libmedic/src/rule_update.cpp
   libmedic/src/qr.cpp
   third_party/qrcodegen/qrcodegen.cpp)
 target_include_directories(medic PUBLIC libmedic/include third_party)
@@ -47,7 +48,7 @@ target_link_libraries(medic-cli PRIVATE medic)
 target_compile_definitions(medic-cli PRIVATE MEDIC_DEFAULT_RULES="${CMAKE_SOURCE_DIR}/knowledge/rules.json")
 
 enable_testing()
-add_executable(medic-tests tests/test_main.cpp tests/test_fixes.cpp tests/test_ui.cpp tests/test_report.cpp)
+add_executable(medic-tests tests/test_main.cpp tests/test_fixes.cpp tests/test_ui.cpp tests/test_report.cpp tests/test_update.cpp)
 target_link_libraries(medic-tests PRIVATE medic_ui)
 target_compile_definitions(medic-tests PRIVATE
   MEDIC_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

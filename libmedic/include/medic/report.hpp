@@ -18,6 +18,12 @@ constexpr const char* kReportDir = "/data/ps5medic/reports";
 
 enum class ReportLang { De, En };
 
+// Eine Gruppe gleichartiger Fehlerzeilen aus dem Log (Zahlen und Kennungen sind beim Gruppieren ausgeblendet).
+struct UnknownLine {
+    std::string example;  // erste Zeile dieser Gruppe, unveraendert
+    int count = 0;
+};
+
 struct ReportInput {
     std::string created_utc;     // "YYYYMMDDTHHMMSSZ" (so wie der Zeitstempel fuer Journal und Backups)
     std::string rules_version;
@@ -25,8 +31,15 @@ struct ReportInput {
     std::vector<Finding> findings;
     Facts facts;                 // Umgebung: Firmware, Modell, Versionen, Prozesse, Speicher
     std::vector<TxnInfo> history;
+    std::vector<UnknownLine> unknown_lines;  // fehlerartige Logzeilen ohne passenden Befund
     std::string saved_path;      // wo der volle Bericht liegt (leer = nicht gespeichert)
 };
+
+// Fehlerartige Zeilen im ShadowMount+-Log (Fakt smp.log.lines), die zu keinem Befund gehoeren: Stoff fuer neue Regeln.
+// Erkannt werden nur eindeutige Fehlerwoerter (failed, panic, cannot, denied, timed out ...), "error" mit Wert ungleich 0
+// und das grossgeschriebene ERROR; ein blosses "error" im Text (z. B. "game error monitoring") oder in einem Spieltitel
+// zaehlt nicht. Gleichartige Zeilen (nur Zeit, Zahlen oder Kennungen verschieden) bilden eine Gruppe; haeufigste zuerst.
+std::vector<UnknownLine> unknown_error_lines(const Facts& facts, const std::vector<Finding>& findings, std::size_t max_groups = 10);
 
 // Stellt die Berichtsdaten zusammen (Verlauf der Reparaturen kommt aus dem Journal der Plattform).
 ReportInput make_report_input(const Platform& p, const Facts& facts, const RuleSet& rules, std::vector<Finding> findings,
