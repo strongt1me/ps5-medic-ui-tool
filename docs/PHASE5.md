@@ -31,6 +31,8 @@ Stand 8. Nov. 2026. Regel-Update (Datei und signierter Download), unbekannte Feh
 
 **Ablauf für den Autor:** Regeln ändern, `db_version` hochzählen, `make test`, `make sign-rules` (schreibt `dist/rules/rules.json` und `.sig` und prüft sie gegen den Schlüssel), `make serve-rules` (oder `dist/rules/` auf einem beliebigen HTTP-Server ablegen). Einmalig die Adresse auf die Konsole schreiben: `make set-update-url PS5_HOST=<ip> UPDATE_URL=http://<ip-des-servers>:8000/`.
 
+**Auf der Konsole bestätigt (8. Nov. 2026, PS5 Pro, FW 12.00):** Download von `http://192.168.1.98:8000/` (Python-Server auf dem PC, an die LAN-Adresse gebunden): Der Server-Log zeigt beide Abrufe von der Konsole, der Bildschirm bot die Datei mit „Signatur gültig (Schlüssel 04de66c8…)“ an, die Installation steht in `update.log` mit `auth: signature` und der Schlüssel-ID. Eine manipulierte Datei (neuere Version, alte Signatur) wurde mit „Die Signatur passt nicht zur Datei“ abgelehnt und nicht angeboten. Der Rollback wurde schon beim Datei-Update bestätigt. **Nicht auf der Konsole geprüft:** Namensauflösung (`getaddrinfo`; getestet ist nur eine IP-Adresse), Verhalten bei blockierter Firewall oder abgeschaltetem Server über die Meldungen hinaus, `https://` (wird bewusst abgelehnt).
+
 **Prüfung** (`check_rule_update`, schreibt nichts), in dieser Reihenfolge; jeder Fehler nennt eine Kennung, die die UI übersetzt:
 1. Datei da? (`no_rules_file`) · höchstens 2 MiB (`too_large`) · lesbar (`unreadable`)
 2. Liegt `rules.json.sig` da: Signatur lesen und prüfen (`sig_malformed`, `sig_unknown_key`, `sig_invalid`); die Prüfsumme wird dann ignoriert, Ergebnis „Signatur gültig (Schlüssel …)“
