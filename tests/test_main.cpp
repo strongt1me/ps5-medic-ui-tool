@@ -180,6 +180,17 @@ static void new_fact_tests() {
         CHECK(lines && lines->is_array() && lines->size() == 2000 && !banner_in_tail, "SM+-Version: im gelesenen Log-Ende steht die Startzeile nicht mehr");
         CHECK(str(f, "smp.version") == "1.7beta3", "SM+-Version: kommt aus dem Anfang des Logs");
     }
+    {  // Konfigurationsformat v2 (SM+ 1.7beta12): wie SM+ lesen (Sektionen, on/off, Anfuehrungszeichen, Kommentare hinter Werten)
+        auto f = facts_of("b13_pos_v2");
+        const json* roots = f.get("smp.scan_roots");
+        CHECK(roots && roots->is_array() && roots->size() == 2 && (*roots)[0] == "/mnt/usb0/Meine Spiele" && (*roots)[1] == "/data/homebrew",
+              "Config v2: Pfad in Anfuehrungszeichen (mit Leerzeichen) und Pfad mit Kommentar dahinter");
+        CHECK(num(f, "smp.debug") == 0 && num(f, "smp.scan_depth") == 2 && num(f, "smp.fakelib_enabled") == 0, "Config v2: debug = off, depth = 2 ; Kommentar, enabled = no");
+        auto d = facts_of("b13_neg_v2_defaults");
+        CHECK(num(d, "smp.debug") == 1 && num(d, "smp.scan_depth") == 1 && num(d, "smp.fakelib_enabled") == 1, "Config v2: auskommentierte Standardwerte bleiben Standard");
+        auto v1 = facts_of("b13_pos_v1_comment");
+        CHECK(num(v1, "smp.debug") == 0 && num(v1, "smp.scan_depth") == 2, "Config v1: Kommentar hinter dem Wert (wie SM+: # und ; leiten ihn ein)");
+    }
     {  // B19: API-Port aus der Bereit-Zeile von ShadowMount+
         auto f = facts_of("b19_pos");
         CHECK(str(f, "smp.api.bind") == "0.0.0.0" && str(f, "smp.api.port") == "10101" && str(f, "smp.api.state") == "closed", "B19: Adresse, Port und Zustand aus Log und Plattform");

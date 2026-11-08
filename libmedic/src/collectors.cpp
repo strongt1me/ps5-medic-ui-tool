@@ -92,9 +92,35 @@ std::string safe_key(std::string k) {
     return k;
 }
 
+// Wert hinter dem '=' so lesen wie ShadowMount+ (src/sm_config_file.c): '#' und ';' leiten einen Kommentar ein (v1 und v2);
+// ab Konfigurationsformat v2 (Sektion [config], 1.7beta12) kann ein Wert in Anfuehrungszeichen stehen, dann zaehlen '#' und ';'
+// darin nicht, und ein Backslash maskiert das folgende Zeichen (Backslash, Anfuehrungszeichen).
+std::string decode_ini_value(const std::string& raw, bool v2) {
+    std::string v = trim(raw);
+    if (v2 && !v.empty() && v[0] == '"') {
+        std::string out;
+        for (std::size_t i = 1; i < v.size(); ++i) {
+            if (v[i] == '\\' && i + 1 < v.size()) {
+                out += v[++i];
+                continue;
+            }
+            if (v[i] == '"') break;
+            out += v[i];
+        }
+        return out;
+    }
+    if (const auto c = v.find_first_of("#;"); c != std::string::npos) v.erase(c);
+    return trim(v);
+}
+
 Config parse_ini(const std::string& text) {
     Config c;
     std::string section;
+    bool v2 = false;  // wie SM+: eine Sektion [config] macht die Datei zu Format v2
+    for (const auto& l : split_lines(text)) {
+        const std::string t = lower(trim(l));
+        if (t.rfind("[config]", 0) == 0) v2 = true;
+    }
     for (auto line : split_lines(text)) {
         line = trim(line);
         if (line.empty() || line[0] == '#' || line[0] == ';') continue;
@@ -106,7 +132,7 @@ Config parse_ini(const std::string& text) {
         auto eq = line.find('=');
         if (eq == std::string::npos) continue;
         std::string key = safe_key(lower(trim(line.substr(0, eq))));
-        std::string val = trim(line.substr(eq + 1));
+        std::string val = decode_ini_value(line.substr(eq + 1), v2);
         if (key == "scanpath" || (section == "scan" && key == "path")) {
             if (!val.empty()) c.scanpaths.push_back(val);
             continue;

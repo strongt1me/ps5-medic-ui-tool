@@ -122,6 +122,18 @@ void ini_tests() {
     CHECK(ini_set_value("[general]\nquiet=1\n\n[scan]\ndepth=1\n", {"general", "debug", ""}, "1") ==
               "[general]\nquiet=1\ndebug=1\n\n[scan]\ndepth=1\n",
           "ini: in vorhandener Sektion");
+    // Konfigurationsformat v2 (1.7beta12): auskommentierte Standardwerte bleiben stehen, die Zeile kommt ans Ende der Sektion
+    {
+        const std::string v2 = "[config]\nversion = 2\n\n[general]\n# debug = on\n\n[scan]\n# depth = 1\n# path = /data/homebrew\n\n[fakelib]\n# enabled = on\n";
+        CHECK(ini_set_value(v2, {"scan", "depth", "scan_depth"}, "2") ==
+                  "[config]\nversion = 2\n\n[general]\n# debug = on\n\n[scan]\n# depth = 1\n# path = /data/homebrew\ndepth=2\n\n[fakelib]\n# enabled = on\n",
+              "ini v2: depth wird in [scan] ergaenzt, Kommentare und Reihenfolge bleiben");
+        CHECK(ini_set_value(v2, {"general", "debug", ""}, "1") ==
+                  "[config]\nversion = 2\n\n[general]\n# debug = on\ndebug=1\n\n[scan]\n# depth = 1\n# path = /data/homebrew\n\n[fakelib]\n# enabled = on\n",
+              "ini v2: debug wird in [general] ergaenzt");
+        const std::string with_value = "[config]\nversion = 2\n[scan]\ndepth = 1 # Standard\n";
+        CHECK(ini_set_value(with_value, {"scan", "depth", "scan_depth"}, "2") == "[config]\nversion = 2\n[scan]\ndepth=2\n", "ini v2: vorhandene Zeile wird ersetzt");
+    }
     // neue Sektion am Ende
     CHECK(ini_set_value("a=1\n", {"scan", "depth", ""}, "2") == "a=1\n\n[scan]\ndepth=2\n", "ini: neue Sektion in Datei ohne Sektionen");
     CHECK(ini_set_value("[general]\ndebug=0\n", {"scan", "depth", ""}, "2") == "[general]\ndebug=0\n\n[scan]\ndepth=2\n", "ini: neue Sektion am Ende");
