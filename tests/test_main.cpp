@@ -179,6 +179,23 @@ static void new_fact_tests() {
         CHECK(lines && lines->is_array() && lines->size() == 2000 && !banner_in_tail, "SM+-Version: im gelesenen Log-Ende steht die Startzeile nicht mehr");
         CHECK(str(f, "smp.version") == "1.7beta3", "SM+-Version: kommt aus dem Anfang des Logs");
     }
+    {  // B11: Zeilen werden je Quelle gezaehlt, nicht insgesamt
+        auto count_of = [&](const char* fixture, const std::string& path) -> long {
+            auto f = facts_of(fixture);
+            const json* a = f.get("smp.unstable_sources");
+            if (!a || !a->is_array()) return -1;
+            for (auto& e : *a)
+                if (e["path"] == path) return e["count"].get<long>();
+            return 0;
+        };
+        CHECK(count_of("b11_pos", "/data/homebrew/Big.ffpfs") == 3, "B11: dreimal dieselbe Quelle, nur der Pfad in der Zeile");
+        CHECK(count_of("b11_pos_named", "/mnt/usb0/homebrew/Big Game (5).ffpfs") == 3 && count_of("b11_pos_named", "/data/homebrew/PPSA99001") == 1,
+              "B11: Name und Pfad mit Klammern, die andere Quelle zaehlt extra");
+        CHECK(count_of("b11_neg_distinct_sources", "/data/homebrew/PPSA99210") == 2 && count_of("b11_neg_distinct_sources", "/data/homebrew/FAKE42007") == 1 &&
+                  count_of("b11_neg_distinct_sources", "/data/homebrew/Zweites Beispiel-lz4") == 1,
+              "B11: die Zeilen des echten Logs verteilen sich auf drei Quellen");
+        CHECK(count_of("a3_neg", "x") == 0, "B11: ohne solche Zeilen eine leere Liste");
+    }
     {  // C3: freier Platz in Prozent
         auto c3 = facts_of("c3_pos");
         const json* m = c3.get("storage.mounts");

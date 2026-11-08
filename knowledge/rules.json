@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.08",
+  "db_version": "2026.11.09",
   "rules": [
     {
       "id": "hen.etahen_with_kstufflite_latest_fw",
@@ -230,15 +230,14 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": { "regex": "source not stable yet", "gte": 3 } }
+          { "fact": "smp.unstable_sources[].count", "gt": "2" }
         ]
       },
       "text": {
-        "de": "debug.log meldet wiederholt „source not stable yet“: Der Kopiervorgang ist noch nicht abgeschlossen, oder stability_wait_seconds passt nicht zur Quelle. Kopieren abwarten bzw. den Wert prüfen.",
-        "en": "debug.log repeatedly reports \"source not stable yet\": the copy is still in progress, or stability_wait_seconds does not suit the source. Wait for the copy to finish or review the value."
+        "de": "debug.log meldet für dieselbe Quelle wiederholt „source not stable yet“: Der Kopiervorgang ist noch nicht abgeschlossen, oder stability_wait_seconds passt nicht zur Quelle. Kopieren abwarten bzw. den Wert prüfen.",
+        "en": "debug.log repeatedly reports \"source not stable yet\" for the same source: the copy is still in progress, or stability_wait_seconds does not suit the source. Wait for the copy to finish or review the value."
       },
-      "evidence": "smp.log.lines",
-      "evidence_filter": "source not stable yet",
+      "evidence": "smp.unstable_sources[].path",
       "fix": null,
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"

@@ -74,8 +74,9 @@ std::string good_sum(const std::string& text) { return sha256_hex(text) + "  rul
 
 void update_tests() {
     const std::string ts = "20261109T100000Z";
-    const std::string old_ver = "2026.11.08", new_ver = "2026.12.01";
+    const std::string new_ver = "2026.12.01";
     const std::string old_text = slurp(kShipped), new_text = rules_text_with_version(new_ver);
+    const std::string old_ver = load_rules_from_string(old_text).db_version;  // die mitgelieferte Version, nicht fest verdrahtet
     const std::size_t shipped_count = load_rules_from_string(old_text).rules.size();
 
     using State = RuleUpdateOffer::State;

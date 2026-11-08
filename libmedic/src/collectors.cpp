@@ -231,6 +231,38 @@ void collect_log_lines(const IFileSystem& fs, const std::string& path, Facts& f,
     f.set(fact, std::move(arr));
 }
 
+// "source not stable yet: <Name> (<Pfad>)" (oder nur "<Pfad>"): je Quelle zaehlen. Jeder normale Kopiervorgang erzeugt ein bis
+// zwei solche Zeilen, bevor ShadowMount+ die Quelle installiert (echtes Log: zwei Zeilen, dann "Installing:"). Nur dieselbe
+// Quelle mehrfach hintereinander deutet auf ein Problem hin; Zeilen verschiedener Quellen zaehlen nicht zusammen.
+void collect_unstable_sources(Facts& f) {
+    static const std::string kMarker = "source not stable yet:";
+    std::vector<std::string> keys;
+    std::vector<int> counts;
+    if (const json* lines = f.get("smp.log.lines"); lines && lines->is_array())
+        for (const auto& l : *lines) {
+            if (!l.is_string()) continue;
+            const std::string line = l.get<std::string>();
+            const auto pos = line.find(kMarker);
+            if (pos == std::string::npos) continue;
+            const std::string rest = trim(line.substr(pos + kMarker.size()));
+            std::string key = rest;
+            if (!rest.empty() && rest.back() == ')') {
+                const auto open = rest.rfind(" (/");
+                if (open != std::string::npos) key = rest.substr(open + 2, rest.size() - open - 3);
+            }
+            const auto it = std::find(keys.begin(), keys.end(), key);
+            if (it == keys.end()) {
+                keys.push_back(key);
+                counts.push_back(1);
+            } else {
+                ++counts[static_cast<std::size_t>(it - keys.begin())];
+            }
+        }
+    json out = json::array();
+    for (std::size_t i = 0; i < keys.size(); ++i) out.push_back({{"path", keys[i]}, {"count", counts[i]}});
+    f.set("smp.unstable_sources", std::move(out));
+}
+
 // Gemountete Images unter /mnt/shadowmnt (Layout vorlaeufig, auf der Konsole in Phase 2 zu verifizieren):
 //   /mnt/shadowmnt/<name>/            gemountetes Spiel-Image
 //   /mnt/shadowmnt/pfsc/<name>/       gemounteter .ffpfsc-Container (soll ein inneres Image enthalten)
@@ -491,6 +523,7 @@ void collect_shadowmount(const Platform& p, Facts& f) {
 
     collect_log_lines(fs, join_path(kSmpDir, "debug.log"), f, "smp.log.lines");
     collect_log_lines(fs, join_path(kSmpDir, "autotune.ini"), f, "smp.autotune.lines");
+    collect_unstable_sources(f);
 
     // ShadowMount+ schreibt beim Start "ShadowMount+ v1.7beta11 ... FW: 12.00" ins debug.log (erster Konsolenlauf).
     // Dient als Versionsquelle, solange die Plattform keine Komponenten-Version liefert; die juengste Startzeile gilt.
