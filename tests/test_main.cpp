@@ -170,6 +170,7 @@ int main() {
     platform_tests();
     fixture_tests();
     fix_tests();
+    ui_tests();
     std::cout << g_pass << " Pruefungen ok, " << g_fail << " fehlgeschlagen\n";
     return g_fail ? 1 : 0;
 }

@@ -1,0 +1,89 @@
+// Vollbild-App: Bildschirme, Eingabe und Darstellung. Plattformunabhaengig (rendert auf eine Canvas, 1920x1080).
+// Ablauf: handle() fuer jede Taste, update() einmal pro Bild, render() zeichnet den aktuellen Bildschirm.
+//
+// Sicherheitsregel: Geschrieben wird nur ueber IMedicService::apply_fix/undo, und nur nach der Bestaetigung
+// (Kreuz) auf dem Vorschau- bzw. Rueckgaengig-Bildschirm.
+#pragma once
+#include "medic/diff.hpp"
+#include "medic_ui/canvas.hpp"
+#include "medic_ui/i18n.hpp"
+#include "medic_ui/input.hpp"
+#include "medic_ui/service.hpp"
+
+#include <string>
+#include <vector>
+
+namespace medic::ui {
+
+class App {
+public:
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings };
+
+    static constexpr int kWidth = 1920, kHeight = 1080;
+
+    explicit App(IMedicService& svc, Lang lang = Lang::De);
+
+    void handle(Button b);
+    void update();
+    void render(Canvas& c) const;
+
+    Screen screen() const { return screen_; }
+    Lang lang() const { return lang_; }
+    std::size_t finding_count() const { return result_.findings.size(); }
+    int selected() const { return sel_; }
+
+private:
+    struct Preview {  // Darstellung einer geplanten Aenderung
+        std::vector<medic::DiffLine> changed;  // nur + und - Zeilen (WriteFile)
+        bool diff_ok = true;
+    };
+    enum class DoneKind { Fix, Undo };
+
+    void start_check();
+    void begin_fix(int index, Screen origin);
+    void move_selection(int& sel, int& top, int count, int visible, int delta);
+    void open_history();
+
+    void draw_chrome(Canvas& c) const;
+    void draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::string>>& hints) const;
+    void draw_start(Canvas& c) const;
+    void draw_running(Canvas& c) const;
+    void draw_findings(Canvas& c) const;
+    void draw_detail(Canvas& c) const;
+    void draw_fix_preview(Canvas& c) const;
+    void draw_fix_done(Canvas& c) const;
+    void draw_history(Canvas& c) const;
+    void draw_undo_confirm(Canvas& c) const;
+    void draw_settings(Canvas& c) const;
+
+    std::string finding_text(const medic::Finding& f) const;
+    std::string fix_name(const std::string& id) const;
+    const medic::Finding* current_finding() const;
+
+    IMedicService& svc_;
+    Lang lang_;
+    Screen screen_ = Screen::Start;
+    int tick_ = 0;
+
+    int start_sel_ = 0;
+
+    bool has_result_ = false;
+    CheckResult result_;
+    bool pending_check_ = false;
+    mutable bool running_rendered_ = false;  // der Bildschirm "Pruefe..." muss mindestens einmal gezeichnet worden sein
+    int sel_ = 0, top_ = 0;
+
+    medic::FixPlan plan_;
+    std::vector<Preview> previews_;
+    Screen fix_origin_ = Screen::Findings;
+
+    DoneKind done_kind_ = DoneKind::Fix;
+    bool done_ok_ = false;
+    std::string done_text_;  // Transaktions-ID bzw. Fehlermeldung
+
+    std::vector<medic::TxnInfo> hist_;
+    int hist_sel_ = 0, hist_top_ = 0;
+    medic::TxnInfo undo_target_;
+};
+
+}  // namespace medic::ui

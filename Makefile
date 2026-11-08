@@ -17,7 +17,15 @@ PS5_SRCS := $(wildcard libmedic/src/*.cpp) $(wildcard ps5/*.cpp)
 PS5_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_SRCS))
 PS5_ELF := $(PS5_BUILD)/ps5medic.elf
 
-.PHONY: host test clean ps5 deploy
+.PHONY: host test clean ps5 deploy preview
+
+# UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
+SNAP ?=
+OUT ?= $(BUILD)/preview
+PREVIEW_ARGS ?=
+preview: host
+	@test -n "$(SNAP)" || { echo "SNAP=<snapshot-ordner> setzen (z. B. tests/fixtures/b8_pos)"; exit 1; }
+	$(BUILD)/medic-ui-preview $(SNAP) $(OUT) $(PREVIEW_ARGS)
 
 host:
 	cmake -S . -B $(BUILD) -DCMAKE_BUILD_TYPE=Release

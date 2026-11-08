@@ -6,6 +6,7 @@
 //   export  <snapshot-dir> <zielordner>   (Snapshot erneut schreiben, z. B. zum Pruefen des Exports)
 // "fix" ohne --apply zeigt nur den Plan (Dry-Run). Mit --apply wird DIREKT im Snapshot-Ordner geschrieben -- Kopie benutzen!
 #include "medic/collectors.hpp"
+#include "medic/diff.hpp"
 #include "medic/fixes.hpp"
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
@@ -55,35 +56,15 @@ std::string utc_timestamp() {
     return buf;
 }
 
-std::vector<std::string> split_lines(const std::string& s) {
-    std::vector<std::string> v;
-    std::size_t pos = 0;
-    while (pos < s.size()) {
-        auto nl = s.find('\n', pos);
-        std::string l = s.substr(pos, nl == std::string::npos ? std::string::npos : nl - pos);
-        if (!l.empty() && l.back() == '\r') l.pop_back();
-        v.push_back(std::move(l));
-        pos = nl == std::string::npos ? s.size() : nl + 1;
-    }
-    return v;
-}
-
-// Einfacher Zeilen-Diff (LCS), reicht fuer config.ini und Autoload-Listen.
+// Zeigt nur geaenderte Zeilen (config.ini, Autoload-Listen).
 void print_diff(const std::string& old_text, const std::string& new_text) {
-    auto a = split_lines(old_text), b = split_lines(new_text);
-    if (a.size() > 2000 || b.size() > 2000) {
-        std::cout << "      (Datei zu gross fuer die Diff-Anzeige: " << a.size() << " -> " << b.size() << " Zeilen)\n";
+    std::vector<medic::DiffLine> d;
+    if (!medic::diff_lines(old_text, new_text, d)) {
+        std::cout << "      (Datei zu gross fuer die Diff-Anzeige)\n";
         return;
     }
-    std::vector<std::vector<int>> L(a.size() + 1, std::vector<int>(b.size() + 1, 0));
-    for (std::size_t i = a.size(); i-- > 0;)
-        for (std::size_t j = b.size(); j-- > 0;) L[i][j] = a[i] == b[j] ? L[i + 1][j + 1] + 1 : std::max(L[i + 1][j], L[i][j + 1]);
-    std::size_t i = 0, j = 0;
-    while (i < a.size() || j < b.size()) {
-        if (i < a.size() && j < b.size() && a[i] == b[j]) { ++i; ++j; }
-        else if (i < a.size() && (j == b.size() || L[i + 1][j] >= L[i][j + 1])) std::cout << "      - " << a[i++] << "\n";
-        else std::cout << "      + " << b[j++] << "\n";
-    }
+    for (const auto& l : d)
+        if (l.tag != ' ') std::cout << "      " << l.tag << " " << l.text << "\n";
 }
 
 struct Args {

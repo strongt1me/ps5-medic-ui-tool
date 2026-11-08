@@ -14,3 +14,4 @@ extern int g_fail, g_pass;
     } while (0)
 
 void fix_tests();  // tests/test_fixes.cpp
+void ui_tests();   // tests/test_ui.cpp
