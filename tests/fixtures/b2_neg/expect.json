@@ -1,1 +1,1 @@
-{"expect":[]}
+{"expect": [], "neg_for": ["smp.parentheses_in_pfs_name"]}

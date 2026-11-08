@@ -62,6 +62,18 @@ public:
         fs::path p;
         return map(path, p) && slurp(p, out);
     }
+    bool read_range(const std::string& path, std::uint64_t offset, std::size_t len, std::string& out) const override {
+        fs::path p;
+        std::error_code ec;
+        if (!map(path, p) || !fs::is_regular_file(p, ec)) return false;
+        std::ifstream in(p, std::ios::binary);
+        if (!in) return false;
+        in.seekg(static_cast<std::streamoff>(offset));
+        out.assign(len, ' ');
+        in.read(out.data(), static_cast<std::streamsize>(len));
+        out.resize(static_cast<std::size_t>(in.gcount()));
+        return !out.empty();
+    }
 
 private:
     // Virtueller Pfad -> <root>/fs/<pfad>. ".." wird abgelehnt, damit nichts ausserhalb des Snapshots gelesen wird.
@@ -112,14 +124,23 @@ public:
                 storage_.push_back(std::move(si));
             }
         }
+        if (j.contains("components") && j["components"].is_object()) {
+            for (auto& [name, props] : j["components"].items()) {
+                if (!props.is_object()) continue;
+                for (auto& [k, v] : props.items())
+                    if (v.is_string()) components_[name][k] = v.get<std::string>();
+            }
+        }
     }
     std::string firmware() const override { return fw_; }
     std::string model() const override { return model_; }
     std::vector<StorageInfo> storage() const override { return storage_; }
+    std::map<std::string, std::map<std::string, std::string>> components() const override { return components_; }
 
 private:
     std::string fw_, model_;
     std::vector<StorageInfo> storage_;
+    std::map<std::string, std::map<std::string, std::string>> components_;
 };
 
 class SnapshotPlatform final : public Platform {

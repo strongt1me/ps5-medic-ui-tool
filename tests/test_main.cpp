@@ -78,6 +78,10 @@ static void unit_tests() {
           "Array: gleiches Element trifft");
     CHECK(!ids_for(rules_with(R"({"all":[{"fact":"smp.images[].name","matches":"[()]"},{"fact":"smp.images[].ext","in":[".exfat"]}]})"), f).count("t.rule"),
           "Array: verschiedene Elemente duerfen nicht kombiniert werden");
+    CHECK(ids_for(rules_with(R"({"fact":"proc.running","count_matches":{"regex":"^etahen$","gte":1}})"), f).count("t.rule"), "count_matches >= 1");
+    CHECK(!ids_for(rules_with(R"({"fact":"proc.running","count_matches":{"regex":"^etahen$","gte":2}})"), f).count("t.rule"), "count_matches < gte");
+    CHECK(load_fails(rules_with(R"({"fact":"proc.running[]","count_matches":{"regex":"x","gte":1}})")), "count_matches mit [] ungueltig");
+    CHECK(load_fails(rules_with(R"({"fact":"proc.running","count_matches":{"regex":"x","gte":0}})")), "count_matches gte >= 1");
     // applies_fw
     medic::Facts fw;
     fw.set("fw.version", "4.03");
@@ -129,8 +133,9 @@ static void fixture_tests() {
     std::sort(dirs.begin(), dirs.end());
     CHECK(!dirs.empty(), "Fixtures vorhanden");
 
-    // Jede Regel braucht ein Positiv- (Regel feuert) und ein Negativ-Fixture (Regel feuert nicht, aber andere Fixtures existieren).
-    std::set<std::string> fired_somewhere, silent_somewhere;
+    // Jede Regel braucht ein Positiv-Fixture (Regel feuert) und ein Negativ-Fixture:
+    // expect.json {"neg_for":["regel.id"]} markiert den "Beinahe-Treffer", bei dem die Regel NICHT feuern darf.
+    std::set<std::string> fired_somewhere, neg_declared;
     for (auto& d : dirs) {
         std::ifstream in(d / "expect.json");
         std::ostringstream ss;
@@ -152,11 +157,16 @@ static void fixture_tests() {
             for (auto& g : got) std::cerr << " " << g;
             std::cerr << "\n";
         }
-        for (auto& r : rules.rules) (got.count(r.id) ? fired_somewhere : silent_somewhere).insert(r.id);
+        for (auto& g : got) fired_somewhere.insert(g);
+        if (ex.contains("neg_for"))
+            for (auto& v : ex["neg_for"]) {
+                neg_declared.insert(v.get<std::string>());
+                CHECK(!got.count(v.get<std::string>()), "Fixture " + d.filename().string() + ": neg_for-Regel feuert nicht");
+            }
     }
     for (auto& r : rules.rules) {
         CHECK(fired_somewhere.count(r.id), "Regel " + r.id + " hat ein Positiv-Fixture");
-        CHECK(silent_somewhere.count(r.id), "Regel " + r.id + " hat ein Negativ-Fixture");
+        CHECK(neg_declared.count(r.id), "Regel " + r.id + " hat ein Negativ-Fixture (neg_for)");
     }
 }
 

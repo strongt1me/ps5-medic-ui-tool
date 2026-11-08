@@ -3,6 +3,61 @@
   "db_version": "2026.11.08",
   "rules": [
     {
+      "id": "hen.etahen_with_kstufflite_latest_fw",
+      "severity": "critical",
+      "applies_fw": ">=13.60",
+      "when": {
+        "all": [
+          { "fact": "proc.running", "contains": "etahen" },
+          { "fact": "proc.running", "contains": "kstuff" }
+        ]
+      },
+      "text": {
+        "de": "etaHEN und kstuff-lite laufen gleichzeitig. Auf der neuesten Jailbreak-Firmware wird kstuff-lite ohne etaHEN empfohlen; die Kombination wurde mit Kernel-Panics gemeldet. Reihenfolge: Jailbreak, kstuff-lite, ShadowMount+.",
+        "en": "etaHEN and kstuff-lite are running at the same time. On the newest jailbreak firmware, kstuff-lite without etaHEN is recommended; the combination was reported with kernel panics. Order: jailbreak, kstuff-lite, ShadowMount+."
+      },
+      "evidence": "proc.running",
+      "fix": null,
+      "source": "https://github.com/EchoStretch/kstuff-lite/issues/94",
+      "verified": "community"
+    },
+    {
+      "id": "hen.etahen_double_load",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "proc.running", "count_matches": { "regex": "^etahen$", "gte": 2 } }
+        ]
+      },
+      "text": {
+        "de": "Es laufen mehrere etaHEN-Prozesse. etaHEN nicht über eine laufende Kopie laden; vorher die Konsole neu starten und den Jailbreak neu ausführen.",
+        "en": "Multiple etaHEN processes are running. Do not load etaHEN over a running copy; restart the console and jailbreak again first."
+      },
+      "evidence": "proc.running",
+      "evidence_filter": "^etahen$",
+      "fix": null,
+      "source": "https://github.com/GronedWaffel/etahen-13.60/releases",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.kstuff_min_version",
+      "severity": "critical",
+      "when": {
+        "all": [
+          { "fact": "proc.running", "contains": "shadowmountplus" },
+          { "fact": "kstuff.version", "lt": "1.07" }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ benötigt kstuff-lite ab Version 1.07.",
+        "en": "ShadowMount+ requires kstuff-lite 1.07 or newer."
+      },
+      "evidence": "kstuff.version",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
       "id": "smp.parentheses_in_pfs_name",
       "severity": "critical",
       "when": {
@@ -21,6 +76,101 @@
       "verified": "community"
     },
     {
+      "id": "smp.autotoggle_crash_1360",
+      "severity": "warning",
+      "applies_fw": "=13.60",
+      "when": {
+        "all": [
+          { "fact": "smp.version", "eq": "1.7beta3" },
+          { "fact": "kstuff.version", "eq": "1.11" },
+          { "fact": "smp.config.kstuff_game_auto_toggle", "eq": "1" }
+        ]
+      },
+      "text": {
+        "de": "Diese Kombination (FW 13.60, ShadowMount+ 1.7beta3, kstuff-lite 1.11, kstuff_game_auto_toggle=1) wurde mit wiederkehrenden Spielabstürzen gemeldet. Workaround: kstuff_game_auto_toggle=0 setzen (kstuff bleibt geladen). Vorher config.ini sichern.",
+        "en": "This combination (FW 13.60, ShadowMount+ 1.7beta3, kstuff-lite 1.11, kstuff_game_auto_toggle=1) was reported with recurring game crashes. Workaround: set kstuff_game_auto_toggle=0 (kstuff stays loaded). Back up config.ini first."
+      },
+      "evidence": "smp.config.kstuff_game_auto_toggle",
+      "fix": "smp_set_key",
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/130",
+      "verified": "community"
+    },
+    {
+      "id": "smp.fw900_kstuff_fork",
+      "severity": "info",
+      "applies_fw": "=9.00",
+      "when": {
+        "all": [
+          { "fact": "proc.running", "contains": "shadowmountplus" },
+          { "fact": "kstuff.origin", "eq": "echostretch" }
+        ]
+      },
+      "text": {
+        "de": "Auf FW 9.00 starten Dumps mit der kstuff-lite-Version von EchoStretch laut Nutzerberichten teils nicht („can't launch the game or app“). Dort half Drakmors kstuff-Fork anstelle der EchoStretch-Version.",
+        "en": "On FW 9.00, dumps reportedly fail to launch with EchoStretch's kstuff-lite build (\"can't launch the game or app\"). Users report that Drakmor's kstuff fork fixes it."
+      },
+      "evidence": "kstuff.origin",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/89",
+      "verified": "community"
+    },
+    {
+      "id": "smp.backpork_conflict",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "proc.running", "contains": "backpork" },
+          { "fact": "smp.fakelib_enabled", "eq": "1" }
+        ]
+      },
+      "text": {
+        "de": "BackPork läuft parallel zur Fakelib-Funktion von ShadowMount+. Beide kollidieren – BackPork deaktivieren.",
+        "en": "BackPork is running alongside ShadowMount+'s fakelib feature. They conflict – disable BackPork."
+      },
+      "evidence": "proc.running",
+      "evidence_filter": "^backpork$",
+      "fix": "smp_disable_conflicting_backpork",
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.image_extra_folder",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.mounts[].kind", "eq": "image" },
+          { "fact": "smp.mounts[].extra_folder", "eq": true }
+        ]
+      },
+      "text": {
+        "de": "Im Image liegt das Spiel in einem zusätzlichen Ordner (/<ORDNER>/sce_sys/param.json statt /sce_sys/param.json). Spieldateien müssen im Image-Root liegen. Image ohne den Zusatzordner neu bauen.",
+        "en": "The game sits in an extra folder inside the image (/<FOLDER>/sce_sys/param.json instead of /sce_sys/param.json). Game files must be at the image root. Rebuild the image without the extra folder."
+      },
+      "evidence": "smp.mounts[].path",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "todo"
+    },
+    {
+      "id": "smp.ffpfsc_direct_files",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.mounts[].kind", "eq": "pfsc" },
+          { "fact": "smp.mounts[].direct_files", "eq": true },
+          { "fact": "smp.mounts[].nested_image", "eq": false }
+        ]
+      },
+      "text": {
+        "de": "Der .ffpfsc-Container enthält direkt Spieldateien. Ein .ffpfsc ist nur ein Container für ein inneres Image (.exfat bzw. pfs_image.dat) und darf keine Spieldateien im Root haben.",
+        "en": "The .ffpfsc container holds game files directly. A .ffpfsc is only a container for an inner image (.exfat or pfs_image.dat) and must not have game files in its root."
+      },
+      "evidence": "smp.mounts[].path",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "todo"
+    },
+    {
       "id": "smp.duplicate_titleid",
       "severity": "warning",
       "when": {
@@ -36,6 +186,129 @@
       "fix": "move_duplicate_titleid",
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
+    },
+    {
+      "id": "smp.custom_scanpath_hides_defaults",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.hidden_sources[].path", "exists": true }
+        ]
+      },
+      "text": {
+        "de": "Es sind eigene Scanpfade gesetzt. Dadurch werden die Standardpfade nicht mehr gescannt – diese Spiele werden von ShadowMount+ nicht gefunden. Den Pfad zur Liste ergänzen oder die Spiele in einen gescannten Pfad legen.",
+        "en": "Custom scan paths are set. The default paths are therefore no longer scanned – ShadowMount+ will not find these games. Add the path to the list or move the games into a scanned path."
+      },
+      "evidence": "smp.hidden_sources[].path",
+      "fix": "smp_set_key",
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.scan_depth",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "smp.deep_sources[].path", "exists": true }
+        ]
+      },
+      "text": {
+        "de": "Diese Spiele liegen tiefer als die eingestellte Scan-Tiefe und werden nicht gefunden. scan_depth erhöhen (z. B. 2) oder die Ordner flacher anlegen.",
+        "en": "These games sit deeper than the configured scan depth and are not found. Increase scan_depth (e.g. 2) or place the folders at a shallower level."
+      },
+      "evidence": "smp.deep_sources[].path",
+      "fix": "smp_set_key",
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.source_not_stable",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": { "regex": "source not stable yet", "gte": 3 } }
+        ]
+      },
+      "text": {
+        "de": "debug.log meldet wiederholt „source not stable yet“: Der Kopiervorgang ist noch nicht abgeschlossen, oder stability_wait_seconds passt nicht zur Quelle. Kopieren abwarten bzw. den Wert prüfen.",
+        "en": "debug.log repeatedly reports \"source not stable yet\": the copy is still in progress, or stability_wait_seconds does not suit the source. Wait for the copy to finish or review the value."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "source not stable yet",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.exfat_cluster",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "smp.images[].ext", "eq": ".exfat" },
+          { "fact": "smp.images[].cluster_size", "lt": "65536" }
+        ]
+      },
+      "text": {
+        "de": "Dieses .exfat-Image hat Cluster kleiner als 64 KB und ist dadurch langsamer. Image mit 64-KB-Clustern neu bauen (z. B. mkfs.exfat -c 64K).",
+        "en": "This .exfat image uses clusters smaller than 64 KB, which slows it down. Rebuild the image with 64 KB clusters (e.g. mkfs.exfat -c 64K)."
+      },
+      "evidence": "smp.images[].path",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.debug_off",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "smp.debug", "eq": "0" }
+        ]
+      },
+      "text": {
+        "de": "debug=0: ohne Debug-Log ist keine Diagnose möglich. Für die Fehlersuche debug=1 setzen.",
+        "en": "debug=0: without the debug log no diagnosis is possible. Set debug=1 while troubleshooting."
+      },
+      "evidence": "smp.debug",
+      "fix": "smp_set_key",
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.register_failed",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": { "regex": "Register failed", "gte": 1 } }
+        ]
+      },
+      "text": {
+        "de": "Die Registrierung eines Spiels ist fehlgeschlagen. Zuerst das Launcher-Icon entfernen und neu registrieren; als letzten Schritt die Spieldaten löschen (Achtung: Speicherstände gehen verloren).",
+        "en": "Registering a game failed. First remove the launcher icon and register again; as a last resort delete the game data (warning: saves are lost)."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "Register failed",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "todo"
+    },
+    {
+      "id": "smp.image_sector_autotune",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "smp.autotune.lines", "count_matches": { "regex": "image_sector", "gte": 1 } }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ hat die Sektorgröße eines Images automatisch angepasst (autotune.ini). Das Spiel einfach erneut starten.",
+        "en": "ShadowMount+ automatically adjusted an image's sector size (autotune.ini). Simply start the game again."
+      },
+      "evidence": "smp.autotune.lines",
+      "evidence_filter": "image_sector",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "todo"
     }
   ]
 }

@@ -16,6 +16,7 @@ struct Rule {
     nlohmann::json when;
     std::string text_de, text_en;
     std::string evidence_path;  // optional
+    std::string evidence_filter;  // optional: Regex, nur passende Array-Elemente (z. B. Log-Zeilen) als Evidenz
     std::string fix;            // leer = kein Fix
     std::string source;
     std::string verified;       // doc | community | todo

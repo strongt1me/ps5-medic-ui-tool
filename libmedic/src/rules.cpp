@@ -20,7 +20,7 @@ using json = nlohmann::json;
 
 // ---- Validierung (entspricht knowledge/rules.schema.json) ---------------
 
-const std::set<std::string> kLeafKeys = {"fact", "eq", "in", "lt", "gt", "matches", "contains", "exists", "default"};
+const std::set<std::string> kLeafKeys = {"fact", "eq", "in", "lt", "gt", "matches", "contains", "exists", "count_matches", "default"};
 
 void validate_condition(const json& c, const std::string& where) {
     if (!c.is_object()) fail(where, "Bedingung muss ein Objekt sein");
@@ -41,8 +41,21 @@ void validate_condition(const json& c, const std::string& where) {
     for (auto it = c.begin(); it != c.end(); ++it)
         if (!kLeafKeys.count(it.key())) fail(where, "unbekannter Schluessel '" + it.key() + "'");
     int ops = 0;
-    for (const char* k : {"eq", "in", "lt", "gt", "matches", "contains", "exists"}) ops += c.contains(k) ? 1 : 0;
-    if (ops != 1) fail(where, "genau ein Operator erwartet (eq, in, lt, gt, matches, contains, exists)");
+    for (const char* k : {"eq", "in", "lt", "gt", "matches", "contains", "exists", "count_matches"}) ops += c.contains(k) ? 1 : 0;
+    if (ops != 1) fail(where, "genau ein Operator erwartet (eq, in, lt, gt, matches, contains, exists, count_matches)");
+    if (c.contains("count_matches")) {
+        const json& cm = c["count_matches"];
+        if (!cm.is_object() || !cm.contains("regex") || !cm["regex"].is_string() || !cm.contains("gte") ||
+            !cm["gte"].is_number_integer() || cm["gte"].get<long>() < 1 || cm.size() != 2)
+            fail(where, "'count_matches' braucht {\"regex\": String, \"gte\": Ganzzahl >= 1}");
+        try {
+            std::regex re(cm["regex"].get<std::string>());
+        } catch (const std::regex_error& e) {
+            fail(where, std::string("ungueltiger regulaerer Ausdruck: ") + e.what());
+        }
+        if (c["fact"].get<std::string>().find("[]") != std::string::npos)
+            fail(where, "'count_matches' arbeitet auf einem ganzen Array, 'fact' darf kein [] enthalten");
+    }
     if (c.contains("in") && !c["in"].is_array()) fail(where, "'in' braucht ein Array");
     for (const char* k : {"lt", "gt", "matches", "contains"})
         if (c.contains(k) && !c[k].is_string()) fail(where, std::string("'") + k + "' braucht einen String");
@@ -89,6 +102,14 @@ Rule parse_rule(const json& j, std::size_t index) {
         fail(where, "verified muss doc|community|todo sein");
 
     if (j.contains("evidence")) r.evidence_path = need_string(j, "evidence", where);
+    if (j.contains("evidence_filter")) {
+        r.evidence_filter = need_string(j, "evidence_filter", where);
+        try {
+            std::regex re(r.evidence_filter);
+        } catch (const std::regex_error& e) {
+            fail(where, std::string("evidence_filter: ungueltiger regulaerer Ausdruck: ") + e.what());
+        }
+    }
     if (j.contains("fix") && !j["fix"].is_null()) r.fix = need_string(j, "fix", where);
     if (j.contains("applies_fw")) r.applies_fw = need_string(j, "applies_fw", where);
     return r;
@@ -155,6 +176,14 @@ bool eval_leaf(const json& c, const Facts& facts, const Binding& b) {
     if (c.contains("exists")) return v.has_value() == c["exists"].get<bool>();
     if (!v) return false;
 
+    if (c.contains("count_matches")) {
+        if (!v->is_array()) return false;
+        std::regex re(c["count_matches"]["regex"].get<std::string>());
+        long n = 0;
+        for (auto& e : *v)
+            if (std::regex_search(to_s(e), re)) ++n;
+        return n >= c["count_matches"]["gte"].get<long>();
+    }
     if (c.contains("eq")) return loose_equal(*v, c["eq"]);
     if (c.contains("in")) {
         for (auto& e : c["in"])
@@ -206,12 +235,16 @@ void collect_prefixes(const json& c, std::set<std::string>& out) {
     }
 }
 
-void add_evidence(std::vector<std::string>& ev, const json& v) {
+constexpr std::size_t kMaxEvidence = 20;
+
+void add_evidence(std::vector<std::string>& ev, const json& v, const std::regex* filter) {
     if (v.is_array()) {
-        for (auto& e : v) add_evidence(ev, e);
+        for (auto& e : v) add_evidence(ev, e, filter);
         return;
     }
     std::string s = to_s(v);
+    if (filter && !std::regex_search(s, *filter)) return;
+    if (ev.size() >= kMaxEvidence) return;
     if (std::find(ev.begin(), ev.end(), s) == ev.end()) ev.push_back(std::move(s));
 }
 
@@ -310,6 +343,8 @@ std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts) {
         if (empty_array || total > kMaxBindings) continue;
 
         Finding f;
+        std::optional<std::regex> ev_filter;
+        if (!r.evidence_filter.empty()) ev_filter.emplace(r.evidence_filter);
         bool hit = false;
         std::vector<std::size_t> idx(prefixes.size(), 0);
         for (;;) {
@@ -318,7 +353,7 @@ std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts) {
             if (eval(r.when, facts, b)) {
                 hit = true;
                 if (!r.evidence_path.empty())
-                    if (auto ev = resolve(facts, r.evidence_path, b)) add_evidence(f.evidence, *ev);
+                    if (auto ev = resolve(facts, r.evidence_path, b)) add_evidence(f.evidence, *ev, ev_filter ? &*ev_filter : nullptr);
             }
             // Zaehler weiterschalten
             std::size_t k = 0;

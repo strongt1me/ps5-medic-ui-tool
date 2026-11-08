@@ -21,6 +21,7 @@
             "properties": { "de": { "type": "string" }, "en": { "type": "string" } }
           },
           "evidence": { "type": "string" },
+          "evidence_filter": { "type": "string", "description": "Regex: nur passende Array-Elemente als Evidenz (z. B. Log-Zeilen)" },
           "fix": { "type": ["string", "null"] },
           "source": { "type": "string", "format": "uri" },
           "verified": { "enum": ["doc", "community", "todo"] },
@@ -45,6 +46,12 @@
             "matches": { "type": "string" },
             "contains": { "type": "string" },
             "exists": { "type": "boolean" },
+            "count_matches": {
+              "type": "object",
+              "required": ["regex", "gte"],
+              "properties": { "regex": { "type": "string" }, "gte": { "type": "integer", "minimum": 1 } },
+              "description": "Zaehlt Array-Elemente, die auf regex passen (fact ohne []); wahr ab gte Treffern."
+            },
             "default": {}
           }
         }
