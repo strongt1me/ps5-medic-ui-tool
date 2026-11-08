@@ -133,6 +133,7 @@ void policy_tests() {
     CHECK(pol.allowed("/data/shadowmount/config.ini"), "Whitelist: config.ini");
     CHECK(!pol.allowed("/data/shadowmount"), "Whitelist: Wurzelordner selbst nicht");
     CHECK(pol.allowed("/data/ps5medic/journal.jsonl"), "Whitelist: ps5medic");
+    CHECK(pol.allowed("/data/pldmgr/autoload.txt") && pol.allowed("/data/ps5_autoloader/autoload.txt"), "Whitelist: Autoload-Listen");
     CHECK(pol.allowed("/mnt/usb0/Game/x.ffpfs"), "Whitelist: Scanpfad");
     CHECK(!pol.allowed("/mnt/usb1/Game"), "Whitelist: anderer USB");
     CHECK(!pol.allowed("/data/other/x"), "Whitelist: zu breiter Scanpfad /data wird ignoriert");
@@ -357,8 +358,14 @@ void plan_content_tests() {
     {
         TempCopy tmp("b5_autoload");
         Ctx c = make_ctx(tmp.dir, "smp.backpork_conflict");
-        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].content == "etaHEN-2.5B.bin\n#ps5-backpork.elf\n# kstuff.elf\n",
-              "backpork: nur die BackPork-Zeile wird auskommentiert");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].content == "!1000\nshadowmountplus.elf\n!2000\n!3000\nkstuff.elf\n",
+              "backpork: nur die BackPork-Zeile wird entfernt, Wartezeiten und andere Payloads bleiben");
+    }
+    {
+        TempCopy tmp("b5_autoload_pldmgr");
+        Ctx c = make_ctx(tmp.dir, "smp.backpork_conflict");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].path == "/data/pldmgr/autoload.txt" && c.plan.changes[0].content == "!3000\n",
+              "backpork: auch die Autoload-Liste des Payload Managers wird gefunden");
     }
 }
 
@@ -370,7 +377,8 @@ void fix_tests() {
     policy_tests();
     const FixCase cases[] = {
         {"b2_pos", "smp.parentheses_in_pfs_name", true}, {"b3_pos", "smp.autotoggle_crash_1360", true},
-        {"b5_autoload", "smp.backpork_conflict", false}, {"b8_pos", "smp.duplicate_titleid", true},
+        {"b5_autoload", "smp.backpork_conflict", false}, {"b5_autoload_pldmgr", "smp.backpork_conflict", false},
+        {"b3_pos_default", "smp.autotoggle_crash_1360", true},{"b8_pos", "smp.duplicate_titleid", true},
         {"b9_pos", "smp.custom_scanpath_hides_defaults", true}, {"b10_pos", "smp.scan_depth", true},
         {"b13_pos", "smp.debug_off", true},
     };

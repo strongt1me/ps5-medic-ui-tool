@@ -83,7 +83,7 @@
         "all": [
           { "fact": "smp.version", "eq": "1.7beta3" },
           { "fact": "kstuff.version", "eq": "1.11" },
-          { "fact": "smp.config.kstuff_game_auto_toggle", "eq": "1" }
+          { "fact": "smp.config.kstuff_game_auto_toggle", "eq": "1", "default": "1" }
         ]
       },
       "text": {
@@ -131,7 +131,7 @@
       "evidence": "proc.running",
       "evidence_filter": "^backpork$",
       "fix": "smp_disable_conflicting_backpork",
-      "fix_params": {"files": ["/data/ps5_autoloader/autoload.txt"], "match": "backpork"},
+      "fix_params": {"files": ["/data/ps5_autoloader/autoload.txt", "/data/pldmgr/autoload.txt"], "match": "backpork"},
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
     },
@@ -151,7 +151,7 @@
       "evidence": "smp.mounts[].path",
       "fix": "fix_image_nesting_hint",
       "source": "https://github.com/drakmor/ShadowMountPlus",
-      "verified": "todo"
+      "verified": "doc"
     },
     {
       "id": "smp.ffpfsc_direct_files",
@@ -170,7 +170,7 @@
       "evidence": "smp.mounts[].path",
       "fix": "fix_image_nesting_hint",
       "source": "https://github.com/drakmor/ShadowMountPlus",
-      "verified": "todo"
+      "verified": "doc"
     },
     {
       "id": "smp.duplicate_titleid",
@@ -313,7 +313,7 @@
       "evidence_filter": "image_sector",
       "fix": null,
       "source": "https://github.com/drakmor/ShadowMountPlus",
-      "verified": "todo"
+      "verified": "doc"
     }
   ]
 }

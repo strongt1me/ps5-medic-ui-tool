@@ -157,23 +157,25 @@ void plan_disable_backpork(FixPlan& plan, const Finding& f, const IFileSystem& f
             while (pos < text.size()) {
                 std::size_t nl = text.find('\n', pos);
                 std::string line = text.substr(pos, nl == std::string::npos ? std::string::npos : nl - pos);
-                std::size_t a = line.find_first_not_of(" \t");
-                const bool commented = a != std::string::npos && (line[a] == '#' || line[a] == ';');
-                if (!commented && std::regex_search(line, re)) {
-                    line = "#" + line;
+                // Format der Autoload-Listen (ps5_autoloader, Payload Manager): "!<ms>" = Wartezeit, sonst ein Dateiname.
+                // Kommentarzeilen gibt es dort nicht ("#..." waere ein Dateiname), daher wird der Eintrag entfernt;
+                // das Original liegt im Backup und kommt mit "undo" zurueck.
+                const bool is_delay = !line.empty() && line[0] == '!';
+                const std::size_t line_end = nl == std::string::npos ? text.size() : nl + 1;
+                if (!is_delay && std::regex_search(line, re)) {
                     changed = true;
+                } else {
+                    out += text.substr(pos, line_end - pos);
                 }
-                out += line;
-                if (nl != std::string::npos) out += '\n';
-                pos = nl == std::string::npos ? text.size() : nl + 1;
+                pos = line_end;
             }
             if (!changed) continue;
             Change c;
             c.kind = Change::Kind::WriteFile;
             c.path = fj.get<std::string>();
             c.content = out;
-            c.note_de = "BackPork-Eintrag in der Autoload-Liste auskommentieren (vorher Backup)";
-            c.note_en = "Comment out the BackPork entry in the autoload list (backup first)";
+            c.note_de = "BackPork-Eintrag aus der Autoload-Liste entfernen (Original im Backup)";
+            c.note_en = "Remove the BackPork entry from the autoload list (original kept in the backup)";
             plan.changes.push_back(std::move(c));
         }
     }

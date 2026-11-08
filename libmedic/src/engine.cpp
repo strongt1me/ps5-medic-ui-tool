@@ -188,7 +188,8 @@ std::size_t component_count(const std::string& norm) {
 }  // namespace
 
 PathPolicy::PathPolicy(std::vector<std::string> extra_roots) {
-    roots_ = {"/data/shadowmount", "/data/ps5medic", "/data/ps5_autoloader"};
+    // ps5_autoloader = WebKit-Autoloader, pldmgr = Payload Manager (beide mit eigener autoload.txt)
+    roots_ = {"/data/shadowmount", "/data/ps5medic", "/data/ps5_autoloader", "/data/pldmgr"};
     for (const auto& r : extra_roots) {
         std::string n = normalize(r);
         if (n.empty() || component_count(n) < 2) continue;  // "/", "/data", relative, ".." -> ignorieren

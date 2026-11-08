@@ -1,0 +1,1 @@
+{"fw": "13.60", "model": "CFI-1216A", "storage": [{"mount": "/data", "total": 900000000000, "free": 400000000000}], "components": {"kstuff": {"version": "1.11", "origin": "drakmor"}, "smp": {"version": "1.7beta3"}}}

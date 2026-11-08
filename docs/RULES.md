@@ -70,3 +70,13 @@ Offene Punkte, vor dem Einsatz auf der Konsole zu klären:
 - **B8**: Doppelte Quellen gehen nach `<Scanpfad>/_duplicates/` (gleiches Laufwerk, kein Kopieren). Bei `scan_depth >= 2` könnte SM+ den Ordner mitscannen – der Plan weist darauf hin. Ob SM+ Ordner mit `_` überspringt, ist ungeprüft.
 - **B9/B10**: Der Fix schreibt in die Sektion `[scan]` bzw. bleibt beim flachen Format, wenn die Datei keine Sektionen hat.
 - **Löschen**: Es wird nichts gelöscht. Einzige Ausnahme: beim Undo werden Ordner entfernt, die der Fix selbst angelegt hat und die leer sind (z. B. `_duplicates/`).
+
+## Nachtrag: Abgleich mit dem lokalen SM+-README (1.7beta5-Stand)
+Quelle: `README.md`, `config.ini.example` und der Payload-Manager-Quelltext aus dem lokalen Ordner `PS5 SDK usw`. Daraus folgt:
+- **Zwei config.ini-Formate** existieren je nach Version: flache Schlüssel (dieses README) und Sektionen (GitHub-Seite, neuere Entwicklung). Collector und Fix-Engine verstehen beide.
+- **B3**: `kstuff_game_auto_toggle` ist standardmässig `1`. Die Regel feuert deshalb auch, wenn der Schlüssel fehlt (Fixture `b3_pos_default`).
+- **B10**: `recursive_scan=1` erzwingt `scan_depth=2` (Fixture `b10_neg_recursive`). Der Ordner `backports` zählt nicht als Spielquelle (Fixture `b8_neg_backports`).
+- **B6/B7**: Mountpunkte `/mnt/shadowmnt/<image>_<hash>` und `/mnt/shadowmnt/pfsc/<image>_<hash>` sind dokumentiert → Status `doc`.
+- **B15**: `image_sector=<datei>:<grösse>` in `autotune.ini` ist dokumentiert (SM+ schreibt es, wenn die Cluster-Grösse nicht zur Sektorgrösse passt) → `doc`.
+- **B14** bleibt `todo`: „Register failed“ wird im README als Benachrichtigung genannt.
+- **B5-Fix**: Die Autoload-Listen (`/data/ps5_autoloader/autoload.txt`, Payload Manager: `/data/pldmgr/autoload.txt`) kennen keine Kommentare: `!<ms>` ist eine Wartezeit, jede andere Zeile ein Dateiname. Der Fix **entfernt** den BackPork-Eintrag (Original im Backup, `undo` stellt es wieder her) statt ihn mit `#` zu markieren. Der Pfad der Liste hängt vom Autoloader ab; beide sind in der Whitelist.

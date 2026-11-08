@@ -172,7 +172,8 @@ struct Entry {
 // Eigene Quarantaene-Ordner der Fix-Engine (_duplicates, _to_delete) werden nicht als Quelle gezaehlt.
 void scan_dir(const IFileSystem& fs, const std::string& root, const std::string& dir, int level, std::map<std::string, Entry>& out) {
     for (const auto& e : fs.list_dir(dir)) {
-        if (e.is_dir && (e.name == "_duplicates" || e.name == "_to_delete")) continue;
+        // "backports" ist laut SM+-README ein Overlay-Ordner (<scanpath>/backports/<TITLE_ID>/) und kein Spiel.
+        if (e.is_dir && (e.name == "_duplicates" || e.name == "_to_delete" || e.name == "backports")) continue;
         const std::string path = join_path(dir, e.name);
         Entry en;
         en.root = root;
@@ -294,7 +295,9 @@ void collect_shadowmount(const Platform& p, Facts& f) {
 
     // Wirksame Einstellungen (Defaults laut SM+ README: scan depth 1, debug an).
     // fakelib: README kennt [fakelib] enabled; aelterer Schluessel backport_fakelib. Default "an" laut RULES.md (B5).
-    const int depth = parse_int(cfg_value(cfg, "scan", "depth", "scan_depth"), 1);
+    // recursive_scan=1 erzwingt laut README scan_depth=2.
+    int depth = parse_int(cfg_value(cfg, "scan", "depth", "scan_depth"), 1);
+    if (parse_flag(cfg_value(cfg, "scan", "recursive", "recursive_scan"), 0) == 1) depth = std::max(depth, 2);
     f.set("smp.scan_depth", depth);
     f.set("smp.debug", parse_flag(cfg_value(cfg, "general", "debug", "debug"), 1));
     f.set("smp.fakelib_enabled", parse_flag(cfg_value(cfg, "fakelib", "enabled", "backport_fakelib"), 1));
