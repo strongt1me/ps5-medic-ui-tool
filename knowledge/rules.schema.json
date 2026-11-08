@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PS5 Medic rules database",
+  "type": "object",
+  "required": ["schema_version", "db_version", "rules"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "db_version": { "type": "string" },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "severity", "when", "text", "source", "verified"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_.]+$" },
+          "severity": { "enum": ["critical", "warning", "info"] },
+          "when": { "$ref": "#/$defs/condition" },
+          "text": {
+            "type": "object",
+            "required": ["de", "en"],
+            "properties": { "de": { "type": "string" }, "en": { "type": "string" } }
+          },
+          "evidence": { "type": "string" },
+          "fix": { "type": ["string", "null"] },
+          "source": { "type": "string", "format": "uri" },
+          "verified": { "enum": ["doc", "community", "todo"] },
+          "applies_fw": { "type": "string", "description": "Versionsbereich, z. B. \">=7.00 <=13.60\"" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "condition": {
+      "oneOf": [
+        { "type": "object", "required": ["all"], "properties": { "all": { "type": "array", "items": { "$ref": "#/$defs/condition" } } } },
+        { "type": "object", "required": ["any"], "properties": { "any": { "type": "array", "items": { "$ref": "#/$defs/condition" } } } },
+        { "type": "object", "required": ["not"], "properties": { "not": { "$ref": "#/$defs/condition" } } },
+        {
+          "type": "object",
+          "required": ["fact"],
+          "properties": {
+            "fact": { "type": "string" },
+            "eq": {}, "in": { "type": "array" },
+            "lt": { "type": "string" }, "gt": { "type": "string" },
+            "matches": { "type": "string" },
+            "contains": { "type": "string" },
+            "exists": { "type": "boolean" },
+            "default": {}
+          }
+        }
+      ]
+    }
+  }
+}

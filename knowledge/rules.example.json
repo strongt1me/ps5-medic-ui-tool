@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "db_version": "2026.11.08",
+  "rules": [
+    {
+      "id": "smp.parentheses_in_pfs_name",
+      "severity": "critical",
+      "when": {
+        "all": [
+          { "fact": "smp.images[].name", "matches": "[()]" },
+          { "fact": "smp.images[].ext", "in": [".ffpfs", ".ffpfsc"] }
+        ]
+      },
+      "text": {
+        "de": "Klammern im Namen eines .ffpfs/.ffpfsc-Images können beim Scan durch ShadowMount+ eine Kernel-Panic auslösen. Umbenennen behebt das.",
+        "en": "Parentheses in a .ffpfs/.ffpfsc image name can cause a kernel panic when ShadowMount+ scans it. Renaming fixes it."
+      },
+      "evidence": "smp.images[].path",
+      "fix": "rename_image_parentheses",
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/66",
+      "verified": "community"
+    },
+    {
+      "id": "smp.kstuff_min_version",
+      "severity": "critical",
+      "when": {
+        "all": [
+          { "fact": "proc.running", "contains": "shadowmountplus" },
+          { "fact": "kstuff.version", "lt": "1.07" }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ benötigt kstuff-lite ab Version 1.07.",
+        "en": "ShadowMount+ requires kstuff-lite 1.07 or newer."
+      },
+      "evidence": "kstuff.version",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.backpork_conflict",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "proc.running", "contains": "backpork" },
+          { "fact": "smp.config.backport_fakelib", "eq": "1", "default": "1" }
+        ]
+      },
+      "text": {
+        "de": "BackPork läuft parallel zur Fakelib-Funktion von ShadowMount+. Beide kollidieren – BackPork deaktivieren.",
+        "en": "BackPork is running alongside ShadowMount+'s fakelib feature. They conflict – disable BackPork."
+      },
+      "evidence": "proc.running",
+      "fix": "smp_disable_conflicting_backpork",
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    }
+  ]
+}
