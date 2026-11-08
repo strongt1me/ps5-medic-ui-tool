@@ -28,6 +28,19 @@ public:
     virtual bool read_range(const std::string& path, std::uint64_t offset, std::size_t len, std::string& out) const = 0;
 };
 
+// Schreibzugriff. Wird ausschliesslich von der FixEngine benutzt (Pfad-Whitelist, Backup, Journal).
+class IFileSystemRW {
+public:
+    virtual ~IFileSystemRW() = default;
+    // Schreibt atomar (Temp-Datei + Umbenennen), legt fehlende Elternordner an.
+    virtual bool write_file(const std::string& path, const std::string& content) = 0;
+    // Benennt Datei oder Ordner um/verschiebt (gleiches Laufwerk). Scheitert, wenn `to` schon existiert.
+    virtual bool rename(const std::string& from, const std::string& to) = 0;
+    virtual bool make_dirs(const std::string& path) = 0;
+    // Entfernt einen LEEREN Ordner (nur fuer Ordner, die die FixEngine selbst angelegt hat). Nie fuer Dateien/gefuellte Ordner.
+    virtual bool remove_empty_dir(const std::string& path) = 0;
+};
+
 class IProcessList {
 public:
     virtual ~IProcessList() = default;
@@ -57,6 +70,8 @@ struct Platform {
     virtual const IFileSystem& fs() const = 0;
     virtual const IProcessList& procs() const = 0;
     virtual const ISystemInfo& sys() const = 0;
+    // nullptr = nur lesend (Standard). Nur die FixEngine darf diesen Zugriff nutzen.
+    virtual IFileSystemRW* fs_rw() { return nullptr; }
 };
 
 // PC-Implementierung: liest einen Fixture-Ordner
@@ -65,6 +80,7 @@ struct Platform {
 //   <root>/system.json   {"fw":"4.03","model":"...","storage":[{"mount":"/data","total":..,"free":..}],
 //                         "components":{"kstuff":{"version":"1.10","origin":"echostretch"},"smp":{"version":"1.7"}}}
 // Fehlende Dateien sind erlaubt (leerer Zustand).
-std::unique_ptr<Platform> make_snapshot_platform(const std::string& root_dir);
+// writable=true erlaubt Schreibzugriffe (fs_rw) direkt im Ordner -- Fixtures vorher kopieren!
+std::unique_ptr<Platform> make_snapshot_platform(const std::string& root_dir, bool writable = false);
 
 }  // namespace medic

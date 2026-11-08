@@ -5,6 +5,7 @@
 #include "medic/collectors.hpp"
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
+#include "check.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -16,13 +17,7 @@
 namespace fs = std::filesystem;
 using nlohmann::json;
 
-static int g_fail = 0, g_pass = 0;
-
-#define CHECK(cond, msg)                                                              \
-    do {                                                                              \
-        if (cond) ++g_pass;                                                           \
-        else { ++g_fail; std::cerr << "FAIL: " << (msg) << "  [" #cond "]\n"; }       \
-    } while (0)
+int g_fail = 0, g_pass = 0;
 
 static bool load_fails(const std::string& text) {
     try {
@@ -174,6 +169,7 @@ int main() {
     unit_tests();
     platform_tests();
     fixture_tests();
+    fix_tests();
     std::cout << g_pass << " Pruefungen ok, " << g_fail << " fehlgeschlagen\n";
     return g_fail ? 1 : 0;
 }

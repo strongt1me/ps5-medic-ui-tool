@@ -29,6 +29,21 @@ nlohmann::json load_json_or_null(const fs::path& p) {
     return nlohmann::json::parse(text, nullptr, /*allow_exceptions=*/false);
 }
 
+// Virtueller Pfad -> <root>/fs/<pfad>. ".." wird abgelehnt, damit nichts ausserhalb des Snapshots erreichbar ist.
+bool map_vpath(const fs::path& root, const std::string& vpath, fs::path& out) {
+    if (vpath.empty() || vpath[0] != '/') return false;
+    fs::path p = root / "fs";
+    std::stringstream ss(vpath);
+    std::string seg;
+    while (std::getline(ss, seg, '/')) {
+        if (seg.empty() || seg == ".") continue;
+        if (seg == ".." || seg.find(char(92)) != std::string::npos) return false;
+        p /= seg;
+    }
+    out = std::move(p);
+    return true;
+}
+
 class SnapshotFs final : public IFileSystem {
 public:
     explicit SnapshotFs(fs::path root) : root_(std::move(root)) {}
@@ -76,20 +91,57 @@ public:
     }
 
 private:
-    // Virtueller Pfad -> <root>/fs/<pfad>. ".." wird abgelehnt, damit nichts ausserhalb des Snapshots gelesen wird.
-    bool map(const std::string& vpath, fs::path& out) const {
-        if (vpath.empty() || vpath[0] != '/') return false;
-        fs::path p = root_ / "fs";
-        std::stringstream ss(vpath);
-        std::string seg;
-        while (std::getline(ss, seg, '/')) {
-            if (seg.empty() || seg == ".") continue;
-            if (seg == ".." || seg.find('\\') != std::string::npos) return false;
-            p /= seg;
+    bool map(const std::string& vpath, fs::path& out) const { return map_vpath(root_, vpath, out); }
+    fs::path root_;
+};
+
+class SnapshotRw final : public IFileSystemRW {
+public:
+    explicit SnapshotRw(fs::path root) : root_(std::move(root)) {}
+    bool write_file(const std::string& path, const std::string& content) override {
+        fs::path p, tmp;
+        std::error_code ec;
+        if (!map_vpath(root_, path, p)) return false;
+        fs::create_directories(p.parent_path(), ec);
+        tmp = p;
+        tmp += ".medic-tmp";
+        {
+            std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
+            if (!out) return false;
+            out.write(content.data(), static_cast<std::streamsize>(content.size()));
+            if (!out) return false;
         }
-        out = std::move(p);
+        fs::rename(tmp, p, ec);
+        if (ec) {
+            fs::remove(tmp, ec);
+            return false;
+        }
         return true;
     }
+    bool rename(const std::string& from, const std::string& to) override {
+        fs::path a, b;
+        std::error_code ec;
+        if (!map_vpath(root_, from, a) || !map_vpath(root_, to, b)) return false;
+        if (!fs::exists(a, ec) || fs::exists(b, ec)) return false;
+        fs::create_directories(b.parent_path(), ec);
+        fs::rename(a, b, ec);
+        return !ec;
+    }
+    bool remove_empty_dir(const std::string& path) override {
+        fs::path p;
+        std::error_code ec;
+        if (!map_vpath(root_, path, p) || !fs::is_directory(p, ec) || !fs::is_empty(p, ec)) return false;
+        return fs::remove(p, ec);
+    }
+    bool make_dirs(const std::string& path) override {
+        fs::path p;
+        std::error_code ec;
+        if (!map_vpath(root_, path, p)) return false;
+        fs::create_directories(p, ec);
+        return !ec;
+    }
+
+private:
     fs::path root_;
 };
 
@@ -145,21 +197,25 @@ private:
 
 class SnapshotPlatform final : public Platform {
 public:
-    explicit SnapshotPlatform(const std::string& root) : fs_(fs::path(root)), procs_(fs::path(root)), sys_(fs::path(root)) {}
+    SnapshotPlatform(const std::string& root, bool writable)
+        : fs_(fs::path(root)), rw_(fs::path(root)), writable_(writable), procs_(fs::path(root)), sys_(fs::path(root)) {}
     const IFileSystem& fs() const override { return fs_; }
+    IFileSystemRW* fs_rw() override { return writable_ ? &rw_ : nullptr; }
     const IProcessList& procs() const override { return procs_; }
     const ISystemInfo& sys() const override { return sys_; }
 
 private:
     SnapshotFs fs_;
+    SnapshotRw rw_;
+    bool writable_;
     SnapshotProcs procs_;
     SnapshotSys sys_;
 };
 
 }  // namespace
 
-std::unique_ptr<Platform> make_snapshot_platform(const std::string& root_dir) {
-    return std::make_unique<SnapshotPlatform>(root_dir);
+std::unique_ptr<Platform> make_snapshot_platform(const std::string& root_dir, bool writable) {
+    return std::make_unique<SnapshotPlatform>(root_dir, writable);
 }
 
 }  // namespace medic

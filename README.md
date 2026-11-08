@@ -2,7 +2,7 @@
 
 Vollbild-App für gejailbreakte PS5-Konsolen: prüft das Homebrew-Setup auf der Konsole selbst, erklärt Fehler in Klartext und repariert sichere Fälle mit Backup und Undo.
 
-**Status:** Planung – siehe `CLAUDE.md` und `docs/`.
+**Status:** Phase 0 (Host-Kern, Regeln A1/A3/B1–B15) und Phase 1 (Fix-Engine mit Journal und Undo) laufen am PC/WSL (`make test`). Die PS5-Oberfläche folgt – siehe `CLAUDE.md` und `docs/ROADMAP.md`.
 
 | Datei | Inhalt |
 |---|---|

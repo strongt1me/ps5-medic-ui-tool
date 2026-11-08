@@ -111,6 +111,10 @@ Rule parse_rule(const json& j, std::size_t index) {
         }
     }
     if (j.contains("fix") && !j["fix"].is_null()) r.fix = need_string(j, "fix", where);
+    if (j.contains("fix_params")) {
+        if (!j["fix_params"].is_object()) fail(where, "'fix_params' muss ein Objekt sein");
+        r.fix_params = j["fix_params"];
+    }
     if (j.contains("applies_fw")) r.applies_fw = need_string(j, "applies_fw", where);
     return r;
 }
@@ -367,6 +371,7 @@ std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts) {
         f.text_de = r.text_de;
         f.text_en = r.text_en;
         f.fix = r.fix;
+        f.fix_params = r.fix_params;
         f.source = r.source;
         f.verified = r.verified;
         out.push_back(std::move(f));

@@ -23,6 +23,7 @@
           "evidence": { "type": "string" },
           "evidence_filter": { "type": "string", "description": "Regex: nur passende Array-Elemente als Evidenz (z. B. Log-Zeilen)" },
           "fix": { "type": ["string", "null"] },
+          "fix_params": { "type": "object", "description": "Parameter fuer den Fix, siehe libmedic/include/medic/fixes.hpp" },
           "source": { "type": "string", "format": "uri" },
           "verified": { "enum": ["doc", "community", "todo"] },
           "applies_fw": { "type": "string", "description": "Versionsbereich, z. B. \">=7.00 <=13.60\"" }

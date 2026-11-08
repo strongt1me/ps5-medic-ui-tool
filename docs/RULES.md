@@ -60,3 +60,13 @@ Beim Abgleich mit dem aktuellen SM+-README (drakmor/ShadowMountPlus) gefunden:
 - **B6/B7**: Images lassen sich ohne Mounten nicht inspizieren. Die Regeln werten den Zustand unter `/mnt/shadowmnt/` aus (Layout vorläufig, in Phase 2 verifizieren) → `todo`.
 - **A1**: Die Firmware-Grenze steht nicht fest. Die Quelle (kstuff-lite #94) nennt nur FW 13.60; die Regel gilt daher ab `>=13.60`.
 - **B3/B4**: Abstürze bzw. Startfehler sind aus einem Snapshot nicht erkennbar; die Regeln prüfen nur die gemeldete Kombination aus FW/Version/Config. Versionen und Herkunft von kstuff kommen vorläufig aus `components` in `system.json` (Konsolen-Quelle offen).
+
+## Fixes (Phase 1, Stand 8. Nov. 2026)
+Umgesetzt und getestet (apply → undo = identischer Dateibaum): `rename_image_parentheses` (B2), `smp_set_key` (B3, B9, B10, B13), `smp_disable_conflicting_backpork` (B5), `move_duplicate_titleid` (B8), `fix_image_nesting_hint` (B6, B7; nur Hinweis).
+Parameter stehen als `fix_params` in der Regel (siehe `libmedic/include/medic/fixes.hpp`).
+
+Offene Punkte, vor dem Einsatz auf der Konsole zu klären:
+- **B5**: Wo BackPork gestartet wird, ist nicht dokumentiert. Der Fix kommentiert den Eintrag in `/data/ps5_autoloader/autoload.txt` aus (Pfad aus einer Dateiliste, Syntax ungeprüft). Gibt es die Datei nicht, ändert der Fix nichts und sagt das. Der laufende BackPork-Prozess endet erst mit dem Neustart.
+- **B8**: Doppelte Quellen gehen nach `<Scanpfad>/_duplicates/` (gleiches Laufwerk, kein Kopieren). Bei `scan_depth >= 2` könnte SM+ den Ordner mitscannen – der Plan weist darauf hin. Ob SM+ Ordner mit `_` überspringt, ist ungeprüft.
+- **B9/B10**: Der Fix schreibt in die Sektion `[scan]` bzw. bleibt beim flachen Format, wenn die Datei keine Sektionen hat.
+- **Löschen**: Es wird nichts gelöscht. Einzige Ausnahme: beim Undo werden Ordner entfernt, die der Fix selbst angelegt hat und die leer sind (z. B. `_duplicates/`).

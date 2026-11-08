@@ -1,9 +1,18 @@
-// medic-cli check <snapshot-dir> [--rules <rules.json>] [--json] [--lang de|en]
+// medic-cli
+//   check   <snapshot-dir> [--rules f] [--json] [--lang de|en]
+//   fix     <snapshot-dir> <regel-id> [--keep pfad] [--apply --yes] [--rules f] [--lang de|en]
+//   undo    <snapshot-dir> <txn>
+//   history <snapshot-dir>
+// "fix" ohne --apply zeigt nur den Plan (Dry-Run). Mit --apply wird DIREKT im Snapshot-Ordner geschrieben -- Kopie benutzen!
 #include "medic/collectors.hpp"
+#include "medic/fixes.hpp"
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
 
+#include <algorithm>
+#include <chrono>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <string>
 
@@ -14,7 +23,11 @@
 namespace {
 
 void usage() {
-    std::cerr << "Aufruf: medic-cli check <snapshot-ordner> [--rules <rules.json>] [--json] [--lang de|en]\n";
+    std::cerr << "Aufruf:\n"
+                 "  medic-cli check   <snapshot-ordner> [--rules <rules.json>] [--json] [--lang de|en]\n"
+                 "  medic-cli fix     <snapshot-ordner> <regel-id> [--keep <pfad>] [--apply --yes] [--rules <rules.json>] [--lang de|en]\n"
+                 "  medic-cli undo    <snapshot-ordner> <txn>\n"
+                 "  medic-cli history <snapshot-ordner>\n";
 }
 
 const char* label(medic::Severity s) {
@@ -26,69 +39,214 @@ const char* label(medic::Severity s) {
     return "";
 }
 
+std::string utc_timestamp() {
+    std::time_t t = std::time(nullptr);
+    std::tm tm{};
+#ifdef _WIN32
+    gmtime_s(&tm, &t);
+#else
+    gmtime_r(&t, &tm);
+#endif
+    char buf[32];
+    std::strftime(buf, sizeof buf, "%Y%m%dT%H%M%SZ", &tm);
+    return buf;
+}
+
+std::vector<std::string> split_lines(const std::string& s) {
+    std::vector<std::string> v;
+    std::size_t pos = 0;
+    while (pos < s.size()) {
+        auto nl = s.find('\n', pos);
+        std::string l = s.substr(pos, nl == std::string::npos ? std::string::npos : nl - pos);
+        if (!l.empty() && l.back() == '\r') l.pop_back();
+        v.push_back(std::move(l));
+        pos = nl == std::string::npos ? s.size() : nl + 1;
+    }
+    return v;
+}
+
+// Einfacher Zeilen-Diff (LCS), reicht fuer config.ini und Autoload-Listen.
+void print_diff(const std::string& old_text, const std::string& new_text) {
+    auto a = split_lines(old_text), b = split_lines(new_text);
+    if (a.size() > 2000 || b.size() > 2000) {
+        std::cout << "      (Datei zu gross fuer die Diff-Anzeige: " << a.size() << " -> " << b.size() << " Zeilen)\n";
+        return;
+    }
+    std::vector<std::vector<int>> L(a.size() + 1, std::vector<int>(b.size() + 1, 0));
+    for (std::size_t i = a.size(); i-- > 0;)
+        for (std::size_t j = b.size(); j-- > 0;) L[i][j] = a[i] == b[j] ? L[i + 1][j + 1] + 1 : std::max(L[i + 1][j], L[i][j + 1]);
+    std::size_t i = 0, j = 0;
+    while (i < a.size() || j < b.size()) {
+        if (i < a.size() && j < b.size() && a[i] == b[j]) { ++i; ++j; }
+        else if (i < a.size() && (j == b.size() || L[i + 1][j] >= L[i][j + 1])) std::cout << "      - " << a[i++] << "\n";
+        else std::cout << "      + " << b[j++] << "\n";
+    }
+}
+
+struct Args {
+    std::string dir, rules = MEDIC_DEFAULT_RULES, lang = "de", rule_id, keep, txn;
+    bool json = false, apply = false, yes = false;
+};
+
+bool parse_flags(int argc, char** argv, int from, Args& a) {
+    for (int i = from; i < argc; ++i) {
+        std::string s = argv[i];
+        if (s == "--json") a.json = true;
+        else if (s == "--apply") a.apply = true;
+        else if (s == "--yes") a.yes = true;
+        else if (s == "--rules" && i + 1 < argc) a.rules = argv[++i];
+        else if (s == "--lang" && i + 1 < argc) a.lang = argv[++i];
+        else if (s == "--keep" && i + 1 < argc) a.keep = argv[++i];
+        else return false;
+    }
+    return a.lang == "de" || a.lang == "en";
+}
+
+int cmd_check(const Args& a) {
+    auto rules = medic::load_rules_from_file(a.rules);
+    auto platform = medic::make_snapshot_platform(a.dir);
+    medic::Facts facts = medic::collect_all(*platform);
+    auto findings = medic::evaluate(rules, facts);
+
+    if (a.json) {
+        nlohmann::json out = nlohmann::json::object();
+        out["snapshot"] = a.dir;
+        out["rules_version"] = rules.db_version;
+        out["findings"] = nlohmann::json::array();
+        for (auto& f : findings)
+            out["findings"].push_back({{"id", f.rule_id},
+                                       {"severity", medic::to_string(f.severity)},
+                                       {"text", a.lang == "de" ? f.text_de : f.text_en},
+                                       {"evidence", f.evidence},
+                                       {"fix", f.fix.empty() ? nlohmann::json(nullptr) : nlohmann::json(f.fix)},
+                                       {"source", f.source},
+                                       {"verified", f.verified}});
+        std::cout << out.dump(2) << "\n";
+        return 0;
+    }
+
+    std::cout << "PS5 Medic - Check-up: " << a.dir << "\n";
+    const auto* fw = facts.get("fw.version");
+    std::cout << "Firmware: " << (fw && fw->is_string() && !fw->get<std::string>().empty() ? fw->get<std::string>() : "unbekannt")
+              << " | Regeln: " << rules.db_version << " (" << rules.rules.size() << ")\n\n";
+    if (findings.empty()) {
+        std::cout << "Keine Befunde.\n";
+        return 0;
+    }
+    for (auto& f : findings) {
+        std::cout << "[" << label(f.severity) << "] " << f.rule_id << "\n  " << (a.lang == "de" ? f.text_de : f.text_en) << "\n";
+        for (auto& e : f.evidence) std::cout << "  Evidenz: " << e << "\n";
+        if (!f.fix.empty()) std::cout << "  Fix:     " << f.fix << "\n";
+        std::cout << "  Quelle:  " << f.source << " (" << f.verified << ")\n\n";
+    }
+    std::cout << findings.size() << " Befund(e).\n";
+    return 0;
+}
+
+int cmd_fix(const Args& a) {
+    auto rules = medic::load_rules_from_file(a.rules);
+    auto platform = medic::make_snapshot_platform(a.dir, /*writable=*/a.apply);
+    medic::Facts facts = medic::collect_all(*platform);
+    auto findings = medic::evaluate(rules, facts);
+    auto it = std::find_if(findings.begin(), findings.end(), [&](auto& f) { return f.rule_id == a.rule_id; });
+    if (it == findings.end()) {
+        std::cerr << "Kein Befund mit der Regel-ID '" << a.rule_id << "' in diesem Snapshot.\n";
+        return 2;
+    }
+    medic::FixOptions opt;
+    opt.keep = a.keep;
+    medic::FixPlan plan = medic::plan_fix(*it, facts, platform->fs(), opt);
+
+    std::cout << "Plan fuer " << a.rule_id << " (Fix: " << (plan.fix_id.empty() ? "-" : plan.fix_id) << ")\n";
+    for (auto& c : plan.changes) {
+        const std::string& note = a.lang == "de" ? c.note_de : c.note_en;
+        if (c.kind == medic::Change::Kind::Rename) {
+            std::cout << "  VERSCHIEBEN  " << c.path << "\n          nach  " << c.to << "\n          " << note << "\n";
+        } else {
+            std::cout << "  SCHREIBEN    " << c.path << "\n          " << note << "\n";
+            std::string old;
+            platform->fs().read_file(c.path, old);
+            print_diff(old, c.content);
+        }
+    }
+    for (auto& w : plan.warnings) std::cout << "  Hinweis: " << w << "\n";
+    const std::string& hint = a.lang == "de" ? plan.hint_de : plan.hint_en;
+    if (!hint.empty()) std::cout << "  " << hint << "\n";
+    if (plan.empty()) {
+        std::cout << "Keine Aenderungen geplant.\n";
+        return 0;
+    }
+    if (!a.apply) {
+        std::cout << "\nDry-Run: es wurde nichts veraendert. Mit --apply --yes ausfuehren.\n";
+        return 0;
+    }
+    if (!a.yes) {
+        std::cerr << "--apply braucht --yes (ausdrueckliche Bestaetigung).\n";
+        return 2;
+    }
+    medic::ApplyOptions ao;
+    ao.timestamp = utc_timestamp();
+    ao.confirmed = true;
+    auto res = medic::apply_plan(plan, *platform, medic::policy_from_facts(facts), ao);
+    if (!res.ok) {
+        std::cerr << "Fehler: " << res.error << "\n";
+        return 2;
+    }
+    std::cout << "\nAngewendet. Transaktion: " << res.txn << "\nRueckgaengig: medic-cli undo " << a.dir << " " << res.txn << "\n";
+    return 0;
+}
+
+int cmd_undo(const Args& a) {
+    auto platform = medic::make_snapshot_platform(a.dir, true);
+    medic::Facts facts = medic::collect_all(*platform);
+    auto res = medic::undo_txn(*platform, medic::policy_from_facts(facts), a.txn, utc_timestamp());
+    if (!res.ok) {
+        std::cerr << "Fehler: " << res.error << "\n";
+        return 2;
+    }
+    std::cout << "Transaktion " << a.txn << " rueckgaengig gemacht.\n";
+    return 0;
+}
+
+int cmd_history(const Args& a) {
+    auto platform = medic::make_snapshot_platform(a.dir);
+    auto h = medic::history(*platform);
+    if (h.empty()) {
+        std::cout << "Noch keine Reparaturen.\n";
+        return 0;
+    }
+    for (auto& t : h) std::cout << t.txn << "  " << t.state << "  " << t.fix << "  (" << t.rule << ", " << t.ops << " Aenderung(en))\n";
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 3 || std::strcmp(argv[1], "check") != 0) {
+    if (argc < 3) {
         usage();
         return 2;
     }
-    std::string dir = argv[2], rules_path = MEDIC_DEFAULT_RULES, lang = "de";
-    bool as_json = false;
-    for (int i = 3; i < argc; ++i) {
-        std::string a = argv[i];
-        if (a == "--json") as_json = true;
-        else if (a == "--rules" && i + 1 < argc) rules_path = argv[++i];
-        else if (a == "--lang" && i + 1 < argc) lang = argv[++i];
-        else {
+    const std::string cmd = argv[1];
+    Args a;
+    a.dir = argv[2];
+    int flags_from = 3;
+    if (cmd == "fix" || cmd == "undo") {
+        if (argc < 4) {
             usage();
             return 2;
         }
+        (cmd == "fix" ? a.rule_id : a.txn) = argv[3];
+        flags_from = 4;
     }
-    if (lang != "de" && lang != "en") {
+    if ((cmd != "check" && cmd != "fix" && cmd != "undo" && cmd != "history") || !parse_flags(argc, argv, flags_from, a)) {
         usage();
         return 2;
     }
-
     try {
-        auto rules = medic::load_rules_from_file(rules_path);
-        auto platform = medic::make_snapshot_platform(dir);
-        medic::Facts facts = medic::collect_all(*platform);
-        auto findings = medic::evaluate(rules, facts);
-
-        if (as_json) {
-            nlohmann::json out = nlohmann::json::object();
-            out["snapshot"] = dir;
-            out["rules_version"] = rules.db_version;
-            out["findings"] = nlohmann::json::array();
-            for (auto& f : findings)
-                out["findings"].push_back({{"id", f.rule_id},
-                                           {"severity", medic::to_string(f.severity)},
-                                           {"text", lang == "de" ? f.text_de : f.text_en},
-                                           {"evidence", f.evidence},
-                                           {"fix", f.fix.empty() ? nlohmann::json(nullptr) : nlohmann::json(f.fix)},
-                                           {"source", f.source},
-                                           {"verified", f.verified}});
-            std::cout << out.dump(2) << "\n";
-            return 0;
-        }
-
-        std::cout << "PS5 Medic - Check-up: " << dir << "\n";
-        const auto* fw = facts.get("fw.version");
-        std::cout << "Firmware: " << (fw && fw->is_string() && !fw->get<std::string>().empty() ? fw->get<std::string>() : "unbekannt")
-                  << " | Regeln: " << rules.db_version << " (" << rules.rules.size() << ")\n\n";
-        if (findings.empty()) {
-            std::cout << "Keine Befunde.\n";
-            return 0;
-        }
-        for (auto& f : findings) {
-            std::cout << "[" << label(f.severity) << "] " << f.rule_id << "\n  " << (lang == "de" ? f.text_de : f.text_en) << "\n";
-            for (auto& e : f.evidence) std::cout << "  Evidenz: " << e << "\n";
-            if (!f.fix.empty()) std::cout << "  Fix:     " << f.fix << "\n";
-            std::cout << "  Quelle:  " << f.source << " (" << f.verified << ")\n\n";
-        }
-        std::cout << findings.size() << " Befund(e).\n";
-        return 0;
+        if (cmd == "check") return cmd_check(a);
+        if (cmd == "fix") return cmd_fix(a);
+        if (cmd == "undo") return cmd_undo(a);
+        return cmd_history(a);
     } catch (const std::exception& e) {
         std::cerr << "Fehler: " << e.what() << "\n";
         return 2;

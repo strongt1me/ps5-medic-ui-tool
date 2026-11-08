@@ -92,6 +92,7 @@
       },
       "evidence": "smp.config.kstuff_game_auto_toggle",
       "fix": "smp_set_key",
+      "fix_params": {"section": "", "key": "kstuff_game_auto_toggle", "value": "0"},
       "source": "https://github.com/drakmor/ShadowMountPlus/issues/130",
       "verified": "community"
     },
@@ -130,6 +131,7 @@
       "evidence": "proc.running",
       "evidence_filter": "^backpork$",
       "fix": "smp_disable_conflicting_backpork",
+      "fix_params": {"files": ["/data/ps5_autoloader/autoload.txt"], "match": "backpork"},
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
     },
@@ -147,7 +149,7 @@
         "en": "The game sits in an extra folder inside the image (/<FOLDER>/sce_sys/param.json instead of /sce_sys/param.json). Game files must be at the image root. Rebuild the image without the extra folder."
       },
       "evidence": "smp.mounts[].path",
-      "fix": null,
+      "fix": "fix_image_nesting_hint",
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "todo"
     },
@@ -166,7 +168,7 @@
         "en": "The .ffpfsc container holds game files directly. A .ffpfsc is only a container for an inner image (.exfat or pfs_image.dat) and must not have game files in its root."
       },
       "evidence": "smp.mounts[].path",
-      "fix": null,
+      "fix": "fix_image_nesting_hint",
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "todo"
     },
@@ -201,6 +203,7 @@
       },
       "evidence": "smp.hidden_sources[].path",
       "fix": "smp_set_key",
+      "fix_params": {"mode": "add", "section": "scan", "key": "path", "legacy_key": "scanpath", "from": {"array": "smp.hidden_sources", "field": "root", "agg": "distinct"}},
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
     },
@@ -218,6 +221,7 @@
       },
       "evidence": "smp.deep_sources[].path",
       "fix": "smp_set_key",
+      "fix_params": {"section": "scan", "key": "depth", "legacy_key": "scan_depth", "from": {"array": "smp.deep_sources", "field": "level", "agg": "max"}},
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
     },
@@ -271,6 +275,7 @@
       },
       "evidence": "smp.debug",
       "fix": "smp_set_key",
+      "fix_params": {"section": "general", "key": "debug", "legacy_key": "debug", "value": "1"},
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
     },

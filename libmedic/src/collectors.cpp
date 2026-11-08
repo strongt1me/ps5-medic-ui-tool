@@ -162,17 +162,20 @@ std::uint64_t exfat_cluster_size(const IFileSystem& fs, const std::string& path)
 }
 
 struct Entry {
-    std::string path, name, ext, titleid;
+    std::string path, name, ext, titleid, root;  // root = Scanpfad, unter dem der Eintrag gefunden wurde
     bool is_image = false;
     std::uint64_t size = 0;
     int level = 0;  // 1 = direkt im Scanpfad
 };
 
 // Sammelt Eintraege je Pfad (kleinste Ebene gewinnt, weil sich Scanpfade ueberlappen: /mnt/usb0 und /mnt/usb0/homebrew).
-void scan_dir(const IFileSystem& fs, const std::string& dir, int level, std::map<std::string, Entry>& out) {
+// Eigene Quarantaene-Ordner der Fix-Engine (_duplicates, _to_delete) werden nicht als Quelle gezaehlt.
+void scan_dir(const IFileSystem& fs, const std::string& root, const std::string& dir, int level, std::map<std::string, Entry>& out) {
     for (const auto& e : fs.list_dir(dir)) {
+        if (e.is_dir && (e.name == "_duplicates" || e.name == "_to_delete")) continue;
         const std::string path = join_path(dir, e.name);
         Entry en;
+        en.root = root;
         en.path = path;
         en.name = e.name;
         en.level = level;
@@ -181,7 +184,7 @@ void scan_dir(const IFileSystem& fs, const std::string& dir, int level, std::map
                 en.titleid = title_id_from_param(fs, path);
                 if (en.titleid.empty()) en.titleid = title_id_from_name(e.name);
             } else {
-                if (level < kMaxScanLevel) scan_dir(fs, path, level + 1, out);
+                if (level < kMaxScanLevel) scan_dir(fs, root, path, level + 1, out);
                 continue;
             }
         } else {
@@ -199,7 +202,7 @@ void scan_dir(const IFileSystem& fs, const std::string& dir, int level, std::map
 std::map<std::string, Entry> scan_roots(const IFileSystem& fs, const std::vector<std::string>& roots) {
     std::map<std::string, Entry> out;
     for (auto& r : roots)
-        if (fs.is_dir(r)) scan_dir(fs, r, 1, out);
+        if (fs.is_dir(r)) scan_dir(fs, r, r, 1, out);
     return out;
 }
 
@@ -297,7 +300,9 @@ void collect_shadowmount(const Platform& p, Facts& f) {
     f.set("smp.fakelib_enabled", parse_flag(cfg_value(cfg, "fakelib", "enabled", "backport_fakelib"), 1));
 
     const bool custom = !cfg.scanpaths.empty();
-    auto entries = scan_roots(fs, custom ? cfg.scanpaths : default_scan_paths());
+    const std::vector<std::string> roots = custom ? cfg.scanpaths : default_scan_paths();
+    f.set("smp.scan_roots", roots);
+    auto entries = scan_roots(fs, roots);
 
     json images = json::array(), deep = json::array();
     std::map<std::string, int> count;
@@ -316,7 +321,7 @@ void collect_shadowmount(const Platform& p, Facts& f) {
             deep.push_back({{"path", e.path}, {"level", e.level}, {"titleid", e.titleid}});
             continue;
         }
-        if (!e.titleid.empty()) titles.push_back({{"titleid", e.titleid}, {"path", e.path}, {"level", e.level}, {"dup_count", count[e.titleid]}});
+        if (!e.titleid.empty()) titles.push_back({{"titleid", e.titleid}, {"path", e.path}, {"root", e.root}, {"level", e.level}, {"dup_count", count[e.titleid]}});
     }
     f.set("smp.images", std::move(images));
     f.set("smp.titles", std::move(titles));
@@ -328,7 +333,7 @@ void collect_shadowmount(const Platform& p, Facts& f) {
         for (auto& [path, e] : scan_roots(fs, default_scan_paths())) {
             if (e.level > depth || e.titleid.empty()) continue;
             bool covered = std::any_of(cfg.scanpaths.begin(), cfg.scanpaths.end(), [&](auto& r) { return starts_with_dir(path, r); });
-            if (!covered) hidden.push_back({{"path", e.path}, {"titleid", e.titleid}});
+            if (!covered) hidden.push_back({{"path", e.path}, {"root", e.root}, {"titleid", e.titleid}});
         }
     f.set("smp.hidden_sources", std::move(hidden));
 

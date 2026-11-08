@@ -9,7 +9,11 @@ add_library(medic STATIC
   libmedic/src/facts.cpp
   libmedic/src/snapshot_platform.cpp
   libmedic/src/collectors.cpp
-  libmedic/src/rules.cpp)
+  libmedic/src/rules.cpp
+  libmedic/src/sha256.cpp
+  libmedic/src/ini.cpp
+  libmedic/src/fixes.cpp
+  libmedic/src/engine.cpp)
 target_include_directories(medic PUBLIC libmedic/include third_party)
 target_compile_options(medic PRIVATE -Wall -Wextra)
 
@@ -18,7 +22,7 @@ target_link_libraries(medic-cli PRIVATE medic)
 target_compile_definitions(medic-cli PRIVATE MEDIC_DEFAULT_RULES="${CMAKE_SOURCE_DIR}/knowledge/rules.json")
 
 enable_testing()
-add_executable(medic-tests tests/test_main.cpp)
+add_executable(medic-tests tests/test_main.cpp tests/test_fixes.cpp)
 target_link_libraries(medic-tests PRIVATE medic)
 target_compile_definitions(medic-tests PRIVATE
   MEDIC_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

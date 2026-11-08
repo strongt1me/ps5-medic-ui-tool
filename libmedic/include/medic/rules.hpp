@@ -18,6 +18,7 @@ struct Rule {
     std::string evidence_path;  // optional
     std::string evidence_filter;  // optional: Regex, nur passende Array-Elemente (z. B. Log-Zeilen) als Evidenz
     std::string fix;            // leer = kein Fix
+    nlohmann::json fix_params = nlohmann::json::object();  // Parameter fuer den Fix (siehe fixes.hpp)
     std::string source;
     std::string verified;       // doc | community | todo
     std::string applies_fw;     // optional, z. B. ">=7.00 <=13.60"
@@ -29,6 +30,7 @@ struct Finding {
     std::string text_de, text_en;
     std::vector<std::string> evidence;
     std::string fix;
+    nlohmann::json fix_params = nlohmann::json::object();
     std::string source;
     std::string verified;
 };
