@@ -3,11 +3,13 @@
 //   fix     <snapshot-dir> <regel-id> [--keep pfad] [--apply --yes] [--rules f] [--lang de|en]
 //   undo    <snapshot-dir> <txn>
 //   history <snapshot-dir>
+//   export  <snapshot-dir> <zielordner>   (Snapshot erneut schreiben, z. B. zum Pruefen des Exports)
 // "fix" ohne --apply zeigt nur den Plan (Dry-Run). Mit --apply wird DIREKT im Snapshot-Ordner geschrieben -- Kopie benutzen!
 #include "medic/collectors.hpp"
 #include "medic/fixes.hpp"
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
+#include "medic/snapshot_export.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -27,7 +29,8 @@ void usage() {
                  "  medic-cli check   <snapshot-ordner> [--rules <rules.json>] [--json] [--lang de|en]\n"
                  "  medic-cli fix     <snapshot-ordner> <regel-id> [--keep <pfad>] [--apply --yes] [--rules <rules.json>] [--lang de|en]\n"
                  "  medic-cli undo    <snapshot-ordner> <txn>\n"
-                 "  medic-cli history <snapshot-ordner>\n";
+                 "  medic-cli history <snapshot-ordner>\n"
+                 "  medic-cli export  <snapshot-ordner> <zielordner>\n";
 }
 
 const char* label(medic::Severity s) {
@@ -208,6 +211,19 @@ int cmd_undo(const Args& a) {
     return 0;
 }
 
+int cmd_export(const Args& a) {
+    auto platform = medic::make_snapshot_platform(a.dir);
+    medic::Facts facts = medic::collect_all(*platform);
+    auto res = medic::export_snapshot(*platform, facts, a.txn, utc_timestamp());
+    if (!res.ok) {
+        std::cerr << "Fehler: " << res.error << "\n";
+        return 2;
+    }
+    std::cout << "Snapshot geschrieben: " << a.txn << " (" << res.entries << " Eintraege)\n";
+    for (auto& w : res.warnings) std::cout << "  Hinweis: " << w << "\n";
+    return 0;
+}
+
 int cmd_history(const Args& a) {
     auto platform = medic::make_snapshot_platform(a.dir);
     auto h = medic::history(*platform);
@@ -230,15 +246,15 @@ int main(int argc, char** argv) {
     Args a;
     a.dir = argv[2];
     int flags_from = 3;
-    if (cmd == "fix" || cmd == "undo") {
+    if (cmd == "fix" || cmd == "undo" || cmd == "export") {
         if (argc < 4) {
             usage();
             return 2;
         }
-        (cmd == "fix" ? a.rule_id : a.txn) = argv[3];
+        (cmd == "fix" ? a.rule_id : a.txn) = argv[3];  // fuer export: Zielordner in a.txn
         flags_from = 4;
     }
-    if ((cmd != "check" && cmd != "fix" && cmd != "undo" && cmd != "history") || !parse_flags(argc, argv, flags_from, a)) {
+    if ((cmd != "check" && cmd != "fix" && cmd != "undo" && cmd != "history" && cmd != "export") || !parse_flags(argc, argv, flags_from, a)) {
         usage();
         return 2;
     }
@@ -246,6 +262,7 @@ int main(int argc, char** argv) {
         if (cmd == "check") return cmd_check(a);
         if (cmd == "fix") return cmd_fix(a);
         if (cmd == "undo") return cmd_undo(a);
+        if (cmd == "export") return cmd_export(a);
         return cmd_history(a);
     } catch (const std::exception& e) {
         std::cerr << "Fehler: " << e.what() << "\n";

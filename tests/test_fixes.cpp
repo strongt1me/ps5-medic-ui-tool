@@ -5,7 +5,9 @@
 #include "medic/ini.hpp"
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
+#include "medic/fwver.hpp"
 #include "medic/sha256.hpp"
+#include "medic/snapshot_export.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -97,6 +99,16 @@ void sha_tests() {
     CHECK(sha256_hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq") ==
               "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1",
           "SHA-256 Zwei-Block-Vektor");
+}
+
+void fw_tests() {
+    CHECK(format_ps5_fw(0x04030000) == "4.03", "FW 4.03");
+    CHECK(format_ps5_fw(0x13600000) == "13.60", "FW 13.60");
+    CHECK(format_ps5_fw(0x09000000) == "9.00", "FW 9.00");
+    CHECK(format_ps5_fw(0x10010000) == "10.01", "FW 10.01");
+    CHECK(format_ps5_fw(0x04030123) == "4.03", "FW ignoriert untere 16 Bit");
+    CHECK(format_ps5_fw(0x0a000000) == "0x0a000000" && format_ps5_fw(0) == "0x00000000", "unplausibler Rohwert bleibt sichtbar");
+    // Snapshot-Plattform und FW-Regel: Version kommt als Text an
 }
 
 void ini_tests() {
@@ -369,10 +381,79 @@ void plan_content_tests() {
     }
 }
 
+// ---- Snapshot-Export -----------------------------------------------------
+
+json comparable_facts(const Facts& f) {
+    json out = json::object();
+    for (const char* k : {"smp.titles", "smp.deep_sources", "smp.hidden_sources", "smp.mounts", "smp.images", "smp.scan_roots", "smp.fakelib_enabled",
+                          "smp.debug", "smp.scan_depth", "proc.running", "fw.version", "kstuff.version", "kstuff.origin", "smp.version"}) {
+        const json* v = f.get(k);
+        if (!v) continue;
+        out[k] = *v;
+        if (std::string(k) == "smp.images")
+            for (auto& img : out[k]) img.erase("size");  // Export legt Images als leere Dateien an
+    }
+    return out;
+}
+
+std::string findings_summary(const std::vector<Finding>& fs_) {
+    std::string s;
+    for (auto& f : fs_) {
+        s += f.rule_id + "|" + f.fix + "|";
+        for (auto& e : f.evidence) s += e + ";";
+        s += "\n";
+    }
+    return s;
+}
+
+void export_tests() {
+    int n = 0;
+    for (auto& e : fs::directory_iterator(fs::path(MEDIC_SOURCE_DIR) / "tests" / "fixtures")) {
+        if (!e.is_directory()) continue;
+        const std::string name = e.path().filename().string();
+        auto p1 = make_snapshot_platform(e.path().string());
+        Facts f1 = collect_all(*p1);
+        fs::path out = fs::temp_directory_path() / ("medic-export-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-" + std::to_string(++n));
+        ExportResult r = export_snapshot(*p1, f1, out.string(), "20261108T150000Z");
+        CHECK(r.ok, "Export " + name + " (" + r.error + ")");
+        if (!r.ok) continue;
+        auto p2 = make_snapshot_platform(out.string());
+        Facts f2 = collect_all(*p2);
+        CHECK(comparable_facts(f1) == comparable_facts(f2), "Export " + name + ": Fakten nach Round-Trip gleich");
+        CHECK(findings_summary(evaluate(rules(), f1)) == findings_summary(evaluate(rules(), f2)), "Export " + name + ": Befunde nach Round-Trip gleich");
+        std::error_code ec;
+        fs::remove_all(out, ec);
+    }
+    // Nicht-leeres Ziel wird abgelehnt, nichts ueberschrieben
+    {
+        TempCopy tmp("b2_pos");
+        auto p = make_snapshot_platform(tmp.dir.string());
+        Facts f = collect_all(*p);
+        auto before = tree(tmp.dir);
+        CHECK(!export_snapshot(*p, f, tmp.dir.string(), "20261108T150001Z").ok, "Export: nicht-leeres Ziel abgelehnt");
+        CHECK(tree(tmp.dir) == before, "Export: vorhandener Ordner unveraendert");
+    }
+    // Spielinhalte werden nicht exportiert: nur sce_sys/param.json
+    {
+        TempCopy tmp("b8_pos");
+        std::ofstream(tmp.dir / "fs/data/homebrew/GameA/eboot.bin") << "GEHEIM";
+        auto p = make_snapshot_platform(tmp.dir.string());
+        Facts f = collect_all(*p);
+        fs::path out = tmp.dir.parent_path() / (tmp.dir.filename().string() + "-out");
+        CHECK(export_snapshot(*p, f, out.string(), "20261108T150002Z").ok, "Export: ok");
+        CHECK(fs::exists(out / "fs/data/homebrew/GameA/sce_sys/param.json") && !fs::exists(out / "fs/data/homebrew/GameA/eboot.bin"),
+              "Export: Spielordner nur mit param.json");
+        std::error_code ec;
+        fs::remove_all(out, ec);
+    }
+}
+
 }  // namespace
 
 void fix_tests() {
+    export_tests();
     sha_tests();
+    fw_tests();
     ini_tests();
     policy_tests();
     const FixCase cases[] = {

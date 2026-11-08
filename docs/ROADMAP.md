@@ -18,6 +18,7 @@ Jede Phase endet mit lauffähigem Stand + kurzem Status an Marc.
 3. Tests: apply → undo → Dateibaum identisch.
 
 ## Phase 2 – PS5-Plattform (Konsole FW 4.03)
+> Stand: Schritte 2 und 3 sind als Diagnose-Payload vorbereitet und bauen (`make ps5`), Schritt 1 und der Lauf auf der Konsole stehen aus – siehe `docs/PHASE2.md`.
 1. **Erst prüfen:** Läuft ein Sample aus PS5_VulkanTemplate auf FW 4.03? Falls nein → SDL2-Software-Rendering (Plan B).
 2. `Ps5Platform`: Firmware, Prozessliste, Dateizugriff mit App-Jailbreak (etaHEN-API oder Lapy-JB-Daemon).
 3. **Snapshot-Export auf der Konsole:** Medic kann den eigenen Zustand als Fixture-Ordner nach `/data/ps5medic/snapshots/` schreiben → per FTP holen → am PC testen.

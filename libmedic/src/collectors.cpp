@@ -305,6 +305,7 @@ void collect_shadowmount(const Platform& p, Facts& f) {
     const bool custom = !cfg.scanpaths.empty();
     const std::vector<std::string> roots = custom ? cfg.scanpaths : default_scan_paths();
     f.set("smp.scan_roots", roots);
+    f.set("smp.default_scan_roots", default_scan_paths());
     auto entries = scan_roots(fs, roots);
 
     json images = json::array(), deep = json::array();

@@ -7,7 +7,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(medic STATIC
   libmedic/src/facts.cpp
+  libmedic/src/posix_fs.cpp
   libmedic/src/snapshot_platform.cpp
+  libmedic/src/snapshot_export.cpp
   libmedic/src/collectors.cpp
   libmedic/src/rules.cpp
   libmedic/src/sha256.cpp
