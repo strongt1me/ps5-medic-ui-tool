@@ -31,7 +31,7 @@ Dann läuft nur der Diagnose-Payload `ps5medic.elf` (per Payload Manager oder Po
 
 ## Datenschutz
 
-- PS5 Medic **sendet nichts**. Es gibt keine Netzfunktion; Berichte und Snapshots verlassen die Konsole nur, wenn du sie selbst weitergibst.
+- PS5 Medic **sendet nichts**. Die einzige Netzfunktion ist der optionale Regel-Download (nur mit Adresse in `config.ini`, nur auf Bestätigung, nur zwei GET-Abrufe); Berichte und Snapshots verlassen die Konsole nur, wenn du sie selbst weitergibst.
 - Der **Bericht** ersetzt IP- und MAC-Adressen, Benutzer- und Konto-IDs und Seriennummern. **Dateinamen und Pfade bleiben**, weil sie meist die Evidenz sind.
 - Der **Snapshot** enthält die Namen von Dateien und Ordnern unter den ShadowMount+-Scanpfaden, also auch Spielnamen, und das `debug.log` von ShadowMount+. Weitergeben nur, wenn du damit einverstanden bist.
 - Teile nichts, was Schlüssel, Firmware oder Spiele-Inhalte enthält. PS5 Medic exportiert so etwas nicht.
@@ -45,11 +45,13 @@ Dann läuft nur der Diagnose-Payload `ps5medic.elf` (per Payload Manager oder Po
 
 ## Regel-Update ausprobieren
 
-PS5 Medic lädt **nie** etwas aus dem Netz. Ein Regel-Update ist eine Datei, die du selbst auf die Konsole legst:
+PS5 Medic lädt **nie von selbst** etwas aus dem Netz. Ein Regel-Update ist entweder eine Datei, die du selbst auf die Konsole legst, oder ein Download, den du ausdrücklich auslöst (unten). Zuerst die Datei:
 
 1. Neue `rules.json` aus dem Release holen und daneben die Prüfsumme anlegen: `sha256sum rules.json > rules.json.sha256`.
 2. Beide Dateien per FTP oder USB-Kopie nach `/data/ps5medic/knowledge/update/` legen.
 3. In PS5 Medic: Einstellungen, **Regel-Update**. Der Bildschirm zeigt die gefundene Version und ob die SHA-256-Prüfsumme stimmt. **✕** installiert, die bisherige Datei wird vorher gesichert (`/data/ps5medic/knowledge/backups/`), nichts wird gelöscht. Mit **△** lässt sich die letzte Installation zurücknehmen.
+
+**Download** (nur wenn dir der Autor eine Adresse nennt): Zeile `update_url=http://<Adresse>/` in `/data/ps5medic/config.ini` schreiben, im Bildschirm **Regel-Update** **□** drücken, die Rückfrage mit **✕** bestätigen. PS5 Medic holt `rules.json` und `rules.json.sig`, prüft die Ed25519-Signatur gegen den eingebauten Schlüssel und bietet die Datei erst dann an; installiert wird wieder erst mit **✕**. Ohne gültige Signatur wird die Datei abgelehnt, auch wenn eine Prüfsumme passt. Nur `http://` (kein TLS auf der Konsole; die Signatur sichert die Echtheit), keine Weiterleitungen.
 
 Die Prüfsumme schützt vor beschädigten oder abgeschnittenen Kopien. Sie schützt **nicht** vor einer absichtlich untergeschobenen Datei samt passender Prüfsumme; wer Dateien auf deine Konsole legen kann, kann ohnehin mehr. Nimm Regeldateien nur aus dem Release des Projekts.
 
@@ -59,10 +61,10 @@ Die Prüfsumme schützt vor beschädigten oder abgeschnittenen Kopien. Sie schü
 >
 > PS5 Medic ist eine Vollbild-App für gejailbreakte PS5, die das Homebrew-Setup prüft (ShadowMount+, kstuff, Payloads, Dateinamen, Konfiguration), Fehler in Klartext erklärt und sichere Fälle mit Backup und Rückgängig repariert. Bisher getestet nur auf einer PS5 Pro mit FW 12.00.
 >
-> Gesucht: andere Firmwares und Setups. Du musst nichts reparieren: Check-up starten, □ drücken, den anonymisierten Bericht in ein Issue einfügen. Auch „keine Befunde" ist ein nützliches Ergebnis. PS5 Medic sendet nichts und lädt nichts aus dem Netz.
+> Gesucht: andere Firmwares und Setups. Du musst nichts reparieren: Check-up starten, □ drücken, den anonymisierten Bericht in ein Issue einfügen. Auch „keine Befunde" ist ein nützliches Ergebnis. PS5 Medic sendet nichts und lädt nur auf deinen Befehl Regeln (mit Signatur) von einer Adresse, die du selbst einträgst.
 >
 > Link zum Release und zur Issue-Vorlage: *(hier einsetzen, sobald das Release veröffentlicht ist)*
 
 ## English summary
 
-PS5 Medic has only been tested on one console (PS5 Pro, FW 12.00). Testers on other firmwares (7.x to 13.60), other jailbreak chains and ShadowMount+ versions are needed. Install the release (copy `PS5MEDIC` to `/data/homebrew/`), start `websrv`, open the **PS5 Medic** tile, run the check-up (✕), press □ and paste the anonymized report into an issue (template: *Report a problem*). Read it first: file and folder names are still in it. Nothing is ever sent by PS5 Medic. Rule updates are files you copy to `/data/ps5medic/knowledge/update/` together with a `rules.json.sha256`; the settings screen verifies and installs them (backup first, roll-back with △).
+PS5 Medic has only been tested on one console (PS5 Pro, FW 12.00). Testers on other firmwares (7.x to 13.60), other jailbreak chains and ShadowMount+ versions are needed. Install the release (copy `PS5MEDIC` to `/data/homebrew/`), start `websrv`, open the **PS5 Medic** tile, run the check-up (✕), press □ and paste the anonymized report into an issue (template: *Report a problem*). Read it first: file and folder names are still in it. Nothing is ever sent by PS5 Medic. Rule updates are files you copy to `/data/ps5medic/knowledge/update/` together with a `rules.json.sha256`, or, if the author gives you an address, a download you trigger yourself (`update_url=http://...` in `/data/ps5medic/config.ini`, □ in the rule update screen); downloads are only accepted with a valid Ed25519 signature. The settings screen verifies and installs them (backup first, roll-back with △).

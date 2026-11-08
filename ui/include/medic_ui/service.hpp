@@ -5,7 +5,9 @@
 #pragma once
 #include "medic/fixes.hpp"
 #include "medic/platform.hpp"
+#include "medic/http.hpp"
 #include "medic/report.hpp"
+#include "medic/rule_download.hpp"
 #include "medic/rule_update.hpp"
 #include "medic/rules.hpp"
 
@@ -51,6 +53,11 @@ public:
     virtual medic::RuleUpdateOffer check_rule_update() = 0;
     virtual medic::RuleUpdateResult install_rule_update() = 0;
     virtual medic::RuleUpdateResult rollback_rule_update() = 0;
+    // Regel-Download (siehe libmedic/include/medic/rule_download.hpp). rule_update_url() ist die in config.ini eingetragene Adresse
+    // (leer: keine). download_rule_update() legt rules.json und rules.json.sig in den Update-Ordner und prueft nichts; die UI ruft es
+    // nur nach ausdruecklicher Bestaetigung auf und danach check_rule_update(). Ohne Netzzugang (PC-Vorschau, Tests) Fehler "no_network".
+    virtual std::string rule_update_url() = 0;
+    virtual medic::RuleDownloadResult download_rule_update() = 0;
 };
 
 // Kern im selben Prozess. `clock` liefert Zeitstempel fuer Backups/Journal (Standard: UTC "YYYYMMDDTHHMMSSZ").
@@ -67,6 +74,13 @@ public:
     medic::RuleUpdateOffer check_rule_update() override;
     medic::RuleUpdateResult install_rule_update() override;
     medic::RuleUpdateResult rollback_rule_update() override;
+    std::string rule_update_url() override;
+    medic::RuleDownloadResult download_rule_update() override;
+
+    // Ohne Client gibt es keinen Download. `h` gehoert dem Aufrufer und muss laenger leben als der Dienst.
+    void set_http_client(medic::IHttpClient* h) { http_ = h; }
+    // Schluessel fuer die Signaturpruefung (Standard: die eingebauten). Nur fuer Tests gedacht.
+    void set_trusted_keys(std::vector<medic::TrustedKey> keys) { keys_ = std::move(keys); }
 
 private:
     medic::Platform& p_;
@@ -78,6 +92,8 @@ private:
     bool reload_rules();
     void ensure_facts();
     std::function<std::string()> clock_;
+    medic::IHttpClient* http_ = nullptr;
+    std::optional<std::vector<medic::TrustedKey>> keys_;
 };
 
 }  // namespace medic::ui

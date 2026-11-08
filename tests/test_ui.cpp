@@ -4,7 +4,9 @@
 #include "check.hpp"
 #include "medic_ui/app.hpp"
 #include "medic_ui/font.hpp"
+#include "medic/http.hpp"
 #include "medic/sha256.hpp"
+#include "medic/signature.hpp"
 #include "medic_ui/png.hpp"
 
 #include <algorithm>
@@ -37,6 +39,14 @@ struct FakeService : IMedicService {
     RuleUpdateResult install_result{true, "", "2026.12.01", "/data/ps5medic/knowledge/backups/rules_T.json"};
     RuleUpdateResult rollback_result{true, "", "2026.11.08", "/data/ps5medic/knowledge/backups/rules_rolledback_T.json"};
     int update_checks = 0, installs = 0, rollbacks = 0;
+    std::string url;                     // Download-Adresse aus der Konfiguration
+    RuleDownloadResult download_result = [] { RuleDownloadResult r; r.ok = true; return r; }();
+    int downloads = 0;
+    std::string rule_update_url() override { return url; }
+    RuleDownloadResult download_rule_update() override {
+        ++downloads;
+        return download_result;
+    }
     RuleUpdateOffer check_rule_update() override {
         ++update_checks;
         return offer;
@@ -622,7 +632,7 @@ void rules_update_flow_tests() {
     Strings::missing().clear();
     Canvas cv(App::kWidth, App::kHeight);
     using State = RuleUpdateOffer::State;
-    const std::initializer_list<Button> others = {Button::Triangle, Button::Square, Button::L1, Button::R1, Button::Options, Button::Left, Button::Right, Button::Up, Button::Down};
+    const std::initializer_list<Button> others = {Button::Triangle, Button::L1, Button::R1, Button::Options, Button::Left, Button::Right, Button::Up, Button::Down};
 
     for (Lang l : {Lang::De, Lang::En}) {
         FakeService svc;
@@ -788,6 +798,205 @@ void rules_update_service_tests() {
     }
 }
 
+
+// Regel-Download in der Oberflaeche: Rueckfrage, Anzeige vor dem Abruf, Ergebnis.
+void rules_download_flow_tests() {
+    Strings::missing().clear();
+    Canvas cv(App::kWidth, App::kHeight);
+    using State = RuleUpdateOffer::State;
+
+    for (Lang l : {Lang::De, Lang::En}) {
+        FakeService svc;
+        svc.offer.old_version = "2026.11.08";
+        svc.offer.old_rule_count = 22;
+        App app(svc, l);
+        press(app, {Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross});  // Start -> Einstellungen -> Regel-Update
+        CHECK(app.screen() == App::Screen::RulesUpdate && svc.downloads == 0, "Download-Flow: Regel-Update offen, noch nichts geholt");
+        app.render(cv);
+
+        // Ohne eingetragene Adresse: Anleitung, Kreuz tut nichts, Kreis geht zurueck
+        press(app, {Button::Square});
+        app.render(cv);
+        app.update();
+        press(app, {Button::Cross});
+        app.render(cv);
+        app.update();
+        CHECK(svc.downloads == 0 && svc.update_checks == 1 && app.screen() == App::Screen::RulesUpdate, "Download-Flow: ohne Adresse wird nichts geholt");
+        press(app, {Button::Circle});
+        CHECK(app.screen() == App::Screen::RulesUpdate, "Download-Flow: Kreis geht aus der Anleitung zum Angebot zurueck");
+
+        // Mit Adresse: Rueckfrage; Kreis bricht ab, ohne Netz zu benutzen
+        svc.url = "http://192.168.1.50:8000/ps5medic/";
+        press(app, {Button::Square});
+        app.render(cv);
+        press(app, {Button::Circle});
+        app.update();
+        CHECK(svc.downloads == 0, "Download-Flow: Abbrechen in der Rueckfrage holt nichts");
+
+        // Bestaetigen: erst "Lade ..." zeichnen, dann abrufen (wie beim Check-up)
+        press(app, {Button::Square, Button::Cross});
+        app.update();
+        CHECK(svc.downloads == 0, "Download-Flow: der Abruf beginnt erst, nachdem 'Lade ...' gezeichnet wurde");
+        press(app, {Button::Cross, Button::Triangle, Button::Square, Button::Circle});  // waehrenddessen ohne Wirkung
+        app.render(cv);
+        CHECK(svc.downloads == 0, "Download-Flow: Zeichnen allein ruft nichts ab");
+        svc.offer.state = State::Ready;
+        svc.offer.new_version = "2026.12.01";
+        svc.offer.new_rule_count = 23;
+        svc.offer.auth = "signature";
+        svc.offer.signed_by = "04de66c8c642d706";
+        svc.offer.sha256 = std::string(64, 'a');
+        app.update();
+        CHECK(svc.downloads == 1 && svc.update_checks == 2 && svc.installs == 0 && app.screen() == App::Screen::RulesUpdate, "Download-Flow: ein Abruf, danach wird geprueft, installiert wird nichts");
+        app.render(cv);
+        press(app, {Button::Cross});
+        CHECK(svc.installs == 1, "Download-Flow: installiert wird erst mit dem Kreuz auf dem Angebot");
+        press(app, {Button::Cross});  // Fertig-Bildschirm -> Einstellungen
+
+        // Fehlschlag: Meldung, nichts angeboten, Kreuz kehrt zurueck
+        svc.download_result = {};
+        svc.download_result.error = "http_status";
+        svc.download_result.http_status = 404;
+        svc.download_result.file = "rules.json";
+        svc.offer = RuleUpdateOffer{};
+        press(app, {Button::Down, Button::Cross});  // Einstellungen: Regel-Update
+        CHECK(app.screen() == App::Screen::RulesUpdate, "Download-Flow: wieder im Regel-Update");
+        press(app, {Button::Square, Button::Cross});
+        app.render(cv);
+        app.update();
+        const int checks_before = svc.update_checks;
+        CHECK(svc.downloads == 2, "Download-Flow: zweiter Abruf");
+        app.render(cv);
+        press(app, {Button::Cross});
+        app.render(cv);
+        CHECK(svc.update_checks == checks_before && svc.installs == 1 && app.screen() == App::Screen::RulesUpdate, "Download-Flow: nach einem Fehlschlag wird nichts geprueft oder installiert");
+
+        // Jede Fehlerkennung hat einen Text
+        for (const char* code : {"no_url", "bad_url", "https_unsupported", "no_write", "write_failed", "bad_timestamp", "no_network", "http_status", "net_resolve", "net_connect", "net_timeout",
+                                 "net_network", "net_redirect", "net_too_large", "net_bad_response"}) {
+            svc.download_result.error = code;
+            press(app, {Button::Square, Button::Cross});
+            app.render(cv);
+            app.update();
+            app.render(cv);
+            press(app, {Button::Cross});
+        }
+        // Angebote mit Signaturproblemen: Text je Grund
+        svc.offer.state = State::Rejected;
+        for (const char* reason : {"sig_malformed", "sig_unknown_key", "sig_invalid"}) {
+            svc.offer.reason = reason;
+            svc.download_result = {};
+            svc.download_result.ok = true;
+            press(app, {Button::Square, Button::Cross});
+            app.render(cv);
+            app.update();
+            app.render(cv);
+            press(app, {Button::Cross});
+            CHECK(svc.installs == 1, std::string("Download-Flow: abgelehnt (") + reason + ") laesst sich nicht installieren");
+        }
+    }
+    CHECK(Strings::missing().empty(), "Download-Flow: kein Text fehlt (" + (Strings::missing().empty() ? std::string() : *Strings::missing().begin()) + ")");
+    for (const char* key : {"update.error.no_url", "update.error.bad_url", "update.error.https_unsupported", "update.error.no_network", "update.error.net_connect", "update.error.net_timeout",
+                            "update.error.net_resolve", "update.error.net_network", "update.error.net_redirect", "update.error.net_too_large", "update.error.net_bad_response",
+                            "update.error.http_status", "update.rejected.sig_malformed", "update.rejected.sig_unknown_key", "update.rejected.sig_invalid", "update.auth_sig",
+                            "update.confirm_download", "update.no_url", "update.downloading", "update.download_failed", "update.downloaded_from", "update.download"})
+        CHECK(Strings::get(Lang::De).has(key) && Strings::get(Lang::En).has(key), std::string("Download-Flow: Text in beiden Sprachen: ") + key);
+}
+
+// Ersatz fuer das Netz: liefert vorbereitete Antworten.
+struct ScriptedHttp : medic::IHttpClient {
+    std::map<std::string, std::string> files;  // Adresse -> Inhalt; fehlt sie, kommt 404
+    std::vector<std::string> asked;
+    medic::HttpResponse get(const std::string& url, std::size_t, int) override {
+        asked.push_back(url);
+        medic::HttpResponse r;
+        auto it = files.find(url);
+        r.status = it == files.end() ? 404 : 200;
+        if (it != files.end()) r.body = it->second;
+        return r;
+    }
+};
+
+// Ganz durch: config.ini -> Quadrat -> Kreuz -> Pruefung der Signatur -> Kreuz installiert -> neue Regeln gelten.
+void rules_download_service_tests() {
+    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+    json nj = json::parse(slurp(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json"));
+    nj["db_version"] = "2026.12.09";
+    const std::string new_text = nj.dump(2) + "\n";
+    medic::Ed25519Seed seed;
+    seed.fill(0x33);
+    const medic::Ed25519KeyPair key = medic::ed25519_keypair_from_seed(seed);
+    const std::vector<medic::TrustedKey> trusted = {medic::make_trusted_key(key.pk)};
+    const std::string base = "http://192.0.2.10:8000/regeln/";
+    auto spit = [](const fs::path& p, const std::string& t) {
+        fs::create_directories(p.parent_path());
+        std::ofstream(p, std::ios::binary | std::ios::trunc) << t;
+    };
+    auto clock = [] { return std::string("20261109T140000Z"); };
+    auto go_to_update = [](App& app) { press(app, {Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross}); };
+
+    {  // gueltig signiert: angeboten und installiert
+        TempCopy t("b2_pos");
+        spit(t.dir / "fs/data/ps5medic/config.ini", "update_url=" + base + "\n");
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+        LocalService svc(*platform, rules, clock);
+        ScriptedHttp http;
+        http.files[base + "rules.json"] = new_text;
+        http.files[base + "rules.json.sig"] = medic::make_signature_file(key, new_text);
+        svc.set_http_client(&http);
+        svc.set_trusted_keys(trusted);
+        App app(svc);
+        Canvas cv(App::kWidth, App::kHeight);
+        go_to_update(app);
+        press(app, {Button::Square});
+        app.render(cv);
+        CHECK(http.asked.empty(), "Download-E2E: die Rueckfrage allein benutzt das Netz nicht");
+        press(app, {Button::Cross});
+        app.render(cv);
+        app.update();
+        CHECK(http.asked.size() == 2 && http.asked[0] == base + "rules.json" && http.asked[1] == base + "rules.json.sig", "Download-E2E: genau zwei Abrufe, rules.json und rules.json.sig");
+        CHECK(!fs::exists(t.dir / "fs/data/ps5medic/knowledge/rules.json"), "Download-E2E: bis zur Bestaetigung bleiben die aktiven Regeln unberuehrt");
+        app.render(cv);
+        const auto offer = svc.check_rule_update();
+        CHECK(offer.state == RuleUpdateOffer::State::Ready && offer.auth == "signature" && offer.signed_by == medic::key_id_of(key.pk), "Download-E2E: Angebot ist signiert");
+        press(app, {Button::Cross});
+        app.render(cv);
+        CHECK(slurp(t.dir / "fs/data/ps5medic/knowledge/rules.json") == new_text && svc.run_check().rules_version == "2026.12.09", "Download-E2E: Kreuz installiert, die neuen Regeln gelten sofort");
+    }
+    {  // untergeschobene Datei: Signatur passt nicht -> abgelehnt, nichts installiert
+        TempCopy t("b2_pos");
+        spit(t.dir / "fs/data/ps5medic/config.ini", "update_url=" + base + "\n");
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+        LocalService svc(*platform, rules, clock);
+        ScriptedHttp http;
+        const std::string evil = new_text + " ";
+        http.files[base + "rules.json"] = evil;
+        http.files[base + "rules.json.sig"] = medic::make_signature_file(key, new_text);
+        svc.set_http_client(&http);
+        svc.set_trusted_keys(trusted);
+        App app(svc);
+        Canvas cv(App::kWidth, App::kHeight);
+        go_to_update(app);
+        press(app, {Button::Square, Button::Cross});
+        app.render(cv);
+        app.update();
+        app.render(cv);
+        const auto offer = svc.check_rule_update();
+        CHECK(offer.state == RuleUpdateOffer::State::Rejected && offer.reason == "sig_invalid", "Download-E2E: veraenderte Datei wird abgelehnt");
+        press(app, {Button::Cross});
+        CHECK(!fs::exists(t.dir / "fs/data/ps5medic/knowledge/rules.json") && svc.run_check().rules_version == rules.db_version && !svc.install_rule_update().ok,
+              "Download-E2E: abgelehnte Datei laesst sich nicht installieren, alte Regeln gelten");
+    }
+    {  // ohne Netz-Client (PC-Vorschau) und ohne Adresse
+        TempCopy t("b2_pos");
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+        LocalService svc(*platform, rules, clock);
+        CHECK(svc.rule_update_url().empty() && svc.download_rule_update().error == "no_network", "Download-E2E: ohne Adresse und ohne Netz-Client");
+        spit(t.dir / "fs/data/ps5medic/config.ini", "update_url=" + base + "\n");
+        CHECK(svc.rule_update_url() == base && svc.download_rule_update().error == "no_network", "Download-E2E: ohne Netz-Client kein Abruf, Kennung no_network");
+    }
+}
+
 void report_service_tests() {
     const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
     auto clock = [] { return std::string("20261108T130000Z"); };
@@ -860,4 +1069,6 @@ void ui_tests() {
     report_service_tests();
     rules_update_flow_tests();
     rules_update_service_tests();
+    rules_download_flow_tests();
+    rules_download_service_tests();
 }

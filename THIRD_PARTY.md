@@ -3,6 +3,7 @@
 | Komponente | Version | Lizenz | Ort |
 |---|---|---|---|
 | [nlohmann/json](https://github.com/nlohmann/json) | 3.11.3 | MIT | `third_party/nlohmann/` (Lizenztext: `LICENSE.MIT`) |
+| [TweetNaCl](https://tweetnacl.cr.yp.to/) | 20140427 | Public Domain (D. J. Bernstein u. a.) | `third_party/tweetnacl/` (unverändert; Quelle und Prüfsummen in `SOURCE.txt`; nur Ed25519 wird benutzt) |
 | [QR Code generator library (C++)](https://www.nayuki.io/page/qr-code-generator-library) | Commit `bcfe1b0` (2026-10-29) | MIT, Project Nayuki | `third_party/qrcodegen/` (unverändert; Lizenztext steht im Kopf beider Dateien, Commit in `COMMIT.txt`) |
 
 Schrift: Die UI enthält vorgerenderte Glyphen aus [DejaVu Sans](https://dejavu-fonts.github.io/) (Bitstream-Vera-Lizenz mit Public-Domain-Anteilen, frei weitergebbar) in `ui/src/font_data.cpp`. Erzeugt mit `tools/gen_font.py` (benötigt nur beim Neuerzeugen Pillow und die TTF-Dateien; beides wird nicht ausgeliefert).

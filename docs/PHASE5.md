@@ -1,22 +1,40 @@
 # Phase 5 – Community
 
-Stand 8. Nov. 2026. Regel-Update, unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung stehen. **Nicht gemacht** (bewusst, liegt beim Autor): Beiträge in Foren oder auf Discord, ein Download von Regeln aus dem Netz und das GitHub-Release.
+Stand 8. Nov. 2026. Regel-Update (Datei und signierter Download), unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung stehen. **Entschieden:** Das Repository bleibt privat, es gibt kein GitHub-Release und keine Foren-Beiträge (siehe `docs/PHASE4.md`).
 
-## 1. Regel-Update (manuell, SHA-256)
+## 1. Regel-Update (Datei oder signierter Download)
 
-`libmedic/src/rule_update.cpp`, in der UI unter Einstellungen → *Regel-Update*.
+`libmedic/src/rule_update.cpp` (prüfen, installieren, zurücksetzen), `rule_download.cpp` und `http.cpp`/`posix_http.cpp` (Download), `signature.cpp`/`ed25519.cpp` (Signatur); in der UI unter Einstellungen → *Regel-Update*.
 
-**Entscheidung: kein Download.** `CLAUDE.md` erlaubt als einzige Netzfunktion ein manuell ausgelöstes, SHA-256-geprüftes Regel-Update. Umgesetzt ist es als **Datei-Update ohne Netz**: Der Nutzer legt `rules.json` und `rules.json.sha256` selbst nach `/data/ps5medic/knowledge/update/` (FTP oder USB-Kopie). Gründe:
-- Ein Download bräuchte TLS auf der Konsole und, damit die Prüfsumme überhaupt etwas schützt, einen vom Download getrennten Vertrauensanker (z. B. eine eingebaute Signatur). Eine Prüfsumme, die vom selben Server kommt wie die Datei, schützt nur vor Übertragungsfehlern.
-- Regeln steuern Reparaturen (`fix`, `fix_params`). Eine untergeschobene Regeldatei wäre ein echter Angriffsweg; ohne Netzfunktion gibt es ihn nicht.
-- „Kein Netz nach außen" bleibt damit ausnahmslos wahr (auch die Port-9021-Prüfung geht nur an `127.0.0.1`).
+**Zwei Wege in denselben Ordner** `/data/ps5medic/knowledge/update/`:
+- **Datei-Update (ohne Netz):** Der Nutzer legt `rules.json` und `rules.json.sha256` selbst dorthin (FTP, USB-Kopie). Die Prüfsumme schützt vor beschädigten Kopien, nicht vor einer absichtlich untergeschobenen Datei samt Prüfsumme; wer Dateien auf die Konsole legen kann, kann ohnehin mehr.
+- **Download (Entscheidung von Marc, 8. Nov. 2026):** □ im Bildschirm *Regel-Update*, Rückfrage, ✕. PS5 Medic holt `rules.json` und `rules.json.sig` von `update_url` und legt sie in den Update-Ordner. **Angenommen wird nur mit gültiger Signatur.**
 
-Ein späterer Download wäre möglich, braucht aber eine Signatur (Schlüsselverwaltung beim Autor) und ist hier nicht angelegt.
+**Warum eine Signatur und nicht nur die Prüfsumme:** Eine Prüfsumme, die vom selben Server kommt wie die Datei, schützt nur vor Übertragungsfehlern. Regeln steuern Reparaturen (`fix`, `fix_params`); eine untergeschobene Regeldatei wäre ein echter Angriffsweg. Deshalb signiert der Autor die Regeldatei mit Ed25519, der öffentliche Schlüssel ist in PS5 Medic eingebaut (`libmedic/src/trusted_keys.cpp`), der Privatschlüssel liegt nie im Repository.
+
+**Was die Netzfunktion tut und nicht tut** (`CLAUDE.md`, Leitlinie 5):
+- nur auf ausdrücklichen Befehl (□, dann ✕); nie beim Start, nie im Hintergrund
+- nur zur Adresse, die der Nutzer selbst in `/data/ps5medic/config.ini` einträgt (`update_url=http://host:port/pfad/`); ohne Eintrag zeigt der Bildschirm nur die Anleitung
+- zwei GET-Abrufe (`<url>/rules.json`, `<url>/rules.json.sig`) mit den Headern `Host`, `User-Agent: PS5-Medic`, `Accept`, `Connection: close`; keine Cookies, keine Zugangsdaten, nichts über Konsole oder Nutzer (ein Test prüft die Anfrage Byte für Byte)
+- nur `http://`, **kein TLS** (auf der Konsole gibt es dafür nichts Brauchbares); die Echtheit sichert die Signatur der Datei, nicht der Kanal. Ein `https://`-Eintrag wird mit eigener Meldung abgelehnt. Folge: Ein Server wie GitHub (nur https) geht nicht; gedacht ist ein eigener kleiner Server, im einfachsten Fall der PC im LAN (`make serve-rules`)
+- keine Weiterleitungen, höchstens 2 MiB für die Regeln und 4 KiB für die Signatur, 15 s je Abruf
+- schreibt nur unter `/data/ps5medic/knowledge/`; bereits dort liegende Update-Dateien wandern nach `update/replaced/<Zeit>/`; `update.log` bekommt eine Zeile `rules_download`
+- der Download prüft und installiert nichts; beides folgt der bekannten Kette (Prüfung, Angebot, Bestätigung, Backup, Undo)
+
+**Signatur und Schlüssel**
+- Format `rules.json.sig`: eine Zeile `ed25519 <schlüssel-id> <base64 der 64 Bytes>`. Die ID sind die ersten 16 Hex-Zeichen von SHA-256 über den öffentlichen Schlüssel und wählt den Schlüssel aus der eingebauten Liste. Signiert werden exakt die Bytes von `rules.json`.
+- Eine daneben liegende Prüfsumme zählt dann nicht mehr: Liegt eine `.sig` im Ordner, entscheidet sie allein (kein Herabstufen auf die Prüfsumme). Ein Test deckt das ab.
+- Rollback-Schutz: Auch eine gültig signierte, aber ältere Datei wird abgelehnt (`not_newer`). Ein Server kann Updates zurückhalten oder eine alte signierte Version ausliefern (wirkungslos), aber keine neue Regeldatei erfinden.
+- Ed25519 steckt in `third_party/tweetnacl` (TweetNaCl 20140427, Public Domain, unverändert, als C übersetzt). Geprüft mit den RFC-8032-Testvektoren und, unabhängig davon, mit OpenSSL an der echten Signatur der ausgelieferten Regeln. TweetNaCl prüft in dieser Version nicht, ob der Skalar S der Signatur kanonisch ist; das erlaubt höchstens eine zweite gültige Signatur für **dieselbe** Datei und ist hier unerheblich.
+- **Privatschlüssel:** `~/.ps5medic/rules-signing.key` (WSL, Rechte 600), erzeugt mit `build/medic-sign keygen`. Er gehört **nicht** ins Repository (`.gitignore` schließt `*.key` aus) und sollte gesichert werden; ohne ihn lassen sich keine Regeln mehr signieren, und ein neuer Schlüssel braucht eine neue PS5-Medic-Version. Wer die Datei hat, kann Regeln signieren, die jede Konsole annimmt.
+- **Schlüsselwechsel:** neuen öffentlichen Schlüssel in `trusted_keys.cpp` **zusätzlich** eintragen, Version ausliefern, erst später den alten entfernen. Eine Sperrliste oder ein Ablaufdatum gibt es nicht; bei einem verlorenen oder kompromittierten Schlüssel hilft nur eine neue Version mit neuem Schlüssel.
+
+**Ablauf für den Autor:** Regeln ändern, `db_version` hochzählen, `make test`, `make sign-rules` (schreibt `dist/rules/rules.json` und `.sig` und prüft sie gegen den Schlüssel), `make serve-rules` (oder `dist/rules/` auf einem beliebigen HTTP-Server ablegen). Einmalig die Adresse auf die Konsole schreiben: `make set-update-url PS5_HOST=<ip> UPDATE_URL=http://<ip-des-servers>:8000/`.
 
 **Prüfung** (`check_rule_update`, schreibt nichts), in dieser Reihenfolge; jeder Fehler nennt eine Kennung, die die UI übersetzt:
 1. Datei da? (`no_rules_file`) · höchstens 2 MiB (`too_large`) · lesbar (`unreadable`)
-2. `rules.json.sha256` vorhanden und mit 64 Hex-Zeichen als erstem Wort, wie `sha256sum` es schreibt (`no_checksum`)
-3. SHA-256 stimmt (`checksum_mismatch`)
+2. Liegt `rules.json.sig` da: Signatur lesen und prüfen (`sig_malformed`, `sig_unknown_key`, `sig_invalid`); die Prüfsumme wird dann ignoriert, Ergebnis „Signatur gültig (Schlüssel …)“
+3. Sonst (Datei-Update): `rules.json.sha256` vorhanden und mit 64 Hex-Zeichen als erstem Wort, wie `sha256sum` es schreibt (`no_checksum`), und SHA-256 stimmt (`checksum_mismatch`); Ergebnis „nur Prüfsumme“
 4. Regel-Pruefer (`load_rules_from_string`) akzeptiert die Datei, auch das Schema (`invalid_rules`, mit Meldung)
 5. `db_version` ist **neuer** als die laufende (`not_newer`; gleich oder älter wird abgelehnt)
 
@@ -49,5 +67,4 @@ Zeilen, die schon als Evidenz eines Befunds im Bericht stehen, fallen weg. Gleic
 
 - **Beiträge** auf GBAtemp/Discord: entfallen vorerst, das Projekt bleibt privat (Entscheidung vom 8. Nov. 2026). Der Entwurf in `docs/TESTER.md` bleibt als Vorlage.
 - **GitHub-Release:** entfällt, Repository privat. Lizenz: GPL-3.0-or-later (siehe `docs/PHASE4.md`). Die Issue-Vorlage hat nur in einem Repository mit Issues einen Sinn.
-- **Download von Regeln** mit Signatur, falls gewünscht (siehe oben).
 - **Tester-Fixtures** entstehen erst, wenn es Berichte gibt.

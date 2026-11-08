@@ -14,7 +14,7 @@ Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedien
 - **Reparieren** (5 Fixes): Image umbenennen (Klammern), ShadowMount+-Einstellung setzen, BackPork aus der Autoload-Liste nehmen, doppelte Kopie derselben TITLE_ID verschieben, Anleitung bei verschachtelten Images. Vorher zeigt die Vorschau genau, was geändert wird.
 - **Rückgängig**: Jede Reparatur steht im Verlauf und lässt sich zurücknehmen.
 - **Bericht**: Taste □ in der Befundliste schreibt einen Markdown-Bericht nach `/data/ps5medic/reports/` und zeigt eine Kurzfassung als **QR-Code** (mit dem Handy scannen, Text kopieren, ins Forum oder in ein Issue einfügen). IP- und MAC-Adressen, Benutzer- und Konto-IDs sowie Seriennummern werden entfernt; Datei- und Ordnernamen bleiben drin, bitte vor dem Teilen prüfen. Fehlerartige Logzeilen, die zu keiner Regel passen, stehen als **Unbekannte Fehlerzeilen** im Bericht: Stoff für neue Regeln.
-- **Regel-Update**: Einstellungen, Regel-Update. Neue `rules.json` samt SHA-256-Prüfsumme per FTP oder USB-Kopie auf die Konsole legen, PS5 Medic prüft sie und installiert sie nach ✕ (mit Backup und Rückgängig). Es wird nichts aus dem Netz geladen.
+- **Regel-Update**: Einstellungen, Regel-Update. Neue `rules.json` samt SHA-256-Prüfsumme per FTP oder USB-Kopie auf die Konsole legen **oder** mit □ von der eigenen Adresse herunterladen (`update_url` in `/data/ps5medic/config.ini`; nur mit gültiger Ed25519-Signatur des Autors). PS5 Medic prüft die Datei und installiert sie nach ✕ (mit Backup und Rückgängig).
 - Deutsch und Englisch (Einstellungen).
 
 ## Sicherheit
@@ -22,7 +22,7 @@ Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedien
 - **Nie löschen**, nur verschieben oder umbenennen. Dateien, die geändert werden, werden vorher gesichert (`/data/ps5medic/backups/`), jede Änderung steht im Journal (`/data/ps5medic/journal.jsonl`).
 - **Kein Schreiben ohne ✕**: Reparatur und Rückgängig passieren erst nach ausdrücklicher Bestätigung auf der Vorschau. Weitere Schreibaktionen: der Bericht (□) und das Regel-Update (✕ auf dem Angebot).
 - Schreibzugriffe nur in einer Whitelist (ShadowMount+-Ordner, Autoload-Listen, die eigenen Scanpfade, `/data/ps5medic`). Nie unter `/system`, `/system_ex` oder `/dev`.
-- **Kein Netzwerkzugriff nach außen.** (Der Test, ob der ELF-Loader auf Port 9021 antwortet, geht nur an `127.0.0.1`.)
+- **Das Netz wird nur für den Regel-Download benutzt**, nur auf □ und Bestätigung, nur zur Adresse aus deiner `config.ini`, und es wird nichts gesendet außer einer GET-Anfrage. (Der Test, ob der ELF-Loader auf Port 9021 antwortet, geht nur an `127.0.0.1`.)
 - Keine Exploits, keine Firmware-Änderungen, keine Funktionen zum Beschaffen, Entsperren oder Verteilen von Spielen, Keys oder Firmware. PS5 Medic repariert die **Umgebung**, nicht Inhalte.
 
 ## Voraussetzungen

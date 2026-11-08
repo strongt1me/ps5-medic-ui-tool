@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Tests fuer das manuelle Regel-Update (libmedic/src/rule_update.cpp).
 #include "check.hpp"
+#include "testutil.hpp"
 #include "medic/platform.hpp"
 #include "medic/rule_update.hpp"
 #include "medic/rules.hpp"
@@ -21,48 +22,7 @@ using nlohmann::json;
 
 namespace {
 
-std::string slurp(const fs::path& p) {
-    std::ifstream in(p, std::ios::binary);
-    std::ostringstream ss;
-    ss << in.rdbuf();
-    return ss.str();
-}
-
-void spit(const fs::path& p, const std::string& text) {
-    fs::create_directories(p.parent_path());
-    std::ofstream out(p, std::ios::binary | std::ios::trunc);
-    out << text;
-}
-
-// Leerer Snapshot-Ordner; die virtuelle Konsole liegt unter <dir>/fs.
-struct Sandbox {
-    fs::path dir;
-    Sandbox() {
-        static int n = 0;
-        dir = fs::temp_directory_path() / ("medic-update-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + "-" + std::to_string(++n));
-        fs::remove_all(dir);
-        fs::create_directories(dir / "fs");
-    }
-    ~Sandbox() {
-        std::error_code ec;
-        fs::remove_all(dir, ec);
-    }
-    fs::path real(const std::string& vpath) const { return dir / "fs" / vpath.substr(1); }
-    std::set<std::string> tree() const {
-        std::set<std::string> t;
-        for (auto& e : fs::recursive_directory_iterator(dir)) t.insert(fs::relative(e.path(), dir).generic_string());
-        return t;
-    }
-};
-
-const std::string kShipped = std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json";
-
-// Die ausgelieferten Regeln mit anderer Version.
-std::string rules_text_with_version(const std::string& version) {
-    json j = json::parse(slurp(kShipped));
-    j["db_version"] = version;
-    return j.dump(2) + "\n";
-}
+using namespace testutil;
 
 void put_update(const Sandbox& sb, const std::string& text, const std::string& sum_line) {
     spit(sb.real(std::string(kRulesUpdateDir) + "/rules.json"), text);

@@ -196,6 +196,9 @@ int main() {
     auto platform = medic::make_ps5_platform(/*writable=*/true);
     medic::RuleSet rules = load_rules();
     medic::ui::LocalService service(*platform, std::move(rules));
+    // Der Regel-Download ist die einzige Netzfunktion: Abruf nur nach Bestaetigung im Bildschirm Regel-Update, nur zur Adresse aus config.ini.
+    const auto http = medic::make_posix_http_client();
+    service.set_http_client(http.get());
     App app(service);
 
     if (!init_sdl_with_retry()) {

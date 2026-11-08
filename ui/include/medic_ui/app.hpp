@@ -98,11 +98,16 @@ private:
 
     int settings_sel_ = 0;  // 0 Sprache, 1 Regel-Update
 
-    enum class UpdateStage { Offer, ConfirmRollback, DoneOk, DoneFail };
+    enum class UpdateStage { Offer, ConfirmRollback, ConfirmDownload, Downloading, DownloadFail, DoneOk, DoneFail };
     medic::RuleUpdateOffer offer_;
     medic::RuleUpdateResult update_result_;
     UpdateStage update_stage_ = UpdateStage::Offer;
     bool update_was_rollback_ = false;
+    std::string download_url_;  // Adresse aus config.ini, beim Oeffnen der Rueckfrage gelesen
+    medic::RuleDownloadResult download_result_;
+    bool downloaded_ = false;   // das angezeigte Angebot stammt aus einem Download auf diesem Bildschirm
+    bool pending_download_ = false;
+    mutable bool download_rendered_ = false;  // "Lade herunter ..." muss einmal gezeichnet worden sein, bevor der Abruf blockiert
 
     ReportResult report_;
     medic::QrCode qr_;       // einmal beim Oeffnen kodiert, nicht in jedem Bild

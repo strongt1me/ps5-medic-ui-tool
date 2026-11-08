@@ -80,14 +80,14 @@ bool LocalService::reload_rules() {
 }
 
 medic::RuleUpdateOffer LocalService::check_rule_update() {
-    medic::RuleUpdateOffer o = medic::check_rule_update(p_.fs(), rules_.db_version);
+    medic::RuleUpdateOffer o = medic::check_rule_update(p_.fs(), rules_.db_version, nullptr, keys_ ? &*keys_ : nullptr);
     o.old_rule_count = rules_.rules.size();
     return o;
 }
 
 medic::RuleUpdateResult LocalService::install_rule_update() {
     const medic::RuleSet before = rules_;
-    medic::RuleUpdateResult r = medic::install_rule_update(p_, rules_.db_version, clock_());
+    medic::RuleUpdateResult r = medic::install_rule_update(p_, rules_.db_version, clock_(), keys_ ? &*keys_ : nullptr);
     if (r.ok) {
         rules_before_install_ = before;
         reload_rules();
@@ -101,6 +101,17 @@ medic::RuleUpdateResult LocalService::rollback_rule_update() {
     if (!r.backup_path.empty()) reload_rules();                     // die bisherige Datei ist wieder aktiv
     else if (rules_before_install_) rules_ = *rules_before_install_;  // es galten die mitgelieferten Regeln
     return r;
+}
+
+std::string LocalService::rule_update_url() { return medic::configured_update_url(p_.fs()); }
+
+medic::RuleDownloadResult LocalService::download_rule_update() {
+    if (!http_) {
+        medic::RuleDownloadResult r;
+        r.error = "no_network";
+        return r;
+    }
+    return medic::download_rule_update(p_, *http_, rule_update_url(), clock_());
 }
 
 ReportResult LocalService::make_report(medic::ReportLang lang) {

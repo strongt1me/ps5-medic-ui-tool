@@ -14,7 +14,7 @@ It runs as a full-screen app directly on the console and is operated with the Du
 - **Repair** (5 fixes): rename an image (parentheses), set a ShadowMount+ option, remove BackPork from the autoload list, move a duplicate copy of the same TITLE_ID, guidance for nested images. A preview shows exactly what will change first.
 - **Undo**: every repair is listed in the history and can be taken back.
 - **Report**: the □ button in the findings list writes a Markdown report to `/data/ps5medic/reports/` and shows a short version as a **QR code** (scan it with your phone, copy the text, paste it into a forum or an issue). IP and MAC addresses, user and account IDs and serial numbers are removed; file and folder names stay in, please check before sharing. Error-like log lines that match no rule appear as **Unknown error lines** in the report: material for new rules.
-- **Rule update**: Settings, Rule update. Put a new `rules.json` with its SHA-256 checksum on the console via FTP or a USB copy; PS5 Medic verifies it and installs it after ✕ (with backup and roll-back). Nothing is downloaded from the network.
+- **Rule update**: Settings, Rule update. Put a new `rules.json` with its SHA-256 checksum on the console via FTP or a USB copy, **or** download it with □ from your own address (`update_url` in `/data/ps5medic/config.ini`; only accepted with a valid Ed25519 signature of the author). PS5 Medic verifies the file and installs it after ✕ (with backup and roll-back).
 - German and English (Settings).
 
 ## Safety
@@ -22,7 +22,7 @@ It runs as a full-screen app directly on the console and is operated with the Du
 - **Never deletes**, only moves or renames. Files that change are backed up first (`/data/ps5medic/backups/`), and every change is recorded in the journal (`/data/ps5medic/journal.jsonl`).
 - **No writing without ✕**: a repair or an undo only happens after you confirm on the preview. Other writes: the report (□) and the rule update (✕ on the offer).
 - Writes are limited to a whitelist (ShadowMount+ folder, autoload lists, your own scan paths, `/data/ps5medic`). Never under `/system`, `/system_ex` or `/dev`.
-- **No outbound network access.** (The check whether the ELF loader answers on port 9021 only goes to `127.0.0.1`.)
+- **The network is only used for the rule download**, only after □ and a confirmation, only to the address in your `config.ini`, and nothing is sent except a GET request. (The check whether the ELF loader answers on port 9021 only goes to `127.0.0.1`.)
 - No exploits, no firmware changes, no features to obtain, unlock or distribute games, keys or firmware. PS5 Medic repairs the **environment**, not content.
 
 ## Requirements

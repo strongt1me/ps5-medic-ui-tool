@@ -19,6 +19,7 @@ std::string join(const std::string& dir, const std::string& name) { return dir +
 
 std::string update_rules_path() { return join(kRulesUpdateDir, "rules.json"); }
 std::string update_sum_path() { return join(kRulesUpdateDir, "rules.json.sha256"); }
+std::string update_sig_path() { return join(kRulesUpdateDir, "rules.json.sig"); }
 
 bool valid_timestamp(const std::string& ts) {
     return !ts.empty() && ts.size() <= 40 &&
@@ -78,7 +79,8 @@ std::string str_of(const json& j, const char* key) { return j.contains(key) && j
 
 }  // namespace
 
-RuleUpdateOffer check_rule_update(const IFileSystem& fs, const std::string& current_version, std::string* verified_text) {
+RuleUpdateOffer check_rule_update(const IFileSystem& fs, const std::string& current_version, std::string* verified_text,
+                                  const std::vector<TrustedKey>* keys) {
     RuleUpdateOffer o;
     o.old_version = current_version;
 
@@ -88,8 +90,8 @@ RuleUpdateOffer check_rule_update(const IFileSystem& fs, const std::string& curr
         o.installed_version = str_of(open, "to");
     }
 
-    const bool has_rules = fs.exists(update_rules_path()), has_sum = fs.exists(update_sum_path());
-    if (!has_rules && !has_sum) return o;  // State::None
+    const bool has_rules = fs.exists(update_rules_path()), has_sum = fs.exists(update_sum_path()), has_sig = fs.exists(update_sig_path());
+    if (!has_rules && !has_sum && !has_sig) return o;  // State::None
     auto reject = [&](const char* reason) {
         o.state = RuleUpdateOffer::State::Rejected;
         o.reason = reason;
@@ -101,12 +103,28 @@ RuleUpdateOffer check_rule_update(const IFileSystem& fs, const std::string& curr
     if (!fs.read_range(update_rules_path(), 0, kMaxRulesBytes + 1, text)) return reject("unreadable");
     if (text.size() > kMaxRulesBytes) return reject("too_large");
 
-    std::string sum_text;
-    if (!has_sum || !fs.read_file(update_sum_path(), sum_text)) return reject("no_checksum");
-    const std::string expected = parse_checksum_file(sum_text);
-    if (expected.empty()) return reject("no_checksum");
     o.sha256 = sha256_hex(text);
-    if (o.sha256 != expected) return reject("checksum_mismatch");
+    if (has_sig) {
+        // Eine Signatur entscheidet allein; eine daneben liegende Pruefsumme zaehlt nicht (sie koennte vom selben Server stammen).
+        std::string sig_text;
+        if (!fs.read_range(update_sig_path(), 0, 4096, sig_text)) return reject("unreadable");
+        const SigInfo si = verify_rules_signature(text, sig_text, keys ? *keys : trusted_rule_keys());
+        switch (si.result) {
+            case SigResult::Valid: break;
+            case SigResult::Malformed: return reject("sig_malformed");
+            case SigResult::UnknownKey: return reject("sig_unknown_key");
+            case SigResult::BadSignature: return reject("sig_invalid");
+        }
+        o.auth = "signature";
+        o.signed_by = si.key_id;
+    } else {
+        std::string sum_text;
+        if (!has_sum || !fs.read_file(update_sum_path(), sum_text)) return reject("no_checksum");
+        const std::string expected = parse_checksum_file(sum_text);
+        if (expected.empty()) return reject("no_checksum");
+        if (o.sha256 != expected) return reject("checksum_mismatch");
+        o.auth = "checksum";
+    }
 
     RuleSet rs;
     try {
@@ -124,7 +142,8 @@ RuleUpdateOffer check_rule_update(const IFileSystem& fs, const std::string& curr
     return o;
 }
 
-RuleUpdateResult install_rule_update(Platform& p, const std::string& current_version, const std::string& timestamp) {
+RuleUpdateResult install_rule_update(Platform& p, const std::string& current_version, const std::string& timestamp,
+                                     const std::vector<TrustedKey>* keys) {
     RuleUpdateResult r;
     if (!p.fs_rw()) {
         r.error = "no_write";
@@ -135,7 +154,7 @@ RuleUpdateResult install_rule_update(Platform& p, const std::string& current_ver
         return r;
     }
     std::string text;
-    const RuleUpdateOffer offer = check_rule_update(p.fs(), current_version, &text);
+    const RuleUpdateOffer offer = check_rule_update(p.fs(), current_version, &text, keys);
     if (offer.state != RuleUpdateOffer::State::Ready) {
         r.error = offer.state == RuleUpdateOffer::State::None ? "no_rules_file" : offer.reason;
         return r;
@@ -171,9 +190,10 @@ RuleUpdateResult install_rule_update(Platform& p, const std::string& current_ver
     const std::string done = join(join(kRulesUpdateDir, "installed"), timestamp);
     p.fs_rw()->rename(update_rules_path(), join(done, "rules.json"));
     p.fs_rw()->rename(update_sum_path(), join(done, "rules.json.sha256"));
+    p.fs_rw()->rename(update_sig_path(), join(done, "rules.json.sig"));
 
     append_log(p, {{"type", "rules_update"}, {"ts", timestamp}, {"from", current_version}, {"to", offer.new_version},
-                   {"sha256", offer.sha256}, {"backup", backup_path}, {"backup_sha256", backup_sha}});
+                   {"sha256", offer.sha256}, {"auth", offer.auth}, {"key", offer.signed_by}, {"backup", backup_path}, {"backup_sha256", backup_sha}});
     r.ok = true;
     r.new_version = offer.new_version;
     r.backup_path = backup_path;

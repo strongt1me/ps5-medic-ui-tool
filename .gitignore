@@ -2,3 +2,7 @@ build/
 build-ps5/
 dist/
 build-title/
+
+# Signierschluessel gehoeren nie ins Repository
+*.key
+rules-signing*

@@ -36,8 +36,8 @@ Jede Phase endet mit lauffähigem Stand + kurzem Status an Marc.
 3. README (DE/EN), `THIRD_PARTY.md` – erledigt. GitHub-Release – entfällt (Repository privat).
 
 ## Phase 5 – Community
-> Stand: Regel-Update (als Datei-Update ohne Netz), unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung sind fertig und getestet (siehe `docs/PHASE5.md`). Foren-Beiträge und GitHub-Release entfallen (Repository privat). Der signierte Regel-Download kommt als Nächstes.
-1. Regel-Update (manuell, SHA-256). – erledigt (Datei auf die Konsole legen, in PS5 Medic prüfen und installieren; kein Download, Begründung in `docs/PHASE5.md`).
+> Stand: Regel-Update (Datei-Update und signierter Download), unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung sind fertig und getestet (siehe `docs/PHASE5.md`). Foren-Beiträge und GitHub-Release entfallen (Repository privat). Der signierte Regel-Download ist umgesetzt (Ed25519, siehe `docs/PHASE5.md`).
+1. Regel-Update (manuell, SHA-256) und signierter Download (Ed25519). – erledigt (Datei auf die Konsole legen oder mit □ von der eigenen Adresse laden; in PS5 Medic prüfen und installieren, Einzelheiten in `docs/PHASE5.md`).
 2. „Unbekannte Fehlerzeilen“ sammeln → Issue-Vorlage. – erledigt (Abschnitt im Bericht, `.github/ISSUE_TEMPLATE/problem.md`).
 3. Tester mit FW 7.x–13.60 suchen (GBAtemp, Discord), Fixtures einsammeln. – Anleitung und Entwurf des Aufrufs in `docs/TESTER.md`; wird nicht veröffentlicht (Repository privat), Tester nur persönlich.
 

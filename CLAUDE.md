@@ -25,7 +25,7 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 2. **Collector → Facts → Rules → Findings → Fixes.** Collectors sammeln Fakten (read-only), Regeln werten nur Fakten aus, Fixes sind separate, reversible Aktionen.
 3. **Jeder Fix ist reversibel:** vorher Backup nach `/data/ps5medic/backups/<timestamp>/`, Journal-Eintrag, Undo-Funktion. Kein Fix ohne Bestätigung durch den Nutzer.
 4. **Nie löschen**, nur verschieben (`_to_delete/`) oder umbenennen.
-5. **Kein Netz nach aussen** ausser dem optionalen, manuell ausgelösten Regel-Update (SHA-256-geprüft). Umgesetzt als Datei-Update ohne Netz, siehe `docs/PHASE5.md`.
+5. **Kein Netz nach aussen** ausser dem optionalen, manuell ausgelösten Regel-Download: nur `http://` zur Adresse `update_url` aus `/data/ps5medic/config.ini`, nur nach Bestätigung, nur zwei GET-Abrufe (`rules.json`, `rules.json.sig`), angenommen nur mit gültiger Ed25519-Signatur (Schlüssel eingebaut, Privatschlüssel nie im Repo). Daneben bleibt das Datei-Update (SHA-256) ohne Netz. Siehe `docs/PHASE5.md`.
 
 ## Grenzen (nicht verhandelbar)
 - Keine Exploits, keine Jailbreak-Ketten, keine Firmware-Änderungen.

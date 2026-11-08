@@ -118,6 +118,7 @@ void App::open_report() {
 void App::open_rules_update() {
     offer_ = svc_.check_rule_update();
     update_stage_ = UpdateStage::Offer;
+    downloaded_ = false;
     screen_ = Screen::RulesUpdate;
 }
 
@@ -227,9 +228,26 @@ void App::handle(Button b) {
                         finish_rules_change(update_result_.ok);
                     } else if (b == Button::Triangle && offer_.can_rollback) {
                         update_stage_ = UpdateStage::ConfirmRollback;
+                    } else if (b == Button::Square) {
+                        download_url_ = svc_.rule_update_url();
+                        update_stage_ = UpdateStage::ConfirmDownload;
                     } else if (b == Button::Circle) {
                         screen_ = Screen::Settings;
                     }
+                    break;
+                case UpdateStage::ConfirmDownload:
+                    if (b == Button::Cross && !download_url_.empty()) {
+                        update_stage_ = UpdateStage::Downloading;
+                        pending_download_ = true;
+                        download_rendered_ = false;
+                    } else if (b == Button::Circle) {
+                        update_stage_ = UpdateStage::Offer;
+                    }
+                    break;
+                case UpdateStage::Downloading:
+                    break;  // nicht unterbrechbar (hoechstens ein paar Sekunden)
+                case UpdateStage::DownloadFail:
+                    if (b == Button::Cross || b == Button::Circle) update_stage_ = UpdateStage::Offer;
                     break;
                 case UpdateStage::ConfirmRollback:
                     if (b == Button::Cross) {
@@ -260,6 +278,17 @@ void App::update() {
         has_result_ = true;
         sel_ = top_ = 0;
         screen_ = Screen::Findings;
+    }
+    if (pending_download_ && download_rendered_) {  // erst ausfuehren, wenn "Lade herunter ..." sichtbar war
+        pending_download_ = false;
+        download_result_ = svc_.download_rule_update();
+        if (download_result_.ok) {
+            offer_ = svc_.check_rule_update();  // Echtheit, Schema und Version prueft der Kern, nicht der Download
+            downloaded_ = true;
+            update_stage_ = UpdateStage::Offer;
+        } else {
+            update_stage_ = UpdateStage::DownloadFail;
+        }
     }
 }
 
@@ -726,12 +755,14 @@ void App::draw_rules_update(Canvas& c) const {
     std::vector<std::pair<PadGlyph, std::string>> hints;
     switch (update_stage_) {
         case UpdateStage::Offer:
+            if (downloaded_) paragraph(small(), S.fmt("update.downloaded_from", {{"url", download_url_}}), kDim, 2);
             if (offer_.state == medic::RuleUpdateOffer::State::None) {
                 paragraph(body(), S("update.none"), kText, 2);
                 paragraph(small(), S("update.howto"), kDim, 5);
             } else if (offer_.state == medic::RuleUpdateOffer::State::Ready) {
                 paragraph(body(), S.fmt("update.ready", {{"v", offer_.new_version}, {"n", std::to_string(offer_.new_rule_count)}}), kOk, 2);
-                paragraph(small(), S.fmt("update.sha", {{"sha", offer_.sha256.substr(0, 16)}}), kDim, 2);
+                if (offer_.auth == "signature") paragraph(small(), S.fmt("update.auth_sig", {{"key", offer_.signed_by}, {"sha", offer_.sha256.substr(0, 16)}}), kDim, 2);
+                else paragraph(small(), S.fmt("update.sha", {{"sha", offer_.sha256.substr(0, 16)}}), kDim, 2);
                 paragraph(small(), S("update.backup_note"), kDim, 3);
                 hints.emplace_back(PadGlyph::Cross, S("update.install"));
             } else {
@@ -742,7 +773,29 @@ void App::draw_rules_update(Canvas& c) const {
                 paragraph(small(), S.fmt("update.can_rollback", {{"v", offer_.installed_version}}), kDim, 3);
                 hints.emplace_back(PadGlyph::Triangle, S("update.rollback"));
             }
+            hints.emplace_back(PadGlyph::Square, S("update.download"));
             hints.emplace_back(PadGlyph::Circle, S("common.back"));
+            break;
+        case UpdateStage::ConfirmDownload:
+            if (download_url_.empty()) {
+                paragraph(body(), S("update.no_url"), kText, 6);
+                hints = {{PadGlyph::Circle, S("common.back")}};
+            } else {
+                paragraph(body(), S.fmt("update.confirm_download", {{"url", download_url_}}), kText, 6);
+                hints = {{PadGlyph::Cross, S("update.download")}, {PadGlyph::Circle, S("common.cancel")}};
+            }
+            break;
+        case UpdateStage::Downloading:
+            download_rendered_ = true;
+            paragraph(body(), S("update.downloading"), kText, 2);
+            paragraph(small(), download_url_, kDim, 2);
+            break;
+        case UpdateStage::DownloadFail:
+            paragraph(body(), S("update.download_failed"), kWarn, 2);
+            if (download_result_.error == "http_status")
+                paragraph(small(), S.fmt("update.error.http_status", {{"file", download_result_.file}, {"status", std::to_string(download_result_.http_status)}}), kDim, 3);
+            else paragraph(small(), reason_text(download_result_.error), kDim, 4);
+            hints = {{PadGlyph::Cross, S("common.back")}};
             break;
         case UpdateStage::ConfirmRollback:
             paragraph(body(), S("update.confirm_rollback"), kText, 4);

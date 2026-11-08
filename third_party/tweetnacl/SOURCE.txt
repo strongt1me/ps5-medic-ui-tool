@@ -1,0 +1,16 @@
+TweetNaCl, Version 20140427 (Daniel J. Bernstein, Wesley Janssen, Tanja Lange, Peter Schwabe, Matthew Dempsky u. a.)
+Lizenz: Public Domain (kein Lizenztext in den Dateien; Angabe der Autoren auf https://tweetnacl.cr.yp.to/)
+
+Quelle:
+  https://tweetnacl.cr.yp.to/20140427/tweetnacl.c
+  https://tweetnacl.cr.yp.to/20140427/tweetnacl.h
+
+SHA-256 der unveraenderten Dateien:
+  02e65bc3013ff2168983365e55906bc783c4c7e0a60d8100f17bb303a17175c4  tweetnacl.c
+  43f29ad721d9927b747b0100ab4160c119e7bb180c7c98a66e4bf79d31244287  tweetnacl.h
+
+Benutzt nur fuer Ed25519 (crypto_sign_ed25519_tweet_open/_keypair/_ed25519_tweet). Die Dateien bleiben unveraendert;
+libmedic/src/ed25519.cpp bindet tweetnacl.c als C++ ein und liefert `randombytes` (siehe dort).
+Bekannte Eigenschaft: Diese Version prueft nicht, ob der Skalar S der Signatur kanonisch ist (Signatur-Veraenderbarkeit).
+Fuer die Echtheitspruefung der Regeldatei ist das unerheblich: eine veraenderte Signatur gilt weiterhin nur fuer genau
+dieselbe Nachricht.
