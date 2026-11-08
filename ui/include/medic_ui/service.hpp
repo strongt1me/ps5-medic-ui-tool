@@ -75,6 +75,7 @@ private:
     std::optional<medic::RuleSet> rules_before_install_;  // fuer den Rollback, wenn es vorher keine Datei im Wissensordner gab
 
     bool reload_rules();
+    void ensure_facts();
     std::function<std::string()> clock_;
 };
 

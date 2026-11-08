@@ -44,6 +44,7 @@ medic::ApplyResult LocalService::apply_fix(const medic::FixPlan& plan) {
     medic::ApplyOptions opt;
     opt.timestamp = clock_();
     opt.confirmed = true;  // die UI hat den Plan gezeigt und das Kreuz abgewartet
+    ensure_facts();
     return medic::apply_plan(plan, p_, medic::policy_from_facts(facts_), opt);
 }
 
@@ -55,7 +56,15 @@ std::string LocalService::read_text(const std::string& path) {
 std::vector<medic::TxnInfo> LocalService::history() { return medic::history(p_); }
 
 medic::UndoResult LocalService::undo(const std::string& txn) {
+    ensure_facts();
     return medic::undo_txn(p_, medic::policy_from_facts(facts_), txn, clock_());
+}
+
+// Die Pfad-Whitelist von Reparatur und Rueckgaengig kommt aus den Scanpfaden der Fakten. Ohne Check-up in dieser Sitzung
+// (App neu gestartet, direkt in den Verlauf) sind die Fakten leer, und jedes Rueckgaengigmachen ausserhalb der Standardpfade
+// scheiterte mit "Pfad nicht in der Whitelist". Deshalb vorher sammeln, wenn noch nichts da ist.
+void LocalService::ensure_facts() {
+    if (!facts_.get("smp.scan_roots")) facts_ = medic::collect_all(p_);
 }
 
 bool LocalService::reload_rules() {

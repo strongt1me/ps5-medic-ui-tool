@@ -549,6 +549,35 @@ void edge_tests() {
     CHECK(b.screen() == App::Screen::History, "Edge: langer Verlauf");
 }
 
+// Fund vom 8. Nov. auf der Konsole: App neu gestartet, ohne Check-up direkt in den Verlauf, Rueckgaengig scheiterte mit
+// "Pfad nicht in der Whitelist", weil die Whitelist aus den Fakten des (nie gelaufenen) Check-ups kam.
+void undo_in_new_session_tests() {
+    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+    TempCopy t("b8_pos");
+    const auto before = tree(t.dir);
+    auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+    Canvas cv(App::kWidth, App::kHeight);
+    {  // erste Sitzung: Check-up und Reparatur
+        LocalService s1(*platform, rules, [] { return std::string("20261108T120000Z"); });
+        App app(s1);
+        run_check_via_ui(app, cv);
+        press(app, {Button::Triangle, Button::Cross});
+        CHECK(app.screen() == App::Screen::FixDone && tree(t.dir) != before, "Neue Sitzung: Vorbereitung, die Reparatur ist angewendet");
+    }
+    // zweite Sitzung: neuer Dienst, kein Check-up
+    LocalService s2(*platform, rules, [] { return std::string("20261108T130000Z"); });
+    App app2(s2);
+    press(app2, {Button::Down, Button::Cross});
+    CHECK(app2.screen() == App::Screen::History, "Neue Sitzung: Verlauf ohne Check-up");
+    app2.render(cv);
+    press(app2, {Button::Cross});
+    CHECK(app2.screen() == App::Screen::UndoConfirm, "Neue Sitzung: Rueckgaengig fragt nach");
+    press(app2, {Button::Cross});
+    CHECK(app2.screen() == App::Screen::FixDone, "Neue Sitzung: Ergebnis");
+    app2.render(cv);
+    CHECK(tree(t.dir) == before, "Neue Sitzung: Rueckgaengig ohne vorherigen Check-up stellt den Dateibaum wieder her");
+}
+
 void end_to_end_tests() {
     const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
     TempCopy t("b8_pos");
@@ -826,6 +855,7 @@ void ui_tests() {
     screen_flow_tests();
     edge_tests();
     end_to_end_tests();
+    undo_in_new_session_tests();
     report_service_tests();
     rules_update_flow_tests();
     rules_update_service_tests();
