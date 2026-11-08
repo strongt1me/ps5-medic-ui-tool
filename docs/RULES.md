@@ -33,7 +33,11 @@ Regeln immer **versionsgebunden** formulieren – die Szene ändert sich wöchen
 | B11 `smp.source_not_stable` | `debug.log` enthält `source not stable yet` wiederholt **für dieselbe Quelle** (mindestens 3 Zeilen je Quelle) | Kopiervorgang noch nicht fertig oder `stability_wait_seconds` zu hoch/niedrig. | Hinweis | [SM+ README](https://github.com/drakmor/ShadowMountPlus) | doc |
 | B12 `smp.exfat_cluster` | `.exfat`-Image mit Cluster < 64 KB | Langsamer; Images mit 64-KB-Clustern bauen. | Anleitung | [SM+ README](https://github.com/drakmor/ShadowMountPlus) | doc |
 | B13 `smp.debug_off` | `debug=0` | Ohne Debug-Log keine Diagnose möglich – für die Fehlersuche `debug=1`. | `smp_set_key` | [SM+ README](https://github.com/drakmor/ShadowMountPlus) | doc |
-| B14 `smp.register_failed` | `debug.log`: `Register failed` | Launcher-Icon entfernen/neu registrieren; als letzter Schritt Spieldaten löschen (Achtung: Saves weg). | Anleitung | [SM+ README](https://github.com/drakmor/ShadowMountPlus) | todo (Erkennung) |
+| B14 `smp.register_failed` | `debug.log`: `Register failed` **oder** `[REG] FAIL` | Launcher-Icon entfernen/neu registrieren; als letzter Schritt Spieldaten löschen (Achtung: Saves weg). Der Fehlercode steht in der `[REG] FAIL`-Zeile. | Anleitung | [Issue 141](https://github.com/drakmor/ShadowMountPlus/issues/141) | community (Zeilenformat an einem echten Log belegt, siehe Nachtrag) |
+| B16 `smp.shellcore_hook_lost` | `debug.log`: `AppInstallAll hook is no longer installed` oder `AppInstallTitleDir bridge unavailable` | Der Registrierungs-Haken in ShellCore ging verloren (nach Ruhemodus/Spielwechsel): neue Spiele lassen sich nicht registrieren. Payload erneut senden; ab 1.7beta5 stellt SM+ den Haken selbst wieder her. | Hinweis | [Issue 145](https://github.com/drakmor/ShadowMountPlus/issues/145), [Issue 147](https://github.com/drakmor/ShadowMountPlus/issues/147) | community (Zeilen aus echten Logs der Issues) |
+| B17 `smp.shellcore_hooks_failed` | `debug.log`: `Failed to Install ShellCore Hooks` | SM+ konnte beim Start keine Haken in ShellCore installieren; Ursache unbestätigt. Sauberer Neustart in der Reihenfolge Jailbreak, kstuff-lite, SM+; neuere Version (ab 1.7beta6 verbesserte Haken). | Hinweis | [Issue 109](https://github.com/drakmor/ShadowMountPlus/issues/109) | community (Meldungstext aus dem Issue; Zeilenformat im Log ungeprüft) |
+| B18 `smp.image_cache_full` | `debug.log`: `image cache full` | SM+ nahm einen Mount zurück, weil der Image-Cache voll war (gemeldet bei 64 Einträgen, über 100 Images). Weniger Quellen/Duplikate, Cache nicht von Hand löschen. | Hinweis | [Issue 32](https://github.com/drakmor/ShadowMountPlus/issues/32) | community (Zeile aus dem echten Log des Issues; der Fall war 1.6test11, ob 1.7 noch ein Limit hat, ist offen) |
+| B19 `smp.api_not_responding` | `[API] HTTP/JSON ready: http://<0.0.0.0\|127.0.0.1>:<Port>/` im Log, SM+ läuft, Port nimmt auf der Konsole keine Verbindung an (Info) | Der API-Listener kann still ausfallen, während SM+ weiterläuft; Programme, die die API nutzen, erreichen SM+ dann nicht. Payload erneut senden (Schlussfolgerung, nicht bestätigt). | Hinweis | [Issue 152](https://github.com/drakmor/ShadowMountPlus/issues/152) | community (Bereit-Zeile und offener Port an der Test-Konsole bestätigt; der Ausfall selbst nicht nachgestellt) |
 | B15 `smp.image_sector_autotune` | `autotune.ini` enthält neuen `image_sector`-Eintrag | SM+ hat die Sektorgrösse angepasst – Spiel einfach erneut starten. | Hinweis | [SM+ README](https://github.com/drakmor/ShadowMountPlus) | todo (Erkennung) |
 
 ## C. Plugins & Speicher
@@ -50,13 +54,13 @@ Regeln immer **versionsgebunden** formulieren – die Szene ändert sich wöchen
 3. Eigene Fälle von der FW-4.03-Konsole als Fixtures sichern.
 
 ## Umsetzungsstand und Abweichungen (Phase 0, Stand 8. Nov. 2026)
-Umgesetzt in `knowledge/rules.json` mit je einem Positiv- und Negativ-Fixture: **A1–A4, B1–B15, C1–C3** (22 Regeln; A2, A4, C1–C3 seit dem 8. Nov., siehe „Nachtrag: A2, A4, C1–C3").
+Umgesetzt in `knowledge/rules.json` mit je einem Positiv- und Negativ-Fixture: **A1–A4, B1–B19, C1–C3** (26 Regeln; B16–B19 aus der Doctor-Wissensbasis, siehe „Nachtrag: Doctor-Wissensbasis“; A2, A4, C1–C3 seit dem 8. Nov., siehe „Nachtrag: A2, A4, C1–C3").
 
 Beim Abgleich mit dem aktuellen SM+-README (drakmor/ShadowMountPlus) gefunden:
 - **config.ini hat Sektionen** (`[scan] path=`, `[scan] depth`, `[general] debug`, `[fakelib] enabled`). Der Collector versteht Sektionen und die älteren flachen Schlüssel (`scanpath`, `scan_depth`, `debug`, `backport_fakelib`). Defaults laut README: Tiefe 1, `debug` an. Ob `[fakelib] enabled` standardmässig an ist (B5), steht nicht im README – Annahme „an“ stammt aus dieser Datei.
 - **Standard-Scanpfade** sind breiter als ursprünglich notiert (`…/homebrew` und `…/etaHEN/games` je Laufwerk, plus `/mnt/usb0..7`, `/mnt/ext0..1`).
 - **`autotune.ini`**: Laut README wandern alte Autotune-Werte nach `profiles.ini` (`[image:DATEI] sector_size`). B15 bleibt als `todo`, bis das Format auf der Konsole geprüft ist.
-- **B14** („Register failed“): im README als Benachrichtigung genannt, nicht als `debug.log`-Zeile → `todo`.
+- **B14** („Register failed“): im README als Benachrichtigung genannt, nicht als `debug.log`-Zeile → `todo`. *Überholt (8. Nov.): Das Zeilenformat ist an einem echten Log belegt, siehe „Nachtrag: Doctor-Wissensbasis“.*
 - **B6/B7**: Images lassen sich ohne Mounten nicht inspizieren. Die Regeln werten den Zustand unter `/mnt/shadowmnt/` aus (Layout vorläufig, in Phase 2 verifizieren) → `todo`.
 - **A1**: Die Firmware-Grenze steht nicht fest. Die Quelle (kstuff-lite #94) nennt nur FW 13.60; die Regel gilt daher ab `>=13.60`.
 - **B3/B4**: Abstürze bzw. Startfehler sind aus einem Snapshot nicht erkennbar; die Regeln prüfen nur die gemeldete Kombination aus FW/Version/Config. Versionen und Herkunft von kstuff kommen vorläufig aus `components` in `system.json` (Konsolen-Quelle offen).
@@ -78,7 +82,7 @@ Quelle: `README.md`, `config.ini.example` und der Payload-Manager-Quelltext aus 
 - **B10**: `recursive_scan=1` erzwingt `scan_depth=2` (Fixture `b10_neg_recursive`). Der Ordner `backports` zählt nicht als Spielquelle (Fixture `b8_neg_backports`).
 - **B6/B7**: Mountpunkte `/mnt/shadowmnt/<image>_<hash>` und `/mnt/shadowmnt/pfsc/<image>_<hash>` sind dokumentiert → Status `doc`.
 - **B15**: `image_sector=<datei>:<grösse>` in `autotune.ini` ist dokumentiert (SM+ schreibt es, wenn die Cluster-Grösse nicht zur Sektorgrösse passt) → `doc`.
-- **B14** bleibt `todo`: „Register failed“ wird im README als Benachrichtigung genannt.
+- **B14** bleibt `todo`: „Register failed“ wird im README als Benachrichtigung genannt. *Überholt (8. Nov.): Das Zeilenformat ist an einem echten Log belegt, siehe „Nachtrag: Doctor-Wissensbasis“.*
 - **B5-Fix**: Die Autoload-Listen (`/data/ps5_autoloader/autoload.txt`, Payload Manager: `/data/pldmgr/autoload.txt`) kennen keine Kommentare: `!<ms>` ist eine Wartezeit, jede andere Zeile ein Dateiname. Der Fix **entfernt** den BackPork-Eintrag (Original im Backup, `undo` stellt es wieder her) statt ihn mit `#` zu markieren. Der Pfad der Liste hängt vom Autoloader ab; beide sind in der Whitelist.
 
 ## Nachtrag: A2, A4, C1–C3 (8. Nov. 2026)
@@ -92,3 +96,23 @@ Die fünf letzten Regeln brauchten neue Fakten. Dafür kennt die Plattform jetzt
 
 ## Nachtrag: B11 nach Befund auf der Konsole (8. Nov. 2026)
 Die Regel zählte `source not stable yet` im ganzen Log (mindestens 3 Zeilen). Auf der Test-Konsole löste sie damit einen Hinweis aus, der keiner war: Jeder normale Kopiervorgang erzeugt ein bis zwei solche Zeilen, bevor ShadowMount+ die Quelle installiert (echtes Log: ein Spiel zwei Zeilen, dann `Installing:`; unser eben hochgeladener Starter eine). Drei Zeilen aus **verschiedenen** Quellen sind Normalbetrieb. Jetzt zählt der Collector je Quelle (`smp.unstable_sources[]`, Schlüssel ist der Pfad in der Zeile) und die Regel feuert ab 3 Zeilen derselben Quelle. Fixtures: `b11_neg_distinct_sources` (die Zeilen des echten Logs) und `b11_pos_named` (Name und Pfad mit Klammern). Die Regelversion ist deshalb `2026.11.09`; **bei jeder inhaltlichen Änderung der Regeln `db_version` hochzählen**, sonst lehnt das Regel-Update die Datei als „nicht neuer" ab. Für den Download danach `make sign-rules` (siehe `docs/PHASE5.md`).
+
+## Nachtrag: Doctor-Wissensbasis gesichtet (8. Nov. 2026)
+Gesichtet wurde die `knowledge_base.json` des PS5 Jailbreak Doctors (MIT, Version 2026.10.17.1: 32 Regeln und 5 Einträge einer Kompatibilitätsmatrix). Der Doctor wertet **Logs am PC** per Textmuster aus; PS5 Medic wertet **Fakten** der Konsole aus. Übernommen wurde deshalb, was sich aus dem ShadowMount+-Log oder einem Live-Fakt erkennen lässt, mit eigenen Texten. Die Quellen wurden **einzeln bei GitHub nachgeprüft** (Status, Wortlaut der Logzeilen, Release-Notizen); der Doctor-Stand ist vom 17. Okt. und teils überholt (z. B. sind die Issues 152 und 153 inzwischen geschlossen).
+
+**Übernommen:** B16 (Haken verloren; Issues 145/147), B17 (Haken nicht installiert; Issue 109), B18 (Image-Cache voll; Issue 32), B19 (API antwortet nicht; Issue 152, **mit Live-Port-Prüfung statt Log-Muster**). B14 erkennt jetzt auch `[REG] FAIL: 0x…` (siehe unten).
+
+**Schon abgedeckt:** Klammern im Image-Namen (B2), doppelte TITLE_ID (B8), „source not stable“ (B11), Scanpfad-Probleme (B9/B10), 1.7beta3-Absturz mit Auto-Toggle (B3), Registrierung fehlgeschlagen (B14), BackPork-Konflikt (B5).
+
+**Nicht übernommen, mit Grund:**
+- *Brauchen klog oder Absturzprotokolle des Spiels, die PS5 Medic nicht liest:* PRX-Modul-Fehler, `param.json` fehlt/ungültig, `libc.prx` fehlt, „crashed before kstuff pause“, SIGSEGV/SIGBUS, Kernel-Panic nach kstuff-Laden, `/dev/klog` busy, „connection refused“ (das ist eine PC-Meldung des Doctors).
+- *Ereignisse statt Zustand, nicht aus einem Snapshot erkennbar:* Kernel-Panic beim Verschieben USB→ext1 (Issue 127), CE-105773-3 nach dem Beenden eines Ordner-Spiels (128), CE-108262-9 (143), Trophäen-Registrierung 0x80551618 (97, die Meldung erscheint am Bildschirm, eine Logzeile ist nicht belegt), FPKG nach Reset nicht erkannt (140/149).
+- *Zu allgemein, würde auch gesunde Logs treffen:* „awaiting same-app handoff“ (steht im gesunden Log der Test-Konsole bei jedem Spielende; Issue 153 ist zudem behoben), allgemeine Installationsfehler, „Spiel startet nicht“.
+- *Quelle nicht auffindbar:* „`/preinst/common/font`“ (Issue 132 liefert 404; der Zugriff wurde laut Release 1.7beta5 ohnehin freigegeben).
+- *Nicht belegt oder nicht prüfbar:* Dateinamenlänge (Grenze unbekannt), Mount mit `Invalid Argument` (0x16; im Issue kein Logwortlaut), 80F50005 als eigene Regel (ein Titel, keine bekannte Ursache; der Code steht jetzt in der Evidenz von B14).
+- *Kompatibilitätsmatrix:* Hinweise zu 1.7beta2 + LZ4 + kstuff 1.11 und zu 1.7beta5 („etaHEN nicht mit diesem Build“) beschreiben Einzelfälle oder allgemeine Release-Hinweise; die zweite deckt `hen.etahen_with_kstufflite_latest_fw` im Kern ab.
+
+**B14 und die Sprache:** Die `NOTIFY:`-Texte von SM+ folgen der Konsolensprache (`language=auto`; auf der Test-Konsole stehen sie auf Deutsch, z. B. „Duplikat … ignoriert“). Das Muster `Register failed` träfe auf einer deutschen Konsole daher nie. Die Zeile `[REG] FAIL: 0x…` ist nicht übersetzt; B14 erkennt beides. Zeilenformat nach Issue 141: `[REG] FAIL: 0x80f50005` und `NOTIFY: Register failed: <Name> (<TITLE_ID>)`. Gesunde Zeilen (`[REG] Installed NEW!`, `[REG] Skip (already present in app.db)`, `AppInstallAll bridge consumed: … result=0x00000000`) treffen nicht (Fixture `b16_neg`).
+
+**B19 im Detail:** SM+ schreibt beim Start `[API] HTTP/JSON ready: http://0.0.0.0:10101/api/v1 …` (echtes Log, 1.7beta11, Test-Konsole). Daraus entstehen `smp.api.bind`, `smp.api.port` und, wenn die Plattform den Port prüfen kann, `smp.api.state` (Verbindungsversuch an `127.0.0.1`). Ohne Bereit-Zeile (API aus, ältere Version, Start nicht abgeschlossen) gibt es keine Fakten und keinen Befund; bei Bindung an eine bestimmte LAN-Adresse sagt ein Loopback-Versuch nichts, der Zustand bleibt unbekannt. Auf der Test-Konsole ist der Port offen, es gibt keinen Befund. Die Regelversion ist `2026.11.10`.
+

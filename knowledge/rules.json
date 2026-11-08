@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.09",
+  "db_version": "2026.11.10",
   "rules": [
     {
       "id": "hen.etahen_with_kstufflite_latest_fw",
@@ -283,18 +283,18 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": { "regex": "Register failed", "gte": 1 } }
+          { "fact": "smp.log.lines", "count_matches": { "regex": "Register failed|\\[REG\\] FAIL", "gte": 1 } }
         ]
       },
       "text": {
-        "de": "Die Registrierung eines Spiels ist fehlgeschlagen. Zuerst das Launcher-Icon entfernen und neu registrieren; als letzten Schritt die Spieldaten löschen (Achtung: Speicherstände gehen verloren).",
-        "en": "Registering a game failed. First remove the launcher icon and register again; as a last resort delete the game data (warning: saves are lost)."
+        "de": "Die Registrierung eines Spiels ist fehlgeschlagen. Zuerst das Launcher-Icon entfernen und neu registrieren; als letzten Schritt die Spieldaten löschen (Achtung: Speicherstände gehen verloren). Den Fehlercode nennt die Zeile „[REG] FAIL: 0x…“ (0x80F50005 wurde bei einem einzelnen Titel gemeldet, ohne bekannte Ursache).",
+        "en": "Registering a game failed. First remove the launcher icon and register again; as a last resort delete the game data (warning: saves are lost). The error code is in the line “[REG] FAIL: 0x…” (0x80F50005 was reported for a single title, cause unknown)."
       },
       "evidence": "smp.log.lines",
-      "evidence_filter": "Register failed",
+      "evidence_filter": "Register failed|\\[REG\\] FAIL",
       "fix": null,
-      "source": "https://github.com/drakmor/ShadowMountPlus",
-      "verified": "todo"
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/141",
+      "verified": "community"
     },
     {
       "id": "smp.image_sector_autotune",
@@ -384,6 +384,78 @@
       "fix": null,
       "source": "https://prosperostore.net/app/PPSA98427/",
       "verified": "todo"
+    },
+    {
+      "id": "smp.shellcore_hook_lost",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": { "regex": "AppInstallAll hook is no longer installed|AppInstallTitleDir bridge unavailable", "gte": 1 } }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ hat seinen Registrierungs-Haken in ShellCore verloren (gemeldet nach Ruhemodus oder Spielwechsel): Neue Spiele werden zwar eingebunden, lassen sich aber nicht registrieren. Abhilfe laut Meldung: den ShadowMount+-Payload erneut senden. Ab 1.7beta5 stellt ShadowMount+ den Haken vor der Registrierung selbst wieder her; steht die Zeile auch dort im Log, bitte mit dem debug.log melden.",
+        "en": "ShadowMount+ lost its registration hook in ShellCore (reported after rest mode or a game switch): new games are mounted but cannot be registered. Reported workaround: send the ShadowMount+ payload again. Since 1.7beta5 ShadowMount+ restores the hook itself before registering; if the line still appears there, report it together with debug.log."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "AppInstallAll hook is no longer installed|AppInstallTitleDir bridge unavailable",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/145",
+      "verified": "community"
+    },
+    {
+      "id": "smp.shellcore_hooks_failed",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": { "regex": "[Ff]ailed to [Ii]nstall [Ss]hell[Cc]ore [Hh]ooks", "gte": 1 } }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ konnte beim Start seine Haken in ShellCore nicht installieren. Das wurde auf mehreren Firmwares (11.60, 12.70) mit 1.7beta3 und 1.7alpha12 gemeldet, die Ursache ist nicht bestätigt; der Entwickler fragte nach einem sauberen Neustart, der Fehler trat laut Melder „nicht immer“ auf. Versuch: Konsole neu starten, dann Jailbreak, kstuff-lite und zuletzt ShadowMount+ laden, und eine neuere Version nehmen (ab 1.7beta6 ist die Zuverlässigkeit der Haken verbessert).",
+        "en": "ShadowMount+ could not install its hooks in ShellCore at startup. This was reported on several firmwares (11.60, 12.70) with 1.7beta3 and 1.7alpha12; the cause is unconfirmed. The developer asked about a clean boot, and the reporter said it did not happen every time. Try: restart the console, then load the jailbreak, kstuff-lite and finally ShadowMount+, and use a newer version (since 1.7beta6 hook reliability is improved)."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "[Ff]ailed to [Ii]nstall [Ss]hell[Cc]ore [Hh]ooks",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/109",
+      "verified": "community"
+    },
+    {
+      "id": "smp.image_cache_full",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": { "regex": "image cache full", "gte": 1 } }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ hat einen Mount zurückgenommen, weil sein Image-Cache voll war (im gemeldeten Fall bei 64 Einträgen und mehr als 100 Images auf dem Laufwerk). Halte weniger Quellen im Scanpfad und entferne oder verschiebe doppelte Images. Den internen Cache nicht von Hand löschen.",
+        "en": "ShadowMount+ rolled back a mount because its image cache was full (in the reported case at 64 entries with more than 100 images on the drive). Keep fewer sources in the scan path and remove or move duplicate images. Do not delete the internal cache by hand."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "image cache full",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/32",
+      "verified": "community"
+    },
+    {
+      "id": "smp.api_not_responding",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "proc.running", "contains": "shadowmountplus" },
+          { "fact": "smp.api.state", "eq": "closed" }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ hat beim Start gemeldet, dass seine HTTP-API bereit ist, aber der Port nimmt jetzt keine Verbindungen an. Gemeldet wurde, dass dieser Listener still ausfallen kann, während der Rest von ShadowMount+ weiterläuft (Issue 152, 1.7-beta5fix1, inzwischen geschlossen). Programme, die die API nutzen (Weboberfläche, Orbit Store), erreichen ShadowMount+ dann nicht; Scannen und Mounten laufen meist weiter. Naheliegend: den ShadowMount+-Payload erneut senden (Schlussfolgerung aus dem Bericht, nicht bestätigt).",
+        "en": "ShadowMount+ reported at startup that its HTTP API is ready, but the port no longer accepts connections. It was reported that this listener can die silently while the rest of ShadowMount+ keeps running (issue 152, 1.7-beta5fix1, since closed). Programs that use the API (web interface, Orbit Store) then cannot reach ShadowMount+; scanning and mounting usually keep working. Likely remedy: send the ShadowMount+ payload again (an inference from the report, not confirmed)."
+      },
+      "evidence": "smp.api.port",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/152",
+      "verified": "community"
     },
     {
       "id": "storage.low_space_data",

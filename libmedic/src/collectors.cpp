@@ -464,6 +464,47 @@ void collect_components(const Platform& p, Facts& f) {
         for (auto& [k, v] : props) f.set(safe_key(name) + "." + safe_key(k), v);
 }
 
+namespace {
+
+// ShadowMount+ meldet beim Start "[API] HTTP/JSON ready: http://0.0.0.0:10101/api/v1 ..." (echtes Log, 1.7beta11). Daraus:
+// smp.api.bind, smp.api.port und -- nur wenn die Plattform den Port pruefen kann -- smp.api.state ("open"/"closed").
+// Ohne diese Zeile (API aus, aeltere Version, Start noch nicht abgeschlossen) fehlen die Fakten und keine Regel feuert.
+// Geprueft wird 127.0.0.1: das passt zu 0.0.0.0 und 127.0.0.1; ist der Listener an eine bestimmte LAN-Adresse gebunden,
+// sagt ein Loopback-Versuch nichts aus, dann bleibt der Zustand unbekannt. Die Bereit-Zeile steht nach einem laengeren
+// Lauf nur noch am Anfang der Datei, deshalb wie bei der Version: erst die gelesenen Zeilen, dann die ersten 16 KiB.
+void collect_smp_api(const Platform& p, Facts& f) {
+    static const std::regex re(R"(\[API\] HTTP/JSON ready: http://([0-9A-Za-z.\-]+):([0-9]{1,5})/)");
+    auto latest_in = [&](const std::vector<std::string>& lines, std::smatch& m) {
+        for (auto it = lines.rbegin(); it != lines.rend(); ++it)
+            if (std::regex_search(*it, m, re)) return true;
+        return false;
+    };
+    std::vector<std::string> tail;
+    if (const json* lines = f.get("smp.log.lines"); lines && lines->is_array())
+        for (const auto& l : *lines)
+            if (l.is_string()) tail.push_back(l.get<std::string>());
+    std::smatch m;
+    if (!latest_in(tail, m)) {
+        std::string head;
+        if (!p.fs().read_range(join_path(kSmpDir, "debug.log"), 0, 16384, head)) return;
+        const auto head_lines = split_lines(head);
+        if (!latest_in(head_lines, m)) return;
+    }
+    const std::string bind = m[1].str();
+    const long port = std::strtol(m[2].str().c_str(), nullptr, 10);
+    if (port < 1 || port > 65535) return;
+    f.set("smp.api.bind", bind);
+    f.set("smp.api.port", std::to_string(port));
+    if (bind != "0.0.0.0" && bind != "127.0.0.1") return;
+    switch (p.sys().local_port_state(static_cast<int>(port))) {
+        case PortState::Open: f.set("smp.api.state", "open"); break;
+        case PortState::Closed: f.set("smp.api.state", "closed"); break;
+        case PortState::Unknown: break;
+    }
+}
+
+}  // namespace
+
 void collect_shadowmount(const Platform& p, Facts& f) {
     const IFileSystem& fs = p.fs();
     const std::string cfg_path = join_path(kSmpDir, "config.ini");
@@ -553,6 +594,7 @@ void collect_shadowmount(const Platform& p, Facts& f) {
         }
         if (!v.empty()) f.set("smp.version", v);
     }
+    collect_smp_api(p, f);
     collect_mounts(fs, f);
 }
 

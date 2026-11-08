@@ -180,6 +180,21 @@ static void new_fact_tests() {
         CHECK(lines && lines->is_array() && lines->size() == 2000 && !banner_in_tail, "SM+-Version: im gelesenen Log-Ende steht die Startzeile nicht mehr");
         CHECK(str(f, "smp.version") == "1.7beta3", "SM+-Version: kommt aus dem Anfang des Logs");
     }
+    {  // B19: API-Port aus der Bereit-Zeile von ShadowMount+
+        auto f = facts_of("b19_pos");
+        CHECK(str(f, "smp.api.bind") == "0.0.0.0" && str(f, "smp.api.port") == "10101" && str(f, "smp.api.state") == "closed", "B19: Adresse, Port und Zustand aus Log und Plattform");
+        CHECK(str(facts_of("b19_neg_open"), "smp.api.state") == "open", "B19: offener Port");
+        auto lan = facts_of("b19_neg_lan_bind");
+        CHECK(str(lan, "smp.api.bind") == "192.168.1.50" && str(lan, "smp.api.state") == "<fehlt>", "B19: an eine LAN-Adresse gebunden: Loopback-Versuch sagt nichts, Zustand bleibt unbekannt");
+        auto none = facts_of("b19_neg_no_ready_line");
+        CHECK(str(none, "smp.api.port") == "<fehlt>" && str(none, "smp.api.state") == "<fehlt>", "B19: ohne Bereit-Zeile gar keine Fakten");
+        auto lg = facts_of("b19_pos_longlog");
+        const json* lines = lg.get("smp.log.lines");
+        bool ready_in_tail = false;
+        if (lines && lines->is_array())
+            for (auto& l : *lines) ready_in_tail = ready_in_tail || (l.is_string() && l.get<std::string>().find("HTTP/JSON ready") != std::string::npos);
+        CHECK(lines && lines->size() == 2000 && !ready_in_tail && str(lg, "smp.api.state") == "closed", "B19: Bereit-Zeile steht nur am Anfang eines langen Logs und wird trotzdem gefunden");
+    }
     {  // B11: Zeilen werden je Quelle gezaehlt, nicht insgesamt
         auto count_of = [&](const char* fixture, const std::string& path) -> long {
             auto f = facts_of(fixture);

@@ -1,0 +1,5 @@
+[10:00:00]   [SHELLCORE] hooks installed: fw=4.03 pid=60 cave=0x735ea360+0x2e8 launch=1 sandbox=1 trampoline=0x735ea5a0 install=1
+[10:05:00]   [SHELLCORE] AppInstallAll bridge consumed: PPSA99100 result=0x00000000
+[10:05:00]   [REG] Installed NEW!
+[10:06:00]   [REG] Skip (already present in app.db)
+[10:07:00]   [IMG] cache hit: /mnt/usb0/etaHEN/games/Beispiel Spiel.exfat

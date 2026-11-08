@@ -163,6 +163,11 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
         for (const auto& [k, v] : props) sys["components"][name][k] = v;
     if (const auto boot = p.sys().boot_epoch(); boot > 0) sys["boot"] = boot;
     if (const auto* v = facts.get("net.port_9021"); v && v->is_string()) sys["ports"]["9021"] = v->get<std::string>() == "open";
+    {  // Port der ShadowMount+-API samt Zustand, damit der Snapshot am PC dasselbe Ergebnis liefert
+        const auto* port = facts.get("smp.api.port");
+        const auto* state = facts.get("smp.api.state");
+        if (port && port->is_string() && state && state->is_string()) sys["ports"][port->get<std::string>()] = state->get<std::string>() == "open";
+    }
     json procs = json::array();
     for (const auto& i : p.procs().running_info()) {
         if (i.start_epoch > 0) procs.push_back({{"name", i.name}, {"start", i.start_epoch}});

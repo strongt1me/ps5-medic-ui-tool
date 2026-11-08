@@ -1,0 +1,4 @@
+[18:26:44]   [SHELLCORE] hooks installed: fw=4.03 pid=60 install=1
+[18:26:48]   [SHELLCORE] AppInstallAll bridge consumed: PPSA99100 result=0x80f50005
+[18:26:48]   [REG] FAIL: 0x80f50005
+[18:26:48] NOTIFY: Register failed: Beispiel Spiel (PPSA99100)

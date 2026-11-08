@@ -56,7 +56,7 @@ int main() {
 
     out("Firmware: " + platform->sys().firmware() + "  Modell: " + platform->sys().model());
     out("Konsolenstart (Epoch): " + std::to_string(platform->sys().boot_epoch()));
-    for (const char* k : {"smp.version", "net.port_9021", "jb.seconds_after_boot", "jb.first_process", "ps5theme.version", "apps.oversized"})
+    for (const char* k : {"smp.version", "net.port_9021", "jb.seconds_after_boot", "jb.first_process", "ps5theme.version", "apps.oversized", "smp.api.bind", "smp.api.port", "smp.api.state"})
         if (const auto* v = facts.get(k)) out(std::string("Fakt ") + k + ": " + v->dump());
     out("Prozesse:");
     for (const auto& n : platform->procs().running()) out("  " + n);

@@ -10,7 +10,7 @@ Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedien
 
 ## Was es kann
 
-- **Check-up**: 22 Regeln (Jailbreak-Kette und HEN, ShadowMount+, Plugins und Speicher), Ergebnis als Liste mit Schweregrad, Klartext, Evidenz (Datei/Zeile/Wert) und Quelle. Der Katalog steht in [docs/RULES.md](docs/RULES.md).
+- **Check-up**: 26 Regeln (Jailbreak-Kette und HEN, ShadowMount+, Plugins und Speicher), Ergebnis als Liste mit Schweregrad, Klartext, Evidenz (Datei/Zeile/Wert) und Quelle. Der Katalog steht in [docs/RULES.md](docs/RULES.md).
 - **Reparieren** (5 Fixes): Image umbenennen (Klammern), ShadowMount+-Einstellung setzen, BackPork aus der Autoload-Liste nehmen, doppelte Kopie derselben TITLE_ID verschieben, Anleitung bei verschachtelten Images. Vorher zeigt die Vorschau genau, was geändert wird.
 - **Rückgängig**: Jede Reparatur steht im Verlauf und lässt sich zurücknehmen.
 - **Bericht**: Taste □ in der Befundliste schreibt einen Markdown-Bericht nach `/data/ps5medic/reports/` und zeigt eine Kurzfassung als **QR-Code** (mit dem Handy scannen, Text kopieren, ins Forum oder in ein Issue einfügen). IP- und MAC-Adressen, Benutzer- und Konto-IDs sowie Seriennummern werden entfernt; Datei- und Ordnernamen bleiben drin, bitte vor dem Teilen prüfen. Fehlerartige Logzeilen, die zu keiner Regel passen, stehen als **Unbekannte Fehlerzeilen** im Bericht: Stoff für neue Regeln.
@@ -95,7 +95,7 @@ Eine neue Regel braucht: einen Eintrag in `knowledge/rules.json` mit Quelle, ein
 | `CLAUDE.md` | Einstieg für Claude Code: Ziel, Stack, Grenzen, Arbeitsweise |
 | `docs/SPEC.md` | Funktionen, Bedienung, Nicht-Ziele |
 | `docs/ARCHITECTURE.md` | Module, Datenfluss, Regel-Format, Sicherheit |
-| `docs/RULES.md` | Regelkatalog (22 Regeln) mit Quellen, Status und Abweichungen |
+| `docs/RULES.md` | Regelkatalog (26 Regeln) mit Quellen, Status und Abweichungen |
 | `docs/ROADMAP.md` | Phasen 0–5 |
 | `docs/PHASE2.md` bis `PHASE5.md` | Konsole und Snapshot, Oberfläche und App-Kontext, Bericht und Release, Regel-Update und Community |
 | `docs/TESTER.md` | Mitmachen als Tester |
