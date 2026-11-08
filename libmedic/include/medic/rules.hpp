@@ -1,0 +1,51 @@
+// Regel-Engine: laedt knowledge/rules.json, prueft sie und wertet sie gegen Fakten aus.
+#pragma once
+#include "medic/facts.hpp"
+#include <nlohmann/json.hpp>
+#include <string>
+#include <vector>
+
+namespace medic {
+
+enum class Severity { Critical, Warning, Info };
+const char* to_string(Severity s);
+
+struct Rule {
+    std::string id;
+    Severity severity = Severity::Info;
+    nlohmann::json when;
+    std::string text_de, text_en;
+    std::string evidence_path;  // optional
+    std::string fix;            // leer = kein Fix
+    std::string source;
+    std::string verified;       // doc | community | todo
+    std::string applies_fw;     // optional, z. B. ">=7.00 <=13.60"
+};
+
+struct Finding {
+    std::string rule_id;
+    Severity severity = Severity::Info;
+    std::string text_de, text_en;
+    std::vector<std::string> evidence;
+    std::string fix;
+    std::string source;
+    std::string verified;
+};
+
+struct RuleSet {
+    std::string db_version;
+    std::vector<Rule> rules;
+};
+
+// Wirft std::runtime_error mit verstaendlicher Meldung, wenn JSON oder Schema ungueltig sind.
+RuleSet load_rules_from_string(const std::string& json_text);
+RuleSet load_rules_from_file(const std::string& path);
+
+// Ergebnis nach Schweregrad (kritisch zuerst), dann nach Regel-ID sortiert.
+std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts);
+
+// Hilfen (auch fuer Tests)
+int compare_versions(const std::string& a, const std::string& b);  // <0, 0, >0
+bool fw_in_range(const std::string& fw, const std::string& range);
+
+}  // namespace medic

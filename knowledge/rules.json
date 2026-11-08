@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "db_version": "2026.11.08",
+  "rules": [
+    {
+      "id": "smp.parentheses_in_pfs_name",
+      "severity": "critical",
+      "when": {
+        "all": [
+          { "fact": "smp.images[].name", "matches": "[()]" },
+          { "fact": "smp.images[].ext", "in": [".ffpfs", ".ffpfsc"] }
+        ]
+      },
+      "text": {
+        "de": "Klammern im Namen eines .ffpfs/.ffpfsc-Images können beim Scan durch ShadowMount+ eine Kernel-Panic auslösen. Umbenennen (Klammern entfernen) behebt das.",
+        "en": "Parentheses in a .ffpfs/.ffpfsc image name can cause a kernel panic when ShadowMount+ scans it. Renaming it (removing the parentheses) fixes it."
+      },
+      "evidence": "smp.images[].path",
+      "fix": "rename_image_parentheses",
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/66",
+      "verified": "community"
+    },
+    {
+      "id": "smp.duplicate_titleid",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.titles[].dup_count", "gt": "1" }
+        ]
+      },
+      "text": {
+        "de": "Dieselbe TITLE_ID liegt in mehreren Quellen vor. ShadowMount+ erwartet pro TITLE_ID nur eine Quelle – die überzähligen Kopien entfernen (verschieben).",
+        "en": "The same TITLE_ID exists in more than one source. ShadowMount+ expects a single source per TITLE_ID – move the extra copies away."
+      },
+      "evidence": "smp.titles[].path",
+      "fix": "move_duplicate_titleid",
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    }
+  ]
+}
