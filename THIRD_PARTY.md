@@ -11,6 +11,8 @@ Geplant (Phase 5): `knowledge_base.json` aus [PS5-Jailbreak-Doctor](https://gith
 
 Nicht im Repo, nur zum Bauen benötigt: [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) (GPLv3, John Törnblom) für `make ps5`. Der gebaute ELF linkt gegen dessen Laufzeit-Bibliotheken; vor einer Veröffentlichung die Lizenzfolgen prüfen.
 
+Kachel-Starter (`title/`): `title/title.ld` und `title/symbols.map` stammen aus [ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) (GPL-3.0-or-later, BlackBearReloaded; der Kopf der Datei nennt das). `make title` nutzt dessen Werkzeug `ps5-native-tool` und kopiert den signierten Laufzeit-Shim `libc.prx` aus einem lokalen Checkout; beides liegt nicht im Repo, und der Titel ist nicht Teil von `make dist` (siehe `docs/TITLE.md`).
+
 Laufzeit-Voraussetzung auf der Konsole, nicht im Repo und nicht von uns ausgeliefert: [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv) (GPL-3.0, John Törnblom u. a.) startet die UI über seinen Big-App-Lader (`/hbldr`, siehe `docs/PHASE3.md`). Der Launcher-Eintrag `ps5/homebrew/homebrew.js` ist eine eigene, kleine Datei nach dem Muster der Beispiele dieses Launchers.
 
 Nicht im Repo, nur für `make ps5-ui` benötigt (Build-Schritte: `docs/PHASE3.md`):

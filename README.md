@@ -38,6 +38,8 @@ Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedien
 
 Wichtig: `websrv` beendet beim Start einer Homebrew-App eine laufende Big App, also auch ein Spiel.
 
+**Optional: Kachel unter „Medien“.** Ein winziger Starter-Titel (`FAKE42007`) legt PS5 Medic auf den Startbildschirm; er bittet `websrv`, die UI zu starten. Bauen und Installieren: [docs/TITLE.md](docs/TITLE.md) (braucht ein ps5-native-app-boilerplate-Checkout; nicht im Release-Paket).
+
 ## Bedienung
 
 | Bildschirm | Tasten |
@@ -97,6 +99,7 @@ Eine neue Regel braucht: einen Eintrag in `knowledge/rules.json` mit Quelle, ein
 | `docs/ROADMAP.md` | Phasen 0–5 |
 | `docs/PHASE2.md` bis `PHASE5.md` | Konsole und Snapshot, Oberfläche und App-Kontext, Bericht und Release, Regel-Update und Community |
 | `docs/TESTER.md` | Mitmachen als Tester |
+| `docs/TITLE.md` | Kachel unter „Medien“ (Starter-Titel) |
 | `knowledge/` | Regeln (`rules.json`) und JSON-Schema |
 
 ## Lizenz und Danksagung

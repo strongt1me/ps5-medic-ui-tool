@@ -7,6 +7,8 @@
 #   make deploy-ui ps5medicui.elf + Regeln + Launcher-Eintrag per FTP auf die Konsole legen (PS5_HOST=<ip> noetig)
 #   make launch-ui deploy-ui und danach per websrv (/hbldr, Port 8080) im App-Kontext starten (Pad geht nur so)
 #   make dist      Release-Ordner und Zip unter dist/ bauen (nur lokal, es wird nichts veroeffentlicht)
+#   make title     Starter-Titel fuer die Kachel unter "Medien" bauen (braucht ein Boilerplate-Checkout, docs/TITLE.md)
+#   make deploy-title Starter-Titel per FTP nach /data/homebrew/FAKE42007/ legen (PS5_HOST=<ip> noetig)
 #
 # SDK: PS5_PAYLOAD_SDK zeigt auf den Ordner mit bin/, target/, toolchain/ (Standard: ~/ps5-sdk/PS5_PAYLOAD_SDK).
 # SDL2 fuer ps5-ui liegt im selben SDK-Sysroot unter target/user/homebrew/ (dort von `make deps` o.ae. installiert,
@@ -36,7 +38,7 @@ PS5_UI_ELF := $(PS5_BUILD)/ps5medicui.elf
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
 
-.PHONY: host test clean ps5 ps5-ui deploy deploy-ui launch-ui preview dist
+.PHONY: host test clean ps5 ps5-ui deploy deploy-ui launch-ui preview dist title deploy-title
 
 # UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
 SNAP ?=
@@ -54,7 +56,7 @@ test: host
 	$(BUILD)/medic-tests
 
 clean:
-	rm -rf $(BUILD) $(PS5_BUILD) dist
+	rm -rf $(BUILD) $(PS5_BUILD) dist build-title
 
 ps5: $(PS5_ELF)
 ps5-ui: $(PS5_UI_ELF)
@@ -112,3 +114,15 @@ dist: ps5 ps5-ui
 	cd $(DIST_DIR) && find . -type f ! -name SHA256SUMS.txt | sort | xargs sha256sum > SHA256SUMS.txt
 	cd dist && python3 -m zipfile -c $(DIST_NAME).zip $(DIST_NAME)
 	@echo "Fertig: dist/$(DIST_NAME).zip (Ordner PS5MEDIC nach /data/homebrew/ kopieren). Lizenz und Veroeffentlichung sind noch offen, siehe README."
+
+# Kachel unter "Medien": ein winziger Starter-Titel (title/), der websrv bittet, die UI zu starten. Siehe docs/TITLE.md.
+title:
+	bash title/build_title.sh
+
+TITLE_ID := FAKE42007
+deploy-title: title
+	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (FTP-Server auf Port $(PS5_FTP_PORT) muss laufen)"; exit 1; }
+	for f in eboot.bin sce_module/libc.prx sce_sys/icon0.png sce_sys/param.json; do \
+	    curl --fail --ftp-create-dirs -T build-title/$(TITLE_ID)/$$f ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/$(TITLE_ID)/$$f || exit 1; \
+	done
+	@echo "Hochgeladen. ShadowMount+ legt die Kachel \"PS5 Medic\" unter Medien innerhalb von Sekunden an. Voraussetzung beim Start: websrv laeuft und der Ordner PS5MEDIC liegt in /data/homebrew/."

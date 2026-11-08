@@ -38,6 +38,8 @@ It runs as a full-screen app directly on the console and is operated with the Du
 
 Note: when it starts a homebrew app, `websrv` ends a running Big App, which includes a game.
 
+**Optional: tile under “Media”.** A tiny starter title (`FAKE42007`) puts PS5 Medic on the home screen; it asks `websrv` to start the UI. Building and installing: [docs/TITLE.md](docs/TITLE.md) (German; needs a ps5-native-app-boilerplate checkout; not part of the release package).
+
 ## Controls
 
 | Screen | Buttons |
@@ -97,6 +99,7 @@ A new rule needs: an entry in `knowledge/rules.json` with a source, a positive a
 | `docs/ROADMAP.md` | Phases 0-5 (German) |
 | `docs/PHASE2.md` to `PHASE5.md` | Console and snapshot, UI and app context, report and release, rule update and community (German) |
 | `docs/TESTER.md` | Contributing as a tester (German, English summary) |
+| `docs/TITLE.md` | Tile under “Media” (starter title; German) |
 | `knowledge/` | Rules (`rules.json`) and JSON schema |
 
 ## License and credits

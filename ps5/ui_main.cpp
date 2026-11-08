@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include <cerrno>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -48,6 +49,33 @@ void open_log() {
     std::error_code ec;
     std::filesystem::create_directories("/data/ps5medic", ec);
     g_log = std::fopen(kLogPath, "w");
+}
+
+extern "C" {
+int sceKernelGetAppInfo(pid_t pid, void* info);
+int sceSystemServiceKillApp(int app_id, int how, int reason, int core_dump);
+}
+
+// Gestartet ueber websrvs Big-App-Lader ist dieser Prozess fuer das System eine laufende App (app_id != 0). Endet nur der
+// Prozess, bleibt die App im Vordergrund haengen, und man kommt nur mit PS-Taste und "Schliessen" heraus. Deshalb schliesst
+// sich die UI beim Beenden ueber das System selbst, so wie websrv eine laufende Big App schliesst. Gefragt wird nach der
+// eigenen PID: als reiner Payload (app_id 0) gibt es nichts zu schliessen, und eine fremde App, etwa ein laufendes Spiel,
+// kann so nie getroffen werden.
+void close_own_app() {
+    alignas(8) unsigned char info[256] = {0};
+    if (sceKernelGetAppInfo(getpid(), info) != 0) {
+        trace("Beenden: App-Info nicht lesbar, nur Prozessende");
+        return;
+    }
+    std::uint32_t app_id = 0;
+    std::memcpy(&app_id, info, sizeof app_id);
+    if (app_id == 0) {
+        trace("Beenden: kein App-Kontext (Payload), nur Prozessende");
+        return;
+    }
+    trace("Beenden: schliesse die eigene App (app_id " + std::to_string(app_id) + ")");
+    const int rc = sceSystemServiceKillApp(static_cast<int>(app_id), -1, 0, 0);
+    trace("Beenden: KillApp rc=" + std::to_string(rc));
 }
 
 // Jede UI-Instanz traegt ihre PID in die Besitzerdatei ein und beendet sich, sobald dort eine fremde PID steht:
@@ -281,8 +309,11 @@ int main() {
         SDL_Delay(33);  // ~30 Bilder/s: reicht fuer eine Menu-UI, schont die CPU
     }
 
+    trace("Beenden: raeume SDL auf");
     if (pad) SDL_GameControllerClose(pad);
     SDL_DestroyWindow(window);
     SDL_Quit();
+    close_own_app();
+    trace("Beenden: fertig");
     return 0;
 }
