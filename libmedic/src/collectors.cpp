@@ -173,7 +173,9 @@ struct Entry {
 void scan_dir(const IFileSystem& fs, const std::string& root, const std::string& dir, int level, std::map<std::string, Entry>& out) {
     for (const auto& e : fs.list_dir(dir)) {
         // "backports" ist laut SM+-README ein Overlay-Ordner (<scanpath>/backports/<TITLE_ID>/) und kein Spiel.
-        if (e.is_dir && (e.name == "_duplicates" || e.name == "_to_delete" || e.name == "backports")) continue;
+        // "sce_sys" ist nie eine Quelle: in Ordnern ohne param.json (z. B. PS4-Dumps) enthaelt es .dat-Dateien (npbind.dat),
+        // die sonst als Images in grosser Tiefe gezaehlt wuerden (erster Konsolenlauf: falscher B10-Befund).
+        if (e.is_dir && (e.name == "_duplicates" || e.name == "_to_delete" || e.name == "backports" || e.name == "sce_sys")) continue;
         const std::string path = join_path(dir, e.name);
         Entry en;
         en.root = root;
@@ -262,9 +264,15 @@ void collect_firmware(const Platform& p, Facts& f) {
     f.set("fw.model", p.sys().model());
 }
 
+// Namen klein geschrieben und ohne ".elf": geladene Payloads erscheinen auf der Konsole als "kstuff.elf",
+// "shadowmountplus.elf" (erster Konsolenlauf), die Regeln vergleichen den Namen ohne Endung.
 void collect_processes(const Platform& p, Facts& f) {
     json arr = json::array();
-    for (auto& n : p.procs().running()) arr.push_back(lower(n));
+    for (auto& n : p.procs().running()) {
+        std::string name = lower(n);
+        if (name.size() > 4 && name.compare(name.size() - 4, 4, ".elf") == 0) name.resize(name.size() - 4);
+        arr.push_back(std::move(name));
+    }
     f.set("proc.running", std::move(arr));
 }
 
@@ -343,6 +351,23 @@ void collect_shadowmount(const Platform& p, Facts& f) {
 
     collect_log_lines(fs, join_path(kSmpDir, "debug.log"), f, "smp.log.lines");
     collect_log_lines(fs, join_path(kSmpDir, "autotune.ini"), f, "smp.autotune.lines");
+
+    // ShadowMount+ schreibt beim Start "ShadowMount+ v1.7beta11 ... FW: 12.00" ins debug.log (erster Konsolenlauf).
+    // Dient als Versionsquelle, solange die Plattform keine Komponenten-Version liefert; die juengste Startzeile gilt.
+    if (!f.get("smp.version")) {
+        static const std::regex re(R"(ShadowMount\+ v([0-9][0-9A-Za-z.\-]*))");
+        const json* lines = f.get("smp.log.lines");
+        if (lines && lines->is_array())
+            for (auto it = lines->rbegin(); it != lines->rend(); ++it) {
+                std::smatch m;
+                const std::string line = it->get<std::string>();
+                if (!std::regex_search(line, m, re)) continue;
+                std::string v = m[1].str();
+                while (!v.empty() && (v.back() == '.' || v.back() == '-')) v.pop_back();
+                if (!v.empty()) f.set("smp.version", v);
+                break;
+            }
+    }
     collect_mounts(fs, f);
 }
 
