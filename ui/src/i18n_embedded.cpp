@@ -6,6 +6,7 @@ namespace medic::ui {
 const char* const kDeJson = R"JSON({
   "app.title": "PS5 Medic",
   "common.back": "Zurück",
+  "common.quit": "Beenden",
   "common.confirm": "Bestätigen",
   "common.cancel": "Abbrechen",
   "common.select": "Auswählen",
@@ -94,6 +95,7 @@ const char* const kDeJson = R"JSON({
 const char* const kEnJson = R"JSON({
   "app.title": "PS5 Medic",
   "common.back": "Back",
+  "common.quit": "Quit",
   "common.confirm": "Confirm",
   "common.cancel": "Cancel",
   "common.select": "Select",

@@ -1,6 +1,6 @@
 # Phase 3 – Vollbild-UI
 
-Stand 8. Nov. 2026. Der plattformunabhängige Teil steht und ist am PC getestet. `make ps5-ui` baut `build-ps5/ps5medicui.elf` (SDL2 + Pad-Anbindung, siehe unten) – **auf der Konsole ist das noch nicht gelaufen.**
+Stand 8. Nov. 2026. Der plattformunabhängige Teil steht und ist am PC getestet. `make ps5-ui` baut `build-ps5/ps5medicui.elf` (SDL2 + Pad-Anbindung, siehe unten). Auf der Konsole läuft die UI, wenn sie über websrvs Big-App-Lader gestartet wird (`make launch-ui`): laut `ui.log` kommen Bild und Controller (siehe „Erster Konsolenlauf"). Der ganze Ablauf ist am 8. Nov. auf der Test-Konsole durchgespielt (Check-up, Detail, Reparatur-Vorschau, Reparatur, Rückgängig, erneuter Check-up), belegt durch `ui.log` und das Journal; Phase 3 ist damit abgeschlossen.
 
 ## Was schon da ist (`ui/`)
 - `Canvas` (1920×1080, ARGB, Kantenglättung), Controller-Symbole als Vektorformen, PNG-Ausgabe für Vorschau und Tests.
@@ -30,7 +30,7 @@ Die Sandbox – und damit der Lapy/etaHEN-Umweg – gilt nur für echte Titles, 
 
 `CLAUDE.md` nennt den Lapy/etaHEN-Weg noch als „Privilegien"-Plan; das ist jetzt überholt und wird bei Gelegenheit korrigiert.
 
-**Spätere Option (Phase 4, optional):** Für einen echten Bibliotheks-Eintrag ließe sich ein winziger Title-„Starter" vorschalten, der nur `sceSystemServiceLoadExec` aufruft und sofort in den eigentlichen Payload wechselt – das Muster nutzt `strongt1me/ps5-usb-formatierer` bereits (`usb_format/app/title/starter.c`, C statt C++, minimale Importliste). Nicht nötig für die MVP-UI.
+**Nachtrag (Konsolentest, 8. Nov.): ein Punkt stimmte nicht ganz.** Ein über elfldr (Port 9021, auch Payload Manager) gestarteter Payload ist zwar unsandboxed, hat aber keinen **App-Kontext** (`app_id=0`), und ohne den lässt sich der DualSense nicht öffnen (`scePadOpen` → `0x809B0081`). Das Bild (VideoOut) geht auch ohne. Lösung ohne Title und ohne Jailbreak-Request: **websrvs Big-App-Lader** (`/hbldr`, ps5-payload-dev/websrv, GPL-3.0, läuft auf der Konsole, nicht Teil dieses Repos). Er startet über `sceSystemServiceLaunchApp("FAKE00000")` eine echte System-App und tauscht deren Inhalt per ptrace gegen den ELF aus: unsandboxed **und** mit App-Kontext. So laufen auch LakeSnes, Mednafen und FFplay mit Controller. Die Fake-App `/system_ex/app/FAKE00000` legt websrv beim ersten Homebrew-Start selbst an; auf der Test-Konsole existiert sie schon, PS5 Medic schreibt dort nichts. Ein Title-Starter wie `bfstarter` (`starter.c` sendet nur an Port 9021) hätte das Problem **nicht** gelöst; die frühere Idee „Title-Starter für einen Bibliothekseintrag" entfällt damit für das Pad, der Launcher-Eintrag (Kachel) kommt jetzt von `homebrew.js`.
 
 ## VideoOut- und Pad-Anbindung: SDL2
 
@@ -46,22 +46,41 @@ tar -xf libsamplerate-0.2.2.tar.xz && cd libsamplerate-0.2.2
 ./configure --prefix="$PREFIX" --host=x86_64-pc-freebsd --enable-static --disable-shared
 make && make install && cd ..
 
-# 2. SDL2 (ps5-payload-dev-Fork, zlib-Lizenz)
+# 2. SDL2 (ps5-payload-dev-Fork, zlib-Lizenz) -- mit einer Aenderung (siehe unten): 32 statt 64 MB Bildspeicher
 git clone https://github.com/ps5-payload-dev/SDL.git && cd SDL
+sed -i 's|device_data->memsize = 0x4000000;|device_data->memsize = 0x2000000; /* ps5-medic: 32 statt 64 MB */|' \
+    src/video/ps5/SDL_ps5video.c
 "$CMAKE" -DCMAKE_BUILD_TYPE=Release -DSDL_OPENGL=YES -DSDL_LOADSO=YES -B build -S .
 "$MAKE" -C build && "$MAKE" -C build install
 
 "$PS5_PAYLOAD_SDK/bin/prospero-cross-fix-root"
 ```
-Landet in `$PS5_PAYLOAD_SDK/target/user/homebrew/{include,lib}` – das Makefile findet es dort automatisch (`PS5_HOMEBREW`). Am 8. Nov. 2026 so gebaut und erfolgreich mit `ps5medicui.elf` gelinkt; auf der Konsole noch nicht getestet.
+Landet in `$PS5_PAYLOAD_SDK/target/user/homebrew/{include,lib}` – das Makefile findet es dort automatisch (`PS5_HOMEBREW`). Am 8. Nov. 2026 so gebaut und mit `ps5medicui.elf` gelinkt.
+
+**Geändertes SDL (zlib-Klausel 2: geänderte Versionen kenntlich machen):** Der VideoOut-Treiber (`src/video/ps5/SDL_ps5video.c`) fordert beim Start fest 64 MB Direktspeicher an. Die Test-Konsole (PS5 Pro, FW 12.00) gab das nicht her (`EAGAIN`; 32, 24 und 16 MB gingen, für alle Speichertypen). Zwei 1080p-Bildpuffer brauchen nur 17 MB (`PS5_Tilemap_BufferSize`: 8,5 MB je Puffer), daher setzt der `sed`-Schritt oben `memsize` auf 32 MB. Sonst ist der Treiber unverändert.
+
+## Erster Konsolenlauf (8. Nov. 2026)
+
+Gefunden beim ersten Start auf der Test-Konsole (192.168.1.94):
+- **Nichts sichtbar, keine Kachel:** Kachel ist Absicht (Payload, kein Title). Dass nichts erschien, lag am 64-MB-Speicherwunsch von SDL (siehe oben): `SDL_Init` scheiterte in `sceKernelAllocateMainDirectMemory`, der Payload hing danach unsichtbar in einer Endlosschleife.
+- **Fehlersuche ohne Bildschirm:** `klog` (Port 3232) lieferte hier nichts. `stdout` des Payloads kommt nur auf der Sende-Verbindung zu Port 9021 an, und nur solange man sie offen hält (`shutdown(SHUT_WR)` statt `close`). Verlässlich ist die Logdatei `/data/ps5medic/ui.log` (per FTP holen, wird bei jedem Start überschrieben; ein zweiter Start überschreibt also das Log des laufenden ersten).
+- **Alle Payloads heißen `payload.elf`** in der Prozessliste (elfldr vergibt den Namen), nicht wie die ELF-Datei. Ein „andere Instanzen von mir beenden" über den Prozessnamen ist deshalb nicht möglich.
+- **Nur eine Instanz:** Solange eine UI läuft, hält sie VideoOut und Direktspeicher; eine zweite scheitert mit `sceVideoOutOpen: Device busy`. Über websrv beendet `/hbldr` die laufende Big-App selbst, bevor es die neue startet. Für Starts über Port 9021 trägt jede Instanz zusätzlich ihre PID in `/data/ps5medic/ui.owner` ein und beendet sich, sobald dort eine fremde PID steht (Prüfung alle 15 Bilder); die neue Instanz versucht `SDL_Init` bis zu 6 s lang erneut.
+- **Bild lief, DualSense nicht (als Payload über elfldr):** `scePadOpen(user, 0, 0)` → `0x809B0081`, auch mit erfundenen Benutzer-IDs; Index 1 → `0x809B0003`, System-IDs 255/254/−1 → `0x809B0001` (Argumentprüfung). Der Benutzer wird gefunden (`sceUserServiceGetLoginUserIdList`), `sceUserServiceGetInitialUser` liefert aber `0x80940004`. Belege (Wegwerf-Sonden, nicht im Repo): `sceKernelGetAppInfo` meldet für den Payload `app_id=0`, leere Title-ID, `authid=0x480000001000000e` (wie `pldmgr.elf`), die Shell-Prozesse dagegen echte App-IDs (SceShellUI `NPXS40087`). Start über den Payload Manager ändert nichts (auch er startet über `elfldr`, ppid 103).
+- **Ganzer Ablauf auf der Konsole bestätigt:** Das `ui.log` zeigt die Bildschirmfolge Start → Prüfung → Befunde (2) → Detail → Reparatur-Vorschau → Ergebnis → Prüfung → Befunde (1) → … → Befunde (0), dazu Verlauf → Rückgängig-Frage → Ergebnis. Das Journal `/data/ps5medic/journal.jsonl` hat die Transaktionen mit Intent, Op, Commit und Undo; die Dateien auf dem Stick stimmen mit dem Journal überein. Es wurden dabei **echte Änderungen am USB-Stick** gemacht und rückgängig gemacht: `…/homebrew/backport_aus/PPSA11111` → `…/homebrew/_duplicates/PPSA11111` (Regel `smp.duplicate_titleid`) und `Rennspiel (5).ffpfsc` → `Rennspiel 5.ffpfsc` (Regel `smp.parentheses_in_pfs_name`, nur Umbenennen, 60,5 GB, keine Kopie). Endzustand: beide Reparaturen angewendet, erneuter Check-up findet nichts; über „Verlauf" jederzeit rückgängig zu machen.
+- **Gelöst über websrv `/hbldr`:** dieselbe Pad-Sonde, so gestartet, liefert `scePadOpen` → gültiges Handle, `scePadReadState` → `rc=0`, `connected=1`, `GetForegroundUser` funktioniert. Die UI meldet dort `Controller verbunden: Yolo` (Name des angemeldeten Benutzers) und gibt das erste Bild aus. Ablauf mit `make launch-ui PS5_HOST=<ip>` (Voraussetzung: `websrv.elf` läuft, Port 8080; aus dem Autoloader oder per Port 9021).
+- **Ausgang:** ◯ auf dem Startbildschirm beendet die App (`App::quit_requested()`), `SDL_Quit` gibt Bildschirm und Speicher frei. Bei Fehlern beendet sich der Payload mit Logeintrag, statt zu hängen.
 
 **`ps5/ui_main.cpp`:** SDL-Fenster (1920×1080, Vollbild) ↔ `Canvas::data()` per `SDL_CreateRGBSurfaceWithFormatFrom`/`SDL_BlitSurface`, `SDL_GameController` ↔ `Button` (Tastenbelegung aus `SDL_ps5joystick.c`: a=Kreuz, b=Kreis, x=Viereck, y=Dreieck, start=Options, Schultertasten/Steuerkreuz direkt). `LocalService` mit `Ps5Platform(writable=true)`, Takt ~30 Bilder/s. Regeln aus denselben zwei Kandidatenpfaden wie der Diagnose-Payload.
 
 ```bash
 make ps5-ui
-make deploy-ui PS5_HOST=<ip>   # ps5medicui.elf + rules.json nach /data/homebrew/PS5MEDIC/
+make deploy-ui PS5_HOST=<ip>   # ps5medicui.elf, rules.json, homebrew.js und Icon nach /data/homebrew/PS5MEDIC/
+make launch-ui PS5_HOST=<ip>   # deploy-ui + Start über websrv (App-Kontext, nötig fürs Pad)
 ```
+Der Start geht auch ohne Make: im websrv-Launcher (`http://<ip>:8080`) erscheint die Kachel „PS5 Medic" (`ps5/homebrew/homebrew.js`, Icon aus `tools/gen_icon.py`).
 
 ## Nächste Schritte
-1. Konsolentest: startet der Payload per Payload Manager, zeigt er das Bild, reagiert der DualSense.
-2. `CLAUDE.md` „Privilegien"-Abschnitt ist bereits auf den Payload-Ansatz angepasst (siehe Abschnitt „Korrektur" oben) – hier nur noch der Hinweis, falls beim Konsolentest etwas abweicht.
+1. Start ohne PC: Eintrag im Launcher reicht; websrv muss dafür laufen (im Autoloader der Test-Konsole als `websrv`-ELF vorhanden, nach einem Neustart prüfen).
+2. Phase 4: Bericht (□ in der UI fehlt noch), Anonymisierung, QR-Code, README, Release. Die „PPSA-Ordner/param.json"-Installation aus dem Plan entfällt: der Launcher-Eintrag (`ps5/homebrew/`) ersetzt sie.
+3. Fehlende Regeln laut Roadmap: A2, A4, C1–C3.

@@ -135,7 +135,7 @@ void App::handle(Button b) {
                 if (start_sel_ == 0) start_check();
                 else if (start_sel_ == 1) open_history();
                 else screen_ = Screen::Settings;
-            }
+            } else if (b == Button::Circle) quit_ = true;
             break;
         case Screen::Running:
             break;  // nicht unterbrechbar (dauert Sekunden)
@@ -291,7 +291,7 @@ void App::draw_start(Canvas& c) const {
     }
     if (has_result_ && !result_.rules_version.empty()) small().draw(c, M + 36, 740, S.fmt("start.rules", {{"v", result_.rules_version}}), kDim);
 
-    draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}});
+    draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}, {PadGlyph::Circle, S("common.quit")}});
 }
 
 void App::draw_running(Canvas& c) const {

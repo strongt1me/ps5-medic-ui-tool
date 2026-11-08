@@ -31,6 +31,7 @@ public:
     Lang lang() const { return lang_; }
     std::size_t finding_count() const { return result_.findings.size(); }
     int selected() const { return sel_; }
+    bool quit_requested() const { return quit_; }  // Kreis auf dem Startbildschirm
 
 private:
     struct Preview {  // Darstellung einer geplanten Aenderung
@@ -64,6 +65,7 @@ private:
     Lang lang_;
     Screen screen_ = Screen::Start;
     int tick_ = 0;
+    bool quit_ = false;
 
     int start_sel_ = 0;
 

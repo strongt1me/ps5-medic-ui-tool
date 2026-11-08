@@ -10,6 +10,8 @@ Geplant (Phase 5): `knowledge_base.json` aus [PS5-Jailbreak-Doctor](https://gith
 
 Nicht im Repo, nur zum Bauen benötigt: [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) (GPLv3, John Törnblom) für `make ps5`. Der gebaute ELF linkt gegen dessen Laufzeit-Bibliotheken; vor einer Veröffentlichung die Lizenzfolgen prüfen.
 
+Laufzeit-Voraussetzung auf der Konsole, nicht im Repo und nicht von uns ausgeliefert: [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv) (GPL-3.0, John Törnblom u. a.) startet die UI über seinen Big-App-Lader (`/hbldr`, siehe `docs/PHASE3.md`). Der Launcher-Eintrag `ps5/homebrew/homebrew.js` ist eine eigene, kleine Datei nach dem Muster der Beispiele dieses Launchers.
+
 Nicht im Repo, nur für `make ps5-ui` benötigt (Build-Schritte: `docs/PHASE3.md`):
-- [ps5-payload-dev/SDL](https://github.com/ps5-payload-dev/SDL) (SDL2, zlib-Lizenz) – VideoOut/Pad-Anbindung. Statisch gelinkt (`libSDL2.a`).
+- [ps5-payload-dev/SDL](https://github.com/ps5-payload-dev/SDL) (SDL2, zlib-Lizenz) – VideoOut/Pad-Anbindung. Statisch gelinkt (`libSDL2.a`). **Geänderte Version:** `src/video/ps5/SDL_ps5video.c` fordert 32 statt 64 MB Bildspeicher an (eine Zeile, siehe `docs/PHASE3.md`).
 - [libsamplerate](https://libsndfile.github.io/libsamplerate/) 0.2.2 (BSD-2-Clause, Erik de Castro Lopo) – Abhängigkeit von SDL2s Audiopfad, auch wenn PS5 Medic selbst kein Audio ausgibt.

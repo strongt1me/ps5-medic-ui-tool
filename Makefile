@@ -4,7 +4,8 @@
 #   make ps5      Diagnose-Payload (ELF, nur lesend) mit dem ps5-payload-sdk bauen
 #   make ps5-ui   Vollbild-UI-Payload bauen (braucht zusaetzlich ps5-payload-sdl2, siehe docs/PHASE3.md)
 #   make deploy    ps5medic.elf + Regeln per FTP (Port 2121) auf die Konsole legen   (PS5_HOST=<ip> noetig)
-#   make deploy-ui ps5medicui.elf + Regeln per FTP auf die Konsole legen             (PS5_HOST=<ip> noetig)
+#   make deploy-ui ps5medicui.elf + Regeln + Launcher-Eintrag per FTP auf die Konsole legen (PS5_HOST=<ip> noetig)
+#   make launch-ui deploy-ui und danach per websrv (/hbldr, Port 8080) im App-Kontext starten (Pad geht nur so)
 #
 # SDK: PS5_PAYLOAD_SDK zeigt auf den Ordner mit bin/, target/, toolchain/ (Standard: ~/ps5-sdk/PS5_PAYLOAD_SDK).
 # SDL2 fuer ps5-ui liegt im selben SDK-Sysroot unter target/user/homebrew/ (dort von `make deps` o.ae. installiert,
@@ -15,6 +16,7 @@ PS5_PAYLOAD_SDK ?= $(HOME)/ps5-sdk/PS5_PAYLOAD_SDK
 PS5_HOMEBREW := $(PS5_PAYLOAD_SDK)/target/user/homebrew
 PS5_HOST ?=
 PS5_FTP_PORT ?= 2121
+PS5_WEB_PORT ?= 8080
 
 PS5_CXX := $(PS5_PAYLOAD_SDK)/bin/prospero-clang++
 # -Iui/include -Iui/src und der SDL2-Include-Pfad gelten fuer alle Objekte -- schadet dem Diagnose-Payload nicht,
@@ -33,7 +35,7 @@ PS5_UI_ELF := $(PS5_BUILD)/ps5medicui.elf
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
 
-.PHONY: host test clean ps5 ps5-ui deploy deploy-ui preview
+.PHONY: host test clean ps5 ps5-ui deploy deploy-ui launch-ui preview
 
 # UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
 SNAP ?=
@@ -79,5 +81,14 @@ deploy: $(PS5_ELF)
 deploy-ui: $(PS5_UI_ELF)
 	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (FTP-Server auf Port $(PS5_FTP_PORT) muss laufen)"; exit 1; }
 	curl --fail --ftp-create-dirs -T $(PS5_UI_ELF) ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/ps5medicui.elf
+	curl --fail --ftp-create-dirs -T ps5/homebrew/homebrew.js ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/homebrew.js
+	curl --fail --ftp-create-dirs -T ps5/homebrew/sce_sys/icon0.png ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/sce_sys/icon0.png
 	curl --fail --ftp-create-dirs -T knowledge/rules.json ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/knowledge/rules.json
-	@echo "Hochgeladen. ps5medicui.elf ueber den Payload Manager starten."
+	@echo "Hochgeladen. Starten: Kachel \"PS5 Medic\" im websrv-Launcher (http://$(PS5_HOST):$(PS5_WEB_PORT)) oder: make launch-ui PS5_HOST=$(PS5_HOST)"
+
+# Startet die UI ueber websrvs Big-App-Lader (/hbldr): nur so hat der Prozess App-Kontext, und nur dann oeffnet sich das Pad.
+# curl endet mit 28 (Zeitlimit), weil die Ausgabe der laufenden App gestreamt wird -- das ist der Normalfall.
+launch-ui: deploy-ui
+	@curl -sf -m 5 http://$(PS5_HOST):$(PS5_WEB_PORT)/version > /dev/null || { echo "websrv antwortet nicht auf http://$(PS5_HOST):$(PS5_WEB_PORT) -- websrv.elf zuerst starten (Payload Manager oder Port 9021)"; exit 1; }
+	curl -s -m 15 "http://$(PS5_HOST):$(PS5_WEB_PORT)/hbldr?path=/data/homebrew/PS5MEDIC/ps5medicui.elf&cwd=/data/homebrew/PS5MEDIC&pipe=1" || test $$? -eq 28
+	@echo "Gestartet. Protokoll: ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/ui.log"

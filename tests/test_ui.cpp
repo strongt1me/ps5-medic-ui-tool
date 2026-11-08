@@ -394,6 +394,9 @@ void screen_flow_tests() {
     CHECK(differ, "Flow: Sprachwechsel aendert die Darstellung");
     press(app, {Button::Circle});
     CHECK(app.screen() == App::Screen::Start, "Flow: Einstellungen schliessen");
+    CHECK(!app.quit_requested(), "Flow: Zurueck aus Einstellungen beendet die App nicht");
+    press(app, {Button::Circle});
+    CHECK(app.quit_requested() && app.screen() == App::Screen::Start, "Flow: Kreis auf dem Start beendet die App");
 
     // Alle Bildschirme in beiden Sprachen ohne fehlende Texte
     for (Lang l : {Lang::De, Lang::En}) {
