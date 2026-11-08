@@ -18,12 +18,13 @@ Jede Phase endet mit lauffähigem Stand + kurzem Status an Marc.
 3. Tests: apply → undo → Dateibaum identisch.
 
 ## Phase 2 – PS5-Plattform (Konsole FW 4.03)
-> Stand: Schritte 2 und 3 sind als Diagnose-Payload vorbereitet und bauen (`make ps5`), Schritt 1 und der Lauf auf der Konsole stehen aus – siehe `docs/PHASE2.md`.
+> Stand: erledigt. Diagnose-Payload gebaut (`make ps5`) und am 8. Nov. auf der Konsole gelaufen (FW 12.00, nicht 4.03 – siehe `docs/PHASE2.md`). `Ps5Platform` liest `/data` und `/mnt/*` frei, **ohne** App-Jailbreak: Payloads über elfldr/Payload Manager sind grundsätzlich nicht sandboxed, der Jailbreak-Request war eine falsche Annahme (siehe `docs/PHASE3.md`, Abschnitt „Korrektur"). Schritt 1 (Grafik-Sample) steht noch aus.
 1. **Erst prüfen:** Läuft ein Sample aus PS5_VulkanTemplate auf FW 4.03? Falls nein → SDL2-Software-Rendering (Plan B).
-2. `Ps5Platform`: Firmware, Prozessliste, Dateizugriff mit App-Jailbreak (etaHEN-API oder Lapy-JB-Daemon).
+2. `Ps5Platform`: Firmware, Prozessliste, Dateizugriff – als Payload, ohne Rechte-Anhebung.
 3. **Snapshot-Export auf der Konsole:** Medic kann den eigenen Zustand als Fixture-Ordner nach `/data/ps5medic/snapshots/` schreiben → per FTP holen → am PC testen.
 
 ## Phase 3 – Vollbild-UI
+> Stand: Der plattformunabhängige Teil (Canvas, Schrift, de/en-Texte, neun Bildschirme, Service-Schnittstelle, PNG-Vorschau) steht und ist getestet. PS5 Medic wird als Payload gebaut, nicht als Sony-Title – kein Jailbreak-Request nötig. Offen ist die VideoOut/Pad-Anbindung (SDL2 vorgeschlagen) – siehe `docs/PHASE3.md`.
 1. Titel mit `new-title.py` aus dem Template erzeugen, Design wählen.
 2. Screens: Start, Check-up läuft, Befundliste, Detail, Reparieren (Vorschau → Bestätigen), Verlauf/Undo, Einstellungen (Sprache).
 3. Controller-Belegung laut SPEC, Strings in `i18n/de.json` und `en.json`.

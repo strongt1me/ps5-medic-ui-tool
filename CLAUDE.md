@@ -17,7 +17,7 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 - **Sprache:** C++20 (Kern) + C wo nötig (SDK-Schnittstellen).
 - **PS5-Basis:** [PS5_VulkanTemplate](https://github.com/mihawk-99/PS5_VulkanTemplate) (Titel-Generator, UI-Designs, Controller, RADV). Alternative falls Vulkan auf FW 4.03 nicht läuft: SDL2-Software-Rendering wie [Nativehbl](https://github.com/Rufidj/Nativehbl).
 - **SDK:** [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) (bzw. die vom Template gepinnte Version).
-- **Privilegien:** App-Jailbreak über etaHEN-API oder [PS5-Lapy-JB-Daemon](https://github.com/ArkSama/PS5-Lapy-JB-Daemon), damit die App `/data`, `/system_data` und Prozesse lesen darf.
+- **Privilegien:** ~~App-Jailbreak über etaHEN-API oder [PS5-Lapy-JB-Daemon](https://github.com/ArkSama/PS5-Lapy-JB-Daemon)~~ – unnötig: Als **Payload** (über elfldr/Payload Manager statt als Sony-Title gestartet) liest die App `/data` und `/mnt/*` ohne jede Rechte-Anhebung; das ist seit Phase 2 auf der Konsole bestätigt (Details: `docs/PHASE3.md`, Abschnitt „Korrektur").
 - **Regeln:** JSON-Wissensdatenbank (`knowledge/rules.json`), kein hartcodiertes Fehlerwissen im C++-Code.
 
 ## Architektur-Leitlinien (wichtig)
@@ -35,7 +35,7 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 ## Build & Test (Zielzustand)
 - `make host` → baut `medic-cli` für Linux/WSL, läuft gegen `tests/fixtures/<fall>/`.
 - `make test` → Unit- + Regel-Tests gegen alle Fixtures.
-- `make ps5` → baut die PS5-Titel-App (PPSA-Ordner).
+- `make ps5` → baut den PS5-Payload (ELF, über elfldr/Payload Manager gestartet – kein Sony-Title mit PPSA-Ordner).
 - `make deploy` → per FTP (Port 2121) nach `/data/homebrew/PS5MEDIC/`.
 
 ## Arbeitsweise für Claude Code
