@@ -22,7 +22,7 @@
 | Modul | Aufgabe |
 |---|---|
 | `platform/` | Interfaces + zwei Implementierungen: PS5 (echt) und Snapshot (Ordner auf dem PC, simuliert `/data`, Prozessliste als JSON). |
-| `collectors/` | Je ein Collector pro Thema: `firmware`, `processes`, `hen`, `shadowmount`, `storage`, `payload_manager`, `plugins`. Nur lesen! |
+| `collectors/` | Je ein Collector pro Thema: `firmware`, `processes`, `hen`, `shadowmount`, `storage`, `payload_manager`, `plugins`, dazu (`collectors_stack.cpp`) Autoload-Listen, ELF-Dateien, nanoDNS-Log und etaHEN; Messwerte wie Temperatur und Dateisystemtyp je Laufwerk kommen aus der Plattform. Nur lesen! |
 | `facts/` | Flacher Key/Value-Store, z. B. `fw.version=4.03`, `smp.config.kstuff_game_auto_toggle=1`, `proc.running[]`. |
 | `rules/` | Lädt `rules.json`, wertet Bedingungen aus (Versionsvergleich, Regex auf Dateien/Logs, Existenz, Prozess läuft). |
 | `fixes/` | Registrierte Fix-Aktionen mit `plan()` (zeigt Änderung), `apply()`, `undo()`. |
@@ -60,5 +60,6 @@ Siehe `knowledge/rules.schema.json`. Kurzform:
 
 ## Sicherheit
 - App läuft mit erhöhten Rechten → jede Schreiboperation geht durch `FixEngine` (Whitelist erlaubter Pfade: `/data/shadowmount/`, `/data/ps5medic/`, Scan-Pfade, Payload-Manager-Config).
+- Absturzsicher (Stromausfall, USB abgezogen): jede Operation steht vor der Ausführung als `intent` im Journal, das Journal wird nur angehängt (fsync), Dateien werden atomar ersetzt; `undo` rollt unvollständige Transaktionen anhand der Intents zurück und lässt sich wiederholen. Ein Plan, dessen Ausgangsdatei sich seit der Vorschau geändert hat, wird abgelehnt. Details: `docs/RULES.md`, „Sicherheitsprüfung der Fix-Engine“.
 - Keine Shell-Ausführung, kein Laden fremder ELFs.
 - Regel-Updates: nur JSON, Schema- und Hash-Prüfung, Rollback.

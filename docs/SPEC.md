@@ -18,13 +18,15 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 - Zeigt Befunde mit Schweregrad: 🔴 kritisch · 🟠 Warnung · 🔵 Hinweis.
 - Jeder Befund: Titel, Klartext, gefundene Evidenz (Zeile/Datei), betroffene Versionen, Quelle (Link), empfohlener Schritt.
 
-### 4.2 Reparieren (MVP: 5 sichere Fixes)
+### 4.2 Reparieren (7 sichere Fixes)
 | Fix-ID | Aktion | Reversibel durch |
 |---|---|---|
 | `rename_image_parentheses` | Klammern aus `.ffpfs`/`.ffpfsc`-Dateinamen entfernen | Rückbenennung aus Journal |
 | `smp_set_key` | Einzelnen Key in `/data/shadowmount/config.ini` setzen (z. B. `kstuff_game_auto_toggle=0`) | Backup der config.ini |
 | `smp_disable_conflicting_backpork` | BackPork-Autostart deaktivieren, wenn `backport_fakelib=1` | Backup Autoload-Liste |
-| `move_duplicate_titleid` | Doppelte Quelle gleicher TITLE_ID nach `_duplicates/` verschieben | Zurückverschieben |
+| `move_duplicate_titleid` | Doppelte Quelle gleicher TITLE_ID nach `.duplicates/` im Scanpfad verschieben (Punkt-Ordner scannt SM+ nicht) | Zurückverschieben |
+| `smp_translate_v1_keys` | Flache v1-Zeilen in einer v2-`config.ini` (die SM+ 1.7beta12 ignoriert) in die richtige Sektion übertragen | Backup der config.ini |
+| `autoload_insert_delay` | `!4000` hinter elfldr in die Autoload-Liste einfügen | Backup der Autoload-Liste |
 | `fix_image_nesting_hint` | Nur Hinweis + Anleitung (kein Auto-Fix, Images werden nicht verändert) | – |
 
 ### 4.3 Bericht
