@@ -155,7 +155,16 @@ const char* const kDeJson = R"JSON({
   "fix.move_duplicate_titleid": "Doppelte Kopie verschieben",
   "fix.fix_image_nesting_hint": "Hinweis zur Image-Struktur",
   "fix.smp_translate_v1_keys": "Alte Einstellungen in das neue Format übertragen",
-  "fix.autoload_insert_delay": "Wartezeit hinter elfldr einfügen"
+  "fix.autoload_insert_delay": "Wartezeit hinter elfldr einfügen",
+  "start.errors": "Fehlercodes",
+  "start.errors_sub": "PS5-Code nachschlagen: Bedeutung und Lösung",
+  "errors.title": "Fehlercodes nachschlagen",
+  "errors.empty": "Die Fehlercode-Liste konnte nicht geladen werden.",
+  "errors.steps": "So gehst du vor",
+  "errors.homebrew": "Homebrew-Hinweis",
+  "errors.official": "Offizielle Seite",
+  "common.family": "Familie",
+  "common.checkup": "Check-up"
 }
 )JSON";
 
@@ -310,7 +319,16 @@ const char* const kEnJson = R"JSON({
   "fix.move_duplicate_titleid": "Move duplicate copy",
   "fix.fix_image_nesting_hint": "Image structure hint",
   "fix.smp_translate_v1_keys": "Move old settings into the new format",
-  "fix.autoload_insert_delay": "Insert a delay after elfldr"
+  "fix.autoload_insert_delay": "Insert a delay after elfldr",
+  "start.errors": "Error codes",
+  "start.errors_sub": "Look up a PS5 code: meaning and fix",
+  "errors.title": "Look up error codes",
+  "errors.empty": "The error code list could not be loaded.",
+  "errors.steps": "What to do",
+  "errors.homebrew": "Homebrew note",
+  "errors.official": "Official page",
+  "common.family": "Family",
+  "common.checkup": "Check-up"
 }
 )JSON";
 

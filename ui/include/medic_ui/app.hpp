@@ -6,8 +6,10 @@
 // (Kreuz) auf dem Vorschau- bzw. Rueckgaengig-Bildschirm. Einzige Ausnahme: die Quadrat-Taste in der Befundliste
 // legt einen Bericht nach /data/ps5medic/reports/ ab (IMedicService::make_report); sonst loest keine Taste Schreiben aus.
 // Das Regel-Update (Einstellungen) schreibt ebenfalls nur nach Kreuz auf dem Angebot bzw. auf der Rueckfrage.
+// Das Fehlercode-Nachschlagen (Start) ist reines Wissen und schreibt nichts; das Dreieck dort startet nur den Check-up.
 #pragma once
 #include "medic/diff.hpp"
+#include "medic/error_codes.hpp"
 #include "medic/qr.hpp"
 #include "medic_ui/canvas.hpp"
 #include "medic_ui/i18n.hpp"
@@ -21,7 +23,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
 
@@ -36,6 +38,8 @@ public:
     std::size_t finding_count() const { return result_.findings.size(); }
     int selected() const { return sel_; }
     bool quit_requested() const { return quit_; }  // Kreis auf dem Startbildschirm
+    // Fuer Tests: hat die letzte Darstellung der Fehlercodes Schritte weggelassen, weil sie nicht mehr in den Kasten passten?
+    bool error_view_clipped() const { return err_clipped_; }
 
 private:
     struct Preview {  // Darstellung einer geplanten Aenderung
@@ -51,6 +55,8 @@ private:
     void open_history();
     void open_report();
     void open_rules_update();
+    void open_error_codes();
+    void select_error_family(int index);
     void finish_rules_change(bool ok);
 
     void draw_chrome(Canvas& c) const;
@@ -66,6 +72,7 @@ private:
     void draw_settings(Canvas& c) const;
     void draw_report(Canvas& c) const;
     void draw_rules_update(Canvas& c) const;
+    void draw_error_codes(Canvas& c) const;
 
     std::string finding_text(const medic::Finding& f) const;
     std::string fix_name(const std::string& id) const;
@@ -98,6 +105,13 @@ private:
     medic::TxnInfo undo_target_;
 
     int settings_sel_ = 0;  // 0 Sprache, 1 Regel-Update
+
+    // Fehlercodes nachschlagen: reines Wissen aus knowledge/error_codes.json (eingebettet), schreibt und liest nichts auf der Konsole.
+    const medic::ErrorDb& errors_;
+    int err_family_ = 0;                          // Index in errors_.prefixes
+    std::vector<const medic::ErrorCode*> err_list_;  // Codes der gewaehlten Familie
+    int err_sel_ = 0, err_top_ = 0;
+    mutable bool err_clipped_ = false;
 
     enum class UpdateStage { Offer, ConfirmRollback, ConfirmDownload, Downloading, DownloadFail, DoneOk, DoneFail };
     medic::RuleUpdateOffer offer_;

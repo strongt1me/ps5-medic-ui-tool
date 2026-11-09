@@ -44,7 +44,8 @@ Note: when it starts a homebrew app, `websrv` ends a running Big App, which incl
 
 | Screen | Buttons |
 |---|---|
-| Start | ↑↓ select · ✕ open · ◯ quit |
+| Start | ↑↓←→ select · ✕ open · ◯ quit |
+| Error codes | ←→ family · ↑↓ code · L1/R1 page · △ check-up · ◯ back |
 | Findings | ↑↓ select · ✕ details · △ repair/guide · □ report · ◯ back |
 | Detail | △ repair · ◯ back |
 | Repair preview | ✕ confirm (writes) · ◯ cancel |

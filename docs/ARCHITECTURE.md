@@ -28,6 +28,7 @@
 | `fixes/` | Registrierte Fix-Aktionen mit `plan()` (zeigt Änderung), `apply()`, `undo()`. |
 | `journal/` | `/data/ps5medic/journal.jsonl` – jede Änderung mit Hash vorher/nachher. |
 | `report/` | Markdown-Bericht, Anonymisierung, QR-Code. |
+| `error_codes` | `knowledge/error_codes.json` laden und prüfen (Schema, doppelte Codes, unbekannte Arten), Codes normalisieren und suchen. Reines Wissen, kein Collector und kein Fix. Die UI bettet die Datei ein (`tools/embed_error_codes.py`), ein Test vergleicht beide. |
 | `app/` | PS5-Oberfläche. |
 | `cli/` | `medic-cli check <snapshot-dir>` für PC/WSL. |
 

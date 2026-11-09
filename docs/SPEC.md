@@ -29,6 +29,12 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 | `autoload_insert_delay` | `!4000` hinter elfldr in die Autoload-Liste einfügen | Backup der Autoload-Liste |
 | `fix_image_nesting_hint` | Nur Hinweis + Anleitung (kein Auto-Fix, Images werden nicht verändert) | – |
 
+### 4.2b Fehlercodes nachschlagen
+- Eigene Karte auf dem Start-Screen („Fehlercodes“): alle **155 PS5-Fehlercodes** der offiziellen Sony-Liste (Stand 9. Nov. 2026), nach Familie (CE, NP, WS, NW, WV, SU, E2) geordnet. Rechts zu jedem Code: Bedeutung, Schritte zur Lösung, ein **Homebrew-Hinweis** für gejailbreakte Konsolen und der Link zur offiziellen Seite.
+- Reines Wissen aus `knowledge/error_codes.json` (in die UI eingebettet, `tools/embed_error_codes.py`): liest und schreibt nichts auf der Konsole. △ startet den Check-up, wenn die Ursache auch in der Homebrew-Umgebung liegen kann.
+- Am PC: `medic-cli error CE-108255-1` (Schreibweisen egal, auch Teilsuche wie `108255`), `medic-cli error --list [familie]`.
+- Texte und Schritte sind eigene Zusammenfassungen der Sony-Seiten, kein Sony-Wortlaut; die offizielle Seite bleibt die Quelle. Sperren (WS-116331-5 u. ä.) gehen von Sony aus und werden weder behoben noch umgangen.
+
 ### 4.3 Bericht
 - Export als Text/Markdown nach `/data/ps5medic/reports/` und als **QR-Code** auf dem Bildschirm (Handy scannen → Bericht kopieren).
 - Anonymisierung: IPs, Konto-IDs, Seriennummern werden entfernt.
@@ -44,6 +50,7 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 - **Befundliste:** ✕ öffnet Details, △ Reparieren, □ Bericht, ◯ zurück.
 - **Detail:** Evidenz, Erklärung, Quelle, Schritte. Reparieren zeigt **vorher** genau, was geändert wird.
 - **Verlauf:** Liste aller Reparaturen mit „Rückgängig“.
+- **Fehlercodes:** ←→ Familie, ↑↓ Code, L1/R1 Seite, △ Check-up (wo er helfen kann), ◯ zurück.
 - Sprache: Deutsch + Englisch (Strings in JSON).
 
 ## 6. Nicht-Ziele

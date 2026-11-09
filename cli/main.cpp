@@ -6,9 +6,11 @@
 //   history <snapshot-dir>
 //   export  <snapshot-dir> <zielordner>   (Snapshot erneut schreiben, z. B. zum Pruefen des Exports)
 //   report  <snapshot-dir> [--out datei] [--qr] [--rules f] [--lang de|en]   (Bericht als Markdown; --qr: Kurzfassung als QR-Code im Terminal)
+//   error   <code|suchtext> [--errors f] [--lang de|en]   (PS5-Fehlercode nachschlagen; "error --list [familie]" listet alle)
 // "fix" ohne --apply zeigt nur den Plan (Dry-Run). Mit --apply wird DIREKT im Snapshot-Ordner geschrieben -- Kopie benutzen!
 #include "medic/collectors.hpp"
 #include "medic/diff.hpp"
+#include "medic/error_codes.hpp"
 #include "medic/fixes.hpp"
 #include "medic/platform.hpp"
 #include "medic/qr.hpp"
@@ -27,6 +29,9 @@
 #ifndef MEDIC_DEFAULT_RULES
 #define MEDIC_DEFAULT_RULES "knowledge/rules.json"
 #endif
+#ifndef MEDIC_DEFAULT_ERRORS
+#define MEDIC_DEFAULT_ERRORS "knowledge/error_codes.json"
+#endif
 
 namespace {
 
@@ -37,7 +42,9 @@ void usage() {
                  "  medic-cli undo    <snapshot-ordner> <txn>\n"
                  "  medic-cli history <snapshot-ordner>\n"
                  "  medic-cli export  <snapshot-ordner> <zielordner>\n"
-                 "  medic-cli report  <snapshot-ordner> [--out <datei>] [--qr] [--rules <rules.json>] [--lang de|en]\n";
+                 "  medic-cli report  <snapshot-ordner> [--out <datei>] [--qr] [--rules <rules.json>] [--lang de|en]\n"
+                 "  medic-cli error   <code|suchtext> [--errors <error_codes.json>] [--lang de|en]\n"
+                 "  medic-cli error   --list [familie] [--errors <error_codes.json>] [--lang de|en]\n";
 }
 
 const char* label(medic::Severity s) {
@@ -74,7 +81,7 @@ void print_diff(const std::string& old_text, const std::string& new_text) {
 }
 
 struct Args {
-    std::string dir, rules = MEDIC_DEFAULT_RULES, lang = "de", rule_id, keep, txn, out;
+    std::string dir, rules = MEDIC_DEFAULT_RULES, errors = MEDIC_DEFAULT_ERRORS, lang = "de", rule_id, keep, txn, out;
     bool json = false, apply = false, yes = false, qr = false;
 };
 
@@ -87,6 +94,7 @@ bool parse_flags(int argc, char** argv, int from, Args& a) {
         else if (s == "--qr") a.qr = true;
         else if (s == "--out" && i + 1 < argc) a.out = argv[++i];
         else if (s == "--rules" && i + 1 < argc) a.rules = argv[++i];
+        else if (s == "--errors" && i + 1 < argc) a.errors = argv[++i];
         else if (s == "--lang" && i + 1 < argc) a.lang = argv[++i];
         else if (s == "--keep" && i + 1 < argc) a.keep = argv[++i];
         else return false;
@@ -258,6 +266,66 @@ int cmd_history(const Args& a) {
     return 0;
 }
 
+// Nachschlagen eines PS5-Fehlercodes. Findet es einen genauen Treffer, kommen Bedeutung, Schritte und Homebrew-Hinweis;
+// sonst eine Trefferliste (Teilsuche) bzw. der Hinweis auf die Familie des Codes. Exit 0: gefunden, 1: nicht in der Liste.
+void print_error_entry(const medic::ErrorDb& db, const medic::ErrorCode& c, bool de) {
+    const medic::ErrorKind* k = db.kind_of(c);
+    std::cout << c.code << "  " << (de ? c.text_de : c.text_en) << "\n";
+    if (!k) return;
+    std::cout << (de ? "Art:  " : "Kind: ") << (de ? k->title_de : k->title_en) << "\n";
+    const auto& steps = de ? k->steps_de : k->steps_en;
+    if (!steps.empty()) std::cout << (de ? "\nSo gehst du vor:\n" : "\nWhat to do:\n");
+    for (std::size_t i = 0; i < steps.size(); ++i) std::cout << "  " << (i + 1) << ". " << steps[i] << "\n";
+    const std::string& hb = de ? k->homebrew_de : k->homebrew_en;
+    if (!hb.empty()) std::cout << (de ? "\nHomebrew: " : "\nHomebrew: ") << hb << "\n";
+    if (k->check) std::cout << (de ? "\nCheck-up: medic-cli check <snapshot-ordner> (auf der Konsole: Check-up starten) sucht Ursachen in der Umgebung.\n"
+                                    : "\nCheck-up: medic-cli check <snapshot-folder> (on the console: start the check-up) looks for causes in the setup.\n");
+    const std::string url = medic::support_url(db, c.code);
+    if (!url.empty()) std::cout << (de ? "\nOffizielle Seite: " : "\nOfficial page: ") << url << "\n";
+}
+
+int cmd_error(const Args& a, bool list, const std::string& query) {
+    const medic::ErrorDb db = medic::load_error_db_from_file(a.errors);
+    const bool de = a.lang == "de";
+    if (list) {
+        const std::string fam = medic::code_prefix(query);
+        if (!query.empty() && !db.prefix(fam)) {
+            std::cerr << (de ? "Unbekannte Familie '" : "Unknown family '") << query << "'.\n";
+            return 1;
+        }
+        for (const auto& p : db.prefixes) {
+            if (!fam.empty() && p.id != fam) continue;
+            std::cout << p.id << " - " << (de ? p.text_de : p.text_en) << "\n";
+            for (const auto* c : medic::codes_with_prefix(db, p.id)) std::cout << "  " << c->code << "  " << (de ? c->text_de : c->text_en) << "\n";
+            std::cout << "\n";
+        }
+        return 0;
+    }
+    if (const auto* c = medic::find_code(db, query)) {
+        print_error_entry(db, *c, de);
+        return 0;
+    }
+    const std::string norm = medic::normalize_code(query);
+    if (!norm.empty()) {  // sieht wie ein Code aus, steht aber nicht in der Liste
+        std::cout << norm << (de ? ": nicht in der Liste (" : ": not in the list (") << db.codes.size() << (de ? " PS5-Codes von Sony, Stand " : " PS5 codes from Sony, as of ") << db.db_version << ").\n";
+        if (const auto* p = db.prefix(medic::code_prefix(norm))) std::cout << (de ? "Familie " : "Family ") << p->id << ": " << (de ? p->text_de : p->text_en) << "\n";
+        std::cout << (de ? "Offizielle Liste: " : "Official list: ") << db.source << "\n";
+        return 1;
+    }
+    const auto hits = medic::search_codes(db, query);
+    if (hits.empty()) {
+        std::cout << (de ? "Kein Code gefunden. Eingabe z. B.: CE-108255-1, ce108255 oder 108255.\n" : "No code found. Input e.g.: CE-108255-1, ce108255 or 108255.\n");
+        return 1;
+    }
+    if (hits.size() == 1) {
+        print_error_entry(db, *hits[0], de);
+        return 0;
+    }
+    std::cout << hits.size() << (de ? " Treffer:\n" : " matches:\n");
+    for (const auto* c : hits) std::cout << "  " << c->code << "  " << (de ? c->text_de : c->text_en) << "\n";
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -269,6 +337,24 @@ int main(int argc, char** argv) {
     Args a;
     a.dir = argv[2];
     int flags_from = 3;
+    if (cmd == "error") {  // argv[2] ist der Suchtext bzw. --list [familie]
+        const bool list = a.dir == "--list";
+        std::string query = list ? std::string() : a.dir;
+        if (list && argc > 3 && std::string(argv[3]).rfind("--", 0) != 0) {
+            query = argv[3];
+            flags_from = 4;
+        }
+        if (!parse_flags(argc, argv, flags_from, a)) {
+            usage();
+            return 2;
+        }
+        try {
+            return cmd_error(a, list, query);
+        } catch (const std::exception& e) {
+            std::cerr << "Fehler: " << e.what() << "\n";
+            return 2;
+        }
+    }
     if (cmd == "fix" || cmd == "undo" || cmd == "export") {
         if (argc < 4) {
             usage();

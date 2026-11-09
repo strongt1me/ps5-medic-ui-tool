@@ -44,7 +44,8 @@ Wichtig: `websrv` beendet beim Start einer Homebrew-App eine laufende Big App, a
 
 | Bildschirm | Tasten |
 |---|---|
-| Start | ↑↓ wählen · ✕ öffnen · ◯ beenden |
+| Start | ↑↓←→ wählen · ✕ öffnen · ◯ beenden |
+| Fehlercodes | ←→ Familie · ↑↓ Code · L1/R1 Seite · △ Check-up · ◯ zurück |
 | Befundliste | ↑↓ wählen · ✕ Details · △ Reparieren/Anleitung · □ Bericht · ◯ zurück |
 | Detail | △ Reparieren · ◯ zurück |
 | Reparatur-Vorschau | ✕ bestätigen (schreibt) · ◯ abbrechen |

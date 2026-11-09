@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic_ui/app.hpp"
 
+#include "medic_ui/error_data.hpp"
 #include "medic_ui/font.hpp"
 
 #include <algorithm>
@@ -10,7 +11,7 @@ namespace medic::ui {
 namespace {
 
 constexpr int W = App::kWidth, H = App::kHeight, M = 96;
-constexpr int kListVisible = 4, kHistVisible = 6;
+constexpr int kListVisible = 4, kHistVisible = 6, kErrVisible = 7;
 
 const Color kBg = rgb(14, 18, 24), kPanel = rgb(23, 29, 38), kPanelHi = rgb(33, 42, 56), kLine = rgb(42, 52, 66);
 const Color kText = rgb(232, 237, 242), kDim = rgb(141, 153, 168), kAccent = rgb(76, 154, 255);
@@ -71,7 +72,7 @@ void card(Canvas& c, int x, int y, int w, int h, bool selected) {
 
 }  // namespace
 
-App::App(IMedicService& svc, Lang lang) : svc_(svc), lang_(lang) {}
+App::App(IMedicService& svc, Lang lang) : svc_(svc), lang_(lang), errors_(embedded_error_db()) { select_error_family(0); }
 
 std::string App::finding_text(const medic::Finding& f) const { return lang_ == Lang::De ? f.text_de : f.text_en; }
 
@@ -137,6 +138,16 @@ void App::open_report() {
     screen_ = Screen::Report;
 }
 
+void App::select_error_family(int index) {
+    err_list_.clear();
+    err_sel_ = err_top_ = 0;
+    if (errors_.prefixes.empty()) return;
+    err_family_ = std::clamp(index, 0, static_cast<int>(errors_.prefixes.size()) - 1);
+    err_list_ = medic::codes_with_prefix(errors_, errors_.prefixes[static_cast<std::size_t>(err_family_)].id);
+}
+
+void App::open_error_codes() { screen_ = Screen::ErrorCodes; }
+
 void App::open_rules_update() {
     offer_ = svc_.check_rule_update();
     update_stage_ = UpdateStage::Offer;
@@ -175,13 +186,14 @@ void App::handle(Button b) {
     switch (screen_) {
         case Screen::Start:
             if (b == Button::Up || b == Button::L1) start_sel_ = std::max(start_sel_ - 1, 0);
-            else if (b == Button::Down || b == Button::R1) start_sel_ = std::min(start_sel_ + 1, 2);
-            else if (b == Button::Left && start_sel_ == 2) start_sel_ = 1;   // die beiden kleinen Knoepfe liegen nebeneinander
-            else if (b == Button::Right && start_sel_ == 1) start_sel_ = 2;
+            else if (b == Button::Down || b == Button::R1) start_sel_ = std::min(start_sel_ + 1, 3);
+            else if (b == Button::Left && start_sel_ >= 2) --start_sel_;   // die drei kleinen Knoepfe (1..3) liegen nebeneinander
+            else if (b == Button::Right && start_sel_ >= 1 && start_sel_ <= 2) ++start_sel_;
             else if (b == Button::Cross) {
                 if (start_sel_ == 0) start_check();
                 else if (start_sel_ == 1) open_history();
-                else screen_ = Screen::Settings;
+                else if (start_sel_ == 2) screen_ = Screen::Settings;
+                else open_error_codes();
             } else if (b == Button::Circle) quit_ = true;
             break;
         case Screen::Running:
@@ -299,6 +311,19 @@ void App::handle(Button b) {
         case Screen::Report:
             if (b == Button::Circle) screen_ = Screen::Findings;
             break;
+        case Screen::ErrorCodes:
+            if (b == Button::Up) move_selection(err_sel_, err_top_, static_cast<int>(err_list_.size()), kErrVisible, -1);
+            else if (b == Button::Down) move_selection(err_sel_, err_top_, static_cast<int>(err_list_.size()), kErrVisible, 1);
+            else if (b == Button::L1) page_selection(err_sel_, err_top_, static_cast<int>(err_list_.size()), kErrVisible, -1);
+            else if (b == Button::R1) page_selection(err_sel_, err_top_, static_cast<int>(err_list_.size()), kErrVisible, 1);
+            else if (b == Button::Left && err_family_ > 0) select_error_family(err_family_ - 1);
+            else if (b == Button::Right && err_family_ + 1 < static_cast<int>(errors_.prefixes.size())) select_error_family(err_family_ + 1);
+            else if (b == Button::Triangle) {
+                // Nur wenn der Fehler auch von der Homebrew-Umgebung kommen kann: der Check-up liest nur, er aendert nichts.
+                const medic::ErrorKind* kind = err_sel_ < static_cast<int>(err_list_.size()) ? errors_.kind_of(*err_list_[static_cast<std::size_t>(err_sel_)]) : nullptr;
+                if (kind && kind->check) start_check();
+            } else if (b == Button::Circle) screen_ = Screen::Start;
+            break;
     }
 }
 
@@ -341,6 +366,7 @@ void App::render(Canvas& c) const {
         case Screen::Settings: draw_settings(c); break;
         case Screen::Report: draw_report(c); break;
         case Screen::RulesUpdate: draw_rules_update(c); break;
+        case Screen::ErrorCodes: draw_error_codes(c); break;
     }
 }
 
@@ -381,14 +407,18 @@ void App::draw_start(Canvas& c) const {
     title().draw(c, M + 48, 190, S("start.check"), rgb(255, 255, 255));
     body().draw(c, M + 48, 266, S("start.check_sub"), rgb(220, 234, 255), W - 2 * M - 96);
 
-    // Zwei kleine Knoepfe
-    const int cw = (W - 2 * M - 32) / 2;
-    const char* keys[2][2] = {{"start.history", "start.history_sub"}, {"start.settings", "start.settings_sub"}};
-    for (int i = 0; i < 2; ++i) {
-        const int x = M + i * (cw + 32);
+    // Drei kleine Knoepfe
+    const int gap = 24, cw = (W - 2 * M - 2 * gap) / 3;
+    const char* keys[3][2] = {{"start.history", "start.history_sub"}, {"start.settings", "start.settings_sub"}, {"start.errors", "start.errors_sub"}};
+    for (int i = 0; i < 3; ++i) {
+        const int x = M + i * (cw + gap);
         card(c, x, 380, cw, 130, start_sel_ == i + 1);
-        body().draw(c, x + 36, 404, S(keys[i][0]), kText);
-        small().draw(c, x + 36, 452, S(keys[i][1]), kDim, cw - 72);
+        body().draw(c, x + 32, 404, S(keys[i][0]), kText);
+        int sy = 448;
+        for (const auto& l : wrap_text(small(), S(keys[i][1]), cw - 64, 2)) {
+            small().draw(c, x + 32, sy, l, kDim);
+            sy += small().line_height() + 2;
+        }
     }
 
     // Letztes Ergebnis
@@ -849,6 +879,118 @@ void App::draw_rules_update(Canvas& c) const {
             hints = {{PadGlyph::Cross, S("common.back")}};
             break;
     }
+    draw_hints(c, hints);
+}
+
+void App::draw_error_codes(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    err_clipped_ = false;
+    title().draw(c, M, 130, S("errors.title"), kText);
+    if (errors_.codes.empty() || err_list_.empty()) {
+        c.fill_round_rect(M, 260, W - 2 * M, 160, 20, kPanel);
+        body().draw(c, M + 40, 320, S("errors.empty"), kWarn, W - 2 * M - 80);
+        draw_hints(c, {{PadGlyph::Circle, S("common.back")}});
+        return;
+    }
+
+    // Familien-Reiter (Links/Rechts)
+    int x = M;
+    for (std::size_t i = 0; i < errors_.prefixes.size(); ++i) {
+        const auto& p = errors_.prefixes[i];
+        const bool on = static_cast<int>(i) == err_family_;
+        const std::string label = p.id + " " + std::to_string(medic::codes_with_prefix(errors_, p.id).size());
+        const int w = small().width(label) + 44;
+        c.fill_round_rect(x, 196, w, 40, 20, on ? kAccent : kPanel);
+        small().draw(c, x + 22, 196 + (40 - small().line_height()) / 2, label, on ? rgb(255, 255, 255) : kDim);
+        x += w + 12;
+    }
+    const auto& fam = errors_.prefixes[static_cast<std::size_t>(err_family_)];
+    const int n = static_cast<int>(err_list_.size());
+    const int last = std::min(n, err_top_ + kErrVisible);
+    small().draw(c, M + 4, 250, elide(small(), lang_ == Lang::De ? fam.text_de : fam.text_en, 1100), kDim);
+    if (n > kErrVisible)
+        text_right(c, small(), W - M, 250, S.fmt("findings.range", {{"from", std::to_string(err_top_ + 1)}, {"to", std::to_string(last)}, {"n", std::to_string(n)}}), kDim);
+
+    // Links: Liste der Codes
+    const int lx = M, lw = 560, rh = 84, rgap = 8, ly = 292;
+    for (int i = err_top_, y = ly; i < last; ++i, y += rh + rgap) {
+        const auto& e = *err_list_[static_cast<std::size_t>(i)];
+        card(c, lx, y, lw, rh, i == err_sel_);
+        body().draw(c, lx + 24, y + 8, e.code, kText);
+        small().draw(c, lx + 24, y + 8 + body().line_height(), elide(small(), lang_ == Lang::De ? e.text_de : e.text_en, lw - 48), kDim);
+    }
+
+    // Rechts: Bedeutung, Schritte, Homebrew-Hinweis
+    const auto& cur = *err_list_[static_cast<std::size_t>(err_sel_)];
+    const medic::ErrorKind* kind = errors_.kind_of(cur);
+    const int px = lx + lw + 32, pw = W - M - px, py = ly, ph = kErrVisible * (rh + rgap) - rgap, pad = 32, tw = pw - 2 * pad;
+    c.fill_round_rect(px, py, pw, ph, 20, kPanel);
+    int y = py + 22;
+    title().draw(c, px + pad, y, cur.code, kText);
+    y += title().line_height() + 4;
+    if (kind) {
+        small().draw(c, px + pad, y, elide(small(), lang_ == Lang::De ? kind->title_de : kind->title_en, tw), kAccent);
+        y += small().line_height() + 12;
+    }
+    for (const auto& l : wrap_text(body(), lang_ == Lang::De ? cur.text_de : cur.text_en, tw, 3)) {
+        body().draw(c, px + pad, y, l, kText);
+        y += body().line_height() + 2;
+    }
+    y += 12;
+
+    // Unten verankert: Quelle und der Homebrew-Hinweis. Die Schritte bekommen den Platz dazwischen.
+    const int lh = small().line_height() + 4;
+    int bottom = py + ph - 18;
+    {
+        std::string url = medic::support_url(errors_, cur.code);
+        for (const char* pre : {"https://www.", "https://"})
+            if (url.rfind(pre, 0) == 0) {
+                url = url.substr(std::string(pre).size());
+                break;
+            }
+        if (!url.empty()) {
+            bottom -= lh;
+            small().draw(c, px + pad, bottom, elide(small(), S("errors.official") + ": " + url, tw), kDim);
+        }
+    }
+    std::vector<std::string> hb_lines;
+    if (kind) hb_lines = wrap_text(small(), lang_ == Lang::De ? kind->homebrew_de : kind->homebrew_en, tw - 24, 5);
+    if (!hb_lines.empty()) {
+        const int hh = 16 + lh + static_cast<int>(hb_lines.size()) * lh + 12;
+        bottom -= hh + 10;
+        c.fill_round_rect(px + pad - 12, bottom, tw + 24, hh, 14, kPanelHi);
+        small().draw(c, px + pad, bottom + 12, S("errors.homebrew"), kInfo);
+        int hy = bottom + 12 + lh;
+        for (const auto& l : hb_lines) {
+            small().draw(c, px + pad, hy, l, kText);
+            hy += lh;
+        }
+        bottom -= 10;
+    }
+    if (kind && !(lang_ == Lang::De ? kind->steps_de : kind->steps_en).empty()) {
+        small().draw(c, px + pad, y, S("errors.steps"), kDim);
+        y += lh + 4;
+        const auto& steps = lang_ == Lang::De ? kind->steps_de : kind->steps_en;
+        for (std::size_t i = 0; i < steps.size(); ++i) {
+            const auto lines = wrap_text(small(), steps[i], tw - 40, 3);
+            if (y + static_cast<int>(lines.size()) * lh > bottom) {  // passt nicht mehr: Rest weglassen (steht auf der Sony-Seite)
+                small().draw(c, px + pad, y, "...", kDim);
+                err_clipped_ = true;
+                break;
+            }
+            small().draw(c, px + pad, y, std::to_string(i + 1) + ".", kAccent);
+            for (const auto& l : lines) {
+                small().draw(c, px + pad + 40, y, l, kText);
+                y += lh;
+            }
+            y += 4;
+        }
+    }
+
+    std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::LeftRight, S("common.family")}};
+    if (n > kErrVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
+    if (kind && kind->check) hints.emplace_back(PadGlyph::Triangle, S("common.checkup"));
+    hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }
 

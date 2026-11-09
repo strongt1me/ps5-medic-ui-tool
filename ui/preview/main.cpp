@@ -81,6 +81,15 @@ int main(int argc, char** argv) {
         shot("07b_settings_rules_update");
         app.handle(Button::Cross);  // Regel-Update (zeigt das Angebot, installiert nichts)
         shot("08_rules_update");
+        app.handle(Button::Circle);  // Einstellungen
+        app.handle(Button::Circle);  // Start
+        for (int i = 0; i < 4; ++i) app.handle(Button::R1);
+        app.handle(Button::Cross);  // Fehlercodes (nur Wissen)
+        static const char* const kFamilies[] = {"CE", "NP", "WS", "NW", "WV", "SU", "E2"};
+        for (int i = 0; i < 7; ++i) {
+            shot(std::string("09_errors_") + kFamilies[i]);
+            app.handle(Button::Right);
+        }
         std::cout << shots << " Bilder in " << out.string() << "\n";
     } catch (const std::exception& e) {
         std::cerr << "Fehler: " << e.what() << "\n";

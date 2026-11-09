@@ -33,7 +33,7 @@ PS5_CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Ilibmedic/include -Ithird_party -I
 PS5_CORE_SRCS := $(wildcard libmedic/src/*.cpp) third_party/qrcodegen/qrcodegen.cpp ps5/ps5_platform.cpp
 PS5_C_SRCS := third_party/tweetnacl/tweetnacl.c
 # png.cpp bleibt aussen vor: nur fuer die PC-Vorschau (medic-ui-preview) gebraucht, nicht auf der Konsole.
-PS5_UI_SRCS := ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp ui/src/i18n.cpp ui/src/i18n_embedded.cpp \
+PS5_UI_SRCS := ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp ui/src/i18n.cpp ui/src/i18n_embedded.cpp ui/src/error_data.cpp ui/src/error_codes_embedded.cpp \
                ui/src/app.cpp ui/src/local_service.cpp
 
 PS5_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) ps5/main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))

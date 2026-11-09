@@ -149,5 +149,14 @@
   "fix.move_duplicate_titleid": "Move duplicate copy",
   "fix.fix_image_nesting_hint": "Image structure hint",
   "fix.smp_translate_v1_keys": "Move old settings into the new format",
-  "fix.autoload_insert_delay": "Insert a delay after elfldr"
+  "fix.autoload_insert_delay": "Insert a delay after elfldr",
+  "start.errors": "Error codes",
+  "start.errors_sub": "Look up a PS5 code: meaning and fix",
+  "errors.title": "Look up error codes",
+  "errors.empty": "The error code list could not be loaded.",
+  "errors.steps": "What to do",
+  "errors.homebrew": "Homebrew note",
+  "errors.official": "Official page",
+  "common.family": "Family",
+  "common.checkup": "Check-up"
 }

@@ -3,6 +3,7 @@
 // ueber LocalService gegen eine Fixture-Kopie.
 #include "check.hpp"
 #include "medic_ui/app.hpp"
+#include "medic_ui/error_data.hpp"
 #include "medic_ui/font.hpp"
 #include "medic/http.hpp"
 #include "medic/sha256.hpp"
@@ -1303,6 +1304,97 @@ void shoulder_and_stick_flow_tests() {
     }
 }
 
+// Fehlercode-Nachschlagen: Zugang vom Start, Bedienung, Darstellung aller Codes in beiden Sprachen.
+void error_codes_ui_tests() {
+    FakeService svc;
+    svc.result.findings = {mk_finding("a.crit", Severity::Critical, true)};
+    Canvas cv(App::kWidth, App::kHeight);
+    Strings::missing().clear();
+    const medic::ErrorDb& db = medic::ui::embedded_error_db();
+    CHECK(db.codes.size() == 155, "Fehlercodes-UI: Daten sind eingebettet");
+
+    {  // Zugang: dritte kleine Karte auf dem Start
+        App a(svc);
+        press(a, {Button::R1, Button::R1, Button::R1, Button::R1, Button::Cross});  // weiter als der letzte Eintrag bleibt dort
+        CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes-UI: R1 bis zur Karte, Kreuz oeffnet sie");
+        a.render(cv);
+        CHECK(distinct_colors(cv) > 6, "Fehlercodes-UI: Bildschirm wird gezeichnet");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Start && !a.quit_requested(), "Fehlercodes-UI: Kreis geht zurueck, beendet nicht");
+        press(a, {Button::Left, Button::Cross});
+        CHECK(a.screen() == App::Screen::Settings, "Fehlercodes-UI: Links wechselt von der Karte zurueck zu den Einstellungen");
+        press(a, {Button::Circle, Button::Right, Button::Cross});
+        CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes-UI: Rechts erreicht die Karte");
+    }
+    {  // Bedienung: Familien, Liste, Seiten
+        App a(svc);
+        press(a, {Button::R1, Button::R1, Button::R1, Button::Cross});
+        const std::size_t ce = medic::codes_with_prefix(db, "CE").size();
+        CHECK(ce > 7, "Fehlercodes-UI: CE hat mehr Codes als auf eine Seite passen");
+        for (int i = 0; i < 40; ++i) a.handle(Button::Down);
+        a.render(cv);
+        press(a, {Button::L1, Button::R1, Button::R1, Button::Up});
+        a.render(cv);
+        press(a, {Button::Right});  // NP
+        a.render(cv);
+        for (int i = 0; i < 10; ++i) press(a, {Button::Right});
+        a.render(cv);  // E2, am Ende bleibt es dort
+        for (int i = 0; i < 10; ++i) press(a, {Button::Left});
+        a.render(cv);
+        CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes-UI: Blaettern ueber Familien und Seiten bleibt im Bildschirm");
+        press(a, {Button::Cross, Button::Square, Button::Options});
+        CHECK(a.screen() == App::Screen::ErrorCodes && svc.checks == 0 && svc.applies == 0 && svc.reports == 0, "Fehlercodes-UI: andere Tasten loesen nichts aus");
+    }
+    {  // Dreieck: Check-up nur, wenn ein Check-up helfen kann
+        App a(svc);
+        press(a, {Button::R1, Button::R1, Button::R1, Button::Cross});
+        const auto ce = medic::codes_with_prefix(db, "CE");
+        CHECK(!ce.empty() && db.kind_of(*ce.front())->check, "Fehlercodes-UI: der erste CE-Code ist einer mit Check-up-Hinweis");
+        press(a, {Button::Triangle});
+        CHECK(a.screen() == App::Screen::Running, "Fehlercodes-UI: Dreieck startet den Check-up");
+        a.update();
+        a.render(cv);
+        a.update();
+        CHECK(a.screen() == App::Screen::Findings && svc.checks == 1, "Fehlercodes-UI: danach die Befunde");
+
+        App b(svc);
+        press(b, {Button::R1, Button::R1, Button::R1, Button::Cross});
+        for (int i = 0; i < 5; ++i) press(b, {Button::Right});  // CE NP WS NW WV SU
+        const auto su = medic::codes_with_prefix(db, "SU");
+        CHECK(!su.empty() && !db.kind_of(*su.front())->check, "Fehlercodes-UI: der erste SU-Code ist einer ohne Check-up-Hinweis");
+        const int before = svc.checks;
+        press(b, {Button::Triangle});
+        CHECK(b.screen() == App::Screen::ErrorCodes && svc.checks == before, "Fehlercodes-UI: ohne Hinweis tut das Dreieck nichts");
+    }
+    {  // Jeder Code in beiden Sprachen: keine fehlenden Texte, nichts ausserhalb des Kastens
+        const Color bg = rgb(14, 18, 24);
+        for (Lang lang : {Lang::De, Lang::En}) {
+            App a(svc, lang);
+            press(a, {Button::R1, Button::R1, Button::R1, Button::Cross});
+            const int families = static_cast<int>(db.prefixes.size());
+            for (int f = 0; f < families; ++f) {
+                const std::size_t n = medic::codes_with_prefix(db, db.prefixes[static_cast<std::size_t>(f)].id).size();
+                for (std::size_t i = 0; i < n; ++i) {
+                    a.render(cv);
+                    // unter dem Detailkasten (ab y=935) muss der Hintergrund bleiben
+                    bool clean = true;
+                    for (int y = 935; y < 975 && clean; y += 2)
+                        for (int x = 640; x < App::kWidth - 96; x += 4)
+                            if (cv.at(x, y) != bg) {
+                                clean = false;
+                                break;
+                            }
+                    CHECK(!a.error_view_clipped(), "Fehlercodes-UI: alle Schritte passen in den Kasten (Familie " + db.prefixes[static_cast<std::size_t>(f)].id + ", Eintrag " + std::to_string(i) + ")");
+                    CHECK(clean, "Fehlercodes-UI: Text bleibt im Kasten (Familie " + db.prefixes[static_cast<std::size_t>(f)].id + ", Eintrag " + std::to_string(i) + ")");
+                    a.handle(Button::Down);
+                }
+                a.handle(Button::Right);
+            }
+        }
+        CHECK(Strings::missing().empty(), "Fehlercodes-UI: keine fehlenden Texte");
+    }
+}
+
 }  // namespace
 
 void ui_tests() {
@@ -1321,4 +1413,5 @@ void ui_tests() {
     rules_download_service_tests();
     pad_nav_tests();
     shoulder_and_stick_flow_tests();
+    error_codes_ui_tests();
 }
