@@ -2,6 +2,7 @@
 // Tests der UI: Canvas, Schrift/Umbruch, Texte, PNG, Bildschirmablauf (mit Fake-Dienst) und eine Ende-zu-Ende-Reparatur
 // ueber LocalService gegen eine Fixture-Kopie.
 #include "check.hpp"
+#include "medic/error_codes.hpp"
 #include "medic_ui/app.hpp"
 #include "medic_ui/font.hpp"
 #include "medic/http.hpp"
@@ -43,6 +44,12 @@ struct FakeService : IMedicService {
     std::string url;                     // Download-Adresse aus der Konfiguration
     RuleDownloadResult download_result = [] { RuleDownloadResult r; r.ok = true; return r; }();
     int downloads = 0;
+    ErrorCodeSet errors;  // Fehlercode-Nachschlagewerk (leer: keine Datei geladen)
+    int error_loads = 0;
+    const ErrorCodeSet& error_codes() override {
+        ++error_loads;
+        return errors;
+    }
     std::string rule_update_url() override { return url; }
     RuleDownloadResult download_rule_update() override {
         ++downloads;
@@ -1303,6 +1310,426 @@ void shoulder_and_stick_flow_tests() {
     }
 }
 
+// ---- Fehlercodes (Nachschlagen) ----------------------------------------------------
+
+// n Codes; Code 0 hat viele lange Schritte (die Detailansicht muss scrollen), die uebrigen je einen kurzen.
+ErrorCodeSet mk_errors(int n) {
+    ErrorCodeSet s;
+    s.db_version = "t";
+    for (int i = 0; i < n; ++i) {
+        ErrorCode c;
+        char id[32];
+        std::snprintf(id, sizeof id, "CE-1000%02d-1", i);
+        c.id = id;
+        c.title_de = "Titel " + c.id + " mit Umlauten äöü";
+        c.title_en = "Title " + c.id;
+        c.text_de = "Deutsche Erklärung zu " + c.id + ". Sie hat mehrere Sätze, damit der Umbruch greift. Dieser Satz ist der dritte.";
+        c.text_en = "English explanation for " + c.id + ". It has several sentences so that wrapping applies. This is the third sentence.";
+        const int steps = i == 0 ? 12 : 1;
+        for (int k = 1; k <= steps; ++k) {
+            c.steps_de.push_back("Schritt " + std::to_string(k) + ": ein längerer Satz, der sicher auf mehrere Zeilen umbricht, weil er viel Text enthält und die Zeile nur begrenzt breit ist.");
+            c.steps_en.push_back("Step " + std::to_string(k) + ": a longer sentence that surely wraps onto several lines because it contains a lot of text and the line is only so wide.");
+        }
+        if (i == 1) {
+            c.notes_de = {"Hinweis eins"};
+            c.notes_en = {"Note one"};
+            c.more_sources = {"https://example.org/weitere"};
+        }
+        c.source = "https://example.org/" + c.id;
+        c.level = i % 3 == 2 ? "community" : "doc";
+        s.codes.push_back(std::move(c));
+    }
+    return s;
+}
+
+std::uint64_t canvas_hash(const Canvas& c) {  // FNV-1a ueber alle Pixel
+    std::uint64_t h = 1469598103934665603ull;
+    const std::uint32_t* d = c.data();
+    for (int i = 0; i < c.width() * c.height(); ++i) {
+        h ^= d[i];
+        h *= 1099511628211ull;
+    }
+    return h;
+}
+
+// Zeichnet das Zeichen mit der Schrift; sieht das Bild aus wie das Ersatzzeichen "?", fehlt das Glyph.
+bool glyph_missing(const Font& f, const std::string& utf8) {
+    if (utf8 == "?") return false;
+    Canvas a(80, 60), b(80, 60);
+    a.clear(rgb(0, 0, 0));
+    b.clear(rgb(0, 0, 0));
+    f.draw(a, 4, 4, utf8, rgb(255, 255, 255));
+    f.draw(b, 4, 4, "?", rgb(255, 255, 255));
+    return canvas_hash(a) == canvas_hash(b);
+}
+
+// Scrollt in der Detailansicht ganz nach unten und liefert die dort erreichte Zeile (0: der Text passt ohne Scrollen).
+int scroll_to_end(App& a) {
+    for (int i = 0; i < 300; ++i) a.handle(Button::Down);
+    return a.error_scroll();
+}
+
+void open_error_codes_via_ui(App& a) { press(a, {Button::Down, Button::Down, Button::Down, Button::Cross}); }
+
+void error_codes_flow_tests() {
+    FakeService svc;
+    svc.errors = mk_errors(12);
+    Canvas cv(App::kWidth, App::kHeight);
+    Strings::missing().clear();
+
+    {  // vom Start erreichbar: Runter, Rechts, L1/R1; an den Raendern bleibt die Auswahl stehen
+        App a(svc);
+        open_error_codes_via_ui(a);
+        CHECK(a.screen() == App::Screen::ErrorCodes && svc.error_loads >= 1, "Fehlercodes: Start, dreimal Runter, Kreuz oeffnet die Liste");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Start, "Fehlercodes: Kreis zurueck zum Start");
+        press(a, {Button::Down, Button::Down, Button::Right, Button::Cross});
+        CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes: Rechts von den Einstellungen waehlt Fehlercodes");
+        press(a, {Button::Circle, Button::Left, Button::Cross});
+        CHECK(a.screen() == App::Screen::Settings, "Fehlercodes: Links geht zurueck zu den Einstellungen");
+        press(a, {Button::Circle, Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross});
+        CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes: weiter nach unten bleibt bei Fehlercodes");
+        press(a, {Button::Circle, Button::Up, Button::Up, Button::Up, Button::Up, Button::Up, Button::Cross});
+        CHECK(a.screen() == App::Screen::Running, "Fehlercodes: Hoch bis oben, dort startet Kreuz den Check-up");
+    }
+    {  // Liste: Auswahl, Blaettern, Details, zurueck
+        App a(svc);
+        open_error_codes_via_ui(a);
+        CHECK(a.error_selected() == 0, "Fehlercodes: Auswahl beginnt oben");
+        press(a, {Button::Up});
+        CHECK(a.error_selected() == 0, "Fehlercodes: oben bleibt die Auswahl oben");
+        press(a, {Button::Down, Button::Down, Button::Down});
+        CHECK(a.error_selected() == 3, "Fehlercodes: Runter waehlt den naechsten Code");
+        a.render(cv);
+        press(a, {Button::R1});
+        CHECK(a.error_selected() > 3 && a.error_selected() <= 11, "Fehlercodes: R1 blaettert eine Seite weiter");
+        press(a, {Button::R1});
+        CHECK(a.error_selected() == 11, "Fehlercodes: R1 springt zum letzten Code");
+        a.render(cv);
+        press(a, {Button::Down, Button::Down});
+        CHECK(a.error_selected() == 11, "Fehlercodes: unten bleibt die Auswahl unten");
+        press(a, {Button::L1});
+        CHECK(a.error_selected() < 11 && a.error_selected() >= 0, "Fehlercodes: L1 blaettert eine Seite zurueck");
+        press(a, {Button::L1, Button::L1});
+        CHECK(a.error_selected() == 0, "Fehlercodes: L1 springt zum ersten Code");
+
+        press(a, {Button::Down, Button::Down, Button::Cross});
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.error_selected() == 2 && a.error_scroll() == 0, "Fehlercodes: Kreuz zeigt die Details des gewaehlten Codes");
+        a.render(cv);
+        press(a, {Button::Right});
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.error_selected() == 3, "Fehlercodes: Rechts blaettert zum naechsten Code");
+        press(a, {Button::R1, Button::R1});
+        CHECK(a.error_selected() == 5, "Fehlercodes: R1 blaettert ebenfalls");
+        press(a, {Button::Left, Button::L1, Button::L1, Button::L1, Button::L1, Button::L1, Button::L1, Button::L1});
+        CHECK(a.error_selected() == 0, "Fehlercodes: Links/L1 blaettern bis zum ersten Code und nicht weiter");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::ErrorCodes && a.error_selected() == 0, "Fehlercodes: Kreis in den Details geht zur Liste");
+        press(a, {Button::Down, Button::Down, Button::Down, Button::Cross, Button::Right, Button::Circle});
+        CHECK(a.screen() == App::Screen::ErrorCodes && a.error_selected() == 4, "Fehlercodes: die Liste behaelt die beim Blaettern erreichte Auswahl");
+        a.render(cv);
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Start && !a.quit_requested(), "Fehlercodes: Kreis in der Liste geht zum Start");
+    }
+    {  // Scrollen in den Details: nur wenn der Text nicht passt, stoppt am Ende, springt beim Blaettern zurueck
+        App a(svc);
+        open_error_codes_via_ui(a);
+        press(a, {Button::Cross});
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.error_selected() == 0, "Scrollen: Code mit vielen Schritten offen");
+        a.render(cv);
+        const std::uint64_t top = canvas_hash(cv);
+        press(a, {Button::Up});
+        CHECK(a.error_scroll() == 0, "Scrollen: oben bleibt die Ansicht oben");
+        press(a, {Button::Down});
+        CHECK(a.error_scroll() == 1, "Scrollen: Runter schiebt den Text um eine Zeile");
+        a.render(cv);
+        CHECK(canvas_hash(cv) != top, "Scrollen: die Anzeige aendert sich");
+        const int end = scroll_to_end(a);
+        CHECK(end > 5, "Scrollen: ein langer Eintrag laesst sich bis zum Ende scrollen (" + std::to_string(end) + ")");
+        press(a, {Button::Down});
+        CHECK(a.error_scroll() == end, "Scrollen: am Ende ist Schluss");
+        a.render(cv);
+        press(a, {Button::Up});
+        CHECK(a.error_scroll() == end - 1, "Scrollen: Hoch scrollt zurueck");
+        for (int i = 0; i < 300; ++i) a.handle(Button::Up);
+        CHECK(a.error_scroll() == 0, "Scrollen: bis ganz nach oben");
+        scroll_to_end(a);
+        press(a, {Button::Right});
+        CHECK(a.error_selected() == 1 && a.error_scroll() == 0, "Scrollen: Blaettern beginnt wieder oben");
+        CHECK(scroll_to_end(a) == 0, "Scrollen: ein kurzer Eintrag scrollt nicht");
+        press(a, {Button::Left});
+        CHECK(a.error_selected() == 0 && a.error_scroll() == 0, "Scrollen: zurueck zum langen Code beginnt oben");
+    }
+    {  // Nur lesen: weder Reparatur noch Check-up noch Bericht noch Update, egal welche Taste
+        FakeService s2;
+        s2.errors = mk_errors(5);
+        s2.result.findings = {mk_finding("a.crit", Severity::Critical, true)};
+        s2.plan = mk_plan();
+        App a(s2);
+        open_error_codes_via_ui(a);
+        for (Button b : {Button::Triangle, Button::Square, Button::Options, Button::Left, Button::Right}) a.handle(b);
+        CHECK(a.screen() == App::Screen::ErrorCodes, "Nur lesen: Dreieck, Quadrat, Options, Links, Rechts aendern in der Liste nichts");
+        press(a, {Button::Cross});
+        for (Button b : {Button::Triangle, Button::Square, Button::Options, Button::Cross}) a.handle(b);
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail, "Nur lesen: Dreieck, Quadrat, Options, Kreuz aendern in den Details nichts");
+        a.render(cv);
+        CHECK(s2.checks == 0 && s2.plans == 0 && s2.applies == 0 && s2.undos == 0 && s2.reports == 0 && s2.update_checks == 0 && s2.installs == 0 &&
+                  s2.rollbacks == 0 && s2.downloads == 0,
+              "Nur lesen: der Dienst wurde nie zum Pruefen, Reparieren, Berichten oder Laden benutzt");
+    }
+    {  // keine Datei geladen: Hinweis statt Liste, nichts kaputt
+        FakeService empty;
+        App a(empty);
+        open_error_codes_via_ui(a);
+        CHECK(a.screen() == App::Screen::ErrorCodes, "Leer: Liste oeffnet sich");
+        a.render(cv);
+        press(a, {Button::Down, Button::Up, Button::L1, Button::R1, Button::Cross});
+        CHECK(a.screen() == App::Screen::ErrorCodes && a.error_selected() == 0, "Leer: Kreuz und Blaettern tun nichts");
+        a.render(cv);
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Start, "Leer: Kreis zurueck");
+    }
+    {  // beide Sprachen: andere Anzeige, keine fehlenden Texte
+        App de(svc, Lang::De), en(svc, Lang::En);
+        open_error_codes_via_ui(de);
+        open_error_codes_via_ui(en);
+        de.render(cv);
+        const std::uint64_t list_de = canvas_hash(cv);
+        en.render(cv);
+        CHECK(list_de != canvas_hash(cv), "Sprachen: die Liste unterscheidet sich");
+        press(de, {Button::Down, Button::Cross});  // Code 1: mit Hinweis und weiterer Quelle
+        press(en, {Button::Down, Button::Cross});
+        de.render(cv);
+        const std::uint64_t detail_de = canvas_hash(cv);
+        en.render(cv);
+        CHECK(detail_de != canvas_hash(cv), "Sprachen: die Details unterscheiden sich");
+        // Community-Eintrag (Code 2) und Eintrag mit vielen Schritten (Code 0) in beiden Sprachen, auch am Ende der Scroll-Strecke
+        for (Lang l : {Lang::De, Lang::En}) {
+            App a(svc, l);
+            open_error_codes_via_ui(a);
+            press(a, {Button::Down, Button::Down, Button::Cross});
+            a.render(cv);
+            scroll_to_end(a);
+            a.render(cv);
+            press(a, {Button::Left, Button::Left});
+            a.render(cv);
+            scroll_to_end(a);
+            a.render(cv);
+        }
+    }
+    CHECK(Strings::missing().empty(), "Fehlercodes: alle gezeichneten Texte existieren in beiden Sprachen (" + (Strings::missing().empty() ? std::string() : Strings::missing().front()) + ")");
+    Strings::missing().clear();
+
+    // Texte der Bildschirme und der Startkarte: in beiden Sprachen vorhanden und nicht leer
+    for (const char* key : {"start.errors", "start.errors_sub", "errors.title", "errors.empty", "errors.empty_sub", "errors.readonly", "errors.steps", "errors.steps_none",
+                            "errors.notes", "errors.community", "errors.community_note", "errors.source_more", "errors.level.doc", "errors.level.community",
+                            "errors.position", "errors.scroll"})
+        for (Lang l : {Lang::De, Lang::En}) {
+            const auto& S = Strings::get(l);
+            CHECK(S.has(key) && !S(key).empty(), std::string("Fehlercodes: Text vorhanden: ") + key + (l == Lang::De ? " (de)" : " (en)"));
+        }
+    CHECK(Strings::get(Lang::De).fmt("errors.position", {{"i", "3"}, {"n", "20"}}) == "Code 3 von 20", "Fehlercodes: Positionsangabe (de)");
+    CHECK(Strings::get(Lang::En).fmt("errors.position", {{"i", "3"}, {"n", "20"}}) == "Code 3 of 20", "Fehlercodes: Positionsangabe (en)");
+    Strings::missing().clear();
+}
+
+// Mit der echten Datei und dem echten Dienst: jeder Code laesst sich in beiden Sprachen oeffnen, durchscrollen und zeichnen,
+// ohne dass auf der (beschreibbaren) Konsole etwas geschieht; alle Zeichen der Texte gibt es in der Schrift.
+void error_codes_real_data_tests() {
+    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+    const ErrorCodeSet codes = load_error_codes_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/error_codes.json");
+    CHECK(codes.codes.size() >= 19, "Fehlercodes (Datei): mindestens die 19 belegten Codes");
+
+    TempCopy t("b8_pos");
+    const auto before = full_tree(t.dir);
+    auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+    LocalService svc(*platform, rules, [] { return std::string("20261108T120000Z"); });
+    CHECK(svc.error_codes().codes.empty(), "Fehlercodes (Datei): ohne set_error_codes ist die Liste leer");
+    svc.set_error_codes(codes);
+    CHECK(svc.error_codes().codes.size() == codes.codes.size(), "Fehlercodes (Datei): LocalService liefert die gesetzten Codes");
+
+    Canvas cv(App::kWidth, App::kHeight);
+    Strings::missing().clear();
+    std::set<std::string> scrolling_codes;  // deutsche Anzeige: Eintraege, deren Text nicht auf einen Bildschirm passt
+    for (Lang l : {Lang::De, Lang::En}) {
+        App a(svc, l);
+        open_error_codes_via_ui(a);
+        CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes (Datei): Liste offen");
+        a.render(cv);
+        press(a, {Button::R1, Button::R1, Button::R1});
+        a.render(cv);
+        CHECK(a.error_selected() == static_cast<int>(codes.codes.size()) - 1, "Fehlercodes (Datei): R1 bis zum letzten Code");
+        press(a, {Button::L1, Button::L1, Button::L1, Button::L1});
+        CHECK(a.error_selected() == 0, "Fehlercodes (Datei): L1 bis zum ersten Code");
+        press(a, {Button::Cross});
+        for (std::size_t i = 0; i < codes.codes.size(); ++i) {
+            CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.error_selected() == static_cast<int>(i), "Fehlercodes (Datei): Detail " + codes.codes[i].id);
+            a.render(cv);
+            const std::uint64_t top = canvas_hash(cv);
+            const int end = scroll_to_end(a);
+            a.render(cv);
+            if (end > 0) {
+                CHECK(canvas_hash(cv) != top, "Fehlercodes (Datei): Scrollen aendert die Anzeige bei " + codes.codes[i].id);
+                if (l == Lang::De) scrolling_codes.insert(codes.codes[i].id);
+            }
+            for (int k = 0; k < end; k += std::max(end / 3, 1)) {  // einige Zwischenstaende
+                for (int j = 0; j < 300; ++j) a.handle(Button::Up);
+                for (int j = 0; j < k; ++j) a.handle(Button::Down);
+                a.render(cv);
+            }
+            press(a, {Button::Right});
+        }
+        CHECK(a.error_selected() == static_cast<int>(codes.codes.size()) - 1, "Fehlercodes (Datei): Rechts bleibt beim letzten Code stehen");
+        press(a, {Button::Circle, Button::Circle});
+        CHECK(a.screen() == App::Screen::Start, "Fehlercodes (Datei): zurueck zum Start");
+    }
+    CHECK(scrolling_codes.count("CE-108262-9") && !scrolling_codes.count("CE-100028-1"), "Fehlercodes (Datei): der laengste Eintrag (Safe Mode) scrollt, ein kurzer nicht");
+    CHECK(Strings::missing().empty(), "Fehlercodes (Datei): keine fehlenden Texte in beiden Sprachen");
+    Strings::missing().clear();
+    CHECK(full_tree(t.dir) == before, "Fehlercodes (Datei): auf der Konsole wurde nichts geschrieben, auch mit beschreibbarer Plattform");
+
+    // Alle Zeichen der Texte muessen in der eingebauten Schrift vorkommen, sonst erscheint "?" mitten im Hinweis.
+    std::set<std::string> glyphs;
+    auto collect = [&](const std::string& s) {
+        for (std::size_t i = 0; i < s.size();) {
+            const std::size_t start = i;
+            next_codepoint(s, i);
+            glyphs.insert(s.substr(start, i - start));
+        }
+    };
+    for (const auto& c : codes.codes) {
+        for (const auto* s : {&c.id, &c.title_de, &c.title_en, &c.text_de, &c.text_en, &c.source}) collect(*s);
+        for (const auto* v : {&c.steps_de, &c.steps_en, &c.notes_de, &c.notes_en, &c.more_sources})
+            for (const auto& s : *v) collect(s);
+    }
+    std::string missing;
+    for (const auto& g : glyphs)
+        for (auto id : {Font::Id::Small, Font::Id::Body})
+            if (g != " " && glyph_missing(Font::get(id), g)) missing += g + " ";
+    CHECK(missing.empty(), "Fehlercodes (Datei): alle Zeichen gibt es in der Schrift (fehlen: " + missing + ")");
+}
+
+// ---- Verweis aus einem Befund auf den Fehlercode-Eintrag -----------------------------------------------------------------------
+
+Finding finding_mentioning(const std::string& id, const std::string& code) {
+    Finding f = mk_finding(id, Severity::Warning, false);
+    f.text_de += " Fehler " + code + " tritt auf.";
+    f.text_en += " Error " + code + " occurs.";
+    return f;
+}
+
+void error_link_tests() {
+    FakeService svc;
+    svc.errors = mk_errors(12);  // CE-100000-1 bis CE-100011-1
+    svc.result.findings = {finding_mentioning("a.known", "CE-100007-1"), finding_mentioning("b.unknown", "CE-999999-9"), mk_finding("c.plain", Severity::Info, false),
+                           finding_mentioning("d.glued", "XCE-100003-1"), finding_mentioning("e.longer", "CE-100003-12"), finding_mentioning("f.dashed", "CE-100003-1-2")};
+    Canvas cv(App::kWidth, App::kHeight);
+    Strings::missing().clear();
+
+    {  // Quadrat im Detail oeffnet den Eintrag, Kreis kommt zum Befund zurueck
+        App a(svc);
+        run_check_via_ui(a, cv);
+        CHECK(a.screen() == App::Screen::Findings && a.finding_count() == 6, "Verweis: Check-up liefert die Befunde");
+        press(a, {Button::Square});
+        CHECK(a.screen() == App::Screen::Report, "Verweis: Quadrat in der Liste bleibt der Bericht");
+        press(a, {Button::Circle, Button::Cross});
+        CHECK(a.screen() == App::Screen::Detail && a.selected() == 0, "Verweis: Befund mit Code offen");
+        a.render(cv);
+        press(a, {Button::Square});
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.error_selected() == 7 && a.error_scroll() == 0, "Verweis: Quadrat zeigt den Eintrag zu CE-100007-1");
+        a.render(cv);
+        press(a, {Button::Left, Button::L1, Button::Right, Button::R1});
+        CHECK(a.error_selected() == 7, "Verweis: im verlinkten Eintrag wird nicht geblaettert");
+        press(a, {Button::Down, Button::Up});
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.error_scroll() == 0, "Verweis: Scrollen geht (kurzer Eintrag bleibt oben)");
+        press(a, {Button::Triangle, Button::Square, Button::Cross});
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail, "Verweis: Dreieck, Quadrat und Kreuz tun im Eintrag nichts");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Detail && a.selected() == 0, "Verweis: Kreis geht zurueck zum Befund");
+        a.render(cv);
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Findings, "Verweis: Kreis im Befund geht zur Liste");
+
+        // Befunde ohne passenden Code: Quadrat tut nichts
+        for (int i = 1; i < 6; ++i) {
+            press(a, {Button::Down, Button::Cross});
+            CHECK(a.screen() == App::Screen::Detail && a.selected() == i, "Verweis: Befund " + std::to_string(i) + " offen");
+            a.render(cv);
+            press(a, {Button::Square});
+            CHECK(a.screen() == App::Screen::Detail, "Verweis: Befund " + std::to_string(i) + " ohne bekannten Code, Quadrat tut nichts");
+            press(a, {Button::Circle});
+        }
+
+        // Aus der Liste geoeffnete Eintraege blaettern wieder, auch nach einem Verweis
+        press(a, {Button::Circle, Button::Down, Button::Down, Button::Down, Button::Cross, Button::Cross});
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.error_selected() == 0, "Verweis: Eintrag aus der Liste offen");
+        press(a, {Button::Right});
+        CHECK(a.error_selected() == 1, "Verweis: aus der Liste geoeffnete Eintraege blaettern weiter");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::ErrorCodes, "Verweis: Kreis geht dort zur Liste");
+    }
+    {  // Beide Sprachen, Anzeige: mit Nachschlagewerk gibt es Zeile und Taste, ohne nicht; unbekannter Code aendert nichts
+        FakeService without;
+        without.result = svc.result;  // gleiche Befunde, aber kein Nachschlagewerk geladen
+        for (Lang l : {Lang::De, Lang::En}) {
+            App with_errors(svc, l), no_errors(without, l);
+            run_check_via_ui(with_errors, cv);
+            run_check_via_ui(no_errors, cv);
+            press(with_errors, {Button::Cross});
+            press(no_errors, {Button::Cross});
+            with_errors.render(cv);
+            const std::uint64_t h_with = canvas_hash(cv);
+            no_errors.render(cv);
+            CHECK(h_with != canvas_hash(cv), "Verweis: mit Nachschlagewerk zeigt der Befund Zeile und Taste fuer den Code");
+            press(with_errors, {Button::Right});  // unbekannter Code CE-999999-9
+            press(no_errors, {Button::Right});
+            with_errors.render(cv);
+            const std::uint64_t h_unknown = canvas_hash(cv);
+            no_errors.render(cv);
+            CHECK(h_unknown == canvas_hash(cv), "Verweis: ein unbekannter Code wird nicht verlinkt");
+            press(no_errors, {Button::Square});
+            CHECK(no_errors.screen() == App::Screen::Detail, "Verweis: ohne Nachschlagewerk tut Quadrat nichts");
+        }
+    }
+    CHECK(Strings::missing().empty(), "Verweis: alle gezeichneten Texte existieren in beiden Sprachen (" + (Strings::missing().empty() ? std::string() : Strings::missing().front()) + ")");
+    Strings::missing().clear();
+    for (const char* key : {"common.lookup", "detail.error_code"})
+        for (Lang l : {Lang::De, Lang::En}) CHECK(Strings::get(l).has(key) && !Strings::get(l)(key).empty(), std::string("Verweis: Text vorhanden: ") + key);
+    CHECK(Strings::get(Lang::De).fmt("detail.error_code", {{"code", "CE-1"}}).find("CE-1") != std::string::npos, "Verweis: Platzhalter {code}");
+    Strings::missing().clear();
+}
+
+// Mit echten Regeln und echter Datei: die Befunde, deren Text einen Fehlercode nennt, fuehren zum passenden Eintrag.
+void error_link_real_data_tests() {
+    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+    const ErrorCodeSet codes = load_error_codes_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/error_codes.json");
+    Canvas cv(App::kWidth, App::kHeight);
+    Strings::missing().clear();
+    const std::pair<const char*, const char*> cases[] = {{"smp10_pos_leak", "CE-108262-9"}, {"c1_pos", "CE-105733-9"}};
+    for (const auto& [fixture, code] : cases) {
+        for (Lang l : {Lang::De, Lang::En}) {
+            TempCopy t(fixture);
+            const auto before = full_tree(t.dir);
+            auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+            LocalService svc(*platform, rules, [] { return std::string("20261108T120000Z"); });
+            svc.set_error_codes(codes);
+            App a(svc, l);
+            run_check_via_ui(a, cv);
+            CHECK(a.finding_count() == 1, std::string("Verweis (Datei): ") + fixture + ": ein Befund");
+            press(a, {Button::Cross});
+            a.render(cv);
+            press(a, {Button::Square});
+            CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.error_selected() >= 0 && codes.codes[static_cast<std::size_t>(a.error_selected())].id == code,
+                  std::string("Verweis (Datei): ") + fixture + " fuehrt zu " + code);
+            a.render(cv);
+            press(a, {Button::Circle});
+            CHECK(a.screen() == App::Screen::Detail, std::string("Verweis (Datei): ") + fixture + ": zurueck zum Befund");
+            CHECK(full_tree(t.dir) == before, std::string("Verweis (Datei): ") + fixture + ": nichts geschrieben");
+        }
+    }
+    CHECK(Strings::missing().empty(), "Verweis (Datei): keine fehlenden Texte");
+    Strings::missing().clear();
+}
+
 }  // namespace
 
 void ui_tests() {
@@ -1321,4 +1748,8 @@ void ui_tests() {
     rules_download_service_tests();
     pad_nav_tests();
     shoulder_and_stick_flow_tests();
+    error_codes_flow_tests();
+    error_codes_real_data_tests();
+    error_link_tests();
+    error_link_real_data_tests();
 }

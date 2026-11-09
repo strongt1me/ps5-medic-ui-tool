@@ -6,6 +6,7 @@
 // Reparaturen laufen ueber LocalService -> medic::apply_plan, also mit Backup/Journal/Undo wie am PC.
 #include "ps5_platform.hpp"
 
+#include "medic/error_codes.hpp"
 #include "medic/rules.hpp"
 #include "medic_ui/app.hpp"
 #include "medic_ui/pad_nav.hpp"
@@ -33,6 +34,7 @@ namespace {
 
 // Erste vorhandene Datei gewinnt (per `make deploy-ui` abgelegt, siehe Makefile).
 const char* const kRulesCandidates[] = {"/data/ps5medic/knowledge/rules.json", "/data/homebrew/PS5MEDIC/rules.json"};
+const char* const kErrorCodesCandidates[] = {"/data/ps5medic/knowledge/error_codes.json", "/data/homebrew/PS5MEDIC/error_codes.json"};
 const char* const kLogPath = "/data/ps5medic/ui.log";
 
 std::FILE* g_log = nullptr;
@@ -147,6 +149,22 @@ medic::RuleSet load_rules() {
     return {};
 }
 
+// Fehlercode-Nachschlagewerk (nur Text zum Lesen). Fehlt die Datei, zeigt der Bildschirm einen Hinweis; der Rest laeuft normal.
+medic::ErrorCodeSet load_error_codes() {
+    for (const char* path : kErrorCodesCandidates) {
+        if (!std::filesystem::exists(path)) continue;
+        try {
+            auto codes = medic::load_error_codes_from_file(path);
+            trace("Fehlercodes: " + codes.db_version + " (" + std::to_string(codes.codes.size()) + ") aus " + path);
+            return codes;
+        } catch (const std::exception& e) {
+            trace(std::string("Fehlercode-Datei ungueltig (") + path + "): " + e.what());
+        }
+    }
+    trace("Keine Fehlercode-Datei gefunden -- der Bildschirm Fehlercodes bleibt leer.");
+    return {};
+}
+
 extern "C" {
 int sceKernelAllocateMainDirectMemory(size_t, size_t, int, intptr_t*);
 int sceKernelReleaseDirectMemory(intptr_t, size_t);
@@ -177,6 +195,8 @@ const char* screen_name(App::Screen s) {
         case App::Screen::Settings: return "Einstellungen";
         case App::Screen::Report: return "Bericht";
         case App::Screen::RulesUpdate: return "Regel-Update";
+        case App::Screen::ErrorCodes: return "Fehlercodes";
+        case App::Screen::ErrorCodeDetail: return "Fehlercode-Detail";
     }
     return "?";
 }
@@ -198,6 +218,7 @@ int main() {
     auto platform = medic::make_ps5_platform(/*writable=*/true);
     medic::RuleSet rules = load_rules();
     medic::ui::LocalService service(*platform, std::move(rules));
+    service.set_error_codes(load_error_codes());
     // Der Regel-Download ist die einzige Netzfunktion: Abruf nur nach Bestaetigung im Bildschirm Regel-Update, nur zur Adresse aus config.ini.
     const auto http = medic::make_posix_http_client();
     service.set_http_client(http.get());

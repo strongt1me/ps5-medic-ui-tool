@@ -15,6 +15,7 @@ It runs as a full-screen app directly on the console and is operated with the Du
 - **Undo**: every repair is listed in the history and can be taken back.
 - **Report**: the □ button in the findings list writes a Markdown report to `/data/ps5medic/reports/` and shows a short version as a **QR code** (scan it with your phone, copy the text, paste it into a forum or an issue). IP and MAC addresses, user and account IDs and serial numbers are removed; file and folder names stay in, please check before sharing. Error-like log lines that match no rule appear as **Unknown error lines** in the report: material for new rules.
 - **Rule update**: Settings, Rule update. Put a new `rules.json` with its SHA-256 checksum on the console via FTP or a USB copy, **or** download it with □ from your own address (`update_url` in `/data/ps5medic/config.ini`; only accepted with a valid Ed25519 signature of the author). PS5 Medic verifies the file and installs it after ✕ (with backup and roll-back).
+- **Error codes**: Start, “Error codes”. A look-up for 19 messages such as CE-108262-9 (explanation, steps according to Sony, source; codes without a Sony page are marked as community information). Read and explain only, nothing is changed.
 - German and English (Settings).
 
 ## Safety
@@ -32,7 +33,7 @@ It runs as a full-screen app directly on the console and is operated with the Du
 
 ## Installation
 
-1. Copy the `PS5MEDIC` folder from the release to `/data/homebrew/` via FTP (it contains `ps5medicui.elf`, `ps5medic.elf`, `rules.json`, `homebrew.js` and the icon).
+1. Copy the `PS5MEDIC` folder from the release to `/data/homebrew/` via FTP (it contains `ps5medicui.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` and the icon).
 2. Start `websrv` (Payload Manager, autoloader or port 9021).
 3. Open the **PS5 Medic** tile in the launcher (`http://<PS5-IP>:8080`). Alternatively from a PC: `make launch-ui PS5_HOST=<PS5-IP>`.
 
@@ -100,7 +101,7 @@ A new rule needs: an entry in `knowledge/rules.json` with a source, a positive a
 | `docs/PHASE2.md` to `PHASE5.md` | Console and snapshot, UI and app context, report and release, rule update and community (German) |
 | `docs/TESTER.md` | Contributing as a tester (German, English summary) |
 | `docs/TITLE.md` | Tile under “Media” (starter title; German) |
-| `knowledge/` | Rules (`rules.json`) and JSON schema |
+| `knowledge/` | Rules (`rules.json`), error codes (`error_codes.json`) and JSON schemas |
 
 ## License and credits
 

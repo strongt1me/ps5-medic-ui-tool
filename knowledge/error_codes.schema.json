@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PS5 Medic error code look-up",
+  "description": "Maßgeblich ist die Pruefung in libmedic/src/error_codes.cpp; dieses Schema beschreibt sie. Schluessel mit fuehrendem Unterstrich an der Wurzel (_license, _note) sind Kommentare.",
+  "type": "object",
+  "required": ["schema_version", "db_version", "codes"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "db_version": { "type": "string", "minLength": 1 },
+    "codes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "text", "steps", "source", "level"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Z]{2}-[0-9]{6}-[0-9]$" },
+          "title": { "$ref": "#/$defs/text_pair" },
+          "text": { "$ref": "#/$defs/text_pair", "description": "Erklaerung, 2 bis 3 Saetze" },
+          "steps": { "$ref": "#/$defs/list_pair", "description": "Sichere Schritte, nur Anleitung. Bei level doc mindestens einer." },
+          "notes": { "$ref": "#/$defs/list_pair", "description": "Optionale Hinweise (z. B. Datenverlust im Safe Mode)" },
+          "source": { "type": "string", "pattern": "^https://[^ ]+$" },
+          "more_sources": { "type": "array", "items": { "type": "string", "pattern": "^https://[^ ]+$" } },
+          "level": { "enum": ["doc", "community"], "description": "doc = Sony-Hilfeseite, community = keine Sony-Seite" }
+        }
+      }
+    }
+  },
+  "patternProperties": { "^_": { "type": "string" } },
+  "additionalProperties": false,
+  "$defs": {
+    "text_pair": {
+      "type": "object",
+      "required": ["de", "en"],
+      "additionalProperties": false,
+      "properties": { "de": { "type": "string", "minLength": 1 }, "en": { "type": "string", "minLength": 1 } }
+    },
+    "list_pair": {
+      "type": "object",
+      "required": ["de", "en"],
+      "additionalProperties": false,
+      "description": "Deutsch und Englisch gleich lang",
+      "properties": {
+        "de": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "en": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

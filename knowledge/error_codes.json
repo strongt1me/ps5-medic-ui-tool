@@ -1,0 +1,579 @@
+{
+  "_license": "SPDX-License-Identifier: GPL-3.0-or-later (wie knowledge/rules.json; JSON kennt keine Kommentare)",
+  "_note": "Nachschlagewerk fuer Fehlercodes: nur lesen und erklaeren, nichts wird veraendert. Jeder Eintrag nennt seine Quelle. level doc = Sony-Hilfeseite (am 9. Nov. 2026 gegen die Seiten geprueft), community = keine Sony-Seite, nur Community-Angaben. Eintraege nach id sortiert. Schema: libmedic/src/error_codes.cpp",
+  "schema_version": 1,
+  "db_version": "2026.11.09",
+  "codes": [
+    {
+      "id": "CE-100006-7",
+      "title": { "de": "Externes Laufwerk wird nicht erkannt", "en": "External storage drive is not recognized" },
+      "text": {
+        "de": "Die Konsole erkennt das angeschlossene externe Laufwerk nicht. Sonys Schritte betreffen die Systemsoftware, die USB-Verbindung (ohne Hub), die Formatierung als erweiterter Speicher und ein mögliches Problem am Laufwerk selbst.",
+        "en": "The console does not recognize the connected external storage drive. Sony's steps cover the system software, the USB connection (without a hub), formatting as extended storage and a possible problem with the drive itself."
+      },
+      "steps": {
+        "de": [
+          "Die Systemsoftware auf die neueste Version aktualisieren.",
+          "Das USB-Kabel abziehen und wieder einstecken. Bei einem USB-Hub das Laufwerk direkt an die Konsole anschließen.",
+          "Wird das Laufwerk zum ersten Mal als erweiterter Speicher benutzt, muss es formatiert werden: „Settings > Storage > Extended Storage“. Achtung: Formatieren löscht alles auf dem Laufwerk.",
+          "Lassen sich nicht alle Daten auf einmal übertragen, die Inhalte einzeln übertragen.",
+          "Prüfen, ob sich die Spieldaten überhaupt auf erweitertem Speicher installieren lassen (Sonys Anleitung zu erweitertem Speicher).",
+          "Es kann ein Problem am Laufwerk geben: ein anderes Speichergerät ausprobieren."
+        ],
+        "en": [
+          "Update the system software to the latest version.",
+          "Unplug the USB cable and plug it back in. If you use a USB hub, remove it and connect the drive directly to the console.",
+          "If the drive is used as extended storage for the first time it has to be formatted: “Settings > Storage > Extended Storage”. Caution: formatting erases everything on the drive.",
+          "If you cannot transfer all data at once, transfer the content one item at a time.",
+          "Check whether the game data can be installed on extended storage at all (Sony's extended storage guide).",
+          "There may be a problem with the drive: try another storage device."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Medic-Hinweis (nicht von Sony): Auf einer gejailbreakten Konsole kann ein Systemupdate den Jailbreak beenden. Medic ändert die Firmware nie; ob du aktualisierst, entscheidest allein du."
+        ],
+        "en": [
+          "Medic note (not from Sony): On a jailbroken console a system update can end the jailbreak. Medic never changes firmware; whether you update is entirely your decision."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-100006-7/",
+      "level": "doc"
+    },
+    {
+      "id": "CE-100028-1",
+      "title": { "de": "Nicht genug freier Platz auf der SSD", "en": "Not enough free space on the SSD" },
+      "text": {
+        "de": "Auf der SSD der Konsole ist nicht genug Platz frei. Sony nennt für diesen Code keinen konkreten Platzbedarf, sondern nur, den freien Platz für den Download zu prüfen und Inhalte zu löschen.",
+        "en": "There is not enough free space on the console's SSD. For this code Sony does not state a specific amount of space; it only says to check the free space for the download and to delete content."
+      },
+      "steps": {
+        "de": [
+          "„Settings > Storage > System Storage“ öffnen und prüfen, ob genug Platz für den Download frei ist.",
+          "Im Konsolenspeicher den Inhalt markieren, die Auswahltaste drücken und „Delete“ (Löschen) wählen.",
+          "Auf dem Startbildschirm den Inhalt markieren, die Options-Taste drücken und „Delete“ (Löschen) wählen."
+        ],
+        "en": [
+          "Open “Settings > Storage > System Storage” and check whether there is enough free space for the download.",
+          "In the console storage, highlight the content, press the select button and choose “Delete”.",
+          "On the home screen, highlight the content, press the options button and choose “Delete”."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-100028-1/",
+      "level": "doc"
+    },
+    {
+      "id": "CE-105733-9",
+      "title": { "de": "Overlay blockiert den Spielstart (ps5-theme-Testbuild)", "en": "Leftover overlay blocks game start (ps5-theme test build)" },
+      "text": {
+        "de": "Zu diesem Code gibt es keine Sony-Seite (unter dem Sony-Muster 404), die Bedeutung stammt nur aus der Community. Laut den Release-Notes von ps5-theme 1.53 verhinderte ein zurückgebliebenes Overlay in früheren Testbuilds den Start aller Spiele und Apps und löste diesen Fehler aus.",
+        "en": "There is no Sony page for this code (404 under Sony's usual address), so the meaning comes from the community only. According to the release notes of ps5-theme 1.53, an overlay left behind in earlier test builds stopped every game and app from starting and caused this error."
+      },
+      "steps": {
+        "de": [
+          "ps5-theme auf Version 1.53 oder neuer aktualisieren; ab dieser Version ist das beschriebene Problem laut Release-Notes behoben."
+        ],
+        "en": [
+          "Update ps5-theme to version 1.53 or newer; according to the release notes the described problem is fixed from that version on."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Medic-Hinweis: Der Check-up meldet ps5-theme-Testbuilds zwischen den Versionen 1.30 und 1.53 (Regel plugin.ps5theme_old_overlay). Der Fehlercode selbst ist aus einem Snapshot nicht erkennbar."
+        ],
+        "en": [
+          "Medic note: The check-up reports ps5-theme test builds between versions 1.30 and 1.53 (rule plugin.ps5theme_old_overlay). The error code itself cannot be seen in a snapshot."
+        ]
+      },
+      "source": "https://github.com/Blaze414/ps5-theme/releases/tag/v1.53",
+      "level": "community"
+    },
+    {
+      "id": "CE-105799-1",
+      "title": { "de": "Server nicht erreichbar", "en": "Unable to connect to the server" },
+      "text": {
+        "de": "Die Konsole kann den PlayStation-Server nicht erreichen. Sonys Schritte reichen von der Statusseite über Kabelverbindung und Router-Neustart bis zu Ports, fester IP-Adresse und einem öffentlichen DNS-Server.",
+        "en": "The console cannot reach the PlayStation server. Sony's steps range from the status page, a wired connection and a router restart to ports, a static IP address and a public DNS server."
+      },
+      "steps": {
+        "de": [
+          "Auf der PlayStation-Statusseite nachsehen, ob eine Störung oder Wartung gemeldet ist.",
+          "Die Konsole neu starten, wenn möglich per Netzwerkkabel ins Internet gehen und die Netzwerkeinstellungen neu einrichten.",
+          "Bei WLAN die Konsole näher an den Router stellen oder Hindernisse dazwischen beseitigen.",
+          "Router und Modem ausschalten, mindestens 5 Minuten warten, dann wieder einschalten.",
+          "Die Firmware des Routers aktualisieren (Anleitung beim Router-Hersteller).",
+          "Wenn möglich diese Ports öffnen: TCP 80, 443, 3478, 3479, 3480 und UDP 3478, 3479, 49152 bis 65535. Hilfe dazu gibt der Internetanbieter.",
+          "In den Netzwerkeinstellungen eine feste IP-Adresse von Hand eintragen.",
+          "Die DNS-Einstellungen vorübergehend auf einen kostenlosen öffentlichen DNS-Server ändern. Hilft nichts davon, ist die Leitung laut Sony womöglich vorübergehend ausgelastet: später erneut versuchen."
+        ],
+        "en": [
+          "Check the PlayStation status page for a server failure or maintenance.",
+          "Restart the console, connect to the internet with a wired connection if possible and set up the network settings again.",
+          "On Wi-Fi, move the console closer to the router or remove anything blocking the connection between the devices.",
+          "Turn off the router and modem, wait at least 5 minutes, then turn them on again.",
+          "Update the router's firmware (ask the router vendor for instructions).",
+          "If possible, open these ports: TCP 80, 443, 3478, 3479, 3480 and UDP 3478, 3479, 49152 to 65535. Your internet provider can help with this.",
+          "In the network settings, enter a static IP address manually.",
+          "Temporarily change the DNS settings to a free public DNS server. If none of this helps, Sony says the line may be temporarily busy: try again later."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-105799-1/",
+      "level": "doc"
+    },
+    {
+      "id": "CE-106485-4",
+      "title": { "de": "System- oder App-Daten möglicherweise nicht lesbar", "en": "System software or app data may be unreadable" },
+      "text": {
+        "de": "Möglicherweise gibt es ein Problem beim Lesen der Systemsoftware oder von App-Daten. Sony nennt dafür nur einen Schritt, die neueste Systemsoftware; bei Spielen auf einer gejailbreakten Konsole ist das nicht der Weg, siehe Schritte.",
+        "en": "There may be a problem reading the system software or application data. Sony gives only one step for this, the latest system software; for games on a jailbroken console that is not the way, see the steps."
+      },
+      "steps": {
+        "de": [
+          "Bei einem Spiel: Es ist vermutlich für eine neuere Firmware gebaut als die der Konsole. Es braucht dann einen Backport für die genutzte Firmware, damit es auf dieser PS5 startet.",
+          "Alternativ AMPR Emu oder AMPR Emu NG verwenden: Die Datei libSceAmpr.sprx kommt in den Ordner fakelib/ des Spiels, das Spiel wird mit ShadowMount+ eingebunden, und in dessen Einstellungen werden die Fakelib-Updates ausgeschaltet (laut README von AMPR Emu NG)."
+        ],
+        "en": [
+          "For a game: it was probably built for a newer firmware than the console runs. It then needs a backport for the firmware in use so that it starts on this PS5.",
+          "Alternatively use AMPR Emu or AMPR Emu NG: the file libSceAmpr.sprx goes into the game's fakelib/ folder, the game is mounted with ShadowMount+ and fakelib updates are turned off in its settings (according to the README of AMPR Emu NG)."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Hinweis aus der Szene (nicht von Sony): Jede Spieldatei nennt die Firmware, für die sie gebaut wurde, und die Konsole startet nichts, was neuer ist als sie selbst; ein Backport senkt diese Anforderung. AMPR Emu und AMPR Emu NG sind Nachbauten der Systembibliothek libSceAmpr.sprx im Spielordner. Dass dieser Code genau diesen Fall meint, ist nicht belegt.",
+          "Medic-Hinweis: Ein Systemupdate wird hier nicht empfohlen, denn auf einer gejailbreakten Konsole kann es den Jailbreak beenden. Medic ändert die Firmware nie und stellt weder Spiele noch Backports bereit."
+        ],
+        "en": [
+          "Note from the scene (not from Sony): every game file names the firmware it was built for, and the console refuses to start anything newer than itself; a backport lowers that requirement. AMPR Emu and AMPR Emu NG are re-implementations of the system library libSceAmpr.sprx in the game folder. That this code means exactly this case is not documented.",
+          "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-106485-4/",
+      "more_sources": [
+        "https://github.com/quer3q/ampr-emu-ng",
+        "https://github.com/cherryduck/ps5-backport-toolkit"
+      ],
+      "level": "doc"
+    },
+    {
+      "id": "CE-107520-5",
+      "title": { "de": "Sony verlangt die neueste Systemsoftware", "en": "Sony asks for the latest system software" },
+      "text": {
+        "de": "Sony erklärt diesen Code nicht näher: Die Hilfeseite verlangt nur, die neueste Systemsoftware zu installieren (Internet, USB-Stick oder Spiel-Disc). Bei Spielen auf einer gejailbreakten Konsole ist das nicht der Weg, siehe Schritte.",
+        "en": "Sony does not explain this code further: the help page only asks you to install the latest system software (internet, USB drive or game disc). For games on a jailbroken console that is not the way, see the steps."
+      },
+      "steps": {
+        "de": [
+          "Bei einem Spiel: Es ist vermutlich für eine neuere Firmware gebaut als die der Konsole. Es braucht dann einen Backport für die genutzte Firmware, damit es auf dieser PS5 startet.",
+          "Alternativ AMPR Emu oder AMPR Emu NG verwenden: Die Datei libSceAmpr.sprx kommt in den Ordner fakelib/ des Spiels, das Spiel wird mit ShadowMount+ eingebunden, und in dessen Einstellungen werden die Fakelib-Updates ausgeschaltet (laut README von AMPR Emu NG)."
+        ],
+        "en": [
+          "For a game: it was probably built for a newer firmware than the console runs. It then needs a backport for the firmware in use so that it starts on this PS5.",
+          "Alternatively use AMPR Emu or AMPR Emu NG: the file libSceAmpr.sprx goes into the game's fakelib/ folder, the game is mounted with ShadowMount+ and fakelib updates are turned off in its settings (according to the README of AMPR Emu NG)."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Hinweis aus der Szene (nicht von Sony): Jede Spieldatei nennt die Firmware, für die sie gebaut wurde, und die Konsole startet nichts, was neuer ist als sie selbst; ein Backport senkt diese Anforderung. AMPR Emu und AMPR Emu NG sind Nachbauten der Systembibliothek libSceAmpr.sprx im Spielordner. Dass dieser Code genau diesen Fall meint, ist nicht belegt.",
+          "Medic-Hinweis: Ein Systemupdate wird hier nicht empfohlen, denn auf einer gejailbreakten Konsole kann es den Jailbreak beenden. Medic ändert die Firmware nie und stellt weder Spiele noch Backports bereit."
+        ],
+        "en": [
+          "Note from the scene (not from Sony): every game file names the firmware it was built for, and the console refuses to start anything newer than itself; a backport lowers that requirement. AMPR Emu and AMPR Emu NG are re-implementations of the system library libSceAmpr.sprx in the game folder. That this code means exactly this case is not documented.",
+          "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107520-5/",
+      "more_sources": [
+        "https://github.com/quer3q/ampr-emu-ng",
+        "https://github.com/cherryduck/ps5-backport-toolkit"
+      ],
+      "level": "doc"
+    },
+    {
+      "id": "CE-107857-8",
+      "title": { "de": "App lässt sich nicht laden oder aktualisieren", "en": "Application cannot be loaded or updated" },
+      "text": {
+        "de": "Beim Laden oder Aktualisieren einer App ist ein Fehler aufgetreten. Sony empfiehlt zuerst einen Neustart, dann Updates für Systemsoftware und App (das Systemupdate hier nicht übernommen, siehe Hinweise) und erst danach die Neuinstallation und den Neuaufbau der Datenbank im Safe Mode.",
+        "en": "An error occurred while loading or updating the application. Sony recommends a restart first, then updates for the system software and the app (the system update is not taken over here, see notes) and only after that a reinstall and rebuilding the database in Safe Mode."
+      },
+      "steps": {
+        "de": [
+          "Die Konsole neu starten.",
+          "Die betroffene App/das Spiel auf die neueste Version aktualisieren.",
+          "Tritt der Fehler nach dem Start weiter auf: die App/das Spiel unter „Settings > Storage“ löschen und neu installieren.",
+          "Die Konsole im Safe Mode (abgesicherter Modus) starten und „Clear Cache and Rebuild Database > Rebuild Database“ wählen. Sony nennt dazu keinen Datenverlust, warnt aber allgemein vor Datenverlust bei einigen Safe-Mode-Optionen: vorher Daten sichern."
+        ],
+        "en": [
+          "Restart the console.",
+          "Update the affected app/game to the latest version.",
+          "If the error keeps happening after starting it: delete the app/game under “Settings > Storage” and reinstall it.",
+          "Start the console in Safe Mode and choose “Clear Cache and Rebuild Database > Rebuild Database”. Sony names no data loss for this, but warns in general that some Safe Mode options lose data: back up your data first."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Safe-Mode-Optionen laut Sony: „Repair Console Storage“ löscht keine Daten, „Restore Default Settings“ löscht keine Spiele, Apps, Screenshots, Videos und Spielstände, „Reset PS5“ löscht alle Benutzerdaten. Zu „Rebuild Database“ äußert sich Sony nicht zum Datenverlust.",
+          "Medic-Hinweis (nicht von Sony): Sonys Schritt „Systemsoftware aktualisieren“ fehlt hier mit Absicht. Auf einer gejailbreakten Konsole kann ein Systemupdate den Jailbreak beenden; Medic ändert die Firmware nie."
+        ],
+        "en": [
+          "Safe Mode options according to Sony: “Repair Console Storage” does not erase data, “Restore Default Settings” does not delete games, apps, screenshots, video clips and saved data, “Reset PS5” deletes all user data. For “Rebuild Database” Sony says nothing about data loss.",
+          "Medic note (not from Sony): Sony's step “update the system software” is left out on purpose. On a jailbroken console a system update can end the jailbreak; Medic never changes firmware."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107857-8/",
+      "more_sources": ["https://www.playstation.com/en-us/support/hardware/safe-mode-playstation/"],
+      "level": "doc"
+    },
+    {
+      "id": "CE-107872-5",
+      "title": { "de": "Nicht genug freier Speicher auf der Konsole", "en": "Not enough free space on the console storage" },
+      "text": {
+        "de": "Auf dem Konsolenspeicher ist nicht genug Platz frei, deshalb lässt sich nichts herunterladen oder kopieren. Sony empfiehlt, bei einer Installation etwa doppelt so viel freien Platz einzuplanen, wie die Daten selbst brauchen.",
+        "en": "There is not enough free space on the console storage, so nothing can be downloaded or copied. Sony recommends reserving about twice the free space the data itself needs when installing."
+      },
+      "steps": {
+        "de": [
+          "Unter „Settings > Storage“ prüfen, wie viel Platz frei ist. Bei einer Installation kann etwa der doppelte Platz nötig sein.",
+          "Reicht der Platz nicht, erweiterten Speicher je nach Bedarf in Betracht ziehen.",
+          "Tritt der Fehler trotz genug freiem Platz auf: den Speicherort auf den Konsolenspeicher oder den erweiterten Speicher ändern. Gibt es einen zweiten erweiterten Speicher, diesen ebenfalls ausprobieren."
+        ],
+        "en": [
+          "Check the free space under “Settings > Storage”. An installation may need about twice the space.",
+          "If there is not enough space, consider extended storage depending on your needs.",
+          "If the error occurs even though enough space is free: change the save destination to the console storage or the extended storage. If you have a second extended storage, try that one too."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107872-5/",
+      "level": "doc"
+    },
+    {
+      "id": "CE-108255-1",
+      "title": { "de": "Fehler im Spiel oder in der App", "en": "Error with the game/application" },
+      "text": {
+        "de": "Im Spiel oder in der App ist ein Fehler aufgetreten. Sony nennt dafür nur einen Schritt: das Spiel aktualisieren. Für weitere Hilfe verweist Sony auf seine Reparatur-Seite.",
+        "en": "An error occurred with the game or application. Sony gives only one step for this: update the game. For more help Sony points to its repair page."
+      },
+      "steps": {
+        "de": [
+          "Das Spiel aktualisieren.",
+          "Für weitere Hilfe verweist Sony auf „PlayStation Repairs“."
+        ],
+        "en": [
+          "Update the game.",
+          "For more help Sony points to “PlayStation Repairs”."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-108255-1/",
+      "level": "doc"
+    },
+    {
+      "id": "CE-108262-9",
+      "title": { "de": "System- oder App-Daten nicht lesbar", "en": "System software or app data cannot be read" },
+      "text": {
+        "de": "Beim Lesen der Systemsoftware oder von App-Daten ist ein Fehler aufgetreten. Sony nennt zuerst ein Systemupdate (hier nicht übernommen, siehe Hinweise) und dann: die betroffene App neu installieren, im Safe Mode die Datenbank neu aufbauen und erst zuletzt die Konsole zurücksetzen.",
+        "en": "An error occurred while reading the system software or application data. Sony names a system update first (not taken over here, see notes) and then: reinstall the affected app, rebuild the database in Safe Mode and only as a last step reset the console."
+      },
+      "steps": {
+        "de": [
+          "Tritt der Fehler nach dem Start eines Spiels oder einer App auf: sie unter „Settings > Storage“ löschen und neu installieren.",
+          "Die Konsole im Safe Mode (abgesicherter Modus) starten und „Clear Cache and Rebuild Database > Rebuild Database“ wählen. Sony nennt dazu keinen Datenverlust, warnt aber allgemein vor Datenverlust bei einigen Safe-Mode-Optionen: vorher Daten sichern (USB-Laufwerk oder Cloud).",
+          "Hilft nichts davon, die Konsole zurücksetzen („Settings > System > System Software > Reset Options > Reset Your Console“). Das löscht alle Daten auf dem Konsolenspeicher: nur als letzter Schritt und, wenn möglich, nach einer Sicherung.",
+          "Nach dem Zurücksetzen das Spiel bzw. die App neu installieren."
+        ],
+        "en": [
+          "If the error occurs after starting a game or app: delete it under “Settings > Storage” and reinstall it.",
+          "Start the console in Safe Mode and choose “Clear Cache and Rebuild Database > Rebuild Database”. Sony names no data loss for this, but warns in general that some Safe Mode options lose data: back up first (USB drive or cloud).",
+          "If none of this helps, reset the console (“Settings > System > System Software > Reset Options > Reset Your Console”). This erases all data on the console storage: only as the last step and, if possible, after a backup.",
+          "After the reset, install the game or app again."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Medic-Hinweis (Community-Meldung, nicht von Sony): Mit ShadowMount+ 1.7beta9 und 1.7beta10 trat dieser Fehler nach Stunden Betrieb auf (Speicherleck, behoben in 1.7beta11). Ob die installierte Version betroffen ist, zeigt der Check-up (Regel smp.leak_pre_beta11).",
+          "Safe-Mode-Optionen laut Sony: „Repair Console Storage“ löscht keine Daten, „Restore Default Settings“ löscht keine Spiele, Apps, Screenshots, Videos und Spielstände, „Reset PS5“ löscht alle Benutzerdaten. Zu „Rebuild Database“ äußert sich Sony nicht zum Datenverlust.",
+          "Medic-Hinweis (nicht von Sony): Sonys Schritt „Systemsoftware aktualisieren“ fehlt hier mit Absicht. Auf einer gejailbreakten Konsole kann ein Systemupdate den Jailbreak beenden; Medic ändert die Firmware nie."
+        ],
+        "en": [
+          "Medic note (community report, not from Sony): With ShadowMount+ 1.7beta9 and 1.7beta10 this error appeared after hours of running (memory leak, fixed in 1.7beta11). The check-up shows whether the installed version is affected (rule smp.leak_pre_beta11).",
+          "Safe Mode options according to Sony: “Repair Console Storage” does not erase data, “Restore Default Settings” does not delete games, apps, screenshots, video clips and saved data, “Reset PS5” deletes all user data. For “Rebuild Database” Sony says nothing about data loss.",
+          "Medic note (not from Sony): Sony's step “update the system software” is left out on purpose. On a jailbroken console a system update can end the jailbreak; Medic never changes firmware."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-108262-9/",
+      "more_sources": [
+        "https://www.playstation.com/en-us/support/hardware/safe-mode-playstation/",
+        "https://github.com/drakmor/ShadowMountPlus/issues/187"
+      ],
+      "level": "doc"
+    },
+    {
+      "id": "CE-108889-4",
+      "title": { "de": "Sony verlangt die neueste Systemsoftware", "en": "Sony asks for the latest system software" },
+      "text": {
+        "de": "Sony erklärt diesen Code nicht näher: Die Hilfeseite verlangt nur, die neueste Systemsoftware zu installieren (Internet, USB-Stick oder Spiel-Disc). Bei Spielen auf einer gejailbreakten Konsole ist das nicht der Weg, siehe Schritte.",
+        "en": "Sony does not explain this code further: the help page only asks you to install the latest system software (internet, USB drive or game disc). For games on a jailbroken console that is not the way, see the steps."
+      },
+      "steps": {
+        "de": [
+          "Bei einem Spiel: Es ist vermutlich für eine neuere Firmware gebaut als die der Konsole. Es braucht dann einen Backport für die genutzte Firmware, damit es auf dieser PS5 startet.",
+          "Alternativ AMPR Emu oder AMPR Emu NG verwenden: Die Datei libSceAmpr.sprx kommt in den Ordner fakelib/ des Spiels, das Spiel wird mit ShadowMount+ eingebunden, und in dessen Einstellungen werden die Fakelib-Updates ausgeschaltet (laut README von AMPR Emu NG)."
+        ],
+        "en": [
+          "For a game: it was probably built for a newer firmware than the console runs. It then needs a backport for the firmware in use so that it starts on this PS5.",
+          "Alternatively use AMPR Emu or AMPR Emu NG: the file libSceAmpr.sprx goes into the game's fakelib/ folder, the game is mounted with ShadowMount+ and fakelib updates are turned off in its settings (according to the README of AMPR Emu NG)."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Hinweis aus der Szene (nicht von Sony): Jede Spieldatei nennt die Firmware, für die sie gebaut wurde, und die Konsole startet nichts, was neuer ist als sie selbst; ein Backport senkt diese Anforderung. AMPR Emu und AMPR Emu NG sind Nachbauten der Systembibliothek libSceAmpr.sprx im Spielordner. Dass dieser Code genau diesen Fall meint, ist nicht belegt.",
+          "Medic-Hinweis: Ein Systemupdate wird hier nicht empfohlen, denn auf einer gejailbreakten Konsole kann es den Jailbreak beenden. Medic ändert die Firmware nie und stellt weder Spiele noch Backports bereit."
+        ],
+        "en": [
+          "Note from the scene (not from Sony): every game file names the firmware it was built for, and the console refuses to start anything newer than itself; a backport lowers that requirement. AMPR Emu and AMPR Emu NG are re-implementations of the system library libSceAmpr.sprx in the game folder. That this code means exactly this case is not documented.",
+          "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-108889-4/",
+      "more_sources": [
+        "https://github.com/quer3q/ampr-emu-ng",
+        "https://github.com/cherryduck/ps5-backport-toolkit"
+      ],
+      "level": "doc"
+    },
+    {
+      "id": "CE-109245-1",
+      "title": { "de": "Lizenz des Inhalts nicht bestätigt", "en": "License information cannot be confirmed" },
+      "text": {
+        "de": "Die Lizenzinformationen des Inhalts lassen sich nicht bestätigen. Sony nennt dafür einen Neustart, die Anmeldung mit dem Konto, dem der Inhalt gehört, und das Einschalten von Konsolenfreigabe und Offline-Spiel.",
+        "en": "The license information of the content cannot be confirmed. Sony's steps are a restart, signing in with the account that owns the content and turning on Console Sharing and Offline Play."
+      },
+      "steps": {
+        "de": [
+          "Die Konsole neu starten.",
+          "Sich im PlayStation Network mit dem Konto anmelden, dem der Inhalt gehört.",
+          "„Settings > Users & Accounts > Other > Console Sharing and Offline Play“ öffnen und „Console Sharing and Offline Play“ (Konsolenfreigabe und Offline-Spiel) einschalten."
+        ],
+        "en": [
+          "Restart the console.",
+          "Sign in to PSN with the account that owns the content you are trying to access.",
+          "Open “Settings > Users & Accounts > Other > Console Sharing and Offline Play” and enable “Console Sharing and Offline Play”."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-109245-1/",
+      "level": "doc"
+    },
+    {
+      "id": "CE-109737-7",
+      "title": { "de": "USB-Speichergerät wird nicht erkannt", "en": "USB storage device is not recognized" },
+      "text": {
+        "de": "Die Konsole erkennt das USB-Speichergerät nicht. Sonys Schritte betreffen den Sitz des Kabels, einen USB-Hub, einen anderen USB-Anschluss, ein anderes Speichergerät und eine App, bei der das Problem auftritt.",
+        "en": "The console does not recognize the USB storage device. Sony's steps cover the cable fit, a USB hub, another USB port, another storage device and an app during which the problem occurs."
+      },
+      "steps": {
+        "de": [
+          "Das USB-Kabel abziehen und wieder einstecken. Darauf achten, dass es ganz eingesteckt ist.",
+          "Bei einem USB-Hub das Speichergerät direkt an die Konsole anschließen.",
+          "Einen anderen USB-Anschluss ausprobieren.",
+          "Prüfen, ob ein anderes USB-Speichergerät erkannt wird.",
+          "Wird das Speichergerät nur bei einer bestimmten laufenden App nicht erkannt, diese App löschen, neu installieren und erneut testen."
+        ],
+        "en": [
+          "Unplug the USB cable and plug it back in. Make sure it is fully inserted.",
+          "If you use a USB hub, remove it and connect the USB storage device directly to the console.",
+          "Try another USB port.",
+          "Check whether another USB storage device is recognized.",
+          "If the USB storage device is not recognized while a specific application is running, delete the application, reinstall it and try again."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-109737-7/",
+      "level": "doc"
+    },
+    {
+      "id": "CE-118527-4",
+      "title": { "de": "Hostname nicht auflösbar (DNS)", "en": "Problem resolving the hostname" },
+      "text": {
+        "de": "Der Name eines Servers ließ sich nicht in eine Adresse auflösen, möglicherweise wegen der Netzwerkverbindung. Sony nennt unter anderem, bei von Hand eingetragenen DNS-Adressen den primären und sekundären DNS zu prüfen.",
+        "en": "The name of a server could not be resolved to an address, possibly because of the network connection. Among other things Sony says to check the primary and secondary DNS if you entered DNS addresses manually."
+      },
+      "steps": {
+        "de": [
+          "„Settings > Network > Connection Status > Test Internet Connection“ ausführen und die Verbindung bei Bedarf neu herstellen.",
+          "Router und Modem ausschalten, mindestens 5 Minuten warten, dann wieder einschalten.",
+          "Wurden IP-Adresse oder DNS von Hand eingetragen: prüfen, ob primärer und sekundärer DNS stimmen.",
+          "Beim Internetanbieter nachfragen, ob gerade Wartungsarbeiten laufen.",
+          "Einige Minuten warten und es erneut versuchen, denn das Problem kann vorübergehend sein."
+        ],
+        "en": [
+          "Run “Settings > Network > Connection Status > Test Internet Connection” and reconnect if necessary.",
+          "Turn off the router and modem, wait at least 5 minutes, then turn them on again.",
+          "If you set the IP address or DNS manually: check that the primary and secondary DNS are correct.",
+          "Ask your internet provider whether maintenance is going on.",
+          "Wait a few minutes and try again, as the problem may be temporary."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-118527-4/",
+      "level": "doc"
+    },
+    {
+      "id": "NP-102944-0",
+      "title": { "de": "Sony verlangt die neueste Systemsoftware", "en": "Sony asks for the latest system software" },
+      "text": {
+        "de": "Sony erklärt diesen Code nicht näher: Die Hilfeseite verlangt nur, die neueste Systemsoftware zu installieren (Internet, USB-Stick oder Spiel-Disc). Bei Spielen auf einer gejailbreakten Konsole ist das nicht der Weg, siehe Schritte.",
+        "en": "Sony does not explain this code further: the help page only asks you to install the latest system software (internet, USB drive or game disc). For games on a jailbroken console that is not the way, see the steps."
+      },
+      "steps": {
+        "de": [
+          "Bei einem Spiel: Es ist vermutlich für eine neuere Firmware gebaut als die der Konsole. Es braucht dann einen Backport für die genutzte Firmware, damit es auf dieser PS5 startet.",
+          "Alternativ AMPR Emu oder AMPR Emu NG verwenden: Die Datei libSceAmpr.sprx kommt in den Ordner fakelib/ des Spiels, das Spiel wird mit ShadowMount+ eingebunden, und in dessen Einstellungen werden die Fakelib-Updates ausgeschaltet (laut README von AMPR Emu NG)."
+        ],
+        "en": [
+          "For a game: it was probably built for a newer firmware than the console runs. It then needs a backport for the firmware in use so that it starts on this PS5.",
+          "Alternatively use AMPR Emu or AMPR Emu NG: the file libSceAmpr.sprx goes into the game's fakelib/ folder, the game is mounted with ShadowMount+ and fakelib updates are turned off in its settings (according to the README of AMPR Emu NG)."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Hinweis aus der Szene (nicht von Sony): Jede Spieldatei nennt die Firmware, für die sie gebaut wurde, und die Konsole startet nichts, was neuer ist als sie selbst; ein Backport senkt diese Anforderung. AMPR Emu und AMPR Emu NG sind Nachbauten der Systembibliothek libSceAmpr.sprx im Spielordner. Dass dieser Code genau diesen Fall meint, ist nicht belegt.",
+          "Medic-Hinweis: Ein Systemupdate wird hier nicht empfohlen, denn auf einer gejailbreakten Konsole kann es den Jailbreak beenden. Medic ändert die Firmware nie und stellt weder Spiele noch Backports bereit."
+        ],
+        "en": [
+          "Note from the scene (not from Sony): every game file names the firmware it was built for, and the console refuses to start anything newer than itself; a backport lowers that requirement. AMPR Emu and AMPR Emu NG are re-implementations of the system library libSceAmpr.sprx in the game folder. That this code means exactly this case is not documented.",
+          "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/np-102944-0/",
+      "more_sources": [
+        "https://github.com/quer3q/ampr-emu-ng",
+        "https://github.com/cherryduck/ps5-backport-toolkit"
+      ],
+      "level": "doc"
+    },
+    {
+      "id": "NP-102945-1",
+      "title": { "de": "Sony verlangt die neueste Systemsoftware", "en": "Sony asks for the latest system software" },
+      "text": {
+        "de": "Sony erklärt diesen Code nicht näher: Die Hilfeseite verlangt nur, die neueste Systemsoftware zu installieren (Internet, USB-Stick oder Spiel-Disc). Bei Spielen auf einer gejailbreakten Konsole ist das nicht der Weg, siehe Schritte.",
+        "en": "Sony does not explain this code further: the help page only asks you to install the latest system software (internet, USB drive or game disc). For games on a jailbroken console that is not the way, see the steps."
+      },
+      "steps": {
+        "de": [
+          "Bei einem Spiel: Es ist vermutlich für eine neuere Firmware gebaut als die der Konsole. Es braucht dann einen Backport für die genutzte Firmware, damit es auf dieser PS5 startet.",
+          "Alternativ AMPR Emu oder AMPR Emu NG verwenden: Die Datei libSceAmpr.sprx kommt in den Ordner fakelib/ des Spiels, das Spiel wird mit ShadowMount+ eingebunden, und in dessen Einstellungen werden die Fakelib-Updates ausgeschaltet (laut README von AMPR Emu NG)."
+        ],
+        "en": [
+          "For a game: it was probably built for a newer firmware than the console runs. It then needs a backport for the firmware in use so that it starts on this PS5.",
+          "Alternatively use AMPR Emu or AMPR Emu NG: the file libSceAmpr.sprx goes into the game's fakelib/ folder, the game is mounted with ShadowMount+ and fakelib updates are turned off in its settings (according to the README of AMPR Emu NG)."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Hinweis aus der Szene (nicht von Sony): Jede Spieldatei nennt die Firmware, für die sie gebaut wurde, und die Konsole startet nichts, was neuer ist als sie selbst; ein Backport senkt diese Anforderung. AMPR Emu und AMPR Emu NG sind Nachbauten der Systembibliothek libSceAmpr.sprx im Spielordner. Dass dieser Code genau diesen Fall meint, ist nicht belegt.",
+          "Medic-Hinweis: Ein Systemupdate wird hier nicht empfohlen, denn auf einer gejailbreakten Konsole kann es den Jailbreak beenden. Medic ändert die Firmware nie und stellt weder Spiele noch Backports bereit."
+        ],
+        "en": [
+          "Note from the scene (not from Sony): every game file names the firmware it was built for, and the console refuses to start anything newer than itself; a backport lowers that requirement. AMPR Emu and AMPR Emu NG are re-implementations of the system library libSceAmpr.sprx in the game folder. That this code means exactly this case is not documented.",
+          "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/np-102945-1/",
+      "more_sources": [
+        "https://github.com/quer3q/ampr-emu-ng",
+        "https://github.com/cherryduck/ps5-backport-toolkit"
+      ],
+      "level": "doc"
+    },
+    {
+      "id": "NW-102216-2",
+      "title": { "de": "Fehler bei der Verbindung zu PlayStation", "en": "Error while connecting to PlayStation" },
+      "text": {
+        "de": "Beim Verbinden mit PlayStation ist ein Fehler aufgetreten. Sonys Schritte reichen von der Statusseite über Kabelverbindung und Router-Neustart bis zu geöffneten Ports.",
+        "en": "An error occurred while connecting to PlayStation. Sony's steps range from the status page, a wired connection and a router restart to open ports."
+      },
+      "steps": {
+        "de": [
+          "Auf der PlayStation-Statusseite nachsehen, ob es Netzwerkprobleme gibt.",
+          "Wenn möglich per Netzwerkkabel ins Internet gehen.",
+          "Bei WLAN die Konsole näher an den Router stellen oder Hindernisse dazwischen beseitigen.",
+          "Den Router ausschalten, mindestens 5 Minuten warten, dann wieder einschalten.",
+          "Die Firmware des Routers aktualisieren (Anleitung beim Router-Hersteller).",
+          "Wenn möglich diese Ports öffnen: TCP 80, 443, 3478, 3479, 3480 und UDP 3478, 3479, 49152 bis 65535. Hilfe dazu gibt der Internetanbieter."
+        ],
+        "en": [
+          "Check the PlayStation status page for network issues.",
+          "Use a wired connection if possible.",
+          "On Wi-Fi, move the console closer to the router or remove anything blocking the connection between the devices.",
+          "Turn off the router, wait at least 5 minutes, then turn it on again.",
+          "Update the router to the latest firmware (ask the router vendor for instructions).",
+          "If possible, open these ports: TCP 80, 443, 3478, 3479, 3480 and UDP 3478, 3479, 49152 to 65535. Your internet provider can help with this."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/nw-102216-2/",
+      "level": "doc"
+    },
+    {
+      "id": "NW-102265-6",
+      "title": { "de": "Server nicht erreichbar", "en": "Unable to connect to the server" },
+      "text": {
+        "de": "Die Konsole kann den PlayStation-Server nicht erreichen. Sonys Schritte reichen von der Statusseite über Kabelverbindung und Router-Neustart bis zu Ports, fester IP-Adresse und einem öffentlichen DNS-Server.",
+        "en": "The console cannot reach the PlayStation server. Sony's steps range from the status page, a wired connection and a router restart to ports, a static IP address and a public DNS server."
+      },
+      "steps": {
+        "de": [
+          "Auf der PlayStation-Statusseite nachsehen, ob eine Störung oder Wartung gemeldet ist.",
+          "Die Konsole neu starten, wenn möglich per Netzwerkkabel ins Internet gehen und die Netzwerkeinstellungen neu einrichten.",
+          "Bei WLAN die Konsole näher an den Router stellen oder Hindernisse dazwischen beseitigen.",
+          "Router und Modem ausschalten, mindestens 5 Minuten warten, dann wieder einschalten.",
+          "Die Firmware des Routers aktualisieren (Anleitung beim Router-Hersteller).",
+          "Wenn möglich diese Ports öffnen: TCP 80, 443, 3478, 3479, 3480 und UDP 3478, 3479, 49152 bis 65535. Hilfe dazu gibt der Internetanbieter.",
+          "In den Netzwerkeinstellungen eine feste IP-Adresse von Hand eintragen.",
+          "Die DNS-Einstellungen vorübergehend auf einen kostenlosen öffentlichen DNS-Server ändern. Hilft nichts davon, ist die Leitung laut Sony womöglich vorübergehend ausgelastet: später erneut versuchen."
+        ],
+        "en": [
+          "Check the PlayStation status page for a server failure or maintenance.",
+          "Restart the console, connect to the internet with a wired connection if possible and set up the network settings again.",
+          "On Wi-Fi, move the console closer to the router or remove anything blocking the connection between the devices.",
+          "Turn off the router and modem, wait at least 5 minutes, then turn them on again.",
+          "Update the router's firmware (ask the router vendor for instructions).",
+          "If possible, open these ports: TCP 80, 443, 3478, 3479, 3480 and UDP 3478, 3479, 49152 to 65535. Your internet provider can help with this.",
+          "In the network settings, enter a static IP address manually.",
+          "Temporarily change the DNS settings to a free public DNS server. If none of this helps, Sony says the line may be temporarily busy: try again later."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/nw-102265-6/",
+      "level": "doc"
+    },
+    {
+      "id": "WS-116328-1",
+      "title": { "de": "Sony verlangt die neueste Systemsoftware", "en": "Sony asks for the latest system software" },
+      "text": {
+        "de": "Sony erklärt diesen Code nicht näher: Die Hilfeseite verlangt nur, die neueste Systemsoftware zu installieren (Internet, USB-Stick oder Spiel-Disc). Bei Spielen auf einer gejailbreakten Konsole ist das nicht der Weg, siehe Schritte.",
+        "en": "Sony does not explain this code further: the help page only asks you to install the latest system software (internet, USB drive or game disc). For games on a jailbroken console that is not the way, see the steps."
+      },
+      "steps": {
+        "de": [
+          "Bei einem Spiel: Es ist vermutlich für eine neuere Firmware gebaut als die der Konsole. Es braucht dann einen Backport für die genutzte Firmware, damit es auf dieser PS5 startet.",
+          "Alternativ AMPR Emu oder AMPR Emu NG verwenden: Die Datei libSceAmpr.sprx kommt in den Ordner fakelib/ des Spiels, das Spiel wird mit ShadowMount+ eingebunden, und in dessen Einstellungen werden die Fakelib-Updates ausgeschaltet (laut README von AMPR Emu NG)."
+        ],
+        "en": [
+          "For a game: it was probably built for a newer firmware than the console runs. It then needs a backport for the firmware in use so that it starts on this PS5.",
+          "Alternatively use AMPR Emu or AMPR Emu NG: the file libSceAmpr.sprx goes into the game's fakelib/ folder, the game is mounted with ShadowMount+ and fakelib updates are turned off in its settings (according to the README of AMPR Emu NG)."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Hinweis aus der Szene (nicht von Sony): Jede Spieldatei nennt die Firmware, für die sie gebaut wurde, und die Konsole startet nichts, was neuer ist als sie selbst; ein Backport senkt diese Anforderung. AMPR Emu und AMPR Emu NG sind Nachbauten der Systembibliothek libSceAmpr.sprx im Spielordner. Dass dieser Code genau diesen Fall meint, ist nicht belegt.",
+          "Medic-Hinweis: Ein Systemupdate wird hier nicht empfohlen, denn auf einer gejailbreakten Konsole kann es den Jailbreak beenden. Medic ändert die Firmware nie und stellt weder Spiele noch Backports bereit."
+        ],
+        "en": [
+          "Note from the scene (not from Sony): every game file names the firmware it was built for, and the console refuses to start anything newer than itself; a backport lowers that requirement. AMPR Emu and AMPR Emu NG are re-implementations of the system library libSceAmpr.sprx in the game folder. That this code means exactly this case is not documented.",
+          "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ws-116328-1/",
+      "more_sources": [
+        "https://github.com/quer3q/ampr-emu-ng",
+        "https://github.com/cherryduck/ps5-backport-toolkit"
+      ],
+      "level": "doc"
+    }
+  ]
+}

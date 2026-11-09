@@ -5,7 +5,7 @@
 #   make ps5      Diagnose-Payload (ELF, nur lesend) mit dem ps5-payload-sdk bauen
 #   make ps5-ui   Vollbild-UI-Payload bauen (braucht zusaetzlich ps5-payload-sdl2, siehe docs/PHASE3.md)
 #   make deploy    ps5medic.elf + Regeln per FTP (Port 2121) auf die Konsole legen   (PS5_HOST=<ip> noetig)
-#   make deploy-ui ps5medicui.elf + Regeln + Launcher-Eintrag per FTP auf die Konsole legen (PS5_HOST=<ip> noetig)
+#   make deploy-ui ps5medicui.elf + Regeln + Fehlercodes + Launcher-Eintrag per FTP auf die Konsole legen (PS5_HOST=<ip> noetig)
 #   make launch-ui deploy-ui und danach per websrv (/hbldr, Port 8080) im App-Kontext starten (Pad geht nur so)
 #   make dist      Release-Ordner und Zip unter dist/ bauen (nur lokal, es wird nichts veroeffentlicht)
 #   make sign-rules   knowledge/rules.json nach dist/rules/ kopieren und mit dem Signierschluessel signieren (SIGN_KEY=...)
@@ -98,6 +98,7 @@ deploy-ui: $(PS5_UI_ELF)
 	curl --fail --ftp-create-dirs -T ps5/homebrew/homebrew.js ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/homebrew.js
 	curl --fail --ftp-create-dirs -T ps5/homebrew/sce_sys/icon0.png ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/sce_sys/icon0.png
 	curl --fail --ftp-create-dirs -T knowledge/rules.json ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/knowledge/rules.json
+	curl --fail --ftp-create-dirs -T knowledge/error_codes.json ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/knowledge/error_codes.json
 	@echo "Hochgeladen. Starten: Kachel \"PS5 Medic\" im websrv-Launcher (http://$(PS5_HOST):$(PS5_WEB_PORT)) oder: make launch-ui PS5_HOST=$(PS5_HOST)"
 
 # Startet die UI ueber websrvs Big-App-Lader (/hbldr): nur so hat der Prozess App-Kontext, und nur dann oeffnet sich das Pad.
@@ -119,6 +120,7 @@ dist: ps5 ps5-ui
 	cp $(PS5_UI_ELF) $(DIST_DIR)/PS5MEDIC/ps5medicui.elf
 	cp $(PS5_ELF) $(DIST_DIR)/PS5MEDIC/ps5medic.elf
 	cp knowledge/rules.json $(DIST_DIR)/PS5MEDIC/rules.json
+	cp knowledge/error_codes.json $(DIST_DIR)/PS5MEDIC/error_codes.json
 	cp ps5/homebrew/homebrew.js $(DIST_DIR)/PS5MEDIC/homebrew.js
 	cp ps5/homebrew/sce_sys/icon0.png $(DIST_DIR)/PS5MEDIC/sce_sys/icon0.png
 	cp LICENSE README.md README.en.md THIRD_PARTY.md docs/TESTER.md $(DIST_DIR)/

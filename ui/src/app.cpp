@@ -10,7 +10,7 @@ namespace medic::ui {
 namespace {
 
 constexpr int W = App::kWidth, H = App::kHeight, M = 96;
-constexpr int kListVisible = 4, kHistVisible = 6;
+constexpr int kListVisible = 4, kHistVisible = 6, kErrVisible = 8;
 
 const Color kBg = rgb(14, 18, 24), kPanel = rgb(23, 29, 38), kPanelHi = rgb(33, 42, 56), kLine = rgb(42, 52, 66);
 const Color kText = rgb(232, 237, 242), kDim = rgb(141, 153, 168), kAccent = rgb(76, 154, 255);
@@ -69,9 +69,92 @@ void card(Canvas& c, int x, int y, int w, int h, bool selected) {
     if (selected) c.stroke_round_rect(x, y, w, h, 16, 3, kAccent);
 }
 
+// ---- Fehlercodes: Textzeilen der Detailansicht ---------------------------------
+// Der Text eines Codes wird in Zeilen zerlegt, die per Hoch/Runter gescrollt werden. Nichts wird gekuerzt: Schritte und
+// Hinweise wie "vorher Daten sichern" duerfen nie abgeschnitten werden.
+constexpr int kErrPanelY = 250, kErrPanelH = 690, kErrPadY = 22, kErrPadX = 36, kErrBar = 28;
+constexpr int kErrTextW = W - 2 * M - 2 * kErrPadX - kErrBar;
+constexpr int kErrAvail = kErrPanelH - 2 * kErrPadY;  // Hoehe des Textbereichs im Panel
+constexpr int kStepIndent = 64;                       // Platz fuer die Nummer vor einem Schritt
+
+struct ErrRow {
+    std::string text, marker;  // marker: Nummer bzw. "-" vor der ersten Zeile eines Schritts/Hinweises
+    bool small = false;
+    Color col = 0;
+    int indent = 0, gap = 0;   // gap: Abstand ueber der Zeile (zwischen Abschnitten)
+};
+
+int row_height(const ErrRow& r) { return (r.small ? small() : body()).line_height() + 4 + r.gap; }
+
+std::vector<ErrRow> error_rows(const medic::ErrorCode& e, Lang lang) {
+    const auto& S = Strings::get(lang);
+    const bool de = lang == Lang::De;
+    std::vector<ErrRow> rows;
+    auto label = [&](const std::string& text, int gap) { rows.push_back({text, "", true, kDim, 0, gap}); };
+    auto paragraph = [&](const std::string& text, bool small_font, Color col, const std::string& marker, int indent) {
+        const auto lines = wrap_text(small_font ? small() : body(), text, kErrTextW - indent);
+        for (std::size_t i = 0; i < lines.size(); ++i) rows.push_back({lines[i], i == 0 ? marker : std::string(), small_font, col, indent, 0});
+    };
+
+    label(S("detail.explanation"), 0);
+    paragraph(de ? e.text_de : e.text_en, false, kText, "", 0);
+
+    label(S("errors.steps"), 18);
+    const auto& steps = de ? e.steps_de : e.steps_en;
+    if (steps.empty()) paragraph(S("errors.steps_none"), false, kDim, "", 0);
+    for (std::size_t i = 0; i < steps.size(); ++i) paragraph(steps[i], false, kText, std::to_string(i + 1) + ".", kStepIndent);
+
+    const auto& notes = de ? e.notes_de : e.notes_en;
+    if (!notes.empty()) {
+        label(S("errors.notes"), 18);
+        for (const auto& n : notes) paragraph(n, false, kText, "-", kStepIndent);
+    }
+
+    if (e.level == "community") {
+        label(S("errors.community"), 18);
+        paragraph(S("errors.community_note"), false, kWarn, "", 0);
+    }
+
+    label(S("detail.source"), 18);
+    paragraph(e.source, true, kText, "", 0);
+    for (const auto& s : e.more_sources) {
+        label(S("errors.source_more"), 8);
+        paragraph(s, true, kText, "", 0);
+    }
+    return rows;
+}
+
+// Kleinster Zeilenindex, ab dem der Rest noch in den Textbereich passt: weiter zu scrollen ist sinnlos.
+int max_first_row(const std::vector<ErrRow>& rows) {
+    int h = 0, first = static_cast<int>(rows.size());
+    while (first > 0 && h + row_height(rows[static_cast<std::size_t>(first - 1)]) <= kErrAvail) h += row_height(rows[static_cast<std::size_t>(--first)]);
+    return first;
+}
+
+// Index des ersten Fehlercodes im Text (Muster XX-123456-1, z. B. CE-108262-9), den das Nachschlagewerk kennt; sonst -1.
+int find_error_index(const medic::ErrorCodeSet& set, const std::string& text) {
+    auto upper = [](char c) { return c >= 'A' && c <= 'Z'; };
+    auto digit = [](char c) { return c >= '0' && c <= '9'; };
+    constexpr std::size_t kLen = 11;
+    for (std::size_t i = 0; i + kLen <= text.size(); ++i) {
+        const char* s = text.c_str() + i;
+        bool ok = upper(s[0]) && upper(s[1]) && s[2] == '-' && s[9] == '-' && digit(s[10]);
+        for (int k = 3; ok && k < 9; ++k) ok = digit(s[k]);
+        if (ok && i > 0 && (upper(text[i - 1]) || digit(text[i - 1]))) ok = false;  // mitten in einem laengeren Wort
+        if (ok && i + kLen < text.size() && (digit(text[i + kLen]) || text[i + kLen] == '-')) ok = false;
+        if (!ok) continue;
+        const std::string id = text.substr(i, kLen);
+        for (std::size_t j = 0; j < set.codes.size(); ++j)
+            if (set.codes[j].id == id) return static_cast<int>(j);
+    }
+    return -1;
+}
+
+Color level_color(const medic::ErrorCode& e) { return e.level == "doc" ? kOk : kWarn; }
+
 }  // namespace
 
-App::App(IMedicService& svc, Lang lang) : svc_(svc), lang_(lang) {}
+App::App(IMedicService& svc, Lang lang) : svc_(svc), lang_(lang) { errors_ = svc_.error_codes(); }
 
 std::string App::finding_text(const medic::Finding& f) const { return lang_ == Lang::De ? f.text_de : f.text_en; }
 
@@ -137,6 +220,36 @@ void App::open_report() {
     screen_ = Screen::Report;
 }
 
+void App::open_error_codes() {
+    errors_ = svc_.error_codes();
+    err_sel_ = err_top_ = err_scroll_ = 0;
+    err_from_finding_ = false;
+    screen_ = Screen::ErrorCodes;
+}
+
+// Nennt der Text des gewaehlten Befunds einen Fehlercode aus dem Nachschlagewerk, dessen Index (sonst -1).
+int App::linked_error_index() const {
+    const medic::Finding* f = current_finding();
+    return f ? find_error_index(errors_, finding_text(*f)) : -1;
+}
+
+// Quadrat im Befund-Detail: den Eintrag zum genannten Fehlercode lesen. Nur Anzeige; Kreis kommt zum Befund zurueck.
+void App::open_error_for_finding() {
+    const int idx = linked_error_index();
+    if (idx < 0) return;
+    const int n = static_cast<int>(errors_.codes.size());
+    err_sel_ = idx;
+    err_top_ = std::clamp(idx - (kErrVisible - 1) / 2, 0, std::max(n - kErrVisible, 0));
+    err_scroll_ = 0;
+    err_from_finding_ = true;
+    screen_ = Screen::ErrorCodeDetail;
+}
+
+const medic::ErrorCode* App::current_error() const {
+    if (err_sel_ < 0 || err_sel_ >= static_cast<int>(errors_.codes.size())) return nullptr;
+    return &errors_.codes[static_cast<std::size_t>(err_sel_)];
+}
+
 void App::open_rules_update() {
     offer_ = svc_.check_rule_update();
     update_stage_ = UpdateStage::Offer;
@@ -175,13 +288,14 @@ void App::handle(Button b) {
     switch (screen_) {
         case Screen::Start:
             if (b == Button::Up || b == Button::L1) start_sel_ = std::max(start_sel_ - 1, 0);
-            else if (b == Button::Down || b == Button::R1) start_sel_ = std::min(start_sel_ + 1, 2);
-            else if (b == Button::Left && start_sel_ == 2) start_sel_ = 1;   // die beiden kleinen Knoepfe liegen nebeneinander
-            else if (b == Button::Right && start_sel_ == 1) start_sel_ = 2;
+            else if (b == Button::Down || b == Button::R1) start_sel_ = std::min(start_sel_ + 1, 3);
+            else if (b == Button::Left && start_sel_ >= 2) --start_sel_;   // die drei kleinen Knoepfe liegen nebeneinander
+            else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < 3) ++start_sel_;
             else if (b == Button::Cross) {
                 if (start_sel_ == 0) start_check();
                 else if (start_sel_ == 1) open_history();
-                else screen_ = Screen::Settings;
+                else if (start_sel_ == 2) screen_ = Screen::Settings;
+                else open_error_codes();
             } else if (b == Button::Circle) quit_ = true;
             break;
         case Screen::Running:
@@ -203,6 +317,7 @@ void App::handle(Button b) {
             if (b == Button::Left || b == Button::L1) move_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, -1);
             else if (b == Button::Right || b == Button::R1) move_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, 1);
             else if (b == Button::Triangle) begin_fix(sel_, Screen::Detail);
+            else if (b == Button::Square) open_error_for_finding();
             else if (b == Button::Circle) screen_ = Screen::Findings;
             break;
         case Screen::FixPreview:
@@ -299,6 +414,31 @@ void App::handle(Button b) {
         case Screen::Report:
             if (b == Button::Circle) screen_ = Screen::Findings;
             break;
+        case Screen::ErrorCodes:  // Nachschlagen: nur lesen, keine Taste loest etwas aus
+            if (b == Button::Up) move_selection(err_sel_, err_top_, static_cast<int>(errors_.codes.size()), kErrVisible, -1);
+            else if (b == Button::Down) move_selection(err_sel_, err_top_, static_cast<int>(errors_.codes.size()), kErrVisible, 1);
+            else if (b == Button::L1) page_selection(err_sel_, err_top_, static_cast<int>(errors_.codes.size()), kErrVisible, -1);
+            else if (b == Button::R1) page_selection(err_sel_, err_top_, static_cast<int>(errors_.codes.size()), kErrVisible, 1);
+            else if (b == Button::Cross) {
+                if (current_error()) {
+                    err_scroll_ = 0;
+                    screen_ = Screen::ErrorCodeDetail;
+                }
+            } else if (b == Button::Circle) screen_ = Screen::Start;
+            break;
+        case Screen::ErrorCodeDetail:
+            // Hoch/Runter scrollt den Text, Links/Rechts und L1/R1 blaettern zum vorherigen/naechsten Code.
+            if (b == Button::Up) err_scroll_ = std::max(err_scroll_ - 1, 0);
+            else if (b == Button::Down) err_scroll_ = std::min(err_scroll_ + 1, error_scroll_max());
+            else if (!err_from_finding_ && (b == Button::Left || b == Button::L1 || b == Button::Right || b == Button::R1)) {
+                const int before = err_sel_;
+                move_selection(err_sel_, err_top_, static_cast<int>(errors_.codes.size()), kErrVisible, (b == Button::Left || b == Button::L1) ? -1 : 1);
+                if (err_sel_ != before) err_scroll_ = 0;
+            } else if (b == Button::Circle) {
+                screen_ = err_from_finding_ ? Screen::Detail : Screen::ErrorCodes;
+                err_from_finding_ = false;
+            }
+            break;
     }
 }
 
@@ -341,6 +481,8 @@ void App::render(Canvas& c) const {
         case Screen::Settings: draw_settings(c); break;
         case Screen::Report: draw_report(c); break;
         case Screen::RulesUpdate: draw_rules_update(c); break;
+        case Screen::ErrorCodes: draw_error_codes(c); break;
+        case Screen::ErrorCodeDetail: draw_error_detail(c); break;
     }
 }
 
@@ -381,23 +523,27 @@ void App::draw_start(Canvas& c) const {
     title().draw(c, M + 48, 190, S("start.check"), rgb(255, 255, 255));
     body().draw(c, M + 48, 266, S("start.check_sub"), rgb(220, 234, 255), W - 2 * M - 96);
 
-    // Zwei kleine Knoepfe
-    const int cw = (W - 2 * M - 32) / 2;
-    const char* keys[2][2] = {{"start.history", "start.history_sub"}, {"start.settings", "start.settings_sub"}};
-    for (int i = 0; i < 2; ++i) {
-        const int x = M + i * (cw + 32);
-        card(c, x, 380, cw, 130, start_sel_ == i + 1);
-        body().draw(c, x + 36, 404, S(keys[i][0]), kText);
-        small().draw(c, x + 36, 452, S(keys[i][1]), kDim, cw - 72);
+    // Drei kleine Knoepfe (Verlauf, Einstellungen, Fehlercodes)
+    const int gap = 24, cw = (W - 2 * M - 2 * gap) / 3;
+    const char* keys[3][2] = {{"start.history", "start.history_sub"}, {"start.settings", "start.settings_sub"}, {"start.errors", "start.errors_sub"}};
+    for (int i = 0; i < 3; ++i) {
+        const int x = M + i * (cw + gap);
+        card(c, x, 380, cw, 150, start_sel_ == i + 1);
+        body().draw(c, x + 32, 400, S(keys[i][0]), kText, cw - 64);
+        int ty = 446;
+        for (const auto& l : wrap_text(small(), S(keys[i][1]), cw - 64, 2)) {
+            small().draw(c, x + 32, ty, l, kDim);
+            ty += small().line_height() + 2;
+        }
     }
 
     // Letztes Ergebnis
-    c.fill_round_rect(M, 550, W - 2 * M, 250, 20, kPanel);
-    small().draw(c, M + 36, 576, S("start.last"), kDim);
+    c.fill_round_rect(M, 560, W - 2 * M, 240, 20, kPanel);
+    small().draw(c, M + 36, 584, S("start.last"), kDim);
     if (!has_result_) {
-        body().draw(c, M + 36, 630, S("start.last_none"), kText);
+        body().draw(c, M + 36, 636, S("start.last_none"), kText);
     } else if (result_.findings.empty()) {
-        body().draw(c, M + 36, 630, S("start.last_clean"), kOk);
+        body().draw(c, M + 36, 636, S("start.last_clean"), kOk);
     } else {
         int crit = 0, warn = 0, info = 0;
         for (auto& f : result_.findings) {
@@ -405,11 +551,11 @@ void App::draw_start(Canvas& c) const {
             else if (f.severity == medic::Severity::Warning) ++warn;
             else ++info;
         }
-        body().draw(c, M + 36, 630,
+        body().draw(c, M + 36, 636,
                     S.fmt("start.last_summary", {{"n", std::to_string(result_.findings.size())}, {"crit", std::to_string(crit)}, {"warn", std::to_string(warn)}, {"info", std::to_string(info)}}),
                     kText, W - 2 * M - 72);
     }
-    if (has_result_ && !result_.rules_version.empty()) small().draw(c, M + 36, 740, S.fmt("start.rules", {{"v", result_.rules_version}}), kDim);
+    if (has_result_ && !result_.rules_version.empty()) small().draw(c, M + 36, 744, S.fmt("start.rules", {{"v", result_.rules_version}}), kDim);
 
     draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}, {PadGlyph::Circle, S("common.quit")}});
 }
@@ -589,10 +735,16 @@ void App::draw_detail(Canvas& c) const {
     }
     if (!f->fix.empty()) body().draw(c, M + 8, y, S.fmt(is_hint_fix(f->fix) ? "detail.hint_available" : "detail.fix_available", {{"name", fix_name(f->fix)}}), kOk, cw - 16);
     else body().draw(c, M + 8, y, S("detail.fix_none"), kDim, cw - 16);
+    const int link = linked_error_index();
+    if (link >= 0) {
+        y += body().line_height() + 12;
+        body().draw(c, M + 8, y, S.fmt("detail.error_code", {{"code", errors_.codes[static_cast<std::size_t>(link)].id}}), kAccent, cw - 16);
+    }
 
     std::vector<std::pair<PadGlyph, std::string>> hints;
     if (result_.findings.size() > 1) hints.emplace_back(PadGlyph::Shoulders, S("common.browse"));
     if (!f->fix.empty()) hints.emplace_back(PadGlyph::Triangle, S(is_hint_fix(f->fix) ? "common.guide" : "common.repair"));
+    if (link >= 0) hints.emplace_back(PadGlyph::Square, S("common.lookup"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }
@@ -849,6 +1001,103 @@ void App::draw_rules_update(Canvas& c) const {
             hints = {{PadGlyph::Cross, S("common.back")}};
             break;
     }
+    draw_hints(c, hints);
+}
+
+int App::error_scroll_max() const {
+    const medic::ErrorCode* e = current_error();
+    return e ? max_first_row(error_rows(*e, lang_)) : 0;
+}
+
+void App::draw_error_codes(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    title().draw(c, M, 130, S("errors.title"), kText);
+    const int n = static_cast<int>(errors_.codes.size());
+    if (n == 0) {
+        c.fill_round_rect(M, 260, W - 2 * M, 300, 20, kPanel);
+        body().draw(c, M + 40, 300, S("errors.empty"), kWarn, W - 2 * M - 80);
+        int y = 360;
+        for (const auto& l : wrap_text(small(), S("errors.empty_sub"), W - 2 * M - 80, 6)) {
+            small().draw(c, M + 40, y, l, kDim);
+            y += small().line_height() + 4;
+        }
+        draw_hints(c, {{PadGlyph::Circle, S("common.back")}});
+        return;
+    }
+    const int last = std::min(n, err_top_ + kErrVisible);
+    text_right(c, small(), W - M, 148, S.fmt("findings.range", {{"from", std::to_string(err_top_ + 1)}, {"to", std::to_string(last)}, {"n", std::to_string(n)}}), kDim);
+
+    const int cw = W - 2 * M, ch = 76, gap = 10, y0 = 200;
+    int y = y0;
+    for (int i = err_top_; i < last; ++i, y += ch + gap) {
+        const auto& e = errors_.codes[static_cast<std::size_t>(i)];
+        card(c, M, y, cw, ch, i == err_sel_);
+        const int ty = y + (ch - body().line_height()) / 2;
+        body().draw(c, M + 32, ty, e.id, kText);
+        const std::string level = S("errors.level." + e.level);
+        const int lw = text_right(c, small(), M + cw - 32, y + (ch - small().line_height()) / 2, level, level_color(e));
+        const int tx = M + 32 + 250;
+        body().draw(c, tx, ty, elide(body(), lang_ == Lang::De ? e.title_de : e.title_en, M + cw - 32 - lw - 28 - tx), kDim);
+    }
+    if (n > kErrVisible) {  // Scrollleiste
+        const int track_h = kErrVisible * (ch + gap) - gap;
+        const int thumb_h = std::max(40, track_h * kErrVisible / n);
+        const int thumb_y = y0 + (track_h - thumb_h) * err_top_ / std::max(n - kErrVisible, 1);
+        c.fill_round_rect(W - 64, y0, 8, track_h, 4, kPanel);
+        c.fill_round_rect(W - 64, thumb_y, 8, thumb_h, 4, kDim);
+    }
+    small().draw(c, M + 8, H - 138, elide(small(), S("errors.readonly"), cw - 16), kDim);
+
+    std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
+    if (n > kErrVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
+    hints.emplace_back(PadGlyph::Cross, S("common.open"));
+    hints.emplace_back(PadGlyph::Circle, S("common.back"));
+    draw_hints(c, hints);
+}
+
+void App::draw_error_detail(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    const medic::ErrorCode* e = current_error();
+    if (!e) return;
+    const int cw = W - 2 * M, n = static_cast<int>(errors_.codes.size());
+
+    // Kopf: Code, Herkunft der Angaben (Sony-Seite oder Community), Kurztitel, Position
+    title().draw(c, M, 126, e->id, kText);
+    const std::string level = S("errors.level." + e->level);
+    const int bw = small().width(level) + 24;
+    draw_badge(c, W - M - bw, 138, level, level_color(*e));
+    if (!err_from_finding_) text_right(c, small(), W - M, 204, S.fmt("errors.position", {{"i", std::to_string(err_sel_ + 1)}, {"n", std::to_string(n)}}), kDim);
+    body().draw(c, M, 196, elide(body(), lang_ == Lang::De ? e->title_de : e->title_en, cw - 220), kDim);
+
+    // Text: Zeilen ab err_scroll_, soweit sie in das Panel passen
+    c.fill_round_rect(M, kErrPanelY, cw, kErrPanelH, 20, kPanel);
+    const auto rows = error_rows(*e, lang_);
+    const int max_first = max_first_row(rows);
+    const int first = std::clamp(err_scroll_, 0, max_first);
+    int y = kErrPanelY + kErrPadY;
+    const int y_end = y + kErrAvail;
+    for (std::size_t i = static_cast<std::size_t>(first); i < rows.size(); ++i) {
+        const ErrRow& r = rows[i];
+        const int h = row_height(r);
+        if (y + h > y_end) break;
+        const Font& f = r.small ? small() : body();
+        if (!r.marker.empty()) f.draw(c, M + kErrPadX, y + r.gap, r.marker, kDim);
+        f.draw(c, M + kErrPadX + r.indent, y + r.gap, r.text, r.col);
+        y += h;
+    }
+    if (max_first > 0) {  // Scrollleiste im Panel
+        const int track_h = kErrAvail, nrows = static_cast<int>(rows.size());
+        const int thumb_h = std::max(40, track_h * (nrows - max_first) / std::max(nrows, 1));
+        const int thumb_y = kErrPadY + kErrPanelY + (track_h - thumb_h) * first / max_first;
+        c.fill_round_rect(M + cw - 24, kErrPanelY + kErrPadY, 8, track_h, 4, kPanelHi);
+        c.fill_round_rect(M + cw - 24, thumb_y, 8, thumb_h, 4, kDim);
+    }
+    small().draw(c, M + 8, kErrPanelY + kErrPanelH + 10, elide(small(), S("errors.readonly"), cw - 16), kDim);
+
+    std::vector<std::pair<PadGlyph, std::string>> hints;
+    if (max_first > 0) hints.emplace_back(PadGlyph::UpDown, S("errors.scroll"));
+    if (n > 1 && !err_from_finding_) hints.emplace_back(PadGlyph::Shoulders, S("common.browse"));
+    hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }
 

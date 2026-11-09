@@ -44,6 +44,7 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 - **Befundliste:** ✕ öffnet Details, △ Reparieren, □ Bericht, ◯ zurück.
 - **Detail:** Evidenz, Erklärung, Quelle, Schritte. Reparieren zeigt **vorher** genau, was geändert wird.
 - **Verlauf:** Liste aller Reparaturen mit „Rückgängig“.
+- **Fehlercodes:** Nachschlagewerk (Liste, Details mit Erklärung, Schritten und Quelle), nur lesen; siehe `docs/RULES.md`, „Fehlercodes nachschlagen“. Nennt ein Befund einen bekannten Code, springt □ im Befund-Detail zum Eintrag.
 - Sprache: Deutsch + Englisch (Strings in JSON).
 
 ## 6. Nicht-Ziele

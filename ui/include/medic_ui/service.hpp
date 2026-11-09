@@ -3,6 +3,7 @@
 // selben Prozess (LocalService: PC-Vorschau, Tests, Payload) oder spaeter eine Verbindung zu einem privilegierten
 // Dienst auf der Konsole (die Titel-App darf /data und /mnt nicht selbst lesen, siehe docs/PHASE3.md).
 #pragma once
+#include "medic/error_codes.hpp"
 #include "medic/fixes.hpp"
 #include "medic/platform.hpp"
 #include "medic/http.hpp"
@@ -58,6 +59,11 @@ public:
     // nur nach ausdruecklicher Bestaetigung auf und danach check_rule_update(). Ohne Netzzugang (PC-Vorschau, Tests) Fehler "no_network".
     virtual std::string rule_update_url() = 0;
     virtual medic::RuleDownloadResult download_rule_update() = 0;
+    // Fehlercode-Nachschlagewerk (knowledge/error_codes.json). Nur Text zum Lesen; die Liste ist leer, wenn keine Datei geladen wurde.
+    virtual const medic::ErrorCodeSet& error_codes() {
+        static const medic::ErrorCodeSet none;
+        return none;
+    }
 };
 
 // Kern im selben Prozess. `clock` liefert Zeitstempel fuer Backups/Journal (Standard: UTC "YYYYMMDDTHHMMSSZ").
@@ -76,6 +82,8 @@ public:
     medic::RuleUpdateResult rollback_rule_update() override;
     std::string rule_update_url() override;
     medic::RuleDownloadResult download_rule_update() override;
+    const medic::ErrorCodeSet& error_codes() override { return error_codes_; }
+    void set_error_codes(medic::ErrorCodeSet set) { error_codes_ = std::move(set); }
 
     // Ohne Client gibt es keinen Download. `h` gehoert dem Aufrufer und muss laenger leben als der Dienst.
     void set_http_client(medic::IHttpClient* h) { http_ = h; }
@@ -85,6 +93,7 @@ public:
 private:
     medic::Platform& p_;
     medic::RuleSet rules_;
+    medic::ErrorCodeSet error_codes_;
     medic::Facts facts_;
     std::vector<medic::Finding> last_findings_;
     std::optional<medic::RuleSet> rules_before_install_;  // fuer den Rollback, wenn es vorher keine Datei im Wissensordner gab

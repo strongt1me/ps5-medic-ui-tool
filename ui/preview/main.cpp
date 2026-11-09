@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // medic-ui-preview <snapshot-ordner> <ausgabe-ordner> [--lang de|en] [--rules datei] [--scale N]
 // Spielt einen festen Tastenablauf gegen einen Snapshot ab und schreibt jeden Bildschirm als PNG.
-// Die Plattform ist nur lesend: Reparaturen werden angezeigt, aber nie ausgefuehrt.
+// Die Plattform ist nur lesend: Reparaturen werden angezeigt, aber nie ausgefuehrt. Die Fehlercodes kommen aus knowledge/error_codes.json.
 #include "medic_ui/app.hpp"
 #include "medic_ui/png.hpp"
 
@@ -13,6 +13,9 @@
 
 #ifndef MEDIC_DEFAULT_RULES
 #define MEDIC_DEFAULT_RULES "knowledge/rules.json"
+#endif
+#ifndef MEDIC_DEFAULT_ERROR_CODES
+#define MEDIC_DEFAULT_ERROR_CODES "knowledge/error_codes.json"
 #endif
 
 using namespace medic::ui;
@@ -38,6 +41,7 @@ int main(int argc, char** argv) {
     try {
         auto platform = medic::make_snapshot_platform(argv[1]);
         LocalService svc(*platform, medic::load_rules_from_file(rules_path));
+        svc.set_error_codes(medic::load_error_codes_from_file(MEDIC_DEFAULT_ERROR_CODES));
         App app(svc, lang);
         Canvas canvas(App::kWidth, App::kHeight);
         const std::filesystem::path out = argv[2];
@@ -81,6 +85,25 @@ int main(int argc, char** argv) {
         shot("07b_settings_rules_update");
         app.handle(Button::Cross);  // Regel-Update (zeigt das Angebot, installiert nichts)
         shot("08_rules_update");
+        app.handle(Button::Circle);  // Einstellungen
+        app.handle(Button::Circle);  // Start
+        app.handle(Button::Down);
+        app.handle(Button::Down);
+        app.handle(Button::Down);
+        shot("09_start_error_codes");
+        app.handle(Button::Cross);  // Fehlercodes (nur Text zum Lesen)
+        shot("10_error_codes");
+        app.handle(Button::Down);
+        app.handle(Button::Cross);
+        shot("11_error_code_detail");
+        for (int i = 0; i < 8; ++i) app.handle(Button::Right);  // bis CE-108262-9, dem laengsten Eintrag (scrollt)
+        shot("12_error_code_long_top");
+        for (int i = 0; i < 40; ++i) app.handle(Button::Down);
+        shot("13_error_code_long_end");
+        for (int i = 0; i < 7; ++i) app.handle(Button::Left);  // CE-105733-9: ohne Sony-Seite, nur Community-Angabe
+        shot("14_error_code_community");
+        for (int i = 0; i < 3; ++i) app.handle(Button::Right);  // CE-107520-5: Spiel braucht Backport oder AMPR Emu, kein Systemupdate
+        shot("15_error_code_game_backport");
         std::cout << shots << " Bilder in " << out.string() << "\n";
     } catch (const std::exception& e) {
         std::cerr << "Fehler: " << e.what() << "\n";

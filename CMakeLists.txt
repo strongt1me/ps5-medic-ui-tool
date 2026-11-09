@@ -13,6 +13,7 @@ add_library(medic STATIC
   libmedic/src/collectors.cpp
   libmedic/src/collectors_stack.cpp
   libmedic/src/rules.cpp
+  libmedic/src/error_codes.cpp
   libmedic/src/sha256.cpp
   libmedic/src/ini.cpp
   libmedic/src/fixes.cpp
@@ -49,7 +50,8 @@ target_compile_options(medic_ui PRIVATE -Wall -Wextra)
 
 add_executable(medic-ui-preview ui/preview/main.cpp)
 target_link_libraries(medic-ui-preview PRIVATE medic_ui)
-target_compile_definitions(medic-ui-preview PRIVATE MEDIC_DEFAULT_RULES="${CMAKE_SOURCE_DIR}/knowledge/rules.json")
+target_compile_definitions(medic-ui-preview PRIVATE MEDIC_DEFAULT_RULES="${CMAKE_SOURCE_DIR}/knowledge/rules.json"
+  MEDIC_DEFAULT_ERROR_CODES="${CMAKE_SOURCE_DIR}/knowledge/error_codes.json")
 
 add_executable(medic-sign tools/medic_sign.cpp)
 target_link_libraries(medic-sign PRIVATE medic)
@@ -59,7 +61,7 @@ target_link_libraries(medic-cli PRIVATE medic)
 target_compile_definitions(medic-cli PRIVATE MEDIC_DEFAULT_RULES="${CMAKE_SOURCE_DIR}/knowledge/rules.json")
 
 enable_testing()
-add_executable(medic-tests tests/test_main.cpp tests/test_fixes.cpp tests/test_ui.cpp tests/test_report.cpp tests/test_update.cpp tests/test_sign.cpp)
+add_executable(medic-tests tests/test_main.cpp tests/test_fixes.cpp tests/test_ui.cpp tests/test_report.cpp tests/test_update.cpp tests/test_sign.cpp tests/test_error_codes.cpp)
 find_package(Threads REQUIRED)
 target_link_libraries(medic-tests PRIVATE medic_ui Threads::Threads)
 target_compile_definitions(medic-tests PRIVATE

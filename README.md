@@ -15,6 +15,7 @@ Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedien
 - **Rückgängig**: Jede Reparatur steht im Verlauf und lässt sich zurücknehmen.
 - **Bericht**: Taste □ in der Befundliste schreibt einen Markdown-Bericht nach `/data/ps5medic/reports/` und zeigt eine Kurzfassung als **QR-Code** (mit dem Handy scannen, Text kopieren, ins Forum oder in ein Issue einfügen). IP- und MAC-Adressen, Benutzer- und Konto-IDs sowie Seriennummern werden entfernt; Datei- und Ordnernamen bleiben drin, bitte vor dem Teilen prüfen. Fehlerartige Logzeilen, die zu keiner Regel passen, stehen als **Unbekannte Fehlerzeilen** im Bericht: Stoff für neue Regeln.
 - **Regel-Update**: Einstellungen, Regel-Update. Neue `rules.json` samt SHA-256-Prüfsumme per FTP oder USB-Kopie auf die Konsole legen **oder** mit □ von der eigenen Adresse herunterladen (`update_url` in `/data/ps5medic/config.ini`; nur mit gültiger Ed25519-Signatur des Autors). PS5 Medic prüft die Datei und installiert sie nach ✕ (mit Backup und Rückgängig).
+- **Fehlercodes**: Start, „Fehlercodes“. Nachschlagewerk zu 19 Meldungen wie CE-108262-9 (Erklärung, Schritte laut Sony, Quelle; Codes ohne Sony-Seite sind als Community-Angabe gekennzeichnet). Nur lesen und erklären, es wird nichts verändert.
 - Deutsch und Englisch (Einstellungen).
 
 ## Sicherheit
@@ -32,7 +33,7 @@ Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedien
 
 ## Installation
 
-1. Den Ordner `PS5MEDIC` aus dem Release per FTP nach `/data/homebrew/` kopieren (er enthält `ps5medicui.elf`, `ps5medic.elf`, `rules.json`, `homebrew.js` und das Icon).
+1. Den Ordner `PS5MEDIC` aus dem Release per FTP nach `/data/homebrew/` kopieren (er enthält `ps5medicui.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` und das Icon).
 2. `websrv` starten (Payload Manager, Autoloader oder Port 9021).
 3. Im Launcher (`http://<PS5-IP>:8080`) die Kachel **PS5 Medic** öffnen. Alternativ vom PC: `make launch-ui PS5_HOST=<PS5-IP>`.
 
@@ -100,7 +101,7 @@ Eine neue Regel braucht: einen Eintrag in `knowledge/rules.json` mit Quelle, ein
 | `docs/PHASE2.md` bis `PHASE5.md` | Konsole und Snapshot, Oberfläche und App-Kontext, Bericht und Release, Regel-Update und Community |
 | `docs/TESTER.md` | Mitmachen als Tester |
 | `docs/TITLE.md` | Kachel unter „Medien“ (Starter-Titel) |
-| `knowledge/` | Regeln (`rules.json`) und JSON-Schema |
+| `knowledge/` | Regeln (`rules.json`), Fehlercodes (`error_codes.json`) und JSON-Schemas |
 
 ## Lizenz und Danksagung
 

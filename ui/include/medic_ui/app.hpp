@@ -6,6 +6,7 @@
 // (Kreuz) auf dem Vorschau- bzw. Rueckgaengig-Bildschirm. Einzige Ausnahme: die Quadrat-Taste in der Befundliste
 // legt einen Bericht nach /data/ps5medic/reports/ ab (IMedicService::make_report); sonst loest keine Taste Schreiben aus.
 // Das Regel-Update (Einstellungen) schreibt ebenfalls nur nach Kreuz auf dem Angebot bzw. auf der Rueckfrage.
+// Die Fehlercodes (Start) sind ein reines Nachschlagewerk: sie zeigen Text, kein Knopf dort loest etwas aus.
 #pragma once
 #include "medic/diff.hpp"
 #include "medic/qr.hpp"
@@ -21,7 +22,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
 
@@ -36,6 +37,8 @@ public:
     std::size_t finding_count() const { return result_.findings.size(); }
     int selected() const { return sel_; }
     bool quit_requested() const { return quit_; }  // Kreis auf dem Startbildschirm
+    int error_selected() const { return err_sel_; }  // Fehlercodes: gewaehlter Eintrag
+    int error_scroll() const { return err_scroll_; } // Fehlercodes, Detail: erste sichtbare Textzeile
 
 private:
     struct Preview {  // Darstellung einer geplanten Aenderung
@@ -51,6 +54,11 @@ private:
     void open_history();
     void open_report();
     void open_rules_update();
+    void open_error_codes();
+    void open_error_for_finding();
+    int linked_error_index() const;
+    int error_scroll_max() const;
+    const medic::ErrorCode* current_error() const;
     void finish_rules_change(bool ok);
 
     void draw_chrome(Canvas& c) const;
@@ -66,6 +74,8 @@ private:
     void draw_settings(Canvas& c) const;
     void draw_report(Canvas& c) const;
     void draw_rules_update(Canvas& c) const;
+    void draw_error_codes(Canvas& c) const;
+    void draw_error_detail(Canvas& c) const;
 
     std::string finding_text(const medic::Finding& f) const;
     std::string fix_name(const std::string& id) const;
@@ -109,6 +119,11 @@ private:
     bool downloaded_ = false;   // das angezeigte Angebot stammt aus einem Download auf diesem Bildschirm
     bool pending_download_ = false;
     mutable bool download_rendered_ = false;  // "Lade herunter ..." muss einmal gezeichnet worden sein, bevor der Abruf blockiert
+
+    medic::ErrorCodeSet errors_;  // beim Oeffnen vom Dienst geholt
+    int err_sel_ = 0, err_top_ = 0;
+    int err_scroll_ = 0;  // Detail: Index der ersten sichtbaren Textzeile
+    bool err_from_finding_ = false;  // Code kam per Quadrat aus einem Befund: Kreis geht dorthin zurueck, kein Blaettern
 
     ReportResult report_;
     medic::QrCode qr_;       // einmal beim Oeffnen kodiert, nicht in jedem Bild
