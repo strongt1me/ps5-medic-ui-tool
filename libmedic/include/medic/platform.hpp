@@ -40,6 +40,14 @@ public:
     virtual bool make_dirs(const std::string& path) = 0;
     // Entfernt einen LEEREN Ordner (nur fuer Ordner, die die FixEngine selbst angelegt hat). Nie fuer Dateien/gefuellte Ordner.
     virtual bool remove_empty_dir(const std::string& path) = 0;
+    // Haengt Text ans Dateiende (legt Datei und Ordner an) und sichert ihn auf den Datentraeger (fsync). Fuer das Journal:
+    // ein Stromausfall beschneidet hoechstens die letzte Zeile, ohne die Datei jedes Mal komplett neu zu schreiben.
+    // Standard: nicht unterstuetzt (false); die Engine schreibt dann die ganze Datei neu.
+    virtual bool append_file(const std::string& path, const std::string& content) {
+        (void)path;
+        (void)content;
+        return false;
+    }
 };
 
 struct ProcInfo {
@@ -65,6 +73,14 @@ struct StorageInfo {
     std::string mount;
     std::uint64_t total_bytes = 0;
     std::uint64_t free_bytes = 0;
+    std::string fstype;      // z. B. "exfatfs", "ufs", "msdosfs", "bfs"; leer = unbekannt
+    bool read_only = false;  // schreibgeschuetzt eingehaengt (MNT_RDONLY)
+};
+
+// Temperaturen in Grad Celsius; -1 = nicht lesbar. Momentaufnahme zum Zeitpunkt des Checks.
+struct Thermal {
+    int cpu_c = -1;
+    int soc_c = -1;
 };
 
 class ISystemInfo {
@@ -78,6 +94,8 @@ public:
     virtual std::map<std::string, std::map<std::string, std::string>> components() const = 0;
     // Zeitpunkt des letzten Konsolenstarts (Sekunden seit 1970), 0 = unbekannt.
     virtual std::int64_t boot_epoch() const { return 0; }
+    // CPU- und SoC-Temperatur. Standard: unbekannt (Plattform kann nicht messen).
+    virtual Thermal thermal() const { return {}; }
     // Nimmt ein lokaler TCP-Port Verbindungen an? Unknown, wenn die Plattform das nicht pruefen kann
     // oder die Antwort nicht eindeutig war (Zeitueberschreitung zaehlt nicht als geschlossen).
     virtual PortState local_port_state(int port) const {
@@ -99,9 +117,10 @@ struct Platform {
 // PC-Implementierung: liest einen Fixture-Ordner
 //   <root>/fs/...        simuliert das PS5-Dateisystem ("/data/..." -> <root>/fs/data/...)
 //   <root>/procs.json    ["etaHEN", "shadowmountplus", ...]; Eintraege duerfen Objekte sein: {"name":"kstuff.elf","start":1794060758}
-//   <root>/system.json   {"fw":"4.03","model":"...","storage":[{"mount":"/data","total":..,"free":..}],
+//   <root>/system.json   {"fw":"4.03","model":"...","storage":[{"mount":"/data","total":..,"free":..,"fstype":"bfs","ro":false}],
 //                         "components":{"kstuff":{"version":"1.10","origin":"echostretch"},"smp":{"version":"1.7"}},
-//                         "boot":1794060571, "ports":{"9021":true}}   (boot und ports sind optional)
+//                         "boot":1794060571, "ports":{"9021":true}, "temp":{"cpu":36,"soc":34}}
+//                        (boot, ports, temp sowie fstype/ro je Laufwerk sind optional)
 // Fehlende Dateien sind erlaubt (leerer Zustand).
 // writable=true erlaubt Schreibzugriffe (fs_rw) direkt im Ordner -- Fixtures vorher kopieren!
 std::unique_ptr<Platform> make_snapshot_platform(const std::string& root_dir, bool writable = false);

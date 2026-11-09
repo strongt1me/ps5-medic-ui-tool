@@ -67,6 +67,27 @@ bool last_open_install(const IFileSystem& fs, json& out) {
     return open;
 }
 
+// Hoechste Version unter den noch nicht zurueckgenommenen Installationen laut update.log. Der Rollback-Schutz ("nicht neuer")
+// vergleicht auch damit und nicht nur mit der gerade geladenen Datei: laesst sich knowledge/rules.json nicht laden und gelten
+// die mitgelieferten Regeln, haette sonst eine aeltere, gueltig signierte Datei untergeschoben werden koennen.
+std::string installed_high_water(const IFileSystem& fs) {
+    std::string text;
+    if (!fs.read_file(kRulesUpdateLog, text)) return {};
+    std::istringstream in(text);
+    std::string line;
+    std::vector<std::string> installed;
+    while (std::getline(in, line)) {
+        json j = json::parse(line, nullptr, false);
+        if (!j.is_object() || !j.contains("type") || !j["type"].is_string()) continue;
+        if (j["type"] == "rules_update" && j.contains("to") && j["to"].is_string()) installed.push_back(j["to"].get<std::string>());
+        else if (j["type"] == "rules_rollback" && !installed.empty()) installed.pop_back();
+    }
+    std::string best;
+    for (const auto& v : installed)
+        if (best.empty() || compare_versions(v, best) > 0) best = v;
+    return best;
+}
+
 bool append_log(Platform& p, const json& rec) {
     std::string text;
     p.fs().read_file(kRulesUpdateLog, text);
@@ -136,6 +157,7 @@ RuleUpdateOffer check_rule_update(const IFileSystem& fs, const std::string& curr
     o.new_version = rs.db_version;
     o.new_rule_count = rs.rules.size();
     if (compare_versions(rs.db_version, current_version) <= 0) return reject("not_newer");
+    if (const std::string high = installed_high_water(fs); !high.empty() && compare_versions(rs.db_version, high) <= 0) return reject("not_newer");
 
     o.state = RuleUpdateOffer::State::Ready;
     if (verified_text) *verified_text = std::move(text);
@@ -179,8 +201,14 @@ RuleUpdateResult install_rule_update(Platform& p, const std::string& current_ver
         r.error = "write_failed";
         return r;
     }
-    if (!p.fs().read_file(kRulesPath, written) || sha256_hex(written) != offer.sha256) {
+    // Zurueck zum Zustand vor der Installation: das Backup einspielen, gab es keine Datei, die neue beiseite legen
+    // (nicht aktiv lassen und nicht loeschen).
+    auto restore = [&](const char* tag) {
         if (!backup_path.empty()) p.fs_rw()->write_file(kRulesPath, active);
+        else p.fs_rw()->rename(kRulesPath, join(kRulesBackupDir, std::string("rules_") + tag + "_" + timestamp + ".json"));
+    };
+    if (!p.fs().read_file(kRulesPath, written) || sha256_hex(written) != offer.sha256) {
+        restore("failed");
         r.error = "verify_failed";
         return r;
     }
@@ -192,8 +220,14 @@ RuleUpdateResult install_rule_update(Platform& p, const std::string& current_ver
     p.fs_rw()->rename(update_sum_path(), join(done, "rules.json.sha256"));
     p.fs_rw()->rename(update_sig_path(), join(done, "rules.json.sig"));
 
-    append_log(p, {{"type", "rules_update"}, {"ts", timestamp}, {"from", current_version}, {"to", offer.new_version},
-                   {"sha256", offer.sha256}, {"auth", offer.auth}, {"key", offer.signed_by}, {"backup", backup_path}, {"backup_sha256", backup_sha}});
+    // Ohne Log-Eintrag gaebe es keine Rueckgaengig-Funktion: lieber den alten Stand wiederherstellen als eine Installation, die
+    // sich nicht zuruecknehmen laesst.
+    if (!append_log(p, {{"type", "rules_update"}, {"ts", timestamp}, {"from", current_version}, {"to", offer.new_version},
+                        {"sha256", offer.sha256}, {"auth", offer.auth}, {"key", offer.signed_by}, {"backup", backup_path}, {"backup_sha256", backup_sha}})) {
+        restore("unlogged");
+        r.error = "log_failed";
+        return r;
+    }
     r.ok = true;
     r.new_version = offer.new_version;
     r.backup_path = backup_path;

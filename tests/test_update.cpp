@@ -109,6 +109,21 @@ void update_tests() {
         CHECK(check_rule_update(pb->fs(), old_ver).reason == "too_large", "Update: zu grosse Datei");
     }
 
+    {  // Rollback-Schutz haengt nicht nur an der geladenen Version: laeuft die App mit den mitgelieferten Regeln (die aktive Datei
+       // liess sich nicht laden), darf eine aeltere, gueltige Datei nicht ueber die installierte neuere gesetzt werden.
+        Sandbox sb;
+        spit(sb.real(kRulesPath), old_text);
+        put_update(sb, new_text, good_sum(new_text));
+        auto p = make_snapshot_platform(sb.dir.string(), /*writable=*/true);
+        CHECK(install_rule_update(*p, old_ver, ts).ok, "Update: Installation fuer den Hochwasser-Test");
+        const std::string older = rules_text_with_version("2026.11.20");  // neuer als die mitgelieferte, aelter als die installierte
+        put_update(sb, older, good_sum(older));
+        const auto o = check_rule_update(p->fs(), old_ver);  // die App "kennt" nur die mitgelieferte Version
+        CHECK(o.state == State::Rejected && o.reason == "not_newer", "Update: aelter als die installierte Version -> abgelehnt, auch wenn neuer als die geladene");
+        const std::string newest = rules_text_with_version("2027.01.05");
+        put_update(sb, newest, good_sum(newest));
+        CHECK(check_rule_update(p->fs(), old_ver).state == State::Ready, "Update: neuer als die installierte Version -> angeboten");
+    }
     {  // Installation mit vorhandener aktiver Datei, danach Rollback
         Sandbox sb;
         spit(sb.real(kRulesPath), old_text);

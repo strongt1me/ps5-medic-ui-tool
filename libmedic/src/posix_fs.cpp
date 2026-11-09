@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/posix_fs.hpp"
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <algorithm>
+#include <cerrno>
 #include <fstream>
 #include <sstream>
 
@@ -9,6 +13,33 @@ namespace fs = std::filesystem;
 
 namespace medic {
 namespace {
+
+bool write_all(int fd, const char* data, std::size_t n) {
+    while (n > 0) {
+        const ssize_t w = ::write(fd, data, n);
+        if (w < 0) {
+            if (errno == EINTR) continue;
+            return false;
+        }
+        data += w;
+        n -= static_cast<std::size_t>(w);
+    }
+    return true;
+}
+
+// fsync; "nicht unterstuetzt" (EINVAL/ENOTSUP) ist kein Fehler, ein echter Schreibfehler (EIO, ENOSPC) schon.
+bool sync_fd(int fd) {
+    if (::fsync(fd) == 0) return true;
+    return errno == EINVAL || errno == ENOTSUP;
+}
+
+// Verzeichniseintrag (Anlegen/Umbenennen) auf den Datentraeger bringen. Best effort: nicht jedes Dateisystem erlaubt das.
+void sync_dir(const fs::path& dir) {
+    const int fd = ::open(dir.c_str(), O_RDONLY);
+    if (fd < 0) return;
+    (void)::fsync(fd);
+    ::close(fd);
+}
 
 bool slurp(const fs::path& p, std::string& out) {
     std::error_code ec;
@@ -94,28 +125,62 @@ bool PosixRw::write_file(const std::string& path, const std::string& content) {
     fs::create_directories(p.parent_path(), ec);
     tmp = p;
     tmp += ".medic-tmp";
-    {
-        std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
-        if (!out) return false;
-        out.write(content.data(), static_cast<std::streamsize>(content.size()));
-        if (!out) return false;
+    // Rest eines frueheren Abbruchs wegraeumen (nur unsere Temp-Datei; ein Symlink dieses Namens wird selbst entfernt,
+    // nicht sein Ziel) und neu anlegen, ohne einem Symlink zu folgen.
+    fs::remove(tmp, ec);
+    const int fd = ::open(tmp.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0666);
+    if (fd < 0) return false;
+    bool ok = write_all(fd, content.data(), content.size()) && sync_fd(fd);
+    if (::close(fd) != 0) ok = false;
+    if (ok) {
+        fs::rename(tmp, p, ec);
+        ok = !ec;
     }
-    fs::rename(tmp, p, ec);
-    if (ec) {
+    if (!ok) {
         fs::remove(tmp, ec);
         return false;
     }
+    sync_dir(p.parent_path());
     return true;
+}
+
+bool PosixRw::append_file(const std::string& path, const std::string& content) {
+    fs::path p;
+    std::error_code ec;
+    if (!map_virtual_path(base_, path, p)) return false;
+    fs::create_directories(p.parent_path(), ec);
+    const int fd = ::open(p.c_str(), O_WRONLY | O_APPEND | O_CREAT | O_NOFOLLOW, 0666);
+    if (fd < 0) return false;
+    const off_t end = ::lseek(fd, 0, SEEK_END);
+    // Endet die Datei mitten in einer Zeile (abgebrochener Schreibvorgang), beginnt der neue Eintrag in einer eigenen Zeile.
+    std::string data;
+    if (end > 0) {
+        const int rfd = ::open(p.c_str(), O_RDONLY);
+        if (rfd >= 0) {
+            char last = '\n';
+            if (::pread(rfd, &last, 1, end - 1) == 1 && last != '\n') data = "\n";
+            ::close(rfd);
+        }
+    }
+    data += content;
+    bool ok = write_all(fd, data.data(), data.size()) && sync_fd(fd);
+    if (::close(fd) != 0) ok = false;
+    if (ok && end == 0) sync_dir(p.parent_path());
+    return ok;
 }
 
 bool PosixRw::rename(const std::string& from, const std::string& to) {
     fs::path a, b;
     std::error_code ec;
     if (!map_virtual_path(base_, from, a) || !map_virtual_path(base_, to, b)) return false;
+    if (fs::is_symlink(a, ec)) return false;  // ein Symlink kann ausserhalb der erlaubten Ordner zeigen
     if (!fs::exists(a, ec) || fs::exists(b, ec)) return false;
     fs::create_directories(b.parent_path(), ec);
     fs::rename(a, b, ec);
-    return !ec;
+    if (ec) return false;
+    sync_dir(b.parent_path());
+    if (a.parent_path() != b.parent_path()) sync_dir(a.parent_path());
+    return true;
 }
 
 bool PosixRw::make_dirs(const std::string& path) {

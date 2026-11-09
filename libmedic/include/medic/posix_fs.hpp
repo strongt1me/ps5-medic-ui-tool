@@ -30,6 +30,7 @@ public:
     bool rename(const std::string& from, const std::string& to) override;
     bool make_dirs(const std::string& path) override;
     bool remove_empty_dir(const std::string& path) override;
+    bool append_file(const std::string& path, const std::string& content) override;
 
 private:
     std::filesystem::path base_;

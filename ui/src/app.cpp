@@ -41,6 +41,9 @@ const char* sev_key(medic::Severity s) {
 // Fixes mit der Endung "_hint" aendern nichts, sie zeigen nur eine Anleitung (z. B. fix_image_nesting_hint).
 bool is_hint_fix(const std::string& id) { return id.size() > 5 && id.compare(id.size() - 5, 5, "_hint") == 0; }
 
+// Rueckgaengig geht bei abgeschlossenen Fixes und bei abgebrochenen ("incomplete": die Engine rollt sie zurueck).
+bool undoable(const std::string& state) { return state == "applied" || state == "incomplete"; }
+
 // "20261108T120000Z" -> "2026-11-08 12:00 UTC"
 std::string pretty_ts(const std::string& ts) {
     if (ts.size() >= 15 && ts[8] == 'T')
@@ -225,7 +228,8 @@ void App::handle(Button b) {
             else if (b == Button::L1) page_selection(hist_sel_, hist_top_, static_cast<int>(hist_.size()), kHistVisible, -1);
             else if (b == Button::R1) page_selection(hist_sel_, hist_top_, static_cast<int>(hist_.size()), kHistVisible, 1);
             else if (b == Button::Cross) {
-                if (hist_sel_ >= 0 && hist_sel_ < static_cast<int>(hist_.size()) && hist_[static_cast<std::size_t>(hist_sel_)].state == "applied") {
+                // "incomplete" (Stromausfall/Abbruch mitten im Fix): die Engine rollt anhand des Journals zurueck.
+                if (hist_sel_ >= 0 && hist_sel_ < static_cast<int>(hist_.size()) && undoable(hist_[static_cast<std::size_t>(hist_sel_)].state)) {
                     undo_target_ = hist_[static_cast<std::size_t>(hist_sel_)];
                     screen_ = Screen::UndoConfirm;
                 }
@@ -718,7 +722,7 @@ void App::draw_history(Canvas& c) const {
         text_right(c, body(), M + cw - 32, y + 14, S.has(skey) ? S(skey) : t.state, sc);
         text_right(c, small(), M + cw - 32, y + 56, S.fmt("history.ops", {{"n", std::to_string(t.ops)}}), kDim);
     }
-    const bool can_undo = hist_sel_ >= 0 && hist_sel_ < n && hist_[static_cast<std::size_t>(hist_sel_)].state == "applied";
+    const bool can_undo = hist_sel_ >= 0 && hist_sel_ < n && undoable(hist_[static_cast<std::size_t>(hist_sel_)].state);
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
     if (n > kHistVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
     if (can_undo) hints.emplace_back(PadGlyph::Cross, S("common.undo"));

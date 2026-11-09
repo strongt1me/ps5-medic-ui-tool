@@ -7,6 +7,9 @@
 //    nach /data/ps5medic/backups/<txn>/.
 //  * Jede Aenderung steht in /data/ps5medic/journal.jsonl (SHA-256 vorher/nachher).
 //  * apply_plan bricht bei jedem Fehler ab und macht bereits Erledigtes rueckgaengig.
+//  * Absturzsicher: Jede Operation steht VOR der Ausfuehrung als "intent" im Journal (mit Backup-Pfad, Hashes, Wurzeln),
+//    das Journal wird nur angehaengt und mit fsync gesichert, Dateien werden atomar ersetzt (Temp-Datei, fsync, Umbenennen).
+//    Bleibt eine Transaktion unvollstaendig, rollt undo_txn sie anhand der Intents zurueck.
 //
 // Fix-Parameter (fix_params in der Regel):
 //   rename_image_parentheses            keine
@@ -14,7 +17,9 @@
 //                                       mode "set" (Standard) | "add",
 //                                       value | from {array, field, agg: "max"|"distinct"}
 //   smp_disable_conflicting_backpork    files [Pfade], match (Regex, Standard "backpork")
-//   move_duplicate_titleid              keine (optional FixOptions::keep)
+//   move_duplicate_titleid              keine (optional FixOptions::keep); Ziel: <Scanpfad>/.duplicates/ (SM+ scannt Punkt-Ordner nicht)
+//   smp_translate_v1_keys               keine; liest smp.v1_keys[] (flache v1-Zeilen in einer v2-config.ini)
+//   autoload_insert_delay               keine; liest autoload.problems[] (kind elfldr_no_delay), fuegt "!4000" ein
 //   fix_image_nesting_hint              keine (nur Hinweis)
 #pragma once
 #include "medic/facts.hpp"
@@ -33,6 +38,12 @@ struct Change {
     std::string to;       // nur Rename
     std::string content;  // nur WriteFile: neuer Gesamtinhalt
     std::string note_de, note_en;
+    // Nur WriteFile: Zustand der Datei, auf dem der Plan beruht. Ist check_base gesetzt, lehnt apply_plan ab, wenn sich die
+    // Datei seit der Vorschau geaendert hat (ShadowMount+, FTP oder der Nutzer): sonst stuende im Diff etwas anderes als
+    // tatsaechlich geschrieben wird.
+    bool check_base = false;
+    bool base_existed = false;
+    std::string base_sha;  // SHA-256 des Inhalts beim Planen (leer, wenn die Datei fehlte)
 };
 
 struct FixPlan {
@@ -54,15 +65,21 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
 
 class PathPolicy {
 public:
-    // extra_roots: Scanpfade aus den Fakten (smp.scan_roots). Zu breite Pfade (z. B. "/data", "/") werden ignoriert.
+    // extra_roots: Scanpfade aus den Fakten (smp.scan_roots). Angenommen werden nur Ordner unterhalb von /data/ sowie
+    // /mnt/usb<N> und /mnt/ext<N>; zu breite (z. B. "/data", "/") und alle anderen (z. B. /user/app, /system_data,
+    // /mnt/sandbox) werden ignoriert, auch wenn ein Scanpfad in der ShadowMount+-Config dorthin zeigt.
     explicit PathPolicy(std::vector<std::string> extra_roots = {});
     // Erlaubt sind Pfade strikt unterhalb der Whitelist-Ordner. /system, /system_ex, /dev sind immer gesperrt.
     bool allowed(const std::string& path, std::string* why = nullptr) const;
     // Entfernt doppelte/abschliessende Slashes; leer, wenn relativ oder ".." enthalten ist.
     static std::string normalize(const std::string& path);
+    // Die angenommenen zusaetzlichen Wurzeln (ohne die festen). Das Journal merkt sie sich je Fix, damit "rueckgaengig"
+    // auch dann geht, wenn der Scanpfad inzwischen aus der Config verschwunden ist.
+    const std::vector<std::string>& extra_roots() const { return extra_; }
 
 private:
     std::vector<std::string> roots_;
+    std::vector<std::string> extra_;
 };
 
 PathPolicy policy_from_facts(const Facts& facts);
@@ -90,7 +107,12 @@ UndoResult undo_txn(Platform& p, const PathPolicy& policy, const std::string& tx
 
 struct TxnInfo {
     std::string txn, ts, fix, rule;
-    std::string state;  // applied | undone | aborted | incomplete
+    // applied    = abgeschlossen, rueckgaengig machbar
+    // undone     = zurueckgenommen
+    // aborted    = Fehler beim Anwenden, alles sauber zurueckgenommen
+    // incomplete = abgebrochen (Stromausfall, Absturz) oder Rollback unvollstaendig: der Zustand ist unklar, "undo_txn" stellt
+    //              den Ausgangszustand wieder her (auch wiederholt, bis es klappt)
+    std::string state;
     int ops = 0;
 };
 std::vector<TxnInfo> history(const Platform& p);
