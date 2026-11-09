@@ -365,7 +365,7 @@ void plan_content_tests() {
         TempCopy tmp("b8_pos");
         Ctx c = make_ctx(tmp.dir, "smp.duplicate_titleid");
         CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].path == "/mnt/usb0/PPSA01234.ffpfs" &&
-                  c.plan.changes[0].to == "/mnt/usb0/_duplicates/PPSA01234.ffpfs",
+                  c.plan.changes[0].to == "/mnt/usb0/.duplicates/PPSA01234.ffpfs",
               "duplicate: Standard behaelt die flachere/erste Quelle");
         Ctx k = make_ctx(tmp.dir, "smp.duplicate_titleid", FixOptions{"/mnt/usb0/PPSA01234.ffpfs"});
         CHECK(k.plan.changes.size() == 1 && k.plan.changes[0].path == "/data/homebrew/GameA", "duplicate: keep waehlt die andere Quelle");
@@ -469,6 +469,335 @@ void export_tests() {
     }
 }
 
+// ---- Absturz, Wiederherstellung, wiederholbares Undo (Befunde der Sicherheitspruefung vom 9. Nov. 2026) ------------
+
+std::string journal_text(const fs::path& dir) { return slurp(dir / "fs/data/ps5medic/journal.jsonl"); }
+
+// Journal auf bestimmte Eintragsarten kuerzen: so sieht es nach einem Absturz aus (Intent geschrieben, nichts verbucht).
+void keep_journal_types(Platform& p, const fs::path& dir, const std::set<std::string>& types) {
+    std::istringstream in(journal_text(dir));
+    std::string out;
+    for (std::string line; std::getline(in, line);) {
+        json j = json::parse(line, nullptr, false);
+        if (j.is_object() && types.count(j.value("type", ""))) out += line + "\n";
+    }
+    p.fs_rw()->write_file(kJournalPath, out);
+}
+
+// Wie FailingRw, scheitert aber bei mehreren Umbenennungen (hier: bei der Aenderung und beim Rollback).
+struct FailSetRw final : IFileSystemRW {
+    IFileSystemRW& in;
+    std::set<int> fail_at;
+    int renames = 0;
+    FailSetRw(IFileSystemRW& i, std::set<int> f) : in(i), fail_at(std::move(f)) {}
+    bool write_file(const std::string& p, const std::string& c) override { return in.write_file(p, c); }
+    bool rename(const std::string& a, const std::string& b) override { return fail_at.count(++renames) ? false : in.rename(a, b); }
+    bool make_dirs(const std::string& p) override { return in.make_dirs(p); }
+    bool remove_empty_dir(const std::string& p) override { return in.remove_empty_dir(p); }
+};
+struct FailSetPlatform final : Platform {
+    std::unique_ptr<Platform> inner;
+    FailSetRw rw;
+    FailSetPlatform(std::unique_ptr<Platform> i, std::set<int> f) : inner(std::move(i)), rw(*inner->fs_rw(), std::move(f)) {}
+    const IFileSystem& fs() const override { return inner->fs(); }
+    const IProcessList& procs() const override { return inner->procs(); }
+    const ISystemInfo& sys() const override { return inner->sys(); }
+    IFileSystemRW* fs_rw() override { return &rw; }
+};
+
+FixPlan three_renames() {
+    FixPlan plan;
+    plan.fix_id = "test";
+    plan.rule_id = "test";
+    for (auto [a, b] : {std::pair{"Clean Game.ffpfs", "A/neu1.ffpfs"}, {"Cool Game (USA).ffpfs", "B/neu2.ffpfs"}, {"Other (Demo).exfat", "neu3.exfat"}}) {
+        Change ch;
+        ch.kind = Change::Kind::Rename;
+        ch.path = std::string("/data/homebrew/") + a;
+        ch.to = std::string("/data/homebrew/") + b;
+        plan.changes.push_back(ch);
+    }
+    return plan;
+}
+
+void recovery_tests() {
+    const std::string rule = "smp.autotoggle_crash_1360";
+
+    // A) Absturz nach Intent und Umbenennen, nichts verbucht: Undo holt die Datei zurueck. Die Wurzeln stehen im Journal,
+    //    die heutige Policy kennt keine Scanpfade (der Scanpfad koennte inzwischen aus der Config verschwunden sein).
+    {
+        TempCopy tmp("b2_pos");
+        const auto before = tree(tmp.dir);
+        auto p = make_snapshot_platform(tmp.dir.string(), true);
+        const std::string from = "/data/homebrew/Cool Game (USA).ffpfs", to = "/data/homebrew/X/neu.ffpfs";
+        json intent = {{"type", "intent"}, {"txn", "T1"}, {"seq", 0}, {"ts", "20261108T150000Z"}, {"op", "rename"}, {"path", from}, {"to", to},
+                       {"created_dirs", json::array({"/data/homebrew/X"})}, {"sha_before", ""}, {"roots", json::array({"/data/homebrew"})}};
+        CHECK(p->fs_rw()->append_file(kJournalPath, intent.dump() + "\n"), "Absturz A: Intent angehaengt");
+        CHECK(p->fs_rw()->rename(from, to), "Absturz A: Umbenennen ist passiert");
+        auto h = history(*p);
+        CHECK(h.size() == 1 && h[0].state == "incomplete", "Absturz A: history = incomplete");
+        UndoResult ur = undo_txn(*p, PathPolicy(), "T1", "20261108T150001Z");
+        CHECK(ur.ok, "Absturz A: undo holt die Datei zurueck (" + ur.error + ")");
+        CHECK(tree(tmp.dir) == before, "Absturz A: Dateibaum identisch (angelegter Ordner X wieder weg)");
+        h = history(*p);
+        CHECK(h.size() == 1 && h[0].state == "undone", "Absturz A: history = undone");
+        CHECK(!undo_txn(*p, PathPolicy(), "T1", "20261108T150002Z").ok, "Absturz A: zweites Undo abgelehnt");
+    }
+    // B) Absturz nach dem Schreiben, vor dem Verbuchen (nur Intents im Journal): Original kommt aus dem Backup zurueck.
+    {
+        TempCopy tmp("b3_pos");
+        const auto before = tree(tmp.dir);
+        Ctx c = make_ctx(tmp.dir, rule);
+        PathPolicy pol = policy_from_facts(c.facts);
+        ApplyResult ar = apply_plan(c.plan, *c.p, pol, confirmed("20261108T150100Z"));
+        CHECK(ar.ok, "Absturz B: apply ok");
+        keep_journal_types(*c.p, tmp.dir, {"intent"});
+        auto h = history(*c.p);
+        CHECK(h.size() == 1 && h[0].state == "incomplete", "Absturz B: history = incomplete");
+        UndoResult ur = undo_txn(*c.p, pol, ar.txn, "20261108T150101Z");
+        CHECK(ur.ok, "Absturz B: undo ok (" + ur.error + ")");
+        CHECK(tree(tmp.dir) == before, "Absturz B: config.ini wieder im Ausgangszustand");
+        CHECK(history(*c.p)[0].state == "undone", "Absturz B: history = undone");
+    }
+    // C) Absturz vor dem Schreiben (Intent da, Datei noch das Original): Undo ist ein sauberes Nichtstun.
+    {
+        TempCopy tmp("b3_pos");
+        const std::string original = slurp(tmp.dir / "fs/data/shadowmount/config.ini");
+        const auto before = tree(tmp.dir);
+        Ctx c = make_ctx(tmp.dir, rule);
+        PathPolicy pol = policy_from_facts(c.facts);
+        ApplyResult ar = apply_plan(c.plan, *c.p, pol, confirmed("20261108T150200Z"));
+        CHECK(ar.ok, "Absturz C: apply ok");
+        keep_journal_types(*c.p, tmp.dir, {"intent"});
+        c.p->fs_rw()->write_file("/data/shadowmount/config.ini", original);
+        UndoResult ur = undo_txn(*c.p, pol, ar.txn, "20261108T150201Z");
+        CHECK(ur.ok && tree(tmp.dir) == before, "Absturz C: undo ok, nichts veraendert (" + ur.error + ")");
+    }
+    // D) Ein Undo, das nur teilweise lief, laesst sich wiederholen (frueher: "Datei fehlt am Zielort").
+    {
+        TempCopy tmp("b2_pos");
+        const auto before = tree(tmp.dir);
+        auto p = make_snapshot_platform(tmp.dir.string(), true);
+        const PathPolicy pol({"/data/homebrew"});
+        ApplyResult ar = apply_plan(three_renames(), *p, pol, confirmed("20261108T150300Z"));
+        CHECK(ar.ok, "Undo wiederholen: apply ok");
+        CHECK(p->fs_rw()->rename("/data/homebrew/B/neu2.ffpfs", "/data/homebrew/Cool Game (USA).ffpfs"), "Undo wiederholen: eine Datei war schon zurueck");
+        UndoResult ur = undo_txn(*p, pol, ar.txn, "20261108T150301Z");
+        CHECK(ur.ok, "Undo wiederholen: Rest wird zurueckgedreht (" + ur.error + ")");
+        CHECK(tree(tmp.dir) == before, "Undo wiederholen: Dateibaum identisch, auch der leere Ordner B ist weg");
+    }
+    // E) Rollback scheitert selbst (Stick abgezogen): history = incomplete, ein spaeteres Undo holt alles zurueck.
+    {
+        TempCopy tmp("b2_pos");
+        const auto before = tree(tmp.dir);
+        FailSetPlatform fp(make_snapshot_platform(tmp.dir.string(), true), {3, 4});  // 3. Aenderung scheitert, dann auch der Rollback von Nr. 2
+        ApplyResult ar = apply_plan(three_renames(), fp, PathPolicy({"/data/homebrew"}), confirmed("20261108T150400Z"));
+        CHECK(!ar.ok && ar.error.find("Rollback unvollstaendig") != std::string::npos, "Rollback-Fehler: apply meldet unvollstaendigen Rollback");
+        auto h = history(fp);
+        CHECK(h.size() == 1 && h[0].state == "incomplete", "Rollback-Fehler: history = incomplete (nicht aborted)");
+        CHECK(tree(tmp.dir) != before, "Rollback-Fehler: eine Datei liegt noch am neuen Ort");
+        auto p2 = make_snapshot_platform(tmp.dir.string(), true);
+        UndoResult ur = undo_txn(*p2, PathPolicy({"/data/homebrew"}), ar.txn, "20261108T150401Z");
+        CHECK(ur.ok, "Rollback-Fehler: undo holt den Rest zurueck (" + ur.error + ")");
+        CHECK(tree(tmp.dir) == before, "Rollback-Fehler: Dateibaum identisch");
+    }
+    // F) Abgeschnittene Journalzeile (Strom weg mitten im Schreiben): Verlauf, Undo und weitere Reparaturen funktionieren.
+    {
+        TempCopy tmp("b3_pos");
+        Ctx c = make_ctx(tmp.dir, rule);
+        PathPolicy pol = policy_from_facts(c.facts);
+        ApplyResult ar = apply_plan(c.plan, *c.p, pol, confirmed("20261108T150500Z"));
+        CHECK(ar.ok, "Journal-Rest: apply ok");
+        CHECK(c.p->fs_rw()->append_file(kJournalPath, "{\"type\":\"op\",\"tx"), "Journal-Rest: Bruchstueck ohne Zeilenende");
+        auto h = history(*c.p);
+        CHECK(h.size() == 1 && h[0].state == "applied", "Journal-Rest: Verlauf bleibt lesbar");
+        UndoResult ur = undo_txn(*c.p, pol, ar.txn, "20261108T150501Z");
+        CHECK(ur.ok, "Journal-Rest: undo geht (" + ur.error + ")");
+        Ctx c2 = make_ctx(tmp.dir, rule);
+        ApplyResult a2 = apply_plan(c2.plan, *c2.p, policy_from_facts(c2.facts), confirmed("20261108T150502Z"));
+        CHECK(a2.ok, "Journal-Rest: danach laesst sich weiter reparieren (" + a2.error + ")");
+        CHECK(history(*c2.p).size() == 2, "Journal-Rest: beide Transaktionen im Verlauf");
+    }
+    // G) Fehlt eine Operation im Journal (unlesbare Zeile), verweigert Undo -- sonst bliebe ein Teil unbemerkt.
+    {
+        TempCopy tmp("b2_pos");
+        auto p = make_snapshot_platform(tmp.dir.string(), true);
+        const PathPolicy pol({"/data/homebrew"});
+        ApplyResult ar = apply_plan(three_renames(), *p, pol, confirmed("20261108T150600Z"));
+        CHECK(ar.ok, "Luecke im Journal: apply ok");
+        std::istringstream in(journal_text(tmp.dir));
+        std::string out;
+        for (std::string line; std::getline(in, line);) {
+            json j = json::parse(line, nullptr, false);
+            const std::string type = j.is_object() ? j.value("type", "") : std::string();
+            // Intent und Op der zweiten Operation gehen verloren (der Intent allein reichte fuer ein Undo noch aus).
+            if ((type == "op" || type == "intent") && j.value("seq", -1) == 1 && j.value("txn", "") == ar.txn) out += "{\"type\":\"op\",\"seq\"\n";
+            else out += line + "\n";
+        }
+        p->fs_rw()->write_file(kJournalPath, out);
+        const auto mid = tree(tmp.dir);
+        UndoResult ur = undo_txn(*p, pol, ar.txn, "20261108T150601Z");
+        CHECK(!ur.ok && ur.error.find("Journal unvollstaendig") != std::string::npos, "Luecke im Journal: undo abgelehnt (" + ur.error + ")");
+        CHECK(tree(tmp.dir) == mid, "Luecke im Journal: nichts veraendert");
+    }
+    // H) Die Datei hat sich seit der Vorschau geaendert: apply lehnt ab, nichts wird ueberschrieben, kein Journal.
+    {
+        TempCopy tmp("b3_pos");
+        Ctx c = make_ctx(tmp.dir, rule);
+        c.p->fs_rw()->write_file("/data/shadowmount/config.ini", slurp(tmp.dir / "fs/data/shadowmount/config.ini") + "von_aussen=1\n");
+        const auto mid = tree(tmp.dir);
+        ApplyResult ar = apply_plan(c.plan, *c.p, policy_from_facts(c.facts), confirmed("20261108T150700Z"));
+        CHECK(!ar.ok && ar.error.find("seit der Vorschau") != std::string::npos, "veralteter Plan: abgelehnt (" + ar.error + ")");
+        CHECK(tree(tmp.dir) == mid && !fs::exists(tmp.dir / "fs/data/ps5medic"), "veralteter Plan: nichts geschrieben, kein Journal");
+        Ctx fresh = make_ctx(tmp.dir, rule);  // neue Vorschau -> geht wieder
+        CHECK(apply_plan(fresh.plan, *fresh.p, policy_from_facts(fresh.facts), confirmed("20261108T150701Z")).ok, "veralteter Plan: neue Vorschau wird angewendet");
+    }
+    // I) Whitelist-Wurzeln aus Scanpfaden: nur Datenbereiche.
+    {
+        PathPolicy pol({"/user/app/x", "/system_data/foo", "/mnt/sandbox/a/b", "/preinst/y", "/mnt/usbX/y", "/mnt/usb0/Games", "/mnt/ext1", "/data/games/x", "/mnt/usb0/Games"});
+        CHECK(!pol.allowed("/user/app/x/a") && !pol.allowed("/system_data/foo/a") && !pol.allowed("/mnt/sandbox/a/b/c") && !pol.allowed("/preinst/y/a"),
+              "Whitelist: Scanpfade auf Systembereichen werden nicht beschreibbar");
+        CHECK(!pol.allowed("/mnt/usbX/y/a"), "Whitelist: /mnt/usb<Buchstabe> ist kein Laufwerk");
+        CHECK(pol.allowed("/mnt/usb0/Games/a") && pol.allowed("/mnt/ext1/a") && pol.allowed("/data/games/x/a"), "Whitelist: USB, ext und /data/... bleiben erlaubt");
+        CHECK(pol.extra_roots().size() == 3, "Whitelist: genau die drei gueltigen Wurzeln, ohne Doppelte");
+    }
+    // J) Ein vorhandener Backup-Ordner wird nie wiederverwendet (auch wenn das Journal fehlt).
+    {
+        TempCopy tmp("b3_pos");
+        Ctx c = make_ctx(tmp.dir, rule);
+        c.p->fs_rw()->write_file(std::string(kBackupRoot) + "/20261108T150800Z/alt.txt", "altes Backup");
+        ApplyResult ar = apply_plan(c.plan, *c.p, policy_from_facts(c.facts), confirmed("20261108T150800Z"));
+        CHECK(ar.ok && ar.txn == "20261108T150800Z-2", "Backup-Ordner: vorhandener wird uebersprungen (" + ar.txn + ")");
+        CHECK(slurp(tmp.dir / "fs/data/ps5medic/backups/20261108T150800Z/alt.txt") == "altes Backup", "Backup-Ordner: altes Backup unveraendert");
+    }
+    // K) Falsche Feldtypen im Journal werfen keine Ausnahme.
+    {
+        TempCopy tmp("b3_pos");
+        Ctx c = make_ctx(tmp.dir, rule);
+        c.p->fs_rw()->write_file(kJournalPath,
+                                 "{\"type\":\"op\",\"txn\":5,\"seq\":\"x\",\"path\":7}\n{\"type\":\"commit\",\"txn\":[1]}\n{\"type\":\"intent\",\"txn\":\"T\",\"seq\":\"z\"}\n");
+        bool threw = false;
+        try {
+            history(*c.p);
+            undo_txn(*c.p, policy_from_facts(c.facts), "T", "20261108T150900Z");
+        } catch (...) {
+            threw = true;
+        }
+        CHECK(!threw, "kaputtes Journal: keine Ausnahme bei Verlauf/Undo");
+        CHECK(!undo_txn(*c.p, policy_from_facts(c.facts), "T", "20261108T150901Z").ok, "kaputtes Journal: Undo ohne lesbare Operationen abgelehnt");
+        CHECK(apply_plan(c.plan, *c.p, policy_from_facts(c.facts), confirmed("20261108T150902Z")).ok, "kaputtes Journal: neue Reparatur geht trotzdem");
+    }
+    // L) Symlinks: eine Temp-Datei-Falle schreibt nicht ans Ziel, ein Symlink wird nicht umbenannt.
+    {
+        TempCopy tmp("b3_pos");
+        const fs::path victim = tmp.dir / "victim.txt";
+        std::ofstream(victim) << "geheim";
+        std::error_code ec;
+        fs::create_symlink(victim, tmp.dir / "fs/data/shadowmount/config.ini.medic-tmp", ec);
+        if (!ec) {
+            Ctx c = make_ctx(tmp.dir, rule);
+            ApplyResult ar = apply_plan(c.plan, *c.p, policy_from_facts(c.facts), confirmed("20261108T151000Z"));
+            CHECK(ar.ok, "Symlink-Falle: apply ok (" + ar.error + ")");
+            CHECK(slurp(victim) == "geheim", "Symlink-Falle: Ziel des Symlinks unveraendert");
+        }
+        TempCopy tmp2("b2_pos");
+        const fs::path target = tmp2.dir / "ziel.bin";
+        std::ofstream(target) << "x";
+        fs::create_symlink(target, tmp2.dir / "fs/data/homebrew/Link.ffpfs", ec);
+        if (!ec) {
+            auto p = make_snapshot_platform(tmp2.dir.string(), true);
+            FixPlan plan;
+            Change ch;
+            ch.kind = Change::Kind::Rename;
+            ch.path = "/data/homebrew/Link.ffpfs";
+            ch.to = "/data/homebrew/Neu.ffpfs";
+            plan.changes.push_back(ch);
+            const auto mid = tree(tmp2.dir);
+            CHECK(!apply_plan(plan, *p, PathPolicy({"/data/homebrew"}), confirmed("20261108T151001Z")).ok, "Symlink: Umbenennen abgelehnt");
+            CHECK(tree(tmp2.dir) == mid, "Symlink: nichts veraendert");
+        }
+    }
+}
+
+// ---- v1-Zeilen in v2-Dateien, Autoload-Fixes, Zugangsdaten im Export (Recherche vom 9. Nov. 2026) -------------------------
+
+void stack_tests() {
+    // SM+ 1.7beta12 ignoriert flache v1-Zeilen in einer v2-Datei: der Collector darf sie nicht mitzaehlen.
+    {
+        TempCopy tmp("smp2_pos_blackbox");
+        auto p = make_snapshot_platform(tmp.dir.string());
+        const Facts f = collect_all(*p);
+        const json* depth = f.get("smp.scan_depth");
+        CHECK(depth && depth->get<int>() == 1, "v2-Datei: flaches scan_depth=2 gilt nicht (Tiefe bleibt 1)");
+        const json* keys = f.get("smp.v1_keys");
+        CHECK(keys && keys->size() == 1 && (*keys)[0]["key"] == "scan_depth" && (*keys)[0]["target"] == "[scan] depth", "v2-Datei: flache Zeile samt Ziel erkannt");
+    }
+    {  // Plan: Zeile entfernen, Wert in die Sektion schreiben, Kommentar und Rest bleiben
+        TempCopy tmp("smp2_pos_blackbox");
+        Ctx c = make_ctx(tmp.dir, "smp.v1_keys_in_v2");
+        CHECK(c.plan.changes.size() == 1, "v1-Fix: ein Plan");
+        if (!c.plan.changes.empty()) {
+            const std::string& t = c.plan.changes[0].content;
+            CHECK(t.find("scan_depth") == std::string::npos && t.find("depth=2") != std::string::npos && t.find("# Added by another tool") != std::string::npos,
+                  "v1-Fix: flache Zeile weg, [scan] depth=2 gesetzt, Kommentar bleibt");
+        }
+    }
+    {  // Zeilen ohne verifizierte Entsprechung bleiben stehen, der Plan sagt es
+        TempCopy tmp("smp2_pos_unmapped");
+        Ctx c = make_ctx(tmp.dir, "smp.v1_keys_in_v2");
+        CHECK(c.plan.empty() && !c.plan.warnings.empty(), "v1-Fix: nur nicht abbildbare Zeile -> kein Plan, Hinweis");
+    }
+    // Autoload: Wartezeit wird an der richtigen Stelle eingefuegt, Kommentare und Zeilenenden bleiben
+    {
+        TempCopy tmp("al1_pos_loader");
+        Ctx c = make_ctx(tmp.dir, "autoload.elfldr_without_delay");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].content == "# Reihenfolge\nelfldr.elf\n!4000\nkstuff.elf # danach\n", "Autoload-Fix: !4000 zwischen elfldr und kstuff");
+    }
+    {
+        TempCopy tmp("al1_pos_pldmgr");
+        Ctx c = make_ctx(tmp.dir, "autoload.elfldr_without_delay");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].content == "local/elfldr\n!4000\nlocal/kstuff\n", "Autoload-Fix (Payload Manager): !4000 eingefuegt");
+    }
+    // Namen in der Autoload-Liste sind case-sensitiv (das Dateisystem der Fixtures auf NTFS ist es nicht, daher in /tmp aufgebaut)
+    {
+        TempCopy tmp("al2_pos_loader_missing");
+        auto p = make_snapshot_platform(tmp.dir.string(), true);
+        std::string elf(64, '\0');
+        elf.replace(0, 4, "\x7f" "ELF");
+        elf[4] = 2;
+        elf[0x36] = 56;
+        p->fs_rw()->write_file("/data/ps5_autoloader/kstuff.elf", elf);
+        p->fs_rw()->write_file("/data/ps5_autoloader/autoload.txt", "KSTUFF.elf\n");
+        Facts f = collect_all(*p);
+        const json* probs = f.get("autoload.problems");
+        CHECK(probs && probs->size() == 1 && (*probs)[0]["kind"] == "entry_case", "Autoload: Eintrag nur in Gross-/Kleinschreibung falsch -> entry_case");
+    }
+    // Zugangsdaten werden beim Export geschwaerzt (SM+ speichert SMB-Passwoerter im Klartext)
+    {
+        TempCopy tmp("smp2_neg_same_names");
+        auto p = make_snapshot_platform(tmp.dir.string(), true);
+        p->fs_rw()->write_file("/data/shadowmount/config.ini", "[config]\nversion = 2\n\n[smb:nas]\nhost = 192.0.2.1\npassword = geheim123\n# password = kommentar\nPasswd=auch\n");
+        p->fs_rw()->write_file("/data/shadowmount/profiles.ini", "[config]\nversion = 2\n[smb:x]\nSecret = s3\n");
+        const fs::path dest = tmp.dir / "export";
+        ExportResult er = export_snapshot(*p, collect_all(*p), dest.string(), "20261108T160000Z");
+        CHECK(er.ok, "Export mit Zugangsdaten: ok (" + er.error + ")");
+        const std::string cfg = slurp(dest / "fs/data/shadowmount/config.ini"), prof = slurp(dest / "fs/data/shadowmount/profiles.ini");
+        CHECK(cfg.find("geheim123") == std::string::npos && cfg.find("auch") == std::string::npos && prof.find("s3") == std::string::npos, "Export: Passwoerter geschwaerzt");
+        CHECK(cfg.find("password = ***") != std::string::npos || cfg.find("password=***") != std::string::npos || cfg.find("password= ***") != std::string::npos, "Export: Schluessel bleibt, Wert ist ***");
+        CHECK(cfg.find("host = 192.0.2.1") != std::string::npos && cfg.find("# password = kommentar") != std::string::npos, "Export: uebrige Zeilen und Kommentare unveraendert");
+    }
+    // Quarantaene der Duplikate: ".duplicates" wird von SM+ nicht gescannt (Punkt-Namen), "_duplicates" schon
+    {
+        TempCopy tmp("b8_pos");
+        auto p = make_snapshot_platform(tmp.dir.string(), true);
+        CHECK(p->fs_rw()->make_dirs("/mnt/usb0/.duplicates") && p->fs_rw()->write_file("/mnt/usb0/.duplicates/PPSA77777.ffpfs", ""), "Scanner: Test-Ordner angelegt");
+        const Facts f = collect_all(*p);
+        bool found = false;
+        for (const auto& t : *f.get("smp.titles"))
+            if (t["titleid"] == "PPSA77777") found = true;
+        CHECK(!found, "Scanner: Inhalt von .duplicates wird nicht als Quelle gezaehlt");
+    }
+}
+
 }  // namespace
 
 void fix_tests() {
@@ -483,10 +812,14 @@ void fix_tests() {
         {"b3_pos_default", "smp.autotoggle_crash_1360", true},{"b8_pos", "smp.duplicate_titleid", true},
         {"b9_pos", "smp.custom_scanpath_hides_defaults", true}, {"b10_pos", "smp.scan_depth", true},
         {"b13_pos", "smp.debug_off", true},
+        {"smp2_pos_blackbox", "smp.v1_keys_in_v2", true}, {"al1_pos_pldmgr", "autoload.elfldr_without_delay", true},
+        {"al1_pos_loader", "autoload.elfldr_without_delay", true},
     };
     int i = 0;
     for (auto& fc : cases) roundtrip(fc, i++);
     safety_tests();
     rollback_test();
     plan_content_tests();
+    recovery_tests();
+    stack_tests();
 }

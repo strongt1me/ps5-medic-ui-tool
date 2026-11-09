@@ -1,0 +1,4 @@
+NanoDNS v0.4
+[nanodns] query from=127.0.0.1:5353 id=0x1 qname=example.test qtype=A(1) qclass=1
+[nanodns] response via=override id=0x1 qname=example.test qtype=A(1) rcode=NOERROR(0) answers=1
+[nanodns] all upstreams failed for a.test

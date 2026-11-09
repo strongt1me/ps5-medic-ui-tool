@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.10",
+  "db_version": "2026.11.11",
   "rules": [
     {
       "id": "hen.etahen_with_kstufflite_latest_fw",
@@ -59,7 +59,7 @@
     },
     {
       "id": "smp.parentheses_in_pfs_name",
-      "severity": "critical",
+      "severity": "info",
       "when": {
         "all": [
           { "fact": "smp.images[].name", "matches": "[()]" },
@@ -67,8 +67,8 @@
         ]
       },
       "text": {
-        "de": "Klammern im Namen eines .ffpfs/.ffpfsc-Images können beim Scan durch ShadowMount+ eine Kernel-Panic auslösen. Umbenennen (Klammern entfernen) behebt das.",
-        "en": "Parentheses in a .ffpfs/.ffpfsc image name can cause a kernel panic when ShadowMount+ scans it. Renaming it (removing the parentheses) fixes it."
+        "de": "Der Name eines .ffpfs/.ffpfsc-Images enthält Klammern. In älteren Versionen (gemeldet mit 1.6test15 auf FW 6.02) löste das beim Scan eine Kernel-Panic aus; der Entwickler schreibt, das sei längst behoben, und es ließ sich mit neueren Versionen (1.7beta4, FW 12.00) nicht nachstellen. Umbenennen ohne Klammern ist trotzdem harmlos und schützt, falls eine ältere Version läuft.",
+        "en": "A .ffpfs/.ffpfsc image name contains parentheses. In older versions (reported with 1.6test15 on FW 6.02) this caused a kernel panic during the scan; the developer says it was fixed long ago, and it could not be reproduced with newer versions (1.7beta4, FW 12.00). Renaming it without the parentheses is harmless anyway and protects you if an older version is running."
       },
       "evidence": "smp.images[].path",
       "fix": "rename_image_parentheses",
@@ -300,16 +300,17 @@
       "id": "smp.image_sector_autotune",
       "severity": "info",
       "when": {
-        "all": [
-          { "fact": "smp.autotune.lines", "count_matches": { "regex": "image_sector", "gte": 1 } }
+        "any": [
+          { "fact": "smp.autotune.lines", "count_matches": { "regex": "image_sector", "gte": 1 } },
+          { "fact": "smp.log.lines", "count_matches": { "regex": "\\[CFG\\] image sector autotuned", "gte": 1 } }
         ]
       },
       "text": {
-        "de": "ShadowMount+ hat die Sektorgröße eines Images automatisch angepasst (autotune.ini). Das Spiel einfach erneut starten.",
-        "en": "ShadowMount+ automatically adjusted an image's sector size (autotune.ini). Simply start the game again."
+        "de": "ShadowMount+ hat die Sektorgröße eines Images automatisch angepasst (ab 1.7beta12 steht der Wert in der profiles.ini unter [image:DATEI], davor in der autotune.ini; im Log: '[CFG] image sector autotuned'). Das Spiel einfach erneut starten.",
+        "en": "ShadowMount+ automatically adjusted an image's sector size (since 1.7beta12 the value is in profiles.ini under [image:FILE], before that in autotune.ini; in the log: '[CFG] image sector autotuned'). Simply start the game again."
       },
-      "evidence": "smp.autotune.lines",
-      "evidence_filter": "image_sector",
+      "evidence": "smp.log.lines",
+      "evidence_filter": "image sector autotuned",
       "fix": null,
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
@@ -408,7 +409,7 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": { "regex": "[Ff]ailed to [Ii]nstall [Ss]hell[Cc]ore [Hh]ooks", "gte": 1 } }
+          { "fact": "smp.log.lines", "count_matches": { "regex": "[Ff]ailed to [Ii]nstall [Ss]hell[Cc]ore [Hh]ooks|\\[SHELLCORE\\] lifecycle hooks unavailable", "gte": 1 } }
         ]
       },
       "text": {
@@ -416,7 +417,7 @@
         "en": "ShadowMount+ could not install its hooks in ShellCore at startup. This was reported on several firmwares (11.60, 12.70) with 1.7beta3 and 1.7alpha12; the cause is unconfirmed. The developer asked about a clean boot, and the reporter said it did not happen every time. Try: restart the console, then load the jailbreak, kstuff-lite and finally ShadowMount+, and use a newer version (since 1.7beta6 hook reliability is improved)."
       },
       "evidence": "smp.log.lines",
-      "evidence_filter": "[Ff]ailed to [Ii]nstall [Ss]hell[Cc]ore [Hh]ooks",
+      "evidence_filter": "[Ff]ailed to [Ii]nstall [Ss]hell[Cc]ore [Hh]ooks|\\[SHELLCORE\\] lifecycle hooks unavailable",
       "fix": null,
       "source": "https://github.com/drakmor/ShadowMountPlus/issues/109",
       "verified": "community"
@@ -475,6 +476,416 @@
       "fix": null,
       "source": "https://github.com/strongt1me/ps5-medic",
       "verified": "todo"
+    },
+    {
+      "id": "smp.config_rejected",
+      "severity": "critical",
+      "when": {
+        "all": [
+          { "fact": "smp.config_problems[].text", "matches": "." }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ 1.7beta12 verwirft die ganze Konfiguration, wenn auch nur eine Zeile ungültig ist: Beim Start beendet sich der Payload (die Meldung erscheint nur auf der Konsole, nicht im Log), bei einer Änderung zur Laufzeit bleibt der alte Stand und die neuen Werte wirken nicht. Die genannten Zeilen korrigieren (Wahrheitswerte als on/off oder 1/0, scan depth 1 oder 2, Zahlen im erlaubten Bereich) oder aus der config.ini entfernen; vorher eine Kopie der Datei machen.",
+        "en": "ShadowMount+ 1.7beta12 rejects the whole configuration if even one line is invalid: at startup the payload exits (the message appears only on the console, not in the log); a change at runtime keeps the old state and the new values have no effect. Correct the listed lines (booleans as on/off or 1/0, scan depth 1 or 2, numbers within the allowed range) or remove them from config.ini; make a copy of the file first."
+      },
+      "evidence": "smp.config_problems[].text",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.v1_keys_in_v2",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.v1_keys[].key", "matches": "." }
+        ]
+      },
+      "text": {
+        "de": "In der config.ini (Format v2) stehen Zeilen im alten flachen Format, z. B. scan_depth=2. ShadowMount+ 1.7beta12 liest in einer v2-Datei nur die Schlüssel der Sektionen und ignoriert diese Zeilen still: die Einstellung wirkt nicht (zum Beispiel findet es Spiele in der zweiten Ebene nicht). Das passiert, wenn ein anderes Werkzeug oder eine alte Anleitung flache Zeilen anhängt. Der Fix überträgt Zeilen mit bekannter Entsprechung in die richtige Sektion (scan_depth nach [scan] depth, fakelib_default_mode nach [fakelib] default_mode, scanpath nach [scan] path usw.); Backup und Rückgängig inklusive.",
+        "en": "The config.ini (format v2) contains lines in the old flat format, e.g. scan_depth=2. ShadowMount+ 1.7beta12 reads only the section keys in a v2 file and silently ignores these lines, so the setting has no effect (for example it will not find games in the second level). This happens when another tool or an old guide appends flat lines. The fix moves lines with a known equivalent into the right section (scan_depth to [scan] depth, fakelib_default_mode to [fakelib] default_mode, scanpath to [scan] path, etc.); backup and undo included."
+      },
+      "evidence": "smp.v1_keys[].key",
+      "fix": "smp_translate_v1_keys",
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.v1_config_restored",
+      "severity": "critical",
+      "when": {
+        "all": [
+          { "fact": "smp.config_present", "eq": "true" },
+          { "fact": "smp.config_v2", "eq": "false" },
+          { "fact": "smp.v1_backup_ready", "eq": "true" }
+        ]
+      },
+      "text": {
+        "de": "Die config.ini ist im alten Format (v1), obwohl ShadowMount+ sie schon auf v2 umgewandelt hat (config-v1-backup/ready.ini existiert). ShadowMount+ 1.7beta12 verweigert dann den Start, damit die umgewandelten Dateien nicht von einer alten überschrieben werden; die Meldung steht nur auf der Konsole. Das passiert, wenn eine alte config.ini zurückkopiert wurde (aus einem Backup oder von einem PC-Werkzeug). Die v2-Datei wiederherstellen (z. B. aus dem Medic-Backup unter /data/ps5medic/backups) oder die Datei auf v2 umstellen.",
+        "en": "The config.ini is in the old format (v1) although ShadowMount+ already converted it to v2 (config-v1-backup/ready.ini exists). ShadowMount+ 1.7beta12 then refuses to start so that the converted files are not overwritten by old ones; the message appears only on the console. This happens when an old config.ini was copied back (from a backup or a PC tool). Restore the v2 file (e.g. from the Medic backup under /data/ps5medic/backups) or convert the file to v2."
+      },
+      "evidence": "smp.config_v2",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.retry_limit",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": {"regex": "(\\[RETRY\\] limit reached|retry limit reached \\()", "gte": 1} }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ hat bei einem Titel oder Image nach mehreren Fehlversuchen aufgegeben (2 Versuche je Titel, 3 je Image) und überspringt es bis zum nächsten Start des Payloads. Die Ursache steht in den Logzeilen davor (z. B. 'attach failed', 'nmount … failed', '[REG] FAIL'). Ursache beheben, dann ShadowMount+ erneut senden (oder die Versuche über die API zurücksetzen: POST /api/v1/scan mit {\"reset_attempts\":true}).",
+        "en": "ShadowMount+ gave up on a title or image after several failed attempts (2 per title, 3 per image) and skips it until the payload is restarted. The cause is in the log lines before it (e.g. 'attach failed', 'nmount … failed', '[REG] FAIL'). Fix the cause, then send ShadowMount+ again (or reset the attempts through the API: POST /api/v1/scan with {\"reset_attempts\":true})."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "(\\[RETRY\\] limit reached|retry limit reached \\()",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.kstuff_wait",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": {"regex": "\\[KSTUFF\\] not found; waiting before starting services", "gte": 1} },
+          { "not": { "fact": "smp.log.lines", "count_matches": {"regex": "ready; continuing startup", "gte": 1} } }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ wartet auf kstuff und startet bis dahin keine Dienste (kein Scan, keine Mounts). kstuff ist nicht geladen oder noch nicht bereit. kstuff-lite laden (in der Autoload-Liste vor ShadowMount+ oder danach mit Wartezeit) und prüfen, ob die Version zur Firmware passt.",
+        "en": "ShadowMount+ is waiting for kstuff and starts no services until then (no scan, no mounts). kstuff is not loaded or not ready yet. Load kstuff-lite (before ShadowMount+ in the autoload list, or after it with a delay) and check that the version matches the firmware."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "\\[KSTUFF\\]",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "smp.scanner_root_denied",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": {"regex": "\\[SCAN\\] watcher open failed for ", "gte": 1} },
+          { "fact": "smp.log.lines", "count_matches": {"regex": "scanner watcher initialization failed", "gte": 1} }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ konnte einen Scanpfad nicht überwachen (Zugriff verweigert) und hat den Scanner beendet: es werden keine neuen Spiele mehr erkannt. Bis 1.7beta11 reichte dafür ein nicht lesbarer Standard-Scanpfad (gemeldet: /data/etaHEN/games). Ab 1.7beta12 behoben: ShadowMount+ aktualisieren. Sonst die Rechte des genannten Ordners prüfen oder nur eigene Scanpfade setzen ([scan] path).",
+        "en": "ShadowMount+ could not watch a scan path (permission denied) and stopped its scanner: no new games are detected any more. Up to 1.7beta11 an unreadable default scan path was enough for that (reported: /data/etaHEN/games). Fixed in 1.7beta12: update ShadowMount+. Otherwise check the permissions of the named folder or set only your own scan paths ([scan] path)."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "\\[SCAN\\] watcher open failed",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/201",
+      "verified": "community"
+    },
+    {
+      "id": "smp.launch_busy",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": {"regex": "launch mount unavailable: .* status=16", "gte": 2} }
+        ]
+      },
+      "text": {
+        "de": "Spiele starten nicht mehr: ShadowMount+ meldet mehrfach 'launch mount unavailable … status=16 (Device busy)'. Nach einem fehlgeschlagenen Spielwechsel blieb ein Titel reserviert, und jeder verwaltete Start scheiterte (gemeldet bis 1.7beta11, behoben in 1.7beta12). Den fehlgeschlagenen Titel einmal ohne laufendes Spiel starten oder ShadowMount+ erneut senden; ShadowMount+ aktualisieren.",
+        "en": "Games no longer start: ShadowMount+ repeatedly reports 'launch mount unavailable … status=16 (Device busy)'. After a failed game switch a title stayed reserved and every managed launch failed (reported up to 1.7beta11, fixed in 1.7beta12). Start the failed title once without a running game or send ShadowMount+ again; update ShadowMount+."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "launch mount unavailable",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/183",
+      "verified": "community"
+    },
+    {
+      "id": "smp.fakelib_handoff_stuck",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": {"regex": "handoff cleanup failed for pid=", "gte": 1} },
+          { "fact": "smp.log.lines", "count_matches": {"regex": "sandbox fakelib unavailable", "gte": 1} }
+        ]
+      },
+      "text": {
+        "de": "Ein beendeter Prozess blockiert die Aufräumschlange der Fakelib: danach starten Backport-Spiele ohne Fakelib und stürzen ab. Das heilt nur ein Neustart der Konsole. Behoben in ShadowMount+ 1.7beta12.",
+        "en": "A terminated process blocks the fakelib cleanup queue: afterwards backported games start without their fakelib and crash. Only a console restart clears it. Fixed in ShadowMount+ 1.7beta12."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "handoff cleanup failed|sandbox fakelib unavailable",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/199",
+      "verified": "community"
+    },
+    {
+      "id": "smp.backport_overlay_denied",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": {"regex": "backport overlay failed: .*Operation not permitted", "gte": 1} }
+        ]
+      },
+      "text": {
+        "de": "Der Backport-Overlay (Fakelib) konnte nicht eingehängt werden ('Operation not permitted'). Das betrifft Backports auf USB-Laufwerken (exFAT), weil der Mount dort nicht erlaubt ist. Laut Entwickler helfen: die Backport-Dateien in den Spielordner kopieren, ein .exfat-Image verwenden oder internen Speicher nutzen.",
+        "en": "The backport overlay (fakelib) could not be mounted ('Operation not permitted'). This affects backports on USB drives (exFAT), where the mount is not allowed. According to the developer this helps: copy the backport files into the game folder, use a .exfat image or use internal storage."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "backport overlay failed",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/118",
+      "verified": "community"
+    },
+    {
+      "id": "smp.leak_pre_beta11",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "smp.version", "gt": "1.7beta8" },
+          { "fact": "smp.version", "lt": "1.7beta11" }
+        ]
+      },
+      "text": {
+        "de": "Diese Version von ShadowMount+ (1.7beta9 oder 1.7beta10) verliert bei jedem Scan Arbeitsspeicher (gemeldet: rund 5 bis 8 MB pro Minute). Nach Stunden kommt es zu Ruckeln, Abstürzen oder dem Fehler CE-108262-9. Behoben in 1.7beta11: ShadowMount+ aktualisieren. Als Notbehelf lässt sich das Scan-Intervall in der config.ini erhöhen ([scan] interval_seconds = 3600, wirkt sofort).",
+        "en": "This version of ShadowMount+ (1.7beta9 or 1.7beta10) leaks memory on every scan (reported: about 5 to 8 MB per minute). After hours this causes stutter, crashes or the error CE-108262-9. Fixed in 1.7beta11: update ShadowMount+. As a workaround raise the scan interval in config.ini ([scan] interval_seconds = 3600, takes effect immediately)."
+      },
+      "evidence": "smp.version",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/187",
+      "verified": "community"
+    },
+    {
+      "id": "smp.usb_game_closed_on_rest",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "smp.log.lines", "count_matches": {"regex": "\\[SLEEP\\] killing USB-backed game before suspend", "gte": 1} }
+        ]
+      },
+      "text": {
+        "de": "Beim Ruhemodus hat ShadowMount+ ein Spiel von einem USB-Laufwerk beendet (Absicht: ein abgezogenes Laufwerk würde sonst das System stören). Ungespeicherter Spielstand kann dabei verloren gehen: das Spiel vor dem Ruhemodus beenden. Bis 1.7beta11 traf das fälschlich auch Spiele auf M.2 (/mnt/ext1); behoben in 1.7beta12.",
+        "en": "On entering rest mode ShadowMount+ closed a game running from a USB drive (by design: an unplugged drive would otherwise disturb the system). Unsaved progress can be lost: quit the game before rest mode. Up to 1.7beta11 this wrongly also hit games on M.2 (/mnt/ext1); fixed in 1.7beta12."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "\\[SLEEP\\] killing USB-backed game",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/198",
+      "verified": "doc"
+    },
+    {
+      "id": "autoload.elfldr_without_delay",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "autoload.problems[].kind", "eq": "elfldr_no_delay" }
+        ]
+      },
+      "text": {
+        "de": "In der Autoload-Liste folgt auf den Loader (elfldr) sofort der nächste Eintrag. Ein frisch gestarteter Loader nimmt erst nach einigen Sekunden Verbindungen an: der folgende Eintrag scheitert dann ('Loader connection failed … 0 bytes sent') und fehlt nach jedem Start. Zwischen elfldr und dem nächsten Payload gehört eine Wartezeit (!4000 = vier Sekunden). Der Fix fügt sie ein; Backup und Rückgängig inklusive.",
+        "en": "In the autoload list the loader (elfldr) is directly followed by the next entry. A freshly started loader accepts connections only after a few seconds: the following entry then fails ('Loader connection failed … 0 bytes sent') and is missing after every start. A delay belongs between elfldr and the next payload (!4000 = four seconds). The fix inserts it; backup and undo included."
+      },
+      "evidence": "autoload.problems[].detail",
+      "fix": "autoload_insert_delay",
+      "source": "https://github.com/itsPLK/ps5-webkit-autoloader",
+      "verified": "doc"
+    },
+    {
+      "id": "autoload.entry_missing",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "autoload.problems[].kind", "in": ["missing_slot", "missing_file", "entry_case"] }
+        ]
+      },
+      "text": {
+        "de": "Die Autoload-Liste enthält einen Eintrag, zu dem es keine Payload-Datei gibt (oder der Name unterscheidet sich nur in Groß-/Kleinschreibung; Namen sind case-sensitiv). Beim Start meldet der Loader 'Payload not found' bzw. 'Not found' und überspringt den Eintrag: das Payload fehlt nach jedem Neustart. Eintrag korrigieren oder die Payload wieder installieren.",
+        "en": "The autoload list contains an entry for which there is no payload file (or the name differs only in letter case; names are case-sensitive). At startup the loader reports 'Payload not found' / 'Not found' and skips the entry: the payload is missing after every restart. Correct the entry or install the payload again."
+      },
+      "evidence": "autoload.problems[].detail",
+      "fix": null,
+      "source": "https://github.com/itsPLK/ps5-payload-manager",
+      "verified": "doc"
+    },
+    {
+      "id": "autoload.entry_duplicate",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "autoload.problems[].kind", "eq": "duplicate" }
+        ]
+      },
+      "text": {
+        "de": "Ein Eintrag steht mehrfach in der Autoload-Liste und wird jedes Mal gesendet (die Loader entfernen Doppelte nicht). Doppelte Zeilen entfernen.",
+        "en": "An entry appears several times in the autoload list and is sent every time (the loaders do not remove duplicates). Remove the duplicate lines."
+      },
+      "evidence": "autoload.problems[].detail",
+      "fix": null,
+      "source": "https://github.com/itsPLK/ps5-payload-manager",
+      "verified": "doc"
+    },
+    {
+      "id": "pldmgr.autoload_syntax",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "autoload.problems[].kind", "eq": "syntax" }
+        ]
+      },
+      "text": {
+        "de": "Die Autoload-Liste des Payload Managers hat ein ungültiges Format. Der Payload Manager prüft sie streng: Ein Fehler (Datei über 4095 Byte, Zeile über 511 Zeichen, ungültige Wartezeit '!…', Komma in einer Zeile) macht die ganze Sequenz ungültig, und es wird gar nichts gestartet. Die genannte Zeile korrigieren.",
+        "en": "The Payload Manager's autoload list has an invalid format. The Payload Manager checks it strictly: one error (file over 4095 bytes, line over 511 characters, invalid delay '!…', comma in a line) invalidates the whole sequence and nothing is started at all. Correct the named line."
+      },
+      "evidence": "autoload.problems[].detail",
+      "fix": null,
+      "source": "https://github.com/itsPLK/ps5-payload-manager",
+      "verified": "doc"
+    },
+    {
+      "id": "pldmgr.autoload_disabled",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "pldmgr.autoload_enabled", "eq": "0" },
+          { "fact": "pldmgr.autoload_entries", "gt": "0" }
+        ]
+      },
+      "text": {
+        "de": "Der Payload Manager hat Einträge in seiner Autoload-Liste, aber Autoload ist ausgeschaltet (AUTOLOAD_ENABLED=0). Die Liste wird beim Start nicht abgearbeitet; die Payloads müssen von Hand geladen werden. Autoload in den Einstellungen des Payload Managers einschalten, falls das nicht gewollt ist.",
+        "en": "The Payload Manager has entries in its autoload list, but autoload is switched off (AUTOLOAD_ENABLED=0). The list is not processed at startup; the payloads have to be loaded by hand. Switch autoload on in the Payload Manager settings if that is not intended."
+      },
+      "evidence": "pldmgr.autoload_entries",
+      "fix": null,
+      "source": "https://github.com/itsPLK/ps5-payload-manager",
+      "verified": "doc"
+    },
+    {
+      "id": "payload.elf_invalid",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "payload.broken_elfs[].reason", "matches": "." }
+        ]
+      },
+      "text": {
+        "de": "Mindestens eine ELF-Datei ist unbrauchbar: zu klein, ohne ELF-Kennung (häufig eine gespeicherte HTML-Fehlerseite) oder am Ende abgeschnitten (abgebrochene Übertragung). Der Loader lehnt solche Dateien ab, das Payload startet nicht. Die Datei neu übertragen (FTP im Binärmodus) oder neu herunterladen; die kaputte Datei vorher wegräumen.",
+        "en": "At least one ELF file is unusable: too small, without an ELF signature (often a saved HTML error page) or cut off at the end (aborted transfer). The loader rejects such files and the payload does not start. Transfer the file again (FTP in binary mode) or download it again; move the broken file out of the way first."
+      },
+      "evidence": "payload.broken_elfs[].path",
+      "fix": null,
+      "source": "https://github.com/ps5-payload-dev/elfldr",
+      "verified": "doc"
+    },
+    {
+      "id": "nanodns.log_problem",
+      "severity": "info",
+      "when": {
+        "any": [
+          { "fact": "nanodns.log.upstream_failed", "gt": "2" },
+          { "fact": "nanodns.log.bind_failed", "gt": "0" },
+          { "fact": "nanodns.log.config_warnings", "gt": "0" }
+        ]
+      },
+      "text": {
+        "de": "Das Log von nanoDNS enthält Fehler: Es erreicht seine Upstream-DNS-Server nicht (dann scheitert jede Namensauflösung, Apps und der Payload Manager wirken 'offline'), kann Port 53 nicht öffnen oder meldet ungültige Zeilen in nanodns.ini. Die Upstream-Server in nanodns.ini prüfen (z. B. die Router-Adresse als ersten Eintrag) und nanoDNS danach neu senden. Das Log wird nur gezählt; Domains daraus gelangen nicht in den Bericht.",
+        "en": "The nanoDNS log contains errors: it cannot reach its upstream DNS servers (then every name lookup fails and apps and the Payload Manager look 'offline'), cannot open port 53 or reports invalid lines in nanodns.ini. Check the upstream servers in nanodns.ini (e.g. the router address as the first entry) and send nanoDNS again. The log is only counted; domains from it never reach the report."
+      },
+      "fix": null,
+      "source": "https://github.com/drakmor/nanoDNS",
+      "verified": "doc"
+    },
+    {
+      "id": "hen.etahen_crashed",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "etahen.crashed", "eq": "true" }
+        ]
+      },
+      "text": {
+        "de": "etaHEN meldet einen Absturz seines Hauptdienstes ('main etaHEN has crashed'). Toolbox und Plugins sind danach nicht mehr verfügbar. Die Konsole neu starten und die Jailbreak-Kette neu laden; wiederholt es sich, zuletzt hinzugefügte Plugins entfernen.",
+        "en": "etaHEN reports a crash of its main service ('main etaHEN has crashed'). Toolbox and plugins are no longer available afterwards. Restart the console and load the jailbreak chain again; if it recurs, remove recently added plugins."
+      },
+      "evidence": "etahen.crashed",
+      "fix": null,
+      "source": "https://github.com/etaHEN/etaHEN",
+      "verified": "doc"
+    },
+    {
+      "id": "hen.etahen_game_rest_kill",
+      "severity": "info",
+      "when": {
+        "any": [
+          { "fact": "etahen.game_rest_kill", "eq": "1" },
+          { "fact": "etahen.util_rest_kill", "eq": "1" }
+        ]
+      },
+      "text": {
+        "de": "In der etaHEN-Konfiguration ist 'Game_rest_kill' (oder 'Util_rest_kill') eingeschaltet: etaHEN beendet beim Ruhemodus das offene Spiel bzw. die Anwendung. Das ist eine Einstellung, kein Fehler. Es erklärt aber 'Spiel nach dem Ruhemodus weg' und nicht gespeicherten Spielstand.",
+        "en": "In the etaHEN configuration 'Game_rest_kill' (or 'Util_rest_kill') is switched on: etaHEN closes the open game or application when the console enters rest mode. This is a setting, not a fault. It does explain 'game gone after rest mode' and lost unsaved progress."
+      },
+      "fix": null,
+      "source": "https://github.com/etaHEN/etaHEN",
+      "verified": "doc"
+    },
+    {
+      "id": "storage.usb_mounted_ro",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "storage.mounts[].mount", "matches": "^/mnt/(usb|ext)[0-9]+$" },
+          { "not": { "fact": "storage.mounts[].fstype", "eq": "tmpfs" } },
+          { "fact": "storage.mounts[].fstype", "matches": "." },
+          { "fact": "storage.mounts[].readonly", "eq": "true" }
+        ]
+      },
+      "text": {
+        "de": "Ein angeschlossenes Laufwerk ist schreibgeschützt eingehängt. Kopieren, Verschieben und Reparaturen (z. B. doppelte Quellen) gehen dort nicht. Mögliche Ursachen: ein Schreibschutz-Schalter, ein Dateisystemfehler oder ein defektes Laufwerk. Das Laufwerk am PC prüfen und reparieren (chkdsk bzw. fsck) und neu einstecken.",
+        "en": "A connected drive is mounted read-only. Copying, moving and repairs (e.g. duplicate sources) do not work there. Possible causes: a write-protect switch, a file system error or a failing drive. Check and repair the drive on a PC (chkdsk or fsck) and plug it in again."
+      },
+      "evidence": "storage.mounts[].mount",
+      "fix": null,
+      "source": "https://github.com/ps5-payload-dev/sdk",
+      "verified": "todo"
+    },
+    {
+      "id": "sys.temp_high",
+      "severity": "info",
+      "when": {
+        "any": [
+          { "fact": "sys.temp.cpu_c", "gt": "85" },
+          { "fact": "sys.temp.soc_c", "gt": "85" }
+        ]
+      },
+      "text": {
+        "de": "Die Konsole ist gerade sehr heiß (CPU oder SoC über 85 °C). Unter Last ist das nicht ungewöhnlich, im Leerlauf deutet es auf schlechte Belüftung oder Staub hin: Lüftungsschlitze freihalten, die Konsole nicht einbauen, bei Dauerproblemen reinigen. Ein niedrigeres Lüfterziel lässt sich in ShadowMount+ setzen ([fan] target_temperature, 50 bis 91 °C; Standard der Konsole laut Entwickler 91 °C). Die Schwelle ist eine eigene Annahme; Sony nennt keine Grenze, und es ist eine Momentaufnahme.",
+        "en": "The console is very hot right now (CPU or SoC above 85 °C). Under load that is not unusual; when idle it points to poor ventilation or dust: keep the vents clear, do not build the console in, clean it if the problem persists. A lower fan target can be set in ShadowMount+ ([fan] target_temperature, 50 to 91 °C; the console's default is 91 °C according to the developer). The threshold is our own assumption; Sony names no limit, and this is a snapshot."
+      },
+      "evidence": "sys.temp.cpu_c",
+      "fix": null,
+      "source": "https://github.com/ps5-payload-dev/sdk",
+      "verified": "todo"
+    },
+    {
+      "id": "storage.scanpath_drive_missing",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "smp.missing_drive_paths[].path", "matches": "." }
+        ]
+      },
+      "text": {
+        "de": "Ein eigener Scanpfad in der config.ini liegt auf einem Laufwerk (/mnt/usbN oder /mnt/extN), das nicht angeschlossen ist: die Spiele dort werden nicht gefunden. Ist [library] remove_missing eingeschaltet, entfernt ShadowMount+ die Registrierungen nach der eingestellten Wartezeit (Standard: aus). Das Laufwerk neu einstecken (ohne USB-Hub, anderer Port) oder den Scanpfad entfernen.",
+        "en": "A custom scan path in config.ini is on a drive (/mnt/usbN or /mnt/extN) that is not connected: the games there are not found. If [library] remove_missing is on, ShadowMount+ removes the registrations after the configured delay (default: off). Plug the drive in again (without a USB hub, another port) or remove the scan path."
+      },
+      "evidence": "smp.missing_drive_paths[].path",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
     }
   ]
 }

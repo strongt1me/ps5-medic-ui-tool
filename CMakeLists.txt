@@ -11,6 +11,7 @@ add_library(medic STATIC
   libmedic/src/snapshot_platform.cpp
   libmedic/src/snapshot_export.cpp
   libmedic/src/collectors.cpp
+  libmedic/src/collectors_stack.cpp
   libmedic/src/rules.cpp
   libmedic/src/sha256.cpp
   libmedic/src/ini.cpp

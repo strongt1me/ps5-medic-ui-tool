@@ -82,9 +82,17 @@ constexpr int kMaxScanLevel = 4;       // wie tief wir zur Faktensammlung suchen
 constexpr std::size_t kMaxLogLines = 2000;
 constexpr std::size_t kMaxLogBytes = 4u << 20;
 
+struct IniLine {
+    int line = 0;  // 1-basiert
+    std::string section, key, value;
+};
+
 struct Config {
     json values = json::object();          // [section] key=value -> values[section][key]; ohne Sektion: values[key]
-    std::vector<std::string> scanpaths;    // "scanpath=" und "[scan] path="
+    std::vector<std::string> scanpaths;    // "scanpath=" (nur v1) und "[scan] path="
+    bool v2 = false;                       // Sektion [config] vorhanden: Format v2 (1.7beta12)
+    std::vector<IniLine> lines;            // alle Schluessel-Zeilen in Dateireihenfolge (fuer die Pruefungen unten)
+    std::vector<int> unreadable_lines;     // Zeilen, die weder Kommentar, Sektion noch "schluessel = wert" sind
 };
 
 std::string safe_key(std::string k) {
@@ -121,7 +129,10 @@ Config parse_ini(const std::string& text) {
         const std::string t = lower(trim(l));
         if (t.rfind("[config]", 0) == 0) v2 = true;
     }
+    c.v2 = v2;
+    int line_no = 0;
     for (auto line : split_lines(text)) {
+        ++line_no;
         line = trim(line);
         if (line.empty() || line[0] == '#' || line[0] == ';') continue;
         if (line[0] == '[') {
@@ -130,10 +141,15 @@ Config parse_ini(const std::string& text) {
             continue;
         }
         auto eq = line.find('=');
-        if (eq == std::string::npos) continue;
+        if (eq == std::string::npos) {
+            c.unreadable_lines.push_back(line_no);
+            continue;
+        }
         std::string key = safe_key(lower(trim(line.substr(0, eq))));
         std::string val = decode_ini_value(line.substr(eq + 1), v2);
-        if (key == "scanpath" || (section == "scan" && key == "path")) {
+        c.lines.push_back({line_no, section, key, val});
+        // Eine v2-Datei kennt "scanpath=" nicht mehr (SM+ ignoriert die Zeile, Antwort aus dem Quelltext 1.7beta12).
+        if ((key == "scanpath" && !v2) || (section == "scan" && key == "path")) {
             if (!val.empty()) c.scanpaths.push_back(val);
             continue;
         }
@@ -146,12 +162,94 @@ Config parse_ini(const std::string& text) {
     return c;
 }
 
-// Wert aus Sektion ([section] key) oder aelterem flachem Schluessel.
+// Wert aus Sektion ([section] key) oder aelterem flachem Schluessel. In einer v2-Datei gilt der flache Schluessel nicht:
+// SM+ 1.7beta12 liest nur bekannte Paare (Sektion, Schluessel) und ignoriert den Rest ("[CFG] unknown setting").
 const json* cfg_value(const Config& c, const char* section, const char* key, const char* legacy_flat) {
     if (c.values.contains(section) && c.values[section].is_object() && c.values[section].contains(key))
         return &c.values[section][key];
-    if (legacy_flat && c.values.contains(legacy_flat) && c.values[legacy_flat].is_string()) return &c.values[legacy_flat];
+    if (!c.v2 && legacy_flat && c.values.contains(legacy_flat) && c.values[legacy_flat].is_string()) return &c.values[legacy_flat];
     return nullptr;
+}
+
+// ---- Pruefungen einer v2-Datei nach den Regeln von ShadowMount+ 1.7beta12 -------------------------------------------
+// (sm_config_mount.c: ein einziger ungueltiger Wert verwirft die ganze Konfiguration; beim Start beendet sich der Payload,
+//  beim Reload bleibt der alte Stand. Unter v1/beta11 wurden ungueltige Werte nur uebersprungen.)
+
+struct V1Map {
+    const char* v1;       // flacher v1-Schluessel
+    const char* section;  // v2-Sektion; nullptr = keine verifizierte Entsprechung
+    const char* key;
+    bool add;             // mehrere Zeilen (scanpath -> [scan] path)
+};
+
+// Entsprechungen, die SM+ bei der Umwandlung der Test-Konsole selbst geschrieben hat (config-v1-backup/config.ini gegen die
+// neue config.ini, 9. Nov. 2026), dazu scanpath -> [scan] path laut Dokumentation. Alle anderen v1-Namen sind bekannt, aber
+// ohne verifizierte Entsprechung: der Befund nennt sie, der Fix fasst sie nicht an.
+const V1Map kV1Keys[] = {
+    {"scan_depth", "scan", "depth", false},
+    {"scanpath", "scan", "path", true},
+    {"api_bind_address", "api", "bind_address", false},
+    {"fan_target_temperature", "fan", "target_temperature", false},
+    {"auto_remove_missing_games", "library", "remove_missing", false},
+    {"auto_remove_missing_delay_seconds", "library", "remove_delay_seconds", false},
+    {"update_emulators", "emulators", "update_enabled", false},
+    {"fakelib_default_mode", "fakelib", "default_mode", false},
+    {"recursive_scan", nullptr, nullptr, false},
+    {"scan_interval_seconds", nullptr, nullptr, false},
+    {"stability_wait_seconds", nullptr, nullptr, false},
+    {"api_enabled", nullptr, nullptr, false},
+    {"api_port", nullptr, nullptr, false},
+    {"mount_read_only", nullptr, nullptr, false},
+    {"force_mount", nullptr, nullptr, false},
+    {"persistent_image_mounts", nullptr, nullptr, false},
+    {"auto_remove_games_with_dlc", nullptr, nullptr, false},
+    {"backport_fakelib", nullptr, nullptr, false},
+    {"fakelib_mode", nullptr, nullptr, false},
+    {"fakelib_exclude", nullptr, nullptr, false},
+    {"emulators_path", nullptr, nullptr, false},
+    {"image_ro", nullptr, nullptr, false},
+    {"image_rw", nullptr, nullptr, false},
+    {"image_sector", nullptr, nullptr, false},
+};
+
+const V1Map* find_v1(const std::string& key) {
+    for (const auto& m : kV1Keys)
+        if (key == m.v1) return &m;
+    return nullptr;
+}
+
+bool is_flag_value(const std::string& v) {
+    const std::string s = lower(v);
+    return s == "1" || s == "0" || s == "true" || s == "false" || s == "yes" || s == "no" || s == "on" || s == "off";
+}
+
+bool is_int_in(const std::string& v, long lo, long hi) {
+    if (v.empty() || v.size() > 9 || !std::all_of(v.begin(), v.end(), [](unsigned char ch) { return std::isdigit(ch); })) return false;
+    const long n = std::stol(v);
+    return n >= lo && n <= hi;
+}
+
+// Liefert eine kurze Beschreibung ("[scan] depth = 3"), wenn SM+ die Datei wegen dieser Zeile ablehnen wuerde.
+std::string invalid_v2_value(const IniLine& l) {
+    struct Check {
+        const char* section;
+        const char* key;
+        int kind;  // 0 = Wahrheitswert, 1 = Zahl lo..hi, 2 = "system" oder 50..91
+        long lo, hi;
+    };
+    static const Check kChecks[] = {
+        {"general", "debug", 0, 0, 0},          {"general", "quiet_mode", 0, 0, 0},
+        {"emulators", "update_enabled", 0, 0, 0}, {"emulators", "auto_update_ampr", 0, 0, 0},
+        {"library", "remove_missing", 0, 0, 0},  {"library", "remove_delay_seconds", 1, 1, 86400},
+        {"scan", "depth", 1, 1, 2},              {"scan", "interval_seconds", 1, 1, 3600},
+        {"scan", "stability_wait_seconds", 1, 0, 3600}, {"fan", "target_temperature", 2, 50, 91},
+    };
+    for (const auto& c : kChecks) {
+        if (l.section != c.section || l.key != c.key) continue;
+        const bool ok = c.kind == 0 ? is_flag_value(l.value) : c.kind == 1 ? is_int_in(l.value, c.lo, c.hi) : (lower(l.value) == "system" || is_int_in(l.value, c.lo, c.hi));
+        if (!ok) return "[" + l.section + "] " + l.key + " = " + l.value;
+    }
+    return {};
 }
 
 // "1/true/yes/on" -> 1, "0/false/no/off" -> 0, sonst Default.
@@ -205,13 +303,15 @@ struct Entry {
 };
 
 // Sammelt Eintraege je Pfad (kleinste Ebene gewinnt, weil sich Scanpfade ueberlappen: /mnt/usb0 und /mnt/usb0/homebrew).
-// Eigene Quarantaene-Ordner der Fix-Engine (_duplicates, _to_delete) werden nicht als Quelle gezaehlt.
+// Wie der Scanner von SM+ (sm_scan_tree.c): Namen mit '.' am Anfang werden auf jeder Ebene uebersprungen, "_..." nicht.
+// Die Quarantaene der Fix-Engine heisst deshalb ".duplicates" (ein "_duplicates" wuerde bei Tiefe 2 mitgescannt).
 void scan_dir(const IFileSystem& fs, const std::string& root, const std::string& dir, int level, std::map<std::string, Entry>& out) {
     for (const auto& e : fs.list_dir(dir)) {
+        if (!e.name.empty() && e.name[0] == '.') continue;
         // "backports" ist laut SM+-README ein Overlay-Ordner (<scanpath>/backports/<TITLE_ID>/) und kein Spiel.
         // "sce_sys" ist nie eine Quelle: in Ordnern ohne param.json (z. B. PS4-Dumps) enthaelt es .dat-Dateien (npbind.dat),
         // die sonst als Images in grosser Tiefe gezaehlt wuerden (erster Konsolenlauf: falscher B10-Befund).
-        if (e.is_dir && (e.name == "_duplicates" || e.name == "_to_delete" || e.name == "backports" || e.name == "sce_sys")) continue;
+        if (e.is_dir && (e.name == "backports" || e.name == "sce_sys")) continue;
         const std::string path = join_path(dir, e.name);
         Entry en;
         en.root = root;
@@ -348,6 +448,11 @@ void collect_system(const Platform& p, Facts& f) {
         case PortState::Unknown: break;
     }
 
+    // sys.temp.cpu_c / sys.temp.soc_c: Momentaufnahme in Grad Celsius; fehlt, wenn nicht lesbar.
+    const Thermal th = p.sys().thermal();
+    if (th.cpu_c >= 0) f.set("sys.temp.cpu_c", th.cpu_c);
+    if (th.soc_c >= 0) f.set("sys.temp.soc_c", th.soc_c);
+
     const std::int64_t boot = p.sys().boot_epoch();
     if (boot <= 0) return;
     static const std::set<std::string> kChain = {"elfldr", "etahen", "kstuff", "shadowmountplus"};
@@ -479,7 +584,8 @@ void collect_storage(const Platform& p, Facts& f) {
     json arr = json::array();
     for (auto& s : p.sys().storage()) {
         double pct = s.total_bytes ? 100.0 * static_cast<double>(s.free_bytes) / static_cast<double>(s.total_bytes) : 0.0;
-        arr.push_back({{"mount", s.mount}, {"total", s.total_bytes}, {"free", s.free_bytes}, {"free_pct", pct}});
+        arr.push_back({{"mount", s.mount}, {"total", s.total_bytes}, {"free", s.free_bytes}, {"free_pct", pct},
+                       {"fstype", s.fstype}, {"readonly", s.read_only}});
     }
     f.set("storage.mounts", std::move(arr));
 }
@@ -540,6 +646,31 @@ void collect_shadowmount(const Platform& p, Facts& f) {
     Config cfg = parse_ini(cfg_text);
     f.set("smp.config", cfg.values);
     f.set("smp.scanpaths_custom", cfg.scanpaths);
+    f.set("smp.config_v2", cfg.v2);
+    // Nach der Umwandlung legt SM+ config-v1-backup/ready.ini an. Steht dann wieder eine v1-Datei in config.ini, verweigert
+    // SM+ den Start (sm_config_file.c: Abbruch, damit die umgewandelten Dateien nicht von einer alten ueberschrieben werden).
+    f.set("smp.v1_backup_ready", fs.exists(join_path(kSmpDir, "config-v1-backup/ready.ini")));
+
+    // Zeilen, die SM+ 1.7beta12 in einer v2-Datei ignoriert (flache v1-Namen) oder wegen derer es die Datei ablehnt.
+    json v1keys = json::array(), problems = json::array();
+    if (cfg.v2) {
+        for (const auto& l : cfg.lines) {
+            if (const V1Map* m = find_v1(l.key)) {
+                // "[auto_update_ampr]" u. a. heissen in v1 und v2 gleich und stehen nicht in der Liste; hier nur echte v1-Namen.
+                v1keys.push_back({{"key", m->v1}, {"value", l.value}, {"line", l.line}, {"section", l.section},
+                                  {"target", m->section ? "[" + std::string(m->section) + "] " + m->key : std::string()},
+                                  {"tsection", m->section ? m->section : ""}, {"tkey", m->key ? m->key : ""}, {"add", m->add}});
+            } else if (const std::string bad = invalid_v2_value(l); !bad.empty()) {
+                problems.push_back({{"line", l.line}, {"text", "Zeile " + std::to_string(l.line) + ": " + bad}});
+            }
+        }
+        for (int n : cfg.unreadable_lines) problems.push_back({{"line", n}, {"text", "Zeile " + std::to_string(n) + ": weder Kommentar noch Sektion noch Schluessel=Wert"}});
+        if (const json* ver = cfg.values.contains("config") && cfg.values["config"].is_object() && cfg.values["config"].contains("version") ? &cfg.values["config"]["version"] : nullptr;
+            ver && ver->is_string() && ver->get<std::string>() != "2")
+            problems.push_back({{"line", 0}, {"text", "[config] version = " + ver->get<std::string>() + " (erwartet: 2)"}});
+    }
+    f.set("smp.v1_keys", std::move(v1keys));
+    f.set("smp.config_problems", std::move(problems));
 
     // Wirksame Einstellungen (Defaults laut SM+ README: scan depth 1, debug an).
     // fakelib: README kennt [fakelib] enabled; aelterer Schluessel backport_fakelib. Default "an" laut RULES.md (B5).
@@ -554,6 +685,32 @@ void collect_shadowmount(const Platform& p, Facts& f) {
     const std::vector<std::string> roots = custom ? cfg.scanpaths : default_scan_paths();
     f.set("smp.scan_roots", roots);
     f.set("smp.default_scan_roots", default_scan_paths());
+
+    // Eigene Scanpfade auf einem Laufwerk, das nicht eingehaengt ist. Ohne Laufwerk sind /mnt/usbN und /mnt/extN auf der PS5
+    // nur kleine tmpfs-Platzhalter (getfsstat auf der Test-Konsole, 9. Nov. 2026); fehlt die Speicherliste ganz, ist der
+    // Zustand unbekannt und nichts wird gemeldet.
+    {
+        json missing = json::array();
+        const auto storage = p.sys().storage();
+        if (!storage.empty()) {
+            for (const auto& root : cfg.scanpaths) {
+                std::string drive;
+                for (const char* prefix : {"/mnt/usb", "/mnt/ext"}) {
+                    const std::string pre = prefix;
+                    if (root.compare(0, pre.size(), pre) != 0) continue;
+                    std::size_t i = pre.size();
+                    while (i < root.size() && std::isdigit(static_cast<unsigned char>(root[i]))) ++i;
+                    if (i > pre.size() && (i == root.size() || root[i] == '/')) drive = root.substr(0, i);
+                }
+                if (drive.empty()) continue;
+                // Nur der ausdrueckliche Platzhalter zaehlt: eine Speicherliste ohne den Eintrag (aeltere Snapshots, unvollstaendige
+                // Angaben) sagt nichts darueber, ob das Laufwerk steckt.
+                const auto it = std::find_if(storage.begin(), storage.end(), [&](const StorageInfo& s) { return s.mount == drive; });
+                if (it != storage.end() && it->fstype == "tmpfs") missing.push_back({{"path", root}, {"drive", drive}});
+            }
+        }
+        f.set("smp.missing_drive_paths", std::move(missing));
+    }
     auto entries = scan_roots(fs, roots);
 
     json images = json::array(), deep = json::array();
@@ -591,6 +748,24 @@ void collect_shadowmount(const Platform& p, Facts& f) {
 
     collect_log_lines(fs, join_path(kSmpDir, "debug.log"), f, "smp.log.lines");
     collect_log_lines(fs, join_path(kSmpDir, "autotune.ini"), f, "smp.autotune.lines");
+
+    // Hat SM+ die Konfiguration abgelehnt, steht das im Log: "[CFG] invalid <was> at line N: <Schluessel>=<Wert>" bzw.
+    // "[CFG] cannot read <Datei> near line N". Die Zeilennummer N zaehlt in der geglaetteten Liste, nicht in der Datei.
+    if (const json* lines = f.get("smp.log.lines"); lines && lines->is_array()) {
+        static const std::regex re(R"(\[CFG\] (invalid .*|cannot read .*))");
+        json log_problems = json::array();
+        for (const auto& l : *lines) {
+            if (!l.is_string()) continue;
+            std::smatch m;
+            const std::string line = l.get<std::string>();
+            if (std::regex_search(line, m, re)) log_problems.push_back({{"line", 0}, {"text", "Log: [CFG] " + trim(m[1].str())}});
+        }
+        if (!log_problems.empty()) {
+            json all = f.get("smp.config_problems") ? *f.get("smp.config_problems") : json::array();
+            for (auto& p2 : log_problems) all.push_back(std::move(p2));
+            f.set("smp.config_problems", std::move(all));
+        }
+    }
     collect_unstable_sources(f);
 
     // ShadowMount+ schreibt beim Start "ShadowMount+ v1.7beta11 ... FW: 12.00" ins debug.log (erster Konsolenlauf).
@@ -634,6 +809,9 @@ Facts collect_all(const Platform& p) {
     collect_shadowmount(p, f);
     collect_plugins(p, f);
     collect_apps(p, f);
+    collect_autoload(p, f);
+    collect_payload_files(p, f);
+    collect_helpers(p, f);
     return f;
 }
 

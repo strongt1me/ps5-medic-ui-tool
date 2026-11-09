@@ -266,18 +266,48 @@ const char* to_string(Severity s) {
     return "info";
 }
 
+namespace {
+
+// Zahlenteile plus Vorabversion: "1.7beta10" = {1, 7} mit Tag beta/10. Eine Vorabversion ist kleiner als die fertige
+// ("1.7beta12" < "1.7"); test < alpha < beta < rc, danach zaehlt die Nummer ("beta9" < "beta10"). Andere Suffixe
+// ("1.13-fpkg-dr-test8") bleiben wie bisher ohne Wirkung.
+struct VersionKey {
+    std::vector<long> nums;
+    int tag_rank = 100;  // 100 = keine Vorabversion
+    long tag_num = 0;
+};
+
+VersionKey parse_version(const std::string& s) {
+    VersionKey k;
+    static const std::pair<const char*, int> kTags[] = {{"test", 0}, {"alpha", 1}, {"beta", 2}, {"rc", 3}};
+    for (auto& seg : split(s, '.')) {
+        char* end = nullptr;
+        k.nums.push_back(std::strtol(seg.c_str(), &end, 10));
+        std::string rest = end ? std::string(end) : std::string();
+        std::transform(rest.begin(), rest.end(), rest.begin(), [](unsigned char c) { return std::tolower(c); });
+        for (const auto& [name, rank] : kTags) {
+            const std::string tag = name;
+            if (rest.compare(0, tag.size(), tag) != 0) continue;
+            const std::string num = rest.substr(tag.size());
+            if (!num.empty() && !std::all_of(num.begin(), num.end(), [](unsigned char c) { return std::isdigit(c); })) continue;
+            k.tag_rank = rank;
+            k.tag_num = num.empty() ? 0 : std::strtol(num.c_str(), nullptr, 10);
+        }
+    }
+    return k;
+}
+
+}  // namespace
+
 int compare_versions(const std::string& a, const std::string& b) {
-    auto parts = [](const std::string& s) {
-        std::vector<long> v;
-        for (auto& seg : split(s, '.')) v.push_back(std::strtol(seg.c_str(), nullptr, 10));  // "7beta" -> 7
-        return v;
-    };
-    auto va = parts(a), vb = parts(b);
-    const std::size_t n = std::max(va.size(), vb.size());
-    va.resize(n, 0);
-    vb.resize(n, 0);
+    VersionKey ka = parse_version(a), kb = parse_version(b);
+    const std::size_t n = std::max(ka.nums.size(), kb.nums.size());
+    ka.nums.resize(n, 0);
+    kb.nums.resize(n, 0);
     for (std::size_t i = 0; i < n; ++i)
-        if (va[i] != vb[i]) return va[i] < vb[i] ? -1 : 1;
+        if (ka.nums[i] != kb.nums[i]) return ka.nums[i] < kb.nums[i] ? -1 : 1;
+    if (ka.tag_rank != kb.tag_rank) return ka.tag_rank < kb.tag_rank ? -1 : 1;
+    if (ka.tag_num != kb.tag_num) return ka.tag_num < kb.tag_num ? -1 : 1;
     return 0;
 }
 

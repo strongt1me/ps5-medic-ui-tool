@@ -147,5 +147,7 @@
   "fix.smp_set_key": "ShadowMount+-Einstellung ändern",
   "fix.smp_disable_conflicting_backpork": "BackPork aus der Autoload-Liste nehmen",
   "fix.move_duplicate_titleid": "Doppelte Kopie verschieben",
-  "fix.fix_image_nesting_hint": "Hinweis zur Image-Struktur"
+  "fix.fix_image_nesting_hint": "Hinweis zur Image-Struktur",
+  "fix.smp_translate_v1_keys": "Alte Einstellungen in das neue Format übertragen",
+  "fix.autoload_insert_delay": "Wartezeit hinter elfldr einfügen"
 }

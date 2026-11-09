@@ -153,7 +153,9 @@ const char* const kDeJson = R"JSON({
   "fix.smp_set_key": "ShadowMount+-Einstellung ändern",
   "fix.smp_disable_conflicting_backpork": "BackPork aus der Autoload-Liste nehmen",
   "fix.move_duplicate_titleid": "Doppelte Kopie verschieben",
-  "fix.fix_image_nesting_hint": "Hinweis zur Image-Struktur"
+  "fix.fix_image_nesting_hint": "Hinweis zur Image-Struktur",
+  "fix.smp_translate_v1_keys": "Alte Einstellungen in das neue Format übertragen",
+  "fix.autoload_insert_delay": "Wartezeit hinter elfldr einfügen"
 }
 )JSON";
 
@@ -306,7 +308,9 @@ const char* const kEnJson = R"JSON({
   "fix.smp_set_key": "Change a ShadowMount+ setting",
   "fix.smp_disable_conflicting_backpork": "Remove BackPork from the autoload list",
   "fix.move_duplicate_titleid": "Move duplicate copy",
-  "fix.fix_image_nesting_hint": "Image structure hint"
+  "fix.fix_image_nesting_hint": "Image structure hint",
+  "fix.smp_translate_v1_keys": "Move old settings into the new format",
+  "fix.autoload_insert_delay": "Insert a delay after elfldr"
 }
 )JSON";
 

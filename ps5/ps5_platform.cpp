@@ -28,6 +28,9 @@
 
 // Aus dem ps5-payload-sdk (samples/hwinfo): nicht in den Headern deklariert.
 extern "C" int sceKernelGetHwModelName(char*);
+// Ebenfalls aus samples/hwinfo; auf der Test-Konsole am 9. Nov. 2026 gelesen (CPU 36 und SoC 34 Grad im Leerlauf).
+extern "C" int sceKernelGetCpuTemperature(int*);
+extern "C" int sceKernelGetSocSensorTemperature(int, int*);
 
 namespace medic {
 namespace {
@@ -84,9 +87,21 @@ public:
             si.mount = m;
             si.total_bytes = static_cast<std::uint64_t>(sfs.f_blocks) * sfs.f_bsize;
             si.free_bytes = static_cast<std::uint64_t>(sfs.f_bavail > 0 ? sfs.f_bavail : 0) * sfs.f_bsize;
+            si.fstype = sfs.f_fstypename;
+            si.read_only = (sfs.f_flags & MNT_RDONLY) != 0;
             out.push_back(std::move(si));
         }
         return out;
+    }
+
+    // Nur plausible Werte (1..150 Grad) zaehlen; alles andere bleibt "unbekannt".
+    Thermal thermal() const override {
+        Thermal t;
+        int v = 0;
+        if (sceKernelGetCpuTemperature(&v) == 0 && v >= 1 && v <= 150) t.cpu_c = v;
+        v = 0;
+        if (sceKernelGetSocSensorTemperature(0, &v) == 0 && v >= 1 && v <= 150) t.soc_c = v;
+        return t;
     }
 
     // Versionen von kstuff, ShadowMount+, etaHEN: auf der Konsole gibt es noch keine verifizierte Quelle

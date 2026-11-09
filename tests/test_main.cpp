@@ -47,7 +47,11 @@ static void unit_tests() {
     CHECK(compare_versions("1.06", "1.07") < 0, "1.06 < 1.07");
     CHECK(compare_versions("13.60", "9.00") > 0, "numerisch, nicht lexikografisch");
     CHECK(compare_versions("4.03", "4.3") == 0, "fuehrende Nullen egal");
-    CHECK(compare_versions("1.7beta3", "1.7") == 0, "Suffix wird ignoriert");
+    CHECK(compare_versions("1.7beta3", "1.7") < 0, "Vorabversion ist kleiner als die fertige");
+    CHECK(compare_versions("1.7beta9", "1.7beta10") < 0 && compare_versions("1.7beta11", "1.7beta10") > 0, "beta-Nummern zaehlen numerisch");
+    CHECK(compare_versions("1.7beta12", "1.7beta12") == 0 && compare_versions("1.7beta1", "1.7alpha12") > 0, "alpha < beta, gleiche Nummer gleich");
+    CHECK(compare_versions("1.6test15", "1.7alpha1") < 0 && compare_versions("1.7rc1", "1.7beta12") > 0, "test < alpha < beta < rc, kleinere Hauptversion zuerst");
+    CHECK(compare_versions("1.13-fpkg-dr-test8", "1.13") == 0, "unbekannter Suffix wird ignoriert");
 
     CHECK(medic::fw_in_range("4.03", ">=4.00 <=7.61"), "FW im Bereich");
     CHECK(!medic::fw_in_range("9.00", ">=4.00 <=7.61"), "FW ausserhalb");

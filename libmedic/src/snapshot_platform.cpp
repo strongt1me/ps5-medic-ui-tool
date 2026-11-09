@@ -67,8 +67,15 @@ public:
                 si.mount = s.value("mount", std::string());
                 si.total_bytes = s.value("total", std::uint64_t{0});
                 si.free_bytes = s.value("free", std::uint64_t{0});
+                if (s.contains("fstype") && s["fstype"].is_string()) si.fstype = s["fstype"].get<std::string>();
+                if (s.contains("ro") && s["ro"].is_boolean()) si.read_only = s["ro"].get<bool>();
                 storage_.push_back(std::move(si));
             }
+        }
+        if (j.contains("temp") && j["temp"].is_object()) {
+            const auto& t = j["temp"];
+            if (t.contains("cpu") && t["cpu"].is_number_integer()) thermal_.cpu_c = t["cpu"].get<int>();
+            if (t.contains("soc") && t["soc"].is_number_integer()) thermal_.soc_c = t["soc"].get<int>();
         }
         if (j.contains("components") && j["components"].is_object()) {
             for (auto& [name, props] : j["components"].items()) {
@@ -83,6 +90,7 @@ public:
     std::vector<StorageInfo> storage() const override { return storage_; }
     std::map<std::string, std::map<std::string, std::string>> components() const override { return components_; }
     std::int64_t boot_epoch() const override { return boot_; }
+    Thermal thermal() const override { return thermal_; }
     PortState local_port_state(int port) const override {
         auto it = ports_.find(port);
         return it == ports_.end() ? PortState::Unknown : it->second;
@@ -90,6 +98,7 @@ public:
 
 private:
     std::int64_t boot_ = 0;
+    Thermal thermal_;
     std::map<int, PortState> ports_;
     std::string fw_, model_;
     std::vector<StorageInfo> storage_;
