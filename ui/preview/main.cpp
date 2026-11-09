@@ -95,15 +95,28 @@ int main(int argc, char** argv) {
         shot("10_error_codes");
         app.handle(Button::Down);
         app.handle(Button::Cross);
+        // Zu einem Code blaettern: erst vorwaerts, sonst rueckwaerts (die Liste ist nach id sortiert).
+        auto goto_code = [&](const std::string& id) {
+            for (int i = 0; i < 80 && app.selected_error_id() != id; ++i) app.handle(Button::Right);
+            for (int i = 0; i < 80 && app.selected_error_id() != id; ++i) app.handle(Button::Left);
+        };
         shot("11_error_code_detail");
-        for (int i = 0; i < 8; ++i) app.handle(Button::Right);  // bis CE-108262-9, dem laengsten Eintrag (scrollt)
+        goto_code("CE-108262-9");  // der laengste Eintrag (scrollt)
         shot("12_error_code_long_top");
         for (int i = 0; i < 40; ++i) app.handle(Button::Down);
         shot("13_error_code_long_end");
-        for (int i = 0; i < 7; ++i) app.handle(Button::Left);  // CE-105733-9: ohne Sony-Seite, nur Community-Angabe
+        app.handle(Button::Square);  // Quelle als QR-Code
+        shot("13b_error_code_source_qr");
+        app.handle(Button::Circle);
+        goto_code("CE-105733-9");  // ohne Sony-Seite, nur Community-Angabe
         shot("14_error_code_community");
-        for (int i = 0; i < 3; ++i) app.handle(Button::Right);  // CE-107520-5: Spiel braucht Backport oder AMPR Emu, kein Systemupdate
+        goto_code("CE-107520-5");  // Spiel braucht Backport oder AMPR Emu, kein Systemupdate; Firmware und betroffene Titel aus dem Check-up
         shot("15_error_code_game_backport");
+        for (int i = 0; i < 12; ++i) app.handle(Button::Down);
+        shot("15b_error_code_game_backport_live");
+        goto_code("CE-100028-1");  // Speicher: freier Platz aus dem Check-up
+        app.handle(Button::Triangle);  // fuer den Bericht vermerken
+        shot("16_error_code_storage_live");
         std::cout << shots << " Bilder in " << out.string() << "\n";
     } catch (const std::exception& e) {
         std::cerr << "Fehler: " << e.what() << "\n";

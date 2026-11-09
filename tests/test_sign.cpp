@@ -346,7 +346,9 @@ static void download_tests() {
         http.answers[base + "/rules.json"] = reply200(text);
         http.answers[base + "/rules.json.sig"] = reply200(sigtext);
         const auto r = download_rule_update(*p, http, base, ts);
-        CHECK(r.ok && r.bytes == text.size() && http.asked.size() == 2 && http.asked[0] == base + "/rules.json" && http.asked[1] == base + "/rules.json.sig", "Download: holt rules.json und rules.json.sig");
+        CHECK(r.ok && r.bytes == text.size() && http.asked.size() == 3 && http.asked[0] == base + "/rules.json" && http.asked[1] == base + "/rules.json.sig" && http.asked[2] == base + "/error_codes.json",
+              "Download: holt rules.json und rules.json.sig, dann fragt er nach error_codes.json (der Server bietet sie hier nicht an: 404)");
+        CHECK(!r.codes_ok && r.codes_error.empty() && !fs::exists(sb.real(std::string(kRulesUpdateDir) + "/error_codes.json")), "Download: ohne Fehlercodes beim Server bleibt es beim Regel-Update");
         CHECK(slurp(sb.real(std::string(kRulesUpdateDir) + "/rules.json")) == text && slurp(sb.real(std::string(kRulesUpdateDir) + "/rules.json.sig")) == sigtext, "Download: beide Dateien liegen im Update-Ordner");
         CHECK(slurp(sb.real(kRulesUpdateLog)).find("rules_download") != std::string::npos, "Download: update.log vermerkt ihn");
         const auto o = check_rule_update(p->fs(), old_ver, nullptr, &keys);

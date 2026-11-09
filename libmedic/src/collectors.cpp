@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/collectors.hpp"
 
+#include "medic/rules.hpp"
+
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
 #include <map>
 #include <regex>
@@ -580,6 +583,68 @@ void collect_apps(const Platform& p, Facts& f) {
     f.set("apps.oversized", std::move(arr));
 }
 
+namespace {
+
+// requiredSystemSoftwareVersion bzw. sdkVersion der param.json: "0x1360000000000000" ist Firmware 13.60 (die ersten beiden Bytes,
+// jedes als zwei Dezimalziffern in Hex; an echten param.json der Test-Konsole abgelesen: 0x0960... = 9.60, 0x0403... = 4.03).
+// Leer, wenn das Feld fehlt, 0 ist (Homebrew) oder nicht in dieses Format passt.
+std::string decode_param_fw(const json& param, const char* key) {
+    if (!param.contains(key) || !param[key].is_string()) return {};
+    const std::string s = param[key].get<std::string>();
+    if (s.size() != 18 || s[0] != '0' || (s[1] != 'x' && s[1] != 'X')) return {};
+    for (std::size_t i = 2; i < s.size(); ++i)
+        if (!std::isxdigit(static_cast<unsigned char>(s[i]))) return {};
+    const std::uint64_t n = std::strtoull(s.c_str() + 2, nullptr, 16);
+    int parts[2] = {0, 0};
+    for (int k = 0; k < 2; ++k) {
+        const unsigned byte = static_cast<unsigned>((n >> (56 - 8 * k)) & 0xff);
+        if ((byte >> 4) > 9 || (byte & 0xf) > 9) return {};
+        parts[k] = static_cast<int>((byte >> 4) * 10 + (byte & 0xf));
+    }
+    if (parts[0] == 0) return {};
+    char buf[16];
+    std::snprintf(buf, sizeof buf, "%d.%02d", parts[0], parts[1]);
+    return buf;
+}
+
+}  // namespace
+
+// games.fw[]: PS5-Titel (PPSA...) unter /user/app mit der Firmware, die ihre param.json verlangt (SM+ legt dort je gemountetem Spiel
+// einen Ordner mit sce_sys/param.json an). games.need_backport[]: davon die Titel, die eine neuere Firmware verlangen, als die Konsole hat,
+// und fuer die es keinen Backport-Ordner <Scanpfad>/backports/<TITLE_ID>/ gibt. Nur lesen.
+void collect_game_firmware(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    const std::string fw = p.sys().firmware();
+    std::vector<std::string> roots;
+    if (const json* r = f.get("smp.scan_roots"); r && r->is_array())
+        for (const auto& e : *r)
+            if (e.is_string()) roots.push_back(e.get<std::string>());
+    for (const auto& d : default_scan_paths()) roots.push_back(d);
+
+    static const std::regex id_re("^PPSA[0-9]{5}$");
+    json games = json::array(), need = json::array();
+    for (const auto& app : fs.list_dir("/user/app")) {
+        if (!app.is_dir || !std::regex_match(app.name, id_re)) continue;
+        std::string text;
+        if (!fs.read_file(join_path(join_path("/user/app", app.name), "sce_sys/param.json"), text)) continue;
+        const json param = json::parse(text, nullptr, false);
+        if (!param.is_object()) continue;
+        const std::string required = decode_param_fw(param, "requiredSystemSoftwareVersion");
+        if (required.empty()) continue;
+        bool backport = false;
+        for (const auto& r : roots)
+            if (fs.is_dir(join_path(join_path(r, "backports"), app.name))) {
+                backport = true;
+                break;
+            }
+        games.push_back({{"titleid", app.name}, {"required_fw", required}, {"sdk_fw", decode_param_fw(param, "sdkVersion")}, {"backport", backport}});
+        if (!fw.empty() && !backport && compare_versions(required, fw) > 0)
+            need.push_back({{"titleid", app.name}, {"required_fw", required}, {"desc", app.name + ": " + required}});
+    }
+    f.set("games.fw", std::move(games));
+    f.set("games.need_backport", std::move(need));
+}
+
 void collect_storage(const Platform& p, Facts& f) {
     json arr = json::array();
     for (auto& s : p.sys().storage()) {
@@ -809,6 +874,7 @@ Facts collect_all(const Platform& p) {
     collect_shadowmount(p, f);
     collect_plugins(p, f);
     collect_apps(p, f);
+    collect_game_firmware(p, f);
     collect_autoload(p, f);
     collect_payload_files(p, f);
     collect_helpers(p, f);

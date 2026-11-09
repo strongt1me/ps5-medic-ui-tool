@@ -11,16 +11,19 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "title", "text", "steps", "source", "level"],
+        "required": ["id", "title", "text", "steps", "source", "checked", "level"],
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "pattern": "^[A-Z]{2}-[0-9]{6}-[0-9]$" },
+          "id": { "type": "string", "pattern": "^([A-Z]{2}-[0-9]{6}-[0-9]|0x[0-9A-F]{8})$" },
           "title": { "$ref": "#/$defs/text_pair" },
           "text": { "$ref": "#/$defs/text_pair", "description": "Erklaerung, 2 bis 3 Saetze" },
           "steps": { "$ref": "#/$defs/list_pair", "description": "Sichere Schritte, nur Anleitung. Bei level doc mindestens einer." },
           "notes": { "$ref": "#/$defs/list_pair", "description": "Optionale Hinweise (z. B. Datenverlust im Safe Mode)" },
+          "context": { "type": "array", "items": { "enum": ["fw", "storage", "drives", "smp", "need_backport"] }, "description": "Welche Angaben der Konsole der Eintrag zusaetzlich zeigt (nur lesend, aus dem letzten Check-up)" },
           "source": { "type": "string", "pattern": "^https://[^ ]+$" },
           "more_sources": { "type": "array", "items": { "type": "string", "pattern": "^https://[^ ]+$" } },
+          "source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 des Hilfetexts der Sony-Seite beim Pruefen (tools/check_error_sources.py)" },
+          "checked": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "Datum der letzten Pruefung gegen die Quelle" },
           "level": { "enum": ["doc", "community"], "description": "doc = Sony-Hilfeseite, community = keine Sony-Seite" }
         }
       }

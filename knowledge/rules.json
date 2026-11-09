@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.11",
+  "db_version": "2026.11.12",
   "rules": [
     {
       "id": "hen.etahen_with_kstufflite_latest_fw",
@@ -384,6 +384,23 @@
       "evidence": "apps.oversized[].name",
       "fix": null,
       "source": "https://prosperostore.net/app/PPSA98427/",
+      "verified": "todo"
+    },
+    {
+      "id": "game.needs_backport",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "games.need_backport[].titleid", "exists": true }
+        ]
+      },
+      "text": {
+        "de": "Für diese Spiele verlangt die param.json eine neuere Firmware, als die Konsole hat (Evidenz: Titel und verlangte Version), und in den Scanpfaden liegt kein Backport-Ordner backports/<TITLE_ID>/. Die Konsole startet laut Backport-Toolkit nichts, was für eine neuere Firmware gebaut ist: Das Spiel braucht einen Backport für die genutzte Firmware oder AMPR Emu bzw. AMPR Emu NG. Ein Systemupdate ist hier nicht der Weg, es kann den Jailbreak beenden. Dass solche Spiele nicht starten, ist an dieser Konsole noch nicht bestätigt.",
+        "en": "For these games the param.json demands a newer firmware than the console has (evidence: title and required version), and the scan paths contain no backport folder backports/<TITLE_ID>/. According to the backport toolkit the console refuses to start anything built for a newer firmware: the game needs a backport for the firmware in use, or AMPR Emu / AMPR Emu NG. A system update is not the way here, it can end the jailbreak. That such games fail to start is not yet confirmed on this console."
+      },
+      "evidence": "games.need_backport[].desc",
+      "fix": null,
+      "source": "https://github.com/cherryduck/ps5-backport-toolkit",
       "verified": "todo"
     },
     {

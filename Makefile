@@ -4,11 +4,14 @@
 #   make test     Unit- und Regel-Tests gegen alle Fixtures
 #   make ps5      Diagnose-Payload (ELF, nur lesend) mit dem ps5-payload-sdk bauen
 #   make ps5-ui   Vollbild-UI-Payload bauen (braucht zusaetzlich ps5-payload-sdl2, siehe docs/PHASE3.md)
+#   make ps5-launcher  Launcher-ELF bauen (ohne websrv: legt die Kachel an, startet die UI mit App-Kontext), siehe docs/TITLE.md
+#   make send-launcher  Launcher an Port 9021 der Konsole senden (PS5_HOST=<ip> noetig; legt Kachel an und startet die UI)
 #   make deploy    ps5medic.elf + Regeln per FTP (Port 2121) auf die Konsole legen   (PS5_HOST=<ip> noetig)
 #   make deploy-ui ps5medicui.elf + Regeln + Fehlercodes + Launcher-Eintrag per FTP auf die Konsole legen (PS5_HOST=<ip> noetig)
-#   make launch-ui deploy-ui und danach per websrv (/hbldr, Port 8080) im App-Kontext starten (Pad geht nur so)
+#   make launch-ui (Alternative ohne Launcher) deploy-ui und danach per websrv (/hbldr, Port 8080) im App-Kontext starten
 #   make dist      Release-Ordner und Zip unter dist/ bauen (nur lokal, es wird nichts veroeffentlicht)
-#   make sign-rules   knowledge/rules.json nach dist/rules/ kopieren und mit dem Signierschluessel signieren (SIGN_KEY=...)
+#   make sign-rules   knowledge/rules.json und error_codes.json nach dist/rules/ kopieren und mit dem Signierschluessel signieren (SIGN_KEY=...)
+#   make check-sources  knowledge/error_codes.json gegen die Sony-Seiten und weiteren Quellen pruefen (Netz noetig; --update: python3 tools/check_error_sources.py --update)
 #   make serve-rules  dist/rules/ per HTTP im LAN anbieten (RULES_PORT, RULES_BIND); die Konsole holt sie unter Regel-Update
 #   make set-update-url  update_url in /data/ps5medic/config.ini der Konsole setzen (PS5_HOST=<ip> UPDATE_URL=http://...)
 #   make title     Starter-Titel fuer die Kachel unter "Medien" bauen (braucht ein Boilerplate-Checkout, docs/TITLE.md)
@@ -40,10 +43,14 @@ PS5_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) ps5/main.cpp) $(p
 PS5_UI_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) $(PS5_UI_SRCS) ps5/ui_main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
 PS5_ELF := $(PS5_BUILD)/ps5medic.elf
 PS5_UI_ELF := $(PS5_BUILD)/ps5medicui.elf
+# Launcher: eigener Dienst ohne websrv. Der Lader (hbldr/elfldr/pt) stammt aus websrv, siehe third_party/websrv-hbldr/ und THIRD_PARTY.md.
+PS5_LAUNCHER_ELF := $(PS5_BUILD)/ps5medic-launcher.elf
+PS5_LAUNCHER_C_SRCS := third_party/websrv-hbldr/hbldr.c third_party/websrv-hbldr/elfldr.c third_party/websrv-hbldr/pt.c
+PS5_LAUNCHER_OBJS := $(PS5_BUILD)/ps5/launcher_main.o $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_LAUNCHER_C_SRCS))
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
 
-.PHONY: host test clean ps5 ps5-ui deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url
+.PHONY: host test clean ps5 ps5-ui ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
 
 # UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
 SNAP ?=
@@ -65,6 +72,7 @@ clean:
 
 ps5: $(PS5_ELF)
 ps5-ui: $(PS5_UI_ELF)
+ps5-launcher: $(PS5_LAUNCHER_ELF)
 
 $(PS5_BUILD)/%.o: %.cpp
 	@test -x $(PS5_CXX) || { echo "ps5-payload-sdk nicht gefunden: $(PS5_PAYLOAD_SDK) (PS5_PAYLOAD_SDK=... setzen)"; exit 1; }
@@ -84,7 +92,18 @@ $(PS5_UI_ELF): $(PS5_UI_OBJS)
 	@test -d $(PS5_HOMEBREW)/lib || { echo "SDL2 fuer die PS5 fehlt in $(PS5_HOMEBREW) (ps5-payload-sdl2 + ps5-payload-libsamplerate, siehe docs/PHASE3.md)"; exit 1; }
 	$(PS5_CXX) $^ -L$(PS5_HOMEBREW)/lib $(PS5_UI_LIBS) -lkernel_sys -o $@
 
--include $(PS5_OBJS:.o=.d) $(PS5_UI_OBJS:.o=.d)
+$(PS5_BUILD)/ps5/launcher_main.o: PS5_CXXFLAGS += -Ithird_party/websrv-hbldr
+
+$(PS5_LAUNCHER_ELF): $(PS5_LAUNCHER_OBJS)
+	$(PS5_CXX) $^ -lkernel_sys -lSceSystemService -lSceUserService -lSceAppInstUtil -o $@
+
+-include $(PS5_OBJS:.o=.d) $(PS5_UI_OBJS:.o=.d) $(PS5_LAUNCHER_OBJS:.o=.d)
+
+# Launcher an elfldr (Port 9021) senden. Danach: Kachel "PS5 Medic" erscheint (ShadowMount+), die UI startet. Protokoll: /data/ps5medic/launcher.log
+send-launcher: $(PS5_LAUNCHER_ELF)
+	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (elfldr muss auf Port 9021 lauschen)"; exit 1; }
+	nc -w 3 $(PS5_HOST) 9021 < $(PS5_LAUNCHER_ELF)
+	@echo "Gesendet. Protokoll: ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/launcher.log (UI: ui.log)"
 
 deploy: $(PS5_ELF)
 	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (FTP-Server auf Port $(PS5_FTP_PORT) muss laufen)"; exit 1; }
@@ -92,9 +111,10 @@ deploy: $(PS5_ELF)
 	curl --fail --ftp-create-dirs -T knowledge/rules.json ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/knowledge/rules.json
 	@echo "Hochgeladen. ps5medic.elf ueber den Payload Manager starten; Ergebnis: /data/ps5medic/last_check.txt und snapshots/"
 
-deploy-ui: $(PS5_UI_ELF)
+deploy-ui: $(PS5_UI_ELF) $(PS5_LAUNCHER_ELF)
 	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (FTP-Server auf Port $(PS5_FTP_PORT) muss laufen)"; exit 1; }
 	curl --fail --ftp-create-dirs -T $(PS5_UI_ELF) ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/ps5medicui.elf
+	curl --fail --ftp-create-dirs -T $(PS5_LAUNCHER_ELF) ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/ps5medic-launcher.elf
 	curl --fail --ftp-create-dirs -T ps5/homebrew/homebrew.js ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/homebrew.js
 	curl --fail --ftp-create-dirs -T ps5/homebrew/sce_sys/icon0.png ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/sce_sys/icon0.png
 	curl --fail --ftp-create-dirs -T knowledge/rules.json ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/knowledge/rules.json
@@ -113,11 +133,12 @@ VERSION := $(shell sed -n 's/.*kMedicVersion = "\(.*\)";/\1/p' libmedic/include/
 DIST_NAME := ps5-medic-$(VERSION)
 DIST_DIR := dist/$(DIST_NAME)
 
-dist: ps5 ps5-ui
+dist: ps5 ps5-ui ps5-launcher
 	@test -n "$(VERSION)" || { echo "Version nicht gefunden (kMedicVersion in libmedic/include/medic/report.hpp)"; exit 1; }
 	rm -rf $(DIST_DIR) dist/$(DIST_NAME).zip
 	mkdir -p $(DIST_DIR)/PS5MEDIC/sce_sys
 	cp $(PS5_UI_ELF) $(DIST_DIR)/PS5MEDIC/ps5medicui.elf
+	cp $(PS5_LAUNCHER_ELF) $(DIST_DIR)/PS5MEDIC/ps5medic-launcher.elf
 	cp $(PS5_ELF) $(DIST_DIR)/PS5MEDIC/ps5medic.elf
 	cp knowledge/rules.json $(DIST_DIR)/PS5MEDIC/rules.json
 	cp knowledge/error_codes.json $(DIST_DIR)/PS5MEDIC/error_codes.json
@@ -153,7 +174,14 @@ sign-rules: host
 	cp knowledge/rules.json $(RULES_OUT)/rules.json
 	$(BUILD)/medic-sign sign "$(SIGN_KEY)" $(RULES_OUT)/rules.json
 	$(BUILD)/medic-sign verify $(RULES_OUT)/rules.json $(RULES_OUT)/rules.json.sig
-	@echo "Fertig: $(RULES_OUT)/rules.json und rules.json.sig. Anbieten: make serve-rules"
+	cp knowledge/error_codes.json $(RULES_OUT)/error_codes.json
+	$(BUILD)/medic-sign sign "$(SIGN_KEY)" $(RULES_OUT)/error_codes.json
+	$(BUILD)/medic-sign verify $(RULES_OUT)/error_codes.json $(RULES_OUT)/error_codes.json.sig
+	@echo "Fertig: $(RULES_OUT)/rules.json und error_codes.json samt .sig. Anbieten: make serve-rules"
+
+# Fehlercodes gegen ihre Quellen pruefen (braucht Netz; nicht Teil von make test). Danach ggf. die Eintraege neu lesen und --update.
+check-sources:
+	python3 tools/check_error_sources.py
 
 serve-rules:
 	@test -f $(RULES_OUT)/rules.json.sig || { echo "Erst make sign-rules"; exit 1; }

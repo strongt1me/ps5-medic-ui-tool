@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cctype>
 #include <functional>
+#include <map>
 #include <nlohmann/json.hpp>
 #include <set>
 #include <string>
@@ -34,6 +35,7 @@ json good_entry() {
       "text": {"de": "Erklaerung.", "en": "Explanation."},
       "steps": {"de": ["Schritt"], "en": ["Step"]},
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-100028-1/",
+      "checked": "2026-11-09",
       "level": "doc"
     })");
 }
@@ -121,6 +123,24 @@ void schema_tests() {
     CHECK(entry_fails([](json& e) { e["level"] = "todo"; }), "Schema: level todo gibt es hier nicht");
     CHECK(entry_fails([](json& e) { e["fix"] = "irgendwas"; }), "Schema: unbekannter Schluessel im Eintrag (Tippfehler nicht stillschweigend schlucken)");
 
+    // Hex-Fehler, Pruefdatum, Fingerabdruck, Kontext
+    CHECK(!entry_fails([](json& e) { e["id"] = "0x809F8032"; e["level"] = "community"; e["steps"] = {{"de", json::array()}, {"en", json::array()}}; e["source"] = "https://example.org/x"; }),
+          "Schema: Hex-Fehler 0x809F8032 ist eine gueltige ID");
+    for (const char* bad : {"0x809f8032", "0x1234", "0x809F80320", "0X809F8032", "809F8032"})
+        CHECK(entry_fails([&](json& e) { e["id"] = bad; }), std::string("Schema: ungueltige Hex-ID '") + bad + "'");
+    CHECK(entry_fails([](json& e) { e.erase("checked"); }), "Schema: checked fehlt");
+    for (const char* bad : {"09.11.2026", "2026-13-01", "2026-11-32", "2026-11-9", "heute"})
+        CHECK(entry_fails([&](json& e) { e["checked"] = bad; }), std::string("Schema: ungueltiges Pruefdatum '") + bad + "'");
+    CHECK(!entry_fails([](json& e) { e["source_sha256"] = std::string(64, 'a'); }), "Schema: gueltiger Fingerabdruck");
+    for (const std::string bad : {std::string(63, 'a'), std::string(64, 'A'), std::string(64, 'g'), std::string()})
+        CHECK(entry_fails([&](json& e) { e["source_sha256"] = bad; }), "Schema: ungueltiger Fingerabdruck '" + bad + "'");
+    CHECK(!entry_fails([](json& e) { e["context"] = {"storage", "fw"}; }), "Schema: bekannte Kontextangaben");
+    CHECK(medic::load_error_codes_from_string(file_with([] { json e = good_entry(); e["context"] = {"smp", "need_backport", "drives"}; return e; }())).codes[0].context.size() == 3,
+          "Schema: context wird gelesen");
+    CHECK(entry_fails([](json& e) { e["context"] = {"network"}; }), "Schema: unbekannte Kontextangabe (Tippfehler nicht schlucken)");
+    CHECK(entry_fails([](json& e) { e["context"] = "storage"; }), "Schema: context ist ein Array");
+    CHECK(entry_fails([](json& e) { e["context"] = {3}; }), "Schema: context enthaelt Strings");
+
     {  // doppelte ID
         json root = {{"schema_version", 1}, {"db_version", "t"}, {"codes", json::array({good_entry(), good_entry()})}};
         CHECK(load_fails(root.dump()), "Schema: doppelte ID");
@@ -144,7 +164,9 @@ void content_tests() {
         "CE-100028-1", "CE-107872-5", "CE-100006-7", "CE-109737-7",                                                   // Speicher, Laufwerke
         "NW-102265-6", "NW-102216-2", "CE-105799-1", "CE-118527-4", "CE-109245-1",                                    // Netz, Lizenz
         "NP-102944-0", "NP-102945-1", "CE-108889-4", "WS-116328-1", "CE-107520-5",                                    // neueste Systemsoftware
-        "CE-105733-9"};                                                                                               // nur Community (CE-108264-1 bewusst nicht: keine Bedeutung belegt)
+        "CE-100005-6", "CE-100009-0", "CE-100095-5", "CE-100096-6", "CE-106487-6", "CE-107527-2", "CE-107622-8",      // Spiele und Apps: laden, starten,
+        "CE-107750-0", "CE-107891-6", "CE-109573-5", "CE-117740-0", "NP-104291-7",                                    // installieren, Fehler beim Spielen, Lizenz
+        "CE-105733-9", "CE-107098-5", "0x80268001", "0x80551618", "0x80960005", "0x809F8032"};                        // nur Community (keine Sony-Seite)
     std::set<std::string> have;
     for (const ErrorCode& c : set.codes) have.insert(c.id);
     CHECK(have == expected, "error_codes.json: genau die belegten Codes (" + std::to_string(set.codes.size()) + ")");
@@ -153,11 +175,11 @@ void content_tests() {
     CHECK(std::is_sorted(set.codes.begin(), set.codes.end(), [](const ErrorCode& a, const ErrorCode& b) { return a.id < b.id; }),
           "error_codes.json: nach id sortiert (die Liste in der UI sucht man so)");
 
-    const std::set<std::string> community = {"CE-105733-9"};
+    const std::set<std::string> community = {"CE-105733-9", "CE-107098-5", "0x80268001", "0x80551618", "0x80960005", "0x809F8032"};
     for (const ErrorCode& c : set.codes) {
         const std::string tag = "error_codes.json " + c.id + ": ";
         CHECK(!c.source.empty(), tag + "Quelle vorhanden");
-        CHECK(c.level == (community.count(c.id) ? "community" : "doc"), tag + "Stufe passt (nur die beiden Codes ohne Sony-Seite sind community)");
+        CHECK(c.level == (community.count(c.id) ? "community" : "doc"), tag + "Stufe passt (nur die Codes ohne Sony-Seite sind community)");
         if (c.level == "doc") {
             // Sony-Muster, am 9. Nov. 2026 abgerufen: .../ps5/<code in Kleinbuchstaben>/
             CHECK(c.source == "https://www.playstation.com/en-us/support/error-codes/ps5/" + lower(c.id) + "/", tag + "doc-Quelle ist die Sony-Seite des Codes");
@@ -224,6 +246,37 @@ void content_tests() {
     for (const ErrorCode& c : set.codes)
         if (recommends_update(c)) CHECK(mentions(c.notes_de, "Jailbreak") && mentions(c.notes_en, "jailbreak"), "Systemupdate: Jailbreak-Hinweis bei " + c.id);
     if (const ErrorCode* c = set.find("CE-100006-7")) CHECK(recommends_update(*c), "CE-100006-7: Laufwerk-Fehler behaelt Sonys Update-Schritt (kein Spiel)");
+    {  // Sonst empfiehlt kein einziger Eintrag ein Systemupdate (auch die spaeter dazugekommenen Spiele-Codes nicht)
+        std::set<std::string> updating;
+        for (const ErrorCode& c : set.codes)
+            if (recommends_update(c)) updating.insert(c.id);
+        CHECK(updating == std::set<std::string>({"CE-100006-7"}), "Systemupdate: nur der Laufwerk-Eintrag CE-100006-7 empfiehlt noch eines (" + std::to_string(updating.size()) + " Eintraege)");
+    }
+    // Die Eintraege, die ein Systemupdate bei Sony nennen und hier weglassen, sagen das in einem Hinweis
+    for (const char* id : {"CE-100096-6", "CE-106487-6", "CE-107750-0", "CE-109573-5", "CE-117740-0", "CE-108262-9", "CE-107857-8"}) {
+        const ErrorCode* c = set.find(id);
+        CHECK(c != nullptr, std::string("Auslassung: ") + id + " vorhanden");
+        if (c) CHECK(mentions(c->notes_de, "fehlt hier mit Absicht") && mentions(c->notes_en, "left out on purpose") && !c->steps_de.empty(), std::string("Auslassung: ") + id + " nennt den Grund");
+    }
+
+    // Pruefdatum und Fingerabdruck (tools/check_error_sources.py): jeder Eintrag hat ein Datum, jede Sony-Seite einen Fingerabdruck
+    for (const ErrorCode& c : set.codes) {
+        const std::string tag = "error_codes.json " + c.id + ": ";
+        CHECK(c.checked.size() == 10, tag + "Pruefdatum");
+        CHECK(c.level == "doc" ? c.source_sha256.size() == 64 : c.source_sha256.empty(), tag + "Fingerabdruck nur bei Sony-Seiten, und dort immer");
+        if (c.id.rfind("0x", 0) == 0) CHECK(c.level == "community", tag + "Hex-Fehler haben keine Sony-Seite");
+    }
+
+    // Welche Angaben der Konsole ein Eintrag zusaetzlich zeigt: Zuordnung steht in der Datei, nicht im Programm
+    const std::map<std::string, std::vector<std::string>> expected_context = {
+        {"NP-102944-0", {"fw", "need_backport"}}, {"NP-102945-1", {"fw", "need_backport"}}, {"CE-108889-4", {"fw", "need_backport"}},
+        {"WS-116328-1", {"fw", "need_backport"}}, {"CE-107520-5", {"fw", "need_backport"}}, {"CE-106485-4", {"fw", "need_backport"}},
+        {"CE-100028-1", {"storage"}}, {"CE-107872-5", {"storage"}}, {"CE-107527-2", {"storage"}}, {"CE-107891-6", {"storage"}},
+        {"CE-100006-7", {"drives"}}, {"CE-109737-7", {"drives"}}, {"CE-108262-9", {"smp"}}};
+    for (const ErrorCode& c : set.codes) {
+        auto it = expected_context.find(c.id);
+        CHECK(c.context == (it == expected_context.end() ? std::vector<std::string>() : it->second), "error_codes.json " + c.id + ": context wie vorgesehen");
+    }
 }
 
 }  // namespace

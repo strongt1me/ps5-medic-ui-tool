@@ -160,6 +160,25 @@ static void new_fact_tests() {
         CHECK(str(facts_of("c1_neg_release"), "ps5theme.version") == "1.23", "C1: Format [ps5-theme] 1.23 starting");
         CHECK(!facts_of("a3_neg").get("ps5theme.version"), "C1: ohne ps5-theme kein Fakt");
     }
+    {  // G1: verlangte Firmware aus requiredSystemSoftwareVersion der param.json unter /user/app
+        auto f = facts_of("g1_pos");
+        const json* g = f.get("games.fw");
+        CHECK(g && g->is_array() && g->size() == 3, "G1: drei PS5-Titel mit gueltiger Version (Homebrew mit 0 und FAKE-Ordner zaehlen nicht)");
+        if (g && g->is_array() && g->size() == 3) {
+            CHECK((*g)[0]["titleid"] == "PPSA00001" && (*g)[0]["required_fw"] == "13.60" && (*g)[0]["sdk_fw"] == "12.00" && (*g)[0]["backport"] == false,
+                  "G1: 0x1360000000000000 ist Firmware 13.60, sdkVersion 12.00");
+            CHECK((*g)[1]["required_fw"] == "11.60" && (*g)[2]["required_fw"] == "12.00", "G1: 11.60 und 12.00");
+        }
+        const json* n = f.get("games.need_backport");
+        CHECK(n && n->is_array() && n->size() == 1 && (*n)[0]["titleid"] == "PPSA00001" && (*n)[0]["desc"] == "PPSA00001: 13.60",
+              "G1: nur der Titel mit 13.60 auf einer 12.00-Konsole braucht einen Backport (gleich und aelter zaehlen nicht)");
+        auto b = facts_of("g1_neg_backport");
+        const json* bg = b.get("games.fw");
+        CHECK(bg && bg->size() == 1 && (*bg)[0]["backport"] == true && b.get("games.need_backport")->empty(), "G1: ein Ordner backports/<TITLE_ID>/ im Scanpfad zaehlt als Backport");
+        CHECK(facts_of("g1_neg_nofw").get("games.need_backport")->empty() && facts_of("g1_neg_nofw").get("games.fw")->size() == 1, "G1: ohne bekannte Firmware kein Befund, die Liste bleibt");
+        CHECK(facts_of("g1_neg_badformat").get("games.fw")->empty(), "G1: ungueltige Versionsangaben (zu kurz, keine BCD-Ziffern, Klartext) werden ignoriert");
+        CHECK(facts_of("a3_neg").get("games.fw")->empty(), "G1: ohne /user/app leere Liste");
+    }
     {  // C2: nur Apps mit grosser Reservierung und kleinem Inhalt
         auto f = facts_of("c2_pos");
         const json* v = f.get("apps.oversized");
@@ -290,6 +309,7 @@ int main() {
     update_tests();
     sign_tests();
     error_code_tests();
+    codes_update_tests();
     ui_tests();
     std::cout << g_pass << " Pruefungen ok, " << g_fail << " fehlgeschlagen\n";
     return g_fail ? 1 : 0;

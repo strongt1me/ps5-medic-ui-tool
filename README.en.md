@@ -6,7 +6,7 @@
 
 It runs as a full-screen app directly on the console and is operated with the DualSense. One button: *Start check-up*.
 
-> Status: version 0.4.0-dev. Tested on a PS5 Pro (FW 12.00) with ShadowMount+ 1.7beta11 and websrv v0.33. Other firmwares and setups are untested; that is why the rules are tied to versions and each one is marked *verified* or *not verified yet*.
+> Status: version 0.4.0-dev. Tested on a PS5 Pro (FW 12.00) with ShadowMount+ 1.7beta12. Other firmwares and setups are untested; that is why the rules are tied to versions and each one is marked *verified* or *not verified yet*.
 
 ## What it does
 
@@ -14,8 +14,8 @@ It runs as a full-screen app directly on the console and is operated with the Du
 - **Repair** (5 fixes): rename an image (parentheses), set a ShadowMount+ option, remove BackPork from the autoload list, move a duplicate copy of the same TITLE_ID, guidance for nested images. A preview shows exactly what will change first.
 - **Undo**: every repair is listed in the history and can be taken back.
 - **Report**: the □ button in the findings list writes a Markdown report to `/data/ps5medic/reports/` and shows a short version as a **QR code** (scan it with your phone, copy the text, paste it into a forum or an issue). IP and MAC addresses, user and account IDs and serial numbers are removed; file and folder names stay in, please check before sharing. Error-like log lines that match no rule appear as **Unknown error lines** in the report: material for new rules.
-- **Rule update**: Settings, Rule update. Put a new `rules.json` with its SHA-256 checksum on the console via FTP or a USB copy, **or** download it with □ from your own address (`update_url` in `/data/ps5medic/config.ini`; only accepted with a valid Ed25519 signature of the author). PS5 Medic verifies the file and installs it after ✕ (with backup and roll-back).
-- **Error codes**: Start, “Error codes”. A look-up for 19 messages such as CE-108262-9 (explanation, steps according to Sony, source; codes without a Sony page are marked as community information). Read and explain only, nothing is changed.
+- **Rule update**: Settings, Rule update. Put a new `rules.json` (and `error_codes.json`) with its SHA-256 checksum on the console via FTP or a USB copy, **or** download it with □ from your own address (`update_url` in `/data/ps5medic/config.ini`; only accepted with a valid Ed25519 signature of the author). PS5 Medic verifies the file and installs it after ✕ (with backup and roll-back).
+- **Error codes**: Start, “Error codes”. A look-up for 36 messages such as CE-108262-9 (explanation, steps according to Sony, source as text and QR code, check date; codes without a Sony page are marked as community information; after a check-up the entry shows what Medic sees on the console). Read and explain only, nothing is changed. If a finding names a code, □ jumps to the entry; △ notes a code for the report.
 - German and English (Settings).
 
 ## Safety
@@ -29,17 +29,15 @@ It runs as a full-screen app directly on the console and is operated with the Du
 ## Requirements
 
 - An already jailbroken PS5 with an ELF loader (port 9021) and FTP (port 2121 here).
-- To start it with the DualSense: [websrv](https://github.com/ps5-payload-dev/websrv) with its homebrew launcher (tested: v0.33). Only its "Big App" loader gives a payload the app context the console requires before it opens the controller (background: [docs/PHASE3.md](docs/PHASE3.md), German). Without websrv only the diagnostic payload (`ps5medic.elf`) runs.
+- To use the DualSense the UI needs an app context (the console does not open the controller otherwise, background: [docs/PHASE3.md](docs/PHASE3.md), German). The bundled **launcher** (`ps5medic-launcher.elf`, a port-9021 payload) provides it; **websrv is no longer needed**. Without the launcher only the diagnostic payload (`ps5medic.elf`) runs.
 
 ## Installation
 
-1. Copy the `PS5MEDIC` folder from the release to `/data/homebrew/` via FTP (it contains `ps5medicui.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` and the icon).
-2. Start `websrv` (Payload Manager, autoloader or port 9021).
-3. Open the **PS5 Medic** tile in the launcher (`http://<PS5-IP>:8080`). Alternatively from a PC: `make launch-ui PS5_HOST=<PS5-IP>`.
+1. Copy the `PS5MEDIC` folder from the release to `/data/homebrew/` via FTP (it contains `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` and the icon).
+2. Send `ps5medic-launcher.elf` to port 9021 (Payload Manager, or from a PC: `make send-launcher PS5_HOST=<PS5-IP>`). It puts the **PS5 Medic** tile on the home screen and starts the UI right away if no app is running.
+3. Afterwards the tile opens the UI. After a console restart send the launcher again (or add it to the Payload Manager autoload list); the tile stays.
 
-Note: when it starts a homebrew app, `websrv` ends a running Big App, which includes a game.
-
-**Optional: tile under “Media”.** A tiny starter title (`FAKE42007`) puts PS5 Medic on the home screen; it asks `websrv` to start the UI. Building and installing: [docs/TITLE.md](docs/TITLE.md) (German; needs a ps5-native-app-boilerplate checkout; not part of the release package).
+The launcher only closes the browser the tile opens and homebrew fake apps; it never closes a running game. Details: [docs/TITLE.md](docs/TITLE.md) (German). The old way through websrv (`make launch-ui`) remains as a fallback.
 
 ## Controls
 
@@ -70,7 +68,7 @@ For the console you need the [ps5-payload-sdk](https://github.com/ps5-payload-de
 ```bash
 make ps5-ui                         # full-screen UI (ps5medicui.elf)
 make ps5                            # diagnostic payload (ps5medic.elf)
-make launch-ui PS5_HOST=192.168.1.x # upload and start through websrv
+make send-launcher PS5_HOST=192.168.1.x # send the launcher to port 9021 (tile + UI); make launch-ui = old way through websrv
 make dist                           # release folder and zip under dist/ (local only)
 ```
 

@@ -58,14 +58,16 @@ void need_https(const std::string& url, const std::string& where) {
         fail(where, "Quelle muss eine https-Adresse ohne Leerzeichen sein");
 }
 
-const std::set<std::string> kEntryKeys = {"id", "title", "text", "steps", "notes", "source", "more_sources", "level"};
+const std::set<std::string> kEntryKeys = {"id", "title", "text", "steps", "notes", "context", "source", "more_sources", "source_sha256", "checked", "level"};
+const std::set<std::string> kContextKinds = {"fw", "storage", "drives", "smp", "need_backport"};
 
 ErrorCode parse_code(const json& j, std::size_t index) {
     std::string where = "codes[" + std::to_string(index) + "]";
     if (!j.is_object()) fail(where, "Eintrag muss ein Objekt sein");
     ErrorCode c;
     c.id = need_string(j, "id", where);
-    if (!std::regex_match(c.id, std::regex("^[A-Z]{2}-[0-9]{6}-[0-9]$"))) fail(where, "ungueltige ID '" + c.id + "' (erwartet z. B. CE-108262-9)");
+    if (!std::regex_match(c.id, std::regex("^([A-Z]{2}-[0-9]{6}-[0-9]|0x[0-9A-F]{8})$")))
+        fail(where, "ungueltige ID '" + c.id + "' (erwartet z. B. CE-108262-9 oder 0x809F8032)");
     where = "code '" + c.id + "'";
     for (auto it = j.begin(); it != j.end(); ++it)
         if (!kEntryKeys.count(it.key())) fail(where, "unbekannter Schluessel '" + it.key() + "'");
@@ -74,6 +76,15 @@ ErrorCode parse_code(const json& j, std::size_t index) {
     need_text_pair(j, "text", where, c.text_de, c.text_en);
     need_list_pair(j, "steps", where, c.steps_de, c.steps_en);
     if (j.contains("notes")) need_list_pair(j, "notes", where, c.notes_de, c.notes_en);
+
+    if (j.contains("context")) {
+        if (!j["context"].is_array()) fail(where, "'context' muss ein Array sein");
+        for (std::size_t i = 0; i < j["context"].size(); ++i) {
+            const json& e = j["context"][i];
+            if (!e.is_string() || !kContextKinds.count(e.get<std::string>())) fail(where, "context[" + std::to_string(i) + "] ist keine bekannte Angabe (fw|storage|drives|smp|need_backport)");
+            c.context.push_back(e.get<std::string>());
+        }
+    }
 
     c.source = need_string(j, "source", where);
     need_https(c.source, where + ".source");
@@ -85,6 +96,13 @@ ErrorCode parse_code(const json& j, std::size_t index) {
             need_https(e.get<std::string>(), where + ".more_sources[" + std::to_string(i) + "]");
             c.more_sources.push_back(e.get<std::string>());
         }
+    }
+
+    c.checked = need_string(j, "checked", where);
+    if (!std::regex_match(c.checked, std::regex("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"))) fail(where, "checked muss ein Datum YYYY-MM-DD sein");
+    if (j.contains("source_sha256")) {
+        c.source_sha256 = need_string(j, "source_sha256", where);
+        if (!std::regex_match(c.source_sha256, std::regex("^[0-9a-f]{64}$"))) fail(where, "source_sha256 muss 64 Hex-Ziffern (klein) sein");
     }
 
     c.level = need_string(j, "level", where);

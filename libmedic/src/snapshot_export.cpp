@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <set>
@@ -266,10 +267,30 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
     }
 
     // ps5-theme: nur die erkannte Version als Startzeile (das echte Log kann Pfade eigener Bilder enthalten).
-    // /user/app wird bewusst nicht exportiert: der Befund storage.oversized_reservation vergleicht Reservierung und
+    // /user/app wird nur verkleinert exportiert (siehe unten): der Befund storage.oversized_reservation vergleicht Reservierung und
     // Dateigroesse, und der Export enthaelt nur leere Dateien. Aus einem Export darf deshalb kein solcher Befund entstehen.
     if (const auto* v = facts.get("ps5theme.version"); v && v->is_string())
         ex.write("/data/ps5-theme/logs/log.txt", "ps5-theme " + v->get<std::string>() + " starting\n");
+
+    // Spiele unter /user/app: nur Titel-ID und verlangte Firmware (ohne Namen, ohne downloadDataSize), fuer den Befund game.needs_backport.
+    if (const auto* g = facts.get("games.fw"); g && g->is_array()) {
+        auto encode = [](const std::string& fw) {  // "13.60" -> "0x1360000000000000"
+            int major = 0, minor = 0;
+            if (std::sscanf(fw.c_str(), "%d.%d", &major, &minor) != 2 || major < 1 || major > 99 || minor < 0 || minor > 99) return std::string();
+            char buf[32];
+            std::snprintf(buf, sizeof buf, "0x%02d%02d000000000000", major, minor);
+            return std::string(buf);
+        };
+        for (const auto& e : *g) {
+            if (!e.is_object() || !e.contains("titleid") || !e["titleid"].is_string() || !e.contains("required_fw") || !e["required_fw"].is_string()) continue;
+            const std::string required = encode(e["required_fw"].get<std::string>());
+            if (required.empty()) continue;
+            json param = {{"titleId", e["titleid"]}, {"requiredSystemSoftwareVersion", required}};
+            if (e.contains("sdk_fw") && e["sdk_fw"].is_string())
+                if (const std::string sdk = encode(e["sdk_fw"].get<std::string>()); !sdk.empty()) param["sdkVersion"] = sdk;
+            ex.write("/user/app/" + e["titleid"].get<std::string>() + "/sce_sys/param.json", param.dump());
+        }
+    }
 
     // Scanpfade (wirksame und Standard, damit auch "versteckte" Spiele sichtbar bleiben) und gemountete Images
     std::vector<std::string> roots = strings_of(facts, "smp.scan_roots");

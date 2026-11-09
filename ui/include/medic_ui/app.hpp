@@ -22,7 +22,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
 
@@ -39,6 +39,9 @@ public:
     bool quit_requested() const { return quit_; }  // Kreis auf dem Startbildschirm
     int error_selected() const { return err_sel_; }  // Fehlercodes: gewaehlter Eintrag
     int error_scroll() const { return err_scroll_; } // Fehlercodes, Detail: erste sichtbare Textzeile
+    std::string selected_error_id() const { return current_error() ? current_error()->id : std::string(); }
+    const std::string& reported_error() const { return reported_error_; }  // fuer den Bericht vermerkter Code (leer: keiner)
+    int error_source_index() const { return err_src_; }                     // Fehlercodes, Quelle: welche Quelle der QR-Code zeigt
 
 private:
     struct Preview {  // Darstellung einer geplanten Aenderung
@@ -59,7 +62,12 @@ private:
     int linked_error_index() const;
     int error_scroll_max() const;
     const medic::ErrorCode* current_error() const;
-    void finish_rules_change(bool ok);
+    void refresh_error_context();
+    void open_error_source();
+    void scroll_error_detail(int dir);
+    void install_updates();
+    void rollback_updates();
+    void finish_updates();
 
     void draw_chrome(Canvas& c) const;
     void draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::string>>& hints) const;
@@ -76,6 +84,7 @@ private:
     void draw_rules_update(Canvas& c) const;
     void draw_error_codes(Canvas& c) const;
     void draw_error_detail(Canvas& c) const;
+    void draw_error_source(Canvas& c) const;
 
     std::string finding_text(const medic::Finding& f) const;
     std::string fix_name(const std::string& id) const;
@@ -112,6 +121,9 @@ private:
     enum class UpdateStage { Offer, ConfirmRollback, ConfirmDownload, Downloading, DownloadFail, DoneOk, DoneFail };
     medic::RuleUpdateOffer offer_;
     medic::RuleUpdateResult update_result_;
+    medic::RuleUpdateOffer codes_offer_;     // dasselbe fuer die Fehlercode-Datei (error_codes.json)
+    medic::RuleUpdateResult codes_result_;
+    bool rules_attempted_ = false, codes_attempted_ = false;  // was die letzte Installation bzw. Zuruecknahme betraf
     UpdateStage update_stage_ = UpdateStage::Offer;
     bool update_was_rollback_ = false;
     std::string download_url_;  // Adresse aus config.ini, beim Oeffnen der Rueckfrage gelesen
@@ -123,6 +135,12 @@ private:
     medic::ErrorCodeSet errors_;  // beim Oeffnen vom Dienst geholt
     int err_sel_ = 0, err_top_ = 0;
     int err_scroll_ = 0;  // Detail: Index der ersten sichtbaren Textzeile
+    CodeContext err_ctx_;          // "Was Medic gerade sieht" zum gewaehlten Code (beim Oeffnen geholt)
+    std::string reported_error_;   // per Dreieck fuer den Bericht vermerkt
+    int err_src_ = 0;              // Quelle (0 = Hauptquelle, danach more_sources), deren QR-Code gezeigt wird
+    medic::QrCode src_qr_;
+    bool src_qr_ok_ = false;
+    int scroll_dir_ = 0, scroll_streak_ = 0, last_scroll_tick_ = -1000;  // Scrollen beschleunigt beim Halten
     bool err_from_finding_ = false;  // Code kam per Quadrat aus einem Befund: Kreis geht dorthin zurueck, kein Blaettern
 
     ReportResult report_;

@@ -18,7 +18,7 @@ Ein Tester braucht nichts zu reparieren. Ein Check-up und der Bericht genügen.
 ## So geht's
 
 1. Release herunterladen und den Ordner `PS5MEDIC` nach `/data/homebrew/` kopieren (siehe README).
-2. `websrv` starten und im Launcher die Kachel **PS5 Medic** öffnen.
+2. `ps5medic-launcher.elf` an Port 9021 senden (legt die Kachel **PS5 Medic** an und startet die UI). Später die Kachel öffnen; nach einem Neustart den Launcher erneut senden.
 3. **✕** auf „Check-up starten".
 4. **□** in der Befundliste: legt den Bericht ab und zeigt den QR-Code. Die Datei liegt unter `/data/ps5medic/reports/`.
 5. Bericht in ein Issue einfügen (Vorlage: *Problem melden*). Er ist anonymisiert. **Lies ihn vorher durch**: Datei- und Ordnernamen (auch Spielnamen) stehen drin.

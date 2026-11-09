@@ -2,8 +2,121 @@
   "_license": "SPDX-License-Identifier: GPL-3.0-or-later (wie knowledge/rules.json; JSON kennt keine Kommentare)",
   "_note": "Nachschlagewerk fuer Fehlercodes: nur lesen und erklaeren, nichts wird veraendert. Jeder Eintrag nennt seine Quelle. level doc = Sony-Hilfeseite (am 9. Nov. 2026 gegen die Seiten geprueft), community = keine Sony-Seite, nur Community-Angaben. Eintraege nach id sortiert. Schema: libmedic/src/error_codes.cpp",
   "schema_version": 1,
-  "db_version": "2026.11.09",
+  "db_version": "2026.11.10",
   "codes": [
+    {
+      "id": "0x80268001",
+      "title": { "de": "Kein Ton: Audio-Aufruf abgelehnt (Firmware 6 bis 9)", "en": "No sound: audio call rejected (firmware 6 to 9)" },
+      "text": {
+        "de": "Zu diesem Code gibt es keine Sony-Seite; die Angabe stammt aus dem README des PS5 Backport Toolkit. Danach lehnt auf den Firmwares 6 bis 9 der Aufruf sceAudioOut2Set3DLatency einen Modus über 1 mit diesem Code ab, und Wwise (Audio-Software in Spielen) behandelt das als fatal: Das Spiel gibt den Ton auf. Ob der Code auch anderswo vorkommt, ist nicht belegt.",
+        "en": "There is no Sony page for this code; the information comes from the README of the PS5 Backport Toolkit. According to it, on firmwares 6 to 9 the call sceAudioOut2Set3DLatency rejects a mode above 1 with this code, and Wwise (audio software in games) treats that as fatal: the game gives up on sound. Whether the code occurs elsewhere is not documented."
+      },
+      "steps": { "de": [], "en": [] },
+      "notes": {
+        "de": [
+          "Das README ordnet das Symptom „No sound“ auf den Firmwares 6 bis 9 der Reparaturregel „set3-nonfatal“ zu. Diese Regel ändert die Spieldateien, wird laut README nie automatisch empfohlen und ist auf 6 bis 9 ungetestet. Medic wendet so etwas nicht an."
+        ],
+        "en": [
+          "The README assigns the symptom “No sound” on firmwares 6 to 9 to the repair rule “set3-nonfatal”. This rule changes the game files, is never recommended automatically according to the README and is untested on 6 to 9. Medic does not apply anything like that."
+        ]
+      },
+      "source": "https://github.com/cherryduck/ps5-backport-toolkit/blob/master/README.md",
+      "checked": "2026-11-09",
+      "level": "community"
+    },
+    {
+      "id": "0x80551618",
+      "title": { "de": "Trophäen-Registrierung fehlgeschlagen", "en": "Trophy registration failed" },
+      "text": {
+        "de": "Zu diesem Code gibt es keine Sony-Seite; die Angabe stammt aus dem Issue 97 von ShadowMount+, nicht von Sony. Dort meldet jemand beim Start jedes PS4-Spiels, das als .ffpfsc-Abbild mit ShadowMount+ eingebunden wurde, die Meldung „Trophy registration failed (0x80551618)“, obwohl die Spiele starten und spielbar sind. Eine bestätigte Ursache oder Lösung gibt es in dem Issue nicht.",
+        "en": "There is no Sony page for this code; the information comes from issue 97 of ShadowMount+, not from Sony. There someone reports the message “Trophy registration failed (0x80551618)” when starting each PS4 game that was mounted as an .ffpfsc image with ShadowMount+, although the games start and are playable. The issue has no confirmed cause or fix."
+      },
+      "steps": { "de": [], "en": [] },
+      "notes": {
+        "de": [
+          "Vermutung des Melders (unbestätigt, im Issue antwortet kein Entwickler): Beim Start werden die Trophäen-Dateien (etwa npbind.dat) an einer Stelle gesucht, die zu PS5-Spielen passt, nicht zu PS4-Spielen; außerdem rufe ShadowMount+ den System-Mechanismus für den App-Start nicht auf. Medic bestätigt das nicht."
+        ],
+        "en": [
+          "Reporter's guess (unconfirmed, no developer answers in the issue): at launch the trophy files (such as npbind.dat) are searched in a place that fits PS5 games, not PS4 games; also ShadowMount+ does not call the system mechanism for starting an app. Medic does not confirm this."
+        ]
+      },
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/97",
+      "checked": "2026-11-09",
+      "level": "community"
+    },
+    {
+      "id": "0x80960005",
+      "title": { "de": "Spiel-Voreinstellungen abgelehnt (Firmware 4.xx)", "en": "Game presets request rejected (firmware 4.xx)" },
+      "text": {
+        "de": "Zu diesem Code gibt es keine Sony-Seite; die Angabe stammt aus dem README des PS5 Backport Toolkit. Danach wird auf der Firmware 4.xx die Anfrage eines Spiels nach seinen Voreinstellungen („Game Presets“) abgelehnt, weil sie 8 Bytes größer ist, als 4.xx annimmt. Den Zusammenhang zwischen Code und Größe zeigt nur die Tabelle des READMEs; eine ausdrückliche Erklärung des Codes steht dort nicht.",
+        "en": "There is no Sony page for this code; the information comes from the README of the PS5 Backport Toolkit. According to it, firmware 4.xx rejects a game's request for its game presets because the request is 8 bytes bigger than 4.xx accepts. The link between the code and the size appears only in the README's table; an explicit explanation of the code is not given there."
+      },
+      "steps": { "de": [], "en": [] },
+      "notes": {
+        "de": [
+          "Das README ordnet den Fehler der Reparaturregel „gamepresets-28“ des Toolkits zu. Diese Regel ändert die Spieldateien; Medic stellt weder Spiele noch Backports bereit und wendet so etwas nicht an."
+        ],
+        "en": [
+          "The README assigns the error to the toolkit's repair rule “gamepresets-28”. This rule changes the game files; Medic provides neither games nor backports and does not apply anything like that."
+        ]
+      },
+      "source": "https://github.com/cherryduck/ps5-backport-toolkit/blob/master/README.md",
+      "checked": "2026-11-09",
+      "level": "community"
+    },
+    {
+      "id": "0x809F8032",
+      "title": { "de": "Spielstand lässt sich nicht öffnen (Mount fehlgeschlagen)", "en": "Save data cannot be opened (mount failed)" },
+      "text": {
+        "de": "Zu diesem Code gibt es keine Sony-Seite; die Angabe stammt aus dem README des PS5 Backport Toolkit. Dort steht der Code in der Log-Zeile „Failed to mount …“: Der Spielstand ist vorhanden, lässt sich aber nicht öffnen, oft weil ein früherer Absturz ihn nur halb angelegt hat. Eine vermutete Ursache bei einem Spiel (Wert 0 beim lesenden Einbinden) wurde im Test ausgeschlossen; die tatsächliche Ursache nennt das README nicht.",
+        "en": "There is no Sony page for this code; the information comes from the README of the PS5 Backport Toolkit. There the code appears in the log line “Failed to mount …”: the save exists but cannot be opened, often because an earlier crash left it half-created. A suspected cause for one game (value 0 on a read-only mount) was ruled out in a test; the README does not name the actual cause."
+      },
+      "steps": {
+        "de": [
+          "Wurde der Spielstand nach einem früheren Absturz nur halb angelegt: ihn unter „Settings > Saved Data“ löschen und es erneut versuchen (das löscht diesen Spielstand: wenn möglich vorher sichern)."
+        ],
+        "en": [
+          "If the save was left half-created by an earlier crash: delete it under “Settings > Saved Data” and try again (this deletes that save: back it up first if possible)."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Der Menüpfad ist so aus dem README übernommen; wie Sony das Menü genau nennt, ist dort nicht angegeben."
+        ],
+        "en": [
+          "The menu path is taken as written in the README; how Sony names the menu exactly is not stated there."
+        ]
+      },
+      "source": "https://github.com/cherryduck/ps5-backport-toolkit/blob/master/README.md",
+      "checked": "2026-11-09",
+      "level": "community"
+    },
+    {
+      "id": "CE-100005-6",
+      "title": { "de": "Spiel oder App lässt sich nicht laden", "en": "Game or application cannot be loaded" },
+      "text": {
+        "de": "Das Spiel oder die App lässt sich nicht laden. Sony nennt dafür vor allem das Löschen und Neuinstallieren; bei Disc-Spielen kommt die Reinigung der Disc dazu.",
+        "en": "The game or application cannot be loaded. For this code Sony mainly names deleting and reinstalling it; for disc games, cleaning the disc is added."
+      },
+      "steps": {
+        "de": [
+          "Auf dem Startbildschirm das Spiel markieren, die Options-Taste drücken und „Delete“ (Löschen) wählen.",
+          "Bei der digitalen Version das Spiel aus der Bibliothek neu installieren.",
+          "Bei einem Disc-Spiel die Disc mit einem weichen, fusselfreien Tuch von der Mitte zum Rand abwischen, wieder einlegen und das Spiel neu installieren.",
+          "Steht die Konsole senkrecht im Ständer, muss die beschriftete Seite der Disc beim Einlegen nach links zeigen."
+        ],
+        "en": [
+          "On the home screen, highlight the game, press the options button and choose “Delete”.",
+          "For the digital version, reinstall the game from your library.",
+          "For a disc game, wipe the disc from the center to the edge with a soft, lint-free cloth, insert it again and reinstall the game.",
+          "If the console stands vertically on the console stand, the labeled side of the disc must face left when you insert it."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-100005-6/",
+      "source_sha256": "1f9cff11efed77b1525eddd930787aecfe7e0e640c4d3733253e5f61d4fe3adf",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
     {
       "id": "CE-100006-7",
       "title": { "de": "Externes Laufwerk wird nicht erkannt", "en": "External storage drive is not recognized" },
@@ -37,7 +150,40 @@
           "Medic note (not from Sony): On a jailbroken console a system update can end the jailbreak. Medic never changes firmware; whether you update is entirely your decision."
         ]
       },
+      "context": ["drives"],
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-100006-7/",
+      "source_sha256": "e705ff27c922a568d4d59ea567895f3a3df5660b9eff33d07085a92af219f52d",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
+    {
+      "id": "CE-100009-0",
+      "title": { "de": "Problem mit der Update-Datei", "en": "Problem with the update file" },
+      "text": {
+        "de": "Mit der Update-Datei einer App oder eines Spiels gibt es ein Problem. Sony nennt: zuerst die gespeicherten Daten sichern, die App löschen und neu installieren, neu starten, sich ab- und wieder anmelden und sonst 24 Stunden warten.",
+        "en": "There is a problem with the update file of an app or game. Sony names: back up the saved data first, delete and reinstall the app, restart, sign out and back in, and otherwise wait 24 hours."
+      },
+      "steps": {
+        "de": [
+          "Die gespeicherten Daten sichern.",
+          "Die App bzw. das Spiel löschen und neu installieren.",
+          "Die Konsole neu starten.",
+          "„Settings > Users and Accounts > Other > Sign Out“ wählen.",
+          "Sich wieder anmelden.",
+          "Tritt der Fehler weiter auf: 24 Stunden warten und es dann erneut versuchen."
+        ],
+        "en": [
+          "Back up your saved data.",
+          "Delete the app/game and reinstall it.",
+          "Restart the console.",
+          "Choose “Settings > Users and Accounts > Other > Sign Out”.",
+          "Sign in again.",
+          "If the error keeps happening, wait 24 hours and try again."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-100009-0/",
+      "source_sha256": "7d53bf2043e129ca86af9b622c7c6d4d79bf4a7a0857129f75b2399a744c2946",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -59,7 +205,62 @@
           "On the home screen, highlight the content, press the options button and choose “Delete”."
         ]
       },
+      "context": ["storage"],
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-100028-1/",
+      "source_sha256": "d8a304f3d8e18054d67de5b8f83e99278b1a6444ff25a33d9372227cf62a79be",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
+    {
+      "id": "CE-100095-5",
+      "title": { "de": "Problem beim Starten der App", "en": "Problem when starting the application" },
+      "text": {
+        "de": "Beim Starten der App ist ein Problem aufgetreten. Sony nennt dafür nur, die App zu löschen und neu zu installieren.",
+        "en": "A problem occurred when starting the application. For this code Sony only says to delete the application and reinstall it."
+      },
+      "steps": {
+        "de": [
+          "Die App markieren, die Options-Taste drücken und „Delete“ (Löschen) wählen.",
+          "Die App neu installieren.",
+          "Die Konsole während der Installation eingeschaltet lassen."
+        ],
+        "en": [
+          "Highlight the application, press the options button and choose “Delete”.",
+          "Reinstall the application.",
+          "Keep the console powered on while the installation is running."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-100095-5/",
+      "source_sha256": "4e4f266c3aef9c1434fa0d21d491909bd48b37ba3f36d343fce15fcdb885c1ba",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
+    {
+      "id": "CE-100096-6",
+      "title": { "de": "Problem beim Laden der App", "en": "Problem loading the application" },
+      "text": {
+        "de": "Beim Laden der App ist ein Fehler aufgetreten. Sony nennt dafür nur zwei Schritte: ein Systemupdate (hier nicht übernommen, siehe Hinweise) und einen Neustart nach dem Ziehen des Netzkabels.",
+        "en": "An error occurred while loading the application. For this code Sony names only two steps: a system update (not taken over here, see notes) and a restart after unplugging the power cable."
+      },
+      "steps": {
+        "de": [
+          "Die Konsole ausschalten, das Netzkabel ziehen, wieder einstecken und die Konsole neu starten."
+        ],
+        "en": [
+          "Turn off the console, unplug the power cable, plug it back in and restart the console."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Medic-Hinweis (nicht von Sony): Sonys Schritt „Systemsoftware aktualisieren“ fehlt hier mit Absicht. Auf einer gejailbreakten Konsole kann ein Systemupdate den Jailbreak beenden; Medic ändert die Firmware nie."
+        ],
+        "en": [
+          "Medic note (not from Sony): Sony's step “update the system software” is left out on purpose. On a jailbroken console a system update can end the jailbreak; Medic never changes firmware."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-100096-6/",
+      "source_sha256": "b0ffbedd23c0ef2df6bb5df27184fbada58f4fb4dfdf4cc16236b6579ef8bbc0",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -86,6 +287,7 @@
         ]
       },
       "source": "https://github.com/Blaze414/ps5-theme/releases/tag/v1.53",
+      "checked": "2026-11-09",
       "level": "community"
     },
     {
@@ -118,6 +320,8 @@
         ]
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-105799-1/",
+      "source_sha256": "c8a9552254c5abeb62b13be4f875b3331a27100198ad59a0fe329ad71ca1f671",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -147,12 +351,74 @@
           "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
         ]
       },
+      "context": ["fw", "need_backport"],
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-106485-4/",
       "more_sources": [
         "https://github.com/quer3q/ampr-emu-ng",
         "https://github.com/cherryduck/ps5-backport-toolkit"
       ],
+      "source_sha256": "f8810a283f5900b9810e0158ad50a49a28895578e518bc2a2b51d6e5b8b743d8",
+      "checked": "2026-11-09",
       "level": "doc"
+    },
+    {
+      "id": "CE-106487-6",
+      "title": { "de": "Problem beim Herunterladen oder Installieren von Inhalt", "en": "Problem downloading or installing content" },
+      "text": {
+        "de": "Beim Herunterladen oder Installieren eines Inhalts ist ein Problem aufgetreten. Sony nennt: die Systemsoftware aktuell halten (hier nicht übernommen, siehe Hinweise), Lizenzen wiederherstellen, den Download löschen und neu starten und die Datenbank im Safe Mode neu aufbauen.",
+        "en": "There was a problem while downloading and installing the content. Sony names: keep the system software up to date (not taken over here, see notes), restore licenses, delete the download and start it again, and rebuild the database in Safe Mode."
+      },
+      "steps": {
+        "de": [
+          "Die Lizenzen wiederherstellen: „Settings > Users and Accounts > Other > Restore Licenses > Restore“.",
+          "Mit der PS-Taste das Kontrollzentrum öffnen, den Download markieren, die Options-Taste drücken, „Delete“ (Löschen) wählen und den Download erneut starten.",
+          "Die Konsole im Safe Mode (abgesicherter Modus) starten und „Clear Cache and Rebuild Database > Rebuild Database“ wählen. Sony nennt dazu keinen Datenverlust, warnt aber allgemein vor Datenverlust bei einigen Safe-Mode-Optionen: vorher Daten sichern.",
+          "Tritt das Problem weiter auf: später erneut versuchen."
+        ],
+        "en": [
+          "Restore the licenses: “Settings > Users and Accounts > Other > Restore Licenses > Restore”.",
+          "Press the PS button to open the control center, highlight the download, press the options button, choose “Delete” and start the download again.",
+          "Start the console in Safe Mode and choose “Clear Cache and Rebuild Database > Rebuild Database”. Sony names no data loss for this, but warns in general that some Safe Mode options lose data: back up your data first.",
+          "If the problem keeps happening, try again later."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Safe-Mode-Optionen laut Sony: „Repair Console Storage“ löscht keine Daten, „Restore Default Settings“ löscht keine Spiele, Apps, Screenshots, Videos und Spielstände, „Reset PS5“ löscht alle Benutzerdaten. Zu „Rebuild Database“ äußert sich Sony nicht zum Datenverlust.",
+          "Medic-Hinweis (nicht von Sony): Sonys Schritt „Systemsoftware aktualisieren“ fehlt hier mit Absicht. Auf einer gejailbreakten Konsole kann ein Systemupdate den Jailbreak beenden; Medic ändert die Firmware nie."
+        ],
+        "en": [
+          "Safe Mode options according to Sony: “Repair Console Storage” does not erase data, “Restore Default Settings” does not delete games, apps, screenshots, video clips and saved data, “Reset PS5” deletes all user data. For “Rebuild Database” Sony says nothing about data loss.",
+          "Medic note (not from Sony): Sony's step “update the system software” is left out on purpose. On a jailbroken console a system update can end the jailbreak; Medic never changes firmware."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-106487-6/",
+      "more_sources": ["https://www.playstation.com/en-us/support/hardware/safe-mode-playstation/"],
+      "source_sha256": "80cbc25fa6c23616e587aaf0d6fcc99d4fff51ec92dbe37ae3e65ba0cf77782e",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
+    {
+      "id": "CE-107098-5",
+      "title": { "de": "Speichern schlägt fehl (Spielstand einbinden, Firmware 4.xx)", "en": "Saving fails (save data mount, firmware 4.xx)" },
+      "text": {
+        "de": "Zu diesem Code gibt es keine Sony-Seite (unter Sonys Adressmuster 404); die Angabe stammt aus dem README des PS5 Backport Toolkit. Danach tritt er auf, wenn ein Spiel beim Einbinden des Spielstands einen Wert übergibt, den die Firmware 4.xx ablehnt, und das Speichern scheitert. Ob der Code auch andere Ursachen haben kann, ist nicht belegt.",
+        "en": "There is no Sony page for this code (404 under Sony's usual address); the information comes from the README of the PS5 Backport Toolkit. According to it, the code appears when a game passes a value to the save data mount that firmware 4.xx rejects, so saving fails. Whether the code can have other causes is not documented."
+      },
+      "steps": { "de": [], "en": [] },
+      "notes": {
+        "de": [
+          "Das README ordnet den Fehler der Reparaturregel „savedata-mount“ des Toolkits zu (danach „savedata-prepare“ und „savedata-dirsearch“). Diese Regeln ändern die Spieldateien; Medic stellt weder Spiele noch Backports bereit und wendet so etwas nicht an.",
+          "Das README nennt den Fall nur für die Firmware 4.xx."
+        ],
+        "en": [
+          "The README assigns the error to the toolkit's repair rule “savedata-mount” (then “savedata-prepare” and “savedata-dirsearch”). These rules change the game files; Medic provides neither games nor backports and does not apply anything like that.",
+          "The README names the case only for firmware 4.xx."
+        ]
+      },
+      "source": "https://github.com/cherryduck/ps5-backport-toolkit/blob/master/README.md",
+      "checked": "2026-11-09",
+      "level": "community"
     },
     {
       "id": "CE-107520-5",
@@ -181,11 +447,112 @@
           "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
         ]
       },
+      "context": ["fw", "need_backport"],
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107520-5/",
       "more_sources": [
         "https://github.com/quer3q/ampr-emu-ng",
         "https://github.com/cherryduck/ps5-backport-toolkit"
       ],
+      "source_sha256": "c592d6da0cc23115788b8d0b4f822cab6e9e487a9409cd471d1458f6ed08494d",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
+    {
+      "id": "CE-107527-2",
+      "title": { "de": "Installation fehlgeschlagen", "en": "Installation failed" },
+      "text": {
+        "de": "Die Installation ist fehlgeschlagen; möglicherweise stimmt etwas mit den zu installierenden Daten nicht. Sonys Schritte betreffen Neustart, Netzwerkverbindung und das Löschen und erneute Herunterladen des Spiels.",
+        "en": "The installation failed; there may be a problem with the data being installed. Sony's steps cover a restart, the network connection and deleting and downloading the game again."
+      },
+      "steps": {
+        "de": [
+          "Die Konsole neu starten.",
+          "Wenn möglich per Netzwerkkabel ins Internet gehen.",
+          "„Settings > Network > Set Up Internet Connection“ öffnen und die Netzwerkeinstellungen neu einrichten.",
+          "Bei WLAN die Konsole näher an den Router stellen oder Hindernisse dazwischen beseitigen.",
+          "Den Router ausschalten, mindestens 5 Minuten warten, dann wieder einschalten.",
+          "Unter „Settings > Storage“ nachsehen: Ist die Installation von Spieldaten fehlgeschlagen, das Spiel löschen und neu herunterladen."
+        ],
+        "en": [
+          "Restart the console.",
+          "Connect to the internet with a wired connection if possible.",
+          "Open “Settings > Network > Set Up Internet Connection” and set up the network settings again.",
+          "On Wi-Fi, move the console closer to the router or remove anything blocking the connection between the devices.",
+          "Turn off the router, wait at least 5 minutes, then turn it on again.",
+          "Check “Settings > Storage”: if game data failed to install, delete the game and download it again."
+        ]
+      },
+      "context": ["storage"],
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107527-2/",
+      "source_sha256": "659f4be35f02a8a093ad60ef960441f0edf1692371439917ebce2b9970bb9fbf",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
+    {
+      "id": "CE-107622-8",
+      "title": { "de": "Start der App fehlgeschlagen", "en": "Failed to launch the application" },
+      "text": {
+        "de": "Die App ließ sich nicht starten; möglicherweise wurde die Update-Datei beim Start nicht richtig angewendet. Sony nennt: neu starten und erneut starten, bei ausbleibender Besserung den Inhalt löschen und die Spieldaten neu installieren, weil sie beschädigt sein können.",
+        "en": "The application could not be launched; the update file may not have been applied properly at start. Sony names: restart and launch again, and if nothing improves delete the content and reinstall the game data, because it may be corrupted."
+      },
+      "steps": {
+        "de": [
+          "Die Konsole neu starten und die App erneut starten.",
+          "Ändert sich nichts, können die Spieldaten beschädigt sein: die App markieren, die Options-Taste drücken und den Inhalt löschen („Delete“).",
+          "Die Spieldaten neu installieren."
+        ],
+        "en": [
+          "Restart the console and launch the application again.",
+          "If nothing improves, the game data may be corrupted: highlight the application, press the options button and delete the content (“Delete”).",
+          "Reinstall the game data."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107622-8/",
+      "source_sha256": "211cf042a1f0a650097281d5c7d280cf7d69c3aed18a88304d1dcb5f0fb6ab7b",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
+    {
+      "id": "CE-107750-0",
+      "title": { "de": "Fehler während des Spiels", "en": "Error while playing the game" },
+      "text": {
+        "de": "Während des Spielens ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Netzkabel ziehen, Spiel und Systemsoftware aktualisieren (die Systemsoftware hier nicht übernommen, siehe Hinweise), das Spiel neu installieren, die Datenbank im Safe Mode neu aufbauen und erst zuletzt die Konsole zurücksetzen.",
+        "en": "An error occurred while playing the game. Sony names a long chain: unplug the power cable, update the game and system software (the system software not taken over here, see notes), reinstall the game, rebuild the database in Safe Mode and only as the last step reset the console."
+      },
+      "steps": {
+        "de": [
+          "Die Konsole ausschalten und das Netzkabel ziehen. Fünf Minuten warten, das Kabel wieder einstecken und die Konsole neu starten.",
+          "Sicherstellen, dass das Spiel auf der neuesten Version ist.",
+          "Besteht der Fehler weiter, das Spiel unter „Settings > Storage“ löschen und neu installieren.",
+          "Die Konsole im Safe Mode (abgesicherter Modus) starten und „Clear Cache and Rebuild Database > Rebuild Database“ wählen. Sony nennt dazu keinen Datenverlust, warnt aber allgemein vor Datenverlust bei einigen Safe-Mode-Optionen: vorher Daten sichern.",
+          "Tritt das Problem weiter auf, die Konsole zurücksetzen. Das löscht alle Daten auf dem Konsolenspeicher: zuerst die Daten der Konsole sichern.",
+          "Nach der Sicherung „Settings > System > System Software > Reset Options > Reset Your Console“ wählen.",
+          "Nach dem Zurücksetzen das Spiel erneut installieren."
+        ],
+        "en": [
+          "Turn off the console and unplug the power cable. Wait five minutes, plug the cable back in and restart the console.",
+          "Make sure that the game is on its latest version.",
+          "If the error persists, delete the game under “Settings > Storage” and reinstall it.",
+          "Start the console in Safe Mode and choose “Clear Cache and Rebuild Database > Rebuild Database”. Sony names no data loss for this, but warns in general that some Safe Mode options lose data: back up your data first.",
+          "If the problem keeps happening, reset the console. This erases all data on the console storage: back up the console data first.",
+          "After the backup, choose “Settings > System > System Software > Reset Options > Reset Your Console”.",
+          "After the reset, install the game again."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Safe-Mode-Optionen laut Sony: „Repair Console Storage“ löscht keine Daten, „Restore Default Settings“ löscht keine Spiele, Apps, Screenshots, Videos und Spielstände, „Reset PS5“ löscht alle Benutzerdaten. Zu „Rebuild Database“ äußert sich Sony nicht zum Datenverlust.",
+          "Medic-Hinweis (nicht von Sony): Sonys Schritt „Systemsoftware aktualisieren“ fehlt hier mit Absicht. Auf einer gejailbreakten Konsole kann ein Systemupdate den Jailbreak beenden; Medic ändert die Firmware nie."
+        ],
+        "en": [
+          "Safe Mode options according to Sony: “Repair Console Storage” does not erase data, “Restore Default Settings” does not delete games, apps, screenshots, video clips and saved data, “Reset PS5” deletes all user data. For “Rebuild Database” Sony says nothing about data loss.",
+          "Medic note (not from Sony): Sony's step “update the system software” is left out on purpose. On a jailbroken console a system update can end the jailbreak; Medic never changes firmware."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107750-0/",
+      "more_sources": ["https://www.playstation.com/en-us/support/hardware/safe-mode-playstation/"],
+      "source_sha256": "25bd6f21b03139d8362c3f3a1fab271bceb4fbf5e4c441062dce2f57e5e39a2c",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -221,6 +588,8 @@
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107857-8/",
       "more_sources": ["https://www.playstation.com/en-us/support/hardware/safe-mode-playstation/"],
+      "source_sha256": "67e5f876f316b01eeccdb66e20fd9dc64419f1f2dcc5c0e71313bae08f971bbb",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -242,7 +611,39 @@
           "If the error occurs even though enough space is free: change the save destination to the console storage or the extended storage. If you have a second extended storage, try that one too."
         ]
       },
+      "context": ["storage"],
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107872-5/",
+      "source_sha256": "59fa63b8629aedcafc7024449e11ae5251a984b18c5249276ae49c169b482b3a",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
+    {
+      "id": "CE-107891-6",
+      "title": { "de": "Inhalt wird nicht richtig installiert", "en": "Content is not installing properly" },
+      "text": {
+        "de": "Ein Inhalt wird auf der Konsole nicht richtig installiert. Sony nennt dafür nur, den betroffenen Inhalt zu löschen und neu zu installieren; hilft das nicht, später erneut zu versuchen.",
+        "en": "Content is not installing properly on the console. For this code Sony only says to delete the affected content and reinstall it; if that does not help, try again later."
+      },
+      "steps": {
+        "de": [
+          "„Settings > Storage“ öffnen.",
+          "Den Speicher wählen, auf dem der Inhalt liegt.",
+          "Das Spiel mit dem Fehler löschen.",
+          "Das Spiel neu installieren.",
+          "Tritt das Problem weiter auf: später erneut versuchen."
+        ],
+        "en": [
+          "Open “Settings > Storage”.",
+          "Select the storage where the content is stored.",
+          "Delete the game that has the error.",
+          "Reinstall the game.",
+          "If you still have problems, try again later."
+        ]
+      },
+      "context": ["storage"],
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107891-6/",
+      "source_sha256": "009e99920aa6dd7d70f9b34dd496d3391cad8c485cab1f2bd661de71c804a9ac",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -263,6 +664,8 @@
         ]
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-108255-1/",
+      "source_sha256": "581e66a095113581ae12827d26082ed70c10030e8ef71374b0c65cf038c976e6",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -298,11 +701,14 @@
           "Medic note (not from Sony): Sony's step “update the system software” is left out on purpose. On a jailbroken console a system update can end the jailbreak; Medic never changes firmware."
         ]
       },
+      "context": ["smp"],
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-108262-9/",
       "more_sources": [
         "https://www.playstation.com/en-us/support/hardware/safe-mode-playstation/",
         "https://github.com/drakmor/ShadowMountPlus/issues/187"
       ],
+      "source_sha256": "d35b8ed43b2fd9423dc597787f1879be9c46b11341c407b84608ea224dab63f8",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -332,11 +738,14 @@
           "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
         ]
       },
+      "context": ["fw", "need_backport"],
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-108889-4/",
       "more_sources": [
         "https://github.com/quer3q/ampr-emu-ng",
         "https://github.com/cherryduck/ps5-backport-toolkit"
       ],
+      "source_sha256": "2d7238d735e4a8dbb8be7c2c389056d0a81f196b9415b1bcfdf06e14384c8be9",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -359,6 +768,47 @@
         ]
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-109245-1/",
+      "source_sha256": "c8c96b55796b8d88b8b478eefe92de616c24c4398be4278d00a6630c57a7177d",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
+    {
+      "id": "CE-109573-5",
+      "title": { "de": "Fehler beim Starten des Spiels", "en": "Error when starting the game" },
+      "text": {
+        "de": "Beim Starten des Spiels ist ein Fehler aufgetreten. Sony nennt: neu starten, das Spiel löschen und neu installieren, die Datenbank im Safe Mode neu aufbauen und als letzten Punkt ein Systemupdate im Safe Mode (hier nicht übernommen, siehe Hinweise).",
+        "en": "An error occurred when starting the game. Sony names: restart, delete and reinstall the game, rebuild the database in Safe Mode and, as the last point, a system update in Safe Mode (not taken over here, see notes)."
+      },
+      "steps": {
+        "de": [
+          "Die Konsole neu starten.",
+          "In der Spielebibliothek („Game Library“) das Spiel markieren, die Options-Taste drücken und „Delete“ (Löschen) wählen.",
+          "Das Spiel neu installieren.",
+          "Hilft das nicht, die Datenbank neu aufbauen. Die Konsole im Safe Mode (abgesicherter Modus) starten und „Clear Cache and Rebuild Database > Rebuild Database“ wählen. Sony nennt dazu keinen Datenverlust, warnt aber allgemein vor Datenverlust bei einigen Safe-Mode-Optionen: vorher Daten sichern.",
+          "Das Spiel starten."
+        ],
+        "en": [
+          "Restart the console.",
+          "In the Game Library, highlight the game, press the options button and choose “Delete”.",
+          "Reinstall the game.",
+          "If that does not help, rebuild the database. Start the console in Safe Mode and choose “Clear Cache and Rebuild Database > Rebuild Database”. Sony names no data loss for this, but warns in general that some Safe Mode options lose data: back up your data first.",
+          "Start the game."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Safe-Mode-Optionen laut Sony: „Repair Console Storage“ löscht keine Daten, „Restore Default Settings“ löscht keine Spiele, Apps, Screenshots, Videos und Spielstände, „Reset PS5“ löscht alle Benutzerdaten. Zu „Rebuild Database“ äußert sich Sony nicht zum Datenverlust.",
+          "Medic-Hinweis (nicht von Sony): Sonys Schritt „Systemsoftware aktualisieren“ fehlt hier mit Absicht. Auf einer gejailbreakten Konsole kann ein Systemupdate den Jailbreak beenden; Medic ändert die Firmware nie."
+        ],
+        "en": [
+          "Safe Mode options according to Sony: “Repair Console Storage” does not erase data, “Restore Default Settings” does not delete games, apps, screenshots, video clips and saved data, “Reset PS5” deletes all user data. For “Rebuild Database” Sony says nothing about data loss.",
+          "Medic note (not from Sony): Sony's step “update the system software” is left out on purpose. On a jailbroken console a system update can end the jailbreak; Medic never changes firmware."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-109573-5/",
+      "more_sources": ["https://www.playstation.com/en-us/support/hardware/safe-mode-playstation/"],
+      "source_sha256": "d9b145b107eba2ab9ddabb829ac638e8b8411e6f8442dd033e44feaa34337610",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -384,7 +834,47 @@
           "If the USB storage device is not recognized while a specific application is running, delete the application, reinstall it and try again."
         ]
       },
+      "context": ["drives"],
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-109737-7/",
+      "source_sha256": "38032b05ebe5ab6a700ca3e87a86c4529bb9704c24fdb667e449a4779449afc5",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
+    {
+      "id": "CE-117740-0",
+      "title": { "de": "Möglicher Fehler im Spiel", "en": "The game may have an error" },
+      "text": {
+        "de": "Das Spiel hat möglicherweise einen Fehler. Sony nennt: die Systemsoftware aktualisieren (hier nicht übernommen, siehe Hinweise), das Spiel löschen und neu installieren, die Datenbank im Safe Mode neu aufbauen und sonst den Kundendienst kontaktieren.",
+        "en": "The game may have an error. Sony names: update the system software (not taken over here, see notes), delete and reinstall the game, rebuild the database in Safe Mode and otherwise contact customer support."
+      },
+      "steps": {
+        "de": [
+          "„Settings > Storage“ öffnen und das Spiel unter „Games and Apps“ löschen.",
+          "Das Spiel neu installieren.",
+          "Die Konsole im Safe Mode (abgesicherter Modus) starten und „Clear Cache and Rebuild Database > Rebuild Database“ wählen. Sony nennt dazu keinen Datenverlust, warnt aber allgemein vor Datenverlust bei einigen Safe-Mode-Optionen: vorher Daten sichern.",
+          "Besteht das Problem weiter, den PlayStation-Kundendienst kontaktieren."
+        ],
+        "en": [
+          "Open “Settings > Storage” and delete the game under “Games and Apps”.",
+          "Reinstall the game.",
+          "Start the console in Safe Mode and choose “Clear Cache and Rebuild Database > Rebuild Database”. Sony names no data loss for this, but warns in general that some Safe Mode options lose data: back up your data first.",
+          "If the problem continues, contact PlayStation customer support."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Safe-Mode-Optionen laut Sony: „Repair Console Storage“ löscht keine Daten, „Restore Default Settings“ löscht keine Spiele, Apps, Screenshots, Videos und Spielstände, „Reset PS5“ löscht alle Benutzerdaten. Zu „Rebuild Database“ äußert sich Sony nicht zum Datenverlust.",
+          "Medic-Hinweis (nicht von Sony): Sonys Schritt „Systemsoftware aktualisieren“ fehlt hier mit Absicht. Auf einer gejailbreakten Konsole kann ein Systemupdate den Jailbreak beenden; Medic ändert die Firmware nie."
+        ],
+        "en": [
+          "Safe Mode options according to Sony: “Repair Console Storage” does not erase data, “Restore Default Settings” does not delete games, apps, screenshots, video clips and saved data, “Reset PS5” deletes all user data. For “Rebuild Database” Sony says nothing about data loss.",
+          "Medic note (not from Sony): Sony's step “update the system software” is left out on purpose. On a jailbroken console a system update can end the jailbreak; Medic never changes firmware."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-117740-0/",
+      "more_sources": ["https://www.playstation.com/en-us/support/hardware/safe-mode-playstation/"],
+      "source_sha256": "0d2f291137c0398b6361c6540623ac857b2cc7661493e8d8be784300c6dd41d8",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -411,6 +901,8 @@
         ]
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-118527-4/",
+      "source_sha256": "fab4faec9d7ac5f5a9e302f9a91e03d4675aeb5eef7d6a201de456dfadfd287c",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -440,11 +932,14 @@
           "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
         ]
       },
+      "context": ["fw", "need_backport"],
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/np-102944-0/",
       "more_sources": [
         "https://github.com/quer3q/ampr-emu-ng",
         "https://github.com/cherryduck/ps5-backport-toolkit"
       ],
+      "source_sha256": "931657d62e2eb25b5462292f41793cedb01a0332bf2429f2e3a7ee2a163c2638",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -474,11 +969,38 @@
           "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
         ]
       },
+      "context": ["fw", "need_backport"],
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/np-102945-1/",
       "more_sources": [
         "https://github.com/quer3q/ampr-emu-ng",
         "https://github.com/cherryduck/ps5-backport-toolkit"
       ],
+      "source_sha256": "e8d2e0bbb2db9e21a825cfe419fe72389b108a70fa21fbbdbae42446fe0618a3",
+      "checked": "2026-11-09",
+      "level": "doc"
+    },
+    {
+      "id": "NP-104291-7",
+      "title": { "de": "Lizenz des Inhalts nicht bestätigt (Serverseite)", "en": "License of the content cannot be confirmed (server side)" },
+      "text": {
+        "de": "Die Lizenzinformationen des Inhalts lassen sich nicht bestätigen; laut Sony können die Titelinformationen auf der Serverseite noch nicht richtig angekommen sein. Sony nennt: mit dem Konto angemeldet sein, das den Anspruch auf den Inhalt besitzt, bei einem gerade erschienenen Titel warten und sonst den Support kontaktieren.",
+        "en": "The license information of the content cannot be confirmed; according to Sony the title information may not be correctly reflected on the server side. Sony names: be signed in with the account that owns the entitlement to the content, wait if the title has just been released, and otherwise contact support."
+      },
+      "steps": {
+        "de": [
+          "Sicherstellen, dass die Anmeldung mit dem Konto erfolgt ist, dem der Inhalt gehört (Anspruch auf den Inhalt).",
+          "Tritt der Fehler bei einem gerade erst erschienenen Titel auf: eine Weile warten und es erneut versuchen.",
+          "Besteht das Problem danach weiter, den PlayStation-Support kontaktieren."
+        ],
+        "en": [
+          "Make sure you are signed in with the account that owns the entitlement to the content.",
+          "If the error appears with a title that has just been released: wait a while and try again.",
+          "If the problem persists after a while, contact PlayStation Support."
+        ]
+      },
+      "source": "https://www.playstation.com/en-us/support/error-codes/ps5/np-104291-7/",
+      "source_sha256": "15787129a3a59d07bdb15ca0e5755bd5f133476a3499b710445c26d9a5e83ea7",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -507,6 +1029,8 @@
         ]
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/nw-102216-2/",
+      "source_sha256": "4a698db6b0849edc31df3e7d66b1d164fc55b3b1614efc36de0b628c25a55dbe",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -539,6 +1063,8 @@
         ]
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/nw-102265-6/",
+      "source_sha256": "b7c336709a25b53767379b12f84a53234136c79c27cd35ae6238b5596f04692e",
+      "checked": "2026-11-09",
       "level": "doc"
     },
     {
@@ -568,11 +1094,14 @@
           "Medic note: a system update is not recommended here, because on a jailbroken console it can end the jailbreak. Medic never changes firmware and provides neither games nor backports."
         ]
       },
+      "context": ["fw", "need_backport"],
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ws-116328-1/",
       "more_sources": [
         "https://github.com/quer3q/ampr-emu-ng",
         "https://github.com/cherryduck/ps5-backport-toolkit"
       ],
+      "source_sha256": "50bcfb74246926d895b1016678278a46520dbed36f3d47358538e120a044c34f",
+      "checked": "2026-11-09",
       "level": "doc"
     }
   ]

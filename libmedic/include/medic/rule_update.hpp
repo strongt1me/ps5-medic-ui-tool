@@ -8,6 +8,11 @@
 //    Hier zaehlt NUR die Signatur: Ed25519 ueber genau die Bytes von rules.json, Schluessel aus signature.hpp. Liegt eine
 //    rules.json.sig im Ordner, wird sie immer geprueft und die Pruefsumme ignoriert; eine ungueltige Signatur lehnt die Datei ab.
 //
+// Dasselbe gilt fuer das Fehlercode-Nachschlagewerk (error_codes.json, KnowledgeKind::ErrorCodes): eigene Dateien im selben Update-Ordner
+// (error_codes.json, .sha256, .sig), dieselben Schluessel und Pruefungen, eigene Sicherungen und eigene Eintraege in update.log
+// (error_codes_update / error_codes_rollback). Die Schemas unterscheiden sich, eine Regeldatei laesst sich daher nie als
+// Fehlercode-Datei installieren und umgekehrt.
+//
 // PS5 Medic prueft, zeigt das Ergebnis und installiert erst nach ausdruecklicher Bestaetigung. Nichts wird geloescht: die
 // bisherige Datei wird gesichert, die Update-Dateien wandern nach update/installed/<zeitstempel>/, jede Installation steht in
 // update.log und laesst sich zuruecknehmen.
@@ -25,6 +30,9 @@ constexpr const char* kRulesUpdateDir = "/data/ps5medic/knowledge/update";
 constexpr const char* kRulesBackupDir = "/data/ps5medic/knowledge/backups";
 constexpr const char* kRulesUpdateLog = "/data/ps5medic/knowledge/update.log";
 constexpr std::size_t kMaxRulesBytes = 2u << 20;  // 2 MiB
+
+// Welche Wissensdatei ein Update betrifft.
+enum class KnowledgeKind { Rules, ErrorCodes };
 
 struct RuleUpdateOffer {
     enum class State { None, Ready, Rejected };
@@ -46,7 +54,7 @@ struct RuleUpdateOffer {
 // Prueft nur (schreibt nichts). `verified_text` (optional) bekommt bei State::Ready den geprueften Dateiinhalt.
 // `keys`: vertrauenswuerdige Schluessel fuer die Signatur (nullptr = die eingebauten, trusted_rule_keys()).
 RuleUpdateOffer check_rule_update(const IFileSystem& fs, const std::string& current_version, std::string* verified_text = nullptr,
-                                  const std::vector<TrustedKey>* keys = nullptr);
+                                  const std::vector<TrustedKey>* keys = nullptr, KnowledgeKind kind = KnowledgeKind::Rules);
 
 struct RuleUpdateResult {
     bool ok = false;
@@ -59,9 +67,9 @@ struct RuleUpdateResult {
 // Installiert das Update. Prueft vorher erneut (verlaesst sich nicht auf einen frueheren check). Bricht bei jedem Fehler
 // ab, ohne die aktive Datei zu veraendern.
 RuleUpdateResult install_rule_update(Platform& p, const std::string& current_version, const std::string& timestamp,
-                                     const std::vector<TrustedKey>* keys = nullptr);
+                                     const std::vector<TrustedKey>* keys = nullptr, KnowledgeKind kind = KnowledgeKind::Rules);
 
 // Nimmt die letzte Installation zurueck: stellt die gesicherte Datei wieder her (die ersetzte wird nach backups/ gelegt).
-RuleUpdateResult rollback_rule_update(Platform& p, const std::string& timestamp);
+RuleUpdateResult rollback_rule_update(Platform& p, const std::string& timestamp, KnowledgeKind kind = KnowledgeKind::Rules);
 
 }  // namespace medic

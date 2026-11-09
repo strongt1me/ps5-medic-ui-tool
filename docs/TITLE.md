@@ -1,49 +1,52 @@
-# Kachel unter „Medien"
+# Kachel und Start ohne websrv: der Launcher
 
-Stand 8. Nov. 2026. PS5 Medic hat eine eigene Kachel auf dem Startbildschirm (Titel-ID `FAKE42007`, Kategorie *Medien*), zusätzlich zum Eintrag im websrv-Launcher.
-
-## Wie es funktioniert
-
-```
-Kachel „PS5 Medic"  ->  Starter-Titel (7 KB)  ->  websrv  /hbldr  ->  ps5medicui.elf (Vollbild-UI, mit App-Kontext)
-```
-
-Der Titel selbst ist nur ein **Starter**: ein winziger nativer PS5-Titel (`title/starter.c`, freistehendes C, keine C-Bibliothek), der `websrv` auf `127.0.0.1:8080` bittet, die UI über dessen Big-App-Lader zu starten. Ein Titel darf weder `/data` lesen noch den DualSense öffnen (Sandbox); die UI braucht beides, und beides bekommt sie nur über websrvs Lader (Hintergrund: `docs/PHASE3.md`, „Nachtrag"). Ein Starter, der den Payload nur an Port 9021 schickt, würde nicht reichen, weil der Payload dann keinen App-Kontext hat.
-
-`websrv` schließt beim Start die laufende Big App, und das ist der Starter selbst. Deshalb endet er normalerweise, bevor die Antwort kommt. Läuft `websrv` nicht, zeigt der Starter einen Hinweis und beendet sich.
-
-**Beenden:** ◯ im Startbildschirm der UI schließt die eigene App über das System (`sceSystemServiceKillApp` mit der App-ID des eigenen Prozesses, gefragt per `sceKernelGetAppInfo(getpid())`). Vorher blieb die App nach dem Prozessende im Vordergrund hängen, und man kam nur mit PS-Taste und „Schließen" heraus. Als reiner Payload (App-ID 0) gibt es nichts zu schließen; eine fremde App, etwa ein laufendes Spiel, kann so nie getroffen werden.
-
-## Voraussetzungen auf der Konsole
-
-- `websrv` läuft (Autoloader oder Port 9021), getestet mit v0.33.
-- Der Ordner `PS5MEDIC` (UI, Regeln) liegt in `/data/homebrew/`, siehe README.
-- ShadowMount+ legt die Kachel an: Es scannt `/data/homebrew`, der Ordner `FAKE42007` wird wie ein Spiel installiert (`mount.lnk`, Icon). Das dauert beim ersten Mal etwa 10 Sekunden.
-
-## Bauen und installieren
-
-Der Starter braucht dieselbe Werkzeugkette wie dein BFpilot- und USB-Formatierer-Starter: ein Checkout von `ps5-native-app-boilerplate` (Standard `~/bfapp`, sonst `BOILERPLATE=<pfad>`) mit SDK 0.45 in `.deps` und gebautem `build/host/ps5-native-tool`, dazu `clang-18`. Das Skript `title/build_title.sh` übersetzt, linkt (mit `title/title.ld`), **prüft, dass nur die erlaubten Importe vorkommen**, wandelt um und signiert.
+Stand 9. Nov. 2026. **Eine ELF an Port 9021 senden, und PS5 Medic hat eine Kachel auf dem Startbildschirm und startet mit App-Kontext (DualSense).** Weder `websrv` noch ein Starter-Titel noch ShadowMount+ sind dafür nötig.
 
 ```bash
-make title                               # baut build-title/FAKE42007/
-make deploy-title PS5_HOST=192.168.1.x   # per FTP nach /data/homebrew/FAKE42007/
+make send-launcher PS5_HOST=192.168.1.x    # baut ps5medic-launcher.elf und sendet es an Port 9021
 ```
 
-## Entfernen
+Oder `ps5medic-launcher.elf` (liegt nach `make deploy-ui` in `/data/homebrew/PS5MEDIC/`) über den Payload Manager starten.
 
-Den Titel in den PS5-Speichereinstellungen entfernen und den Ordner `/data/homebrew/FAKE42007` verschieben oder löschen (per FTP). Der Ordner `PS5MEDIC` und der Launcher-Eintrag bleiben davon unberührt.
+## Was der Launcher tut
 
-## Lizenz und Weitergabe
+```
+ELF senden  ->  Kachel "PS5 Medic" (FAKE42008) installieren  ->  UI starten (wenn keine App läuft)  ->  bleibt als Dienst
+Kachel öffnen  ->  Browser öffnet http://127.0.0.1:9056/  ->  Dienst startet die UI und schließt den Browser
+```
 
-- `title/title.ld` ist aus `ps5-native-app-boilerplate/tooling/native/ps5-pie.ld` übernommen (GPL-3.0-or-later, BlackBearReloaded) und unverändert aus dem BFpilot-Starter kopiert; der Kopf der Datei nennt das.
-- Zum Titel gehört `sce_module/libc.prx`, der **signierte Laufzeit-Shim des Boilerplates**. Er liegt weder im Repo noch im Release-Paket (`make dist`), sondern wird beim Bauen aus dem Boilerplate-Checkout kopiert.
-- Deshalb ist der Titel **nicht Teil von `make dist`**. PS5 Medic steht unter GPL-3.0-or-later wie das Boilerplate, `starter.c` und das Bauskript sind damit lizenzgleich. Der Titel bleibt trotzdem aus dem Paket: `libc.prx` ist ein fremder, signierter Shim, den wir nicht weitergeben.
+1. **Kachel:** `ps5/launcher_main.cpp` legt `/user/app/FAKE42008/sce_sys/{param.json,icon0.png}` an und installiert sie über `sceAppInstUtilAppInstallTitleDir`, so wie websrv seine Kachel „Homebrew Launcher“ anlegt. Die Kachel hat keinen eigenen Code, nur einen `deeplinkUri` auf `http://127.0.0.1:9056/`. Das Icon kommt aus `/data/homebrew/PS5MEDIC/sce_sys/icon0.png` (`make deploy-ui`). Ist die Kachel schon da, bleibt sie.
+2. **Dienst:** Der Launcher bleibt laufen und lauscht **nur auf 127.0.0.1:9056**. `GET /` (und `/launch`) startet die UI, `GET /quit` beendet den Dienst; alles andere ist 404.
+3. **UI mit App-Kontext:** Der Start nutzt den Big-App-Lader aus websrv (`third_party/websrv-hbldr/`, GPL-3.0-or-later): Die System-App `FAKE00000` wird per `sceSystemServiceLaunchApp` gestartet und per ptrace gegen `ps5medicui.elf` getauscht. Das bringt App-Kontext (nur damit öffnet sich der DualSense, siehe `docs/PHASE3.md`) und keine Sandbox. Die System-App `/system_ex/app/FAKE00000` legt der Lader selbst an, falls sie fehlt.
+4. **Vorher:** Der Launcher setzt wie websrv die System-`authid` des eigenen Prozesses (`0x4801000000000013`) und initialisiert den User-Dienst; beides ist Voraussetzung für `LaunchApp` und die Installation.
 
-## Bekannte Eigenheiten
+**Sicherheit:** Geschlossen wird nur, was ein System-Programm (`NPXS…`, der Browser der Kachel) oder eine Homebrew-Fake-App (`FAKE…`) ist. Ein Spiel oder eine App mit unbekannter Titel-ID wird nie geschlossen; dann zeigt der Launcher eine Benachrichtigung („Eine App läuft im Vordergrund. Bitte erst schließen.“). Es gibt keinen Netzzugriff nach außen.
 
-- Startet man die Kachel, während schon eine andere Homebrew-App über websrv läuft, kann es zu Fehlern kommen (bekannt von websrv).
-- Beendet sich ein Titel genau in dem Moment, in dem websrv etwas startet, hält ShadowMount+ ihn mitunter noch für aktiv und verweigert spätere Starts („Device busy"; erst ein Neustart hilft). Der Starter wartet deshalb kurz, bevor er sich beendet. Im ersten Konsolentest trat das nicht auf (siehe unten).
+**Neustart der Konsole:** Der Launcher läuft nicht weiter. Die Kachel bleibt, öffnet aber ohne Launcher nur eine leere Browserseite. Den Launcher erneut senden oder in die Autoload-Liste des Payload Managers eintragen (`/data/pldmgr/autoload.txt`, Eintrag `local/…`; das macht PS5 Medic nicht selbst).
 
-## Konsolentest (8. Nov. 2026)
+**Neu senden:** Ein erneut gesendeter Launcher löst den laufenden ab (gleicher Thread-Name wie bei websrv, die alte Instanz wird beendet) und lässt eine laufende UI in Ruhe.
 
-Kachel geöffnet, UI benutzt, im Startbildschirm mit ◯ beendet. Das ShadowMount+-Log zeigt die Kette lückenlos: der Starter (`FAKE42007`) endet („awaiting same-app handoff"), im selben Moment startet `FAKE00000` als App 0x18 mit der UI, nach ◯ steht „game stopped … title=FAKE00000" und „finalizing stopped application", also ein sauberes Schließen durch das System. Kein „Device busy", der Starter-Titel wurde danach ohne Neustart erneut gestartet. `ui.log` hält fest: „Beenden: schließe die eigene App (app_id 24)".
+**Beenden der UI:** ◯ im Startbildschirm schließt die eigene App über das System (`sceSystemServiceKillApp` mit der App-ID aus `sceKernelGetAppInfo(getpid())`).
+
+## Protokolle
+
+- `/data/ps5medic/launcher.log`: Start, Ablösung der alten Instanz, Kachel-Installation (`AppInstallTitleDir rc=0` = ok), jeder UI-Start, welche App geschlossen wurde. Wird bei jedem Start überschrieben.
+- `/data/ps5medic/ui.log`: die UI (wie bisher); `ui.stdout`: ihre Standardausgabe.
+
+## Kachel entfernen
+
+In den PS5-Speichereinstellungen „PS5 Medic“ (FAKE42008) entfernen. Der Ordner `PS5MEDIC` bleibt. Danach installiert ein erneut gesendeter Launcher sie wieder.
+
+## Konsolentest (9. Nov. 2026, PS5 Pro FW 12.00)
+
+- Erste Fassung des Launchers: Die UI startete nicht, `launcher.log` endete bei „hbldr_launch“. Ursache: Es fehlten `sceUserServiceInitialize` und die System-`authid`, die websrv in seinem Konstruktor setzt, und `kevent()` wartete ohne Zeitlimit. Behoben (Initialisierung, `authid`, 20-s-Limit in `hbldr.c`).
+- Zweite Fassung: Die alte, hängende Instanz wurde per Pid aus dem alten Protokoll abgelöst, die Kachel `FAKE42008` über `AppInstallTitleDir` installiert (`rc=0`), die UI mit App-Kontext gestartet (`ui.log`: „Controller verbunden“, erstes Bild). Beim erneuten Senden bei laufender UI: alte Instanz per Thread-Name abgelöst, `Vordergrund: app_id 24600 (FAKE00000)` richtig erkannt, UI blieb unberührt.
+- **Noch nicht geprüft:** das Öffnen der Kachel selbst (Browser → `127.0.0.1:9056` → UI-Start). Ob der Browser der Konsole die Adresse öffnet und welche Titel-ID er hat (`NPXS…` wird geschlossen, alles andere nicht), zeigt `launcher.log` beim ersten Mal.
+
+## Der alte Weg (Starter-Titel, websrv)
+
+Bis 8. Nov. gab es eine Kachel `FAKE42007`, einen winzigen nativen Titel (`title/starter.c`), der websrv per `/hbldr` bat, die UI zu starten (`make title`, `make deploy-title`; braucht ein ps5-native-app-boilerplate-Checkout und dessen `libc.prx`). Das ist **ersetzt**: der Launcher braucht weder websrv noch eine Titel-Toolchain. `title/` und die zugehörigen Make-Ziele bleiben als Ausweichweg im Repo; die alte Kachel lässt sich in den Speichereinstellungen entfernen. `make launch-ui` (websrv) funktioniert weiter.
+
+## Lizenz
+
+Der Lader in `third_party/websrv-hbldr/` ist GPL-3.0-or-later (John Törnblom), wie PS5 Medic; Änderungen und Herkunft stehen in `THIRD_PARTY.md` und im Kopf von `hbldr.c`. Der Launcher selbst ist eigener Code.

@@ -426,6 +426,11 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
         }
     o << "\n";
 
+    if (!in.error_code.empty()) {
+        o << (de ? "## Gemeldeter Fehlercode\n\n" : "## Reported error code\n\n");
+        o << "- " << md_code(in.error_code) << ": " << (de ? in.error_title_de : in.error_title_en) << "\n\n";
+    }
+
     o << (de ? "## Befunde (" : "## Findings (") << in.findings.size() << ")\n\n";
     if (in.findings.empty()) o << (de ? "Keine Befunde.\n\n" : "No findings.\n\n");
     for (const auto& x : in.findings) {
@@ -475,6 +480,7 @@ std::string build_report_compact(const ReportInput& in, ReportLang lang, std::si
                                                                            {"ps5-theme", str_fact(f, "ps5theme.version")}})
         if (!v.empty()) versions += (versions.empty() ? "" : ", ") + name + " " + v;
     if (!versions.empty()) head += line(versions);
+    if (!in.error_code.empty()) head += line((de ? "Fehlercode " : "Error code ") + in.error_code);
     head += line(in.findings.empty() ? (de ? "Keine Befunde" : "No findings")
                                      : std::to_string(in.findings.size()) + (de ? " Befund(e):" : " finding(s):"));
 

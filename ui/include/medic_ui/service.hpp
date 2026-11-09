@@ -13,6 +13,7 @@
 #include "medic/rules.hpp"
 
 #include <functional>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -34,6 +35,19 @@ struct ReportResult {
 
 // Groesse der Kurzfassung im QR-Code: bis Version 20 (97 Module) bleibt er vom Sofa aus mit dem Handy lesbar.
 constexpr std::size_t kQrMaxBytes = 640;
+
+// Eine Zeile aus "Was Medic gerade sieht": `kind` waehlt den Text der UI (ctx.<kind>), `args` fuellt dessen Platzhalter.
+struct ContextLine {
+    std::string kind;
+    std::map<std::string, std::string> args;
+};
+
+// Angaben der Konsole zu einem Fehlercode (nur lesend, aus dem letzten Check-up dieser Sitzung). available = false: noch kein Check-up
+// gelaufen, es gibt nichts anzuzeigen.
+struct CodeContext {
+    bool available = false;
+    std::vector<ContextLine> lines;
+};
 
 class IMedicService {
 public:
@@ -59,6 +73,28 @@ public:
     // nur nach ausdruecklicher Bestaetigung auf und danach check_rule_update(). Ohne Netzzugang (PC-Vorschau, Tests) Fehler "no_network".
     virtual std::string rule_update_url() = 0;
     virtual medic::RuleDownloadResult download_rule_update() = 0;
+    // Update der Fehlercode-Datei (error_codes.json im Update-Ordner), gleiche Pruefungen und gleicher Ablauf wie beim Regel-Update.
+    // Standard: es gibt nie ein Angebot. check schreibt nichts; install und rollback schreiben und werden nur nach ausdruecklicher
+    // Bestaetigung (Kreuz) aufgerufen.
+    virtual medic::RuleUpdateOffer check_codes_update() { return {}; }
+    virtual medic::RuleUpdateResult install_codes_update() {
+        medic::RuleUpdateResult r;
+        r.error = "no_write";
+        return r;
+    }
+    virtual medic::RuleUpdateResult rollback_codes_update() {
+        medic::RuleUpdateResult r;
+        r.error = "no_write";
+        return r;
+    }
+    // Zusaetzliche Angaben der Konsole zu einem Fehlercode, so wie sie dessen `context` verlangt. Liest nur; sammelt nichts neu,
+    // sondern benutzt die Fakten des letzten Check-ups (Standard: nichts).
+    virtual CodeContext code_context(const medic::ErrorCode& code) {
+        (void)code;
+        return {};
+    }
+    // Vermerkt einen Fehlercode fuer den naechsten Bericht (leer = keinen). Nur im Speicher; geschrieben wird erst beim Bericht.
+    virtual void set_reported_error(const std::string& id) { (void)id; }
     // Fehlercode-Nachschlagewerk (knowledge/error_codes.json). Nur Text zum Lesen; die Liste ist leer, wenn keine Datei geladen wurde.
     virtual const medic::ErrorCodeSet& error_codes() {
         static const medic::ErrorCodeSet none;
@@ -83,6 +119,11 @@ public:
     std::string rule_update_url() override;
     medic::RuleDownloadResult download_rule_update() override;
     const medic::ErrorCodeSet& error_codes() override { return error_codes_; }
+    CodeContext code_context(const medic::ErrorCode& code) override;
+    void set_reported_error(const std::string& id) override { reported_error_ = id; }
+    medic::RuleUpdateOffer check_codes_update() override;
+    medic::RuleUpdateResult install_codes_update() override;
+    medic::RuleUpdateResult rollback_codes_update() override;
     void set_error_codes(medic::ErrorCodeSet set) { error_codes_ = std::move(set); }
 
     // Ohne Client gibt es keinen Download. `h` gehoert dem Aufrufer und muss laenger leben als der Dienst.
@@ -94,8 +135,11 @@ private:
     medic::Platform& p_;
     medic::RuleSet rules_;
     medic::ErrorCodeSet error_codes_;
+    std::string reported_error_;  // fuer den Bericht vermerkter Fehlercode
     medic::Facts facts_;
     std::vector<medic::Finding> last_findings_;
+    std::optional<medic::ErrorCodeSet> codes_before_install_;  // dito fuer die Fehlercodes
+    bool reload_error_codes();
     std::optional<medic::RuleSet> rules_before_install_;  // fuer den Rollback, wenn es vorher keine Datei im Wissensordner gab
 
     bool reload_rules();

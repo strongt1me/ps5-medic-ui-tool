@@ -34,6 +34,8 @@ struct ReportInput {
     std::vector<TxnInfo> history;
     std::vector<UnknownLine> unknown_lines;  // fehlerartige Logzeilen ohne passenden Befund
     std::string saved_path;      // wo der volle Bericht liegt (leer = nicht gespeichert)
+    // Fehlercode, den der Nutzer im Nachschlagewerk fuer den Bericht vermerkt hat (leer = keiner), mit Titel in beiden Sprachen.
+    std::string error_code, error_title_de, error_title_en;
 };
 
 // Fehlerartige Zeilen im ShadowMount+-Log (Fakt smp.log.lines), die zu keinem Befund gehoeren: Stoff fuer neue Regeln.

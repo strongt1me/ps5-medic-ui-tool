@@ -61,7 +61,7 @@ target_link_libraries(medic-cli PRIVATE medic)
 target_compile_definitions(medic-cli PRIVATE MEDIC_DEFAULT_RULES="${CMAKE_SOURCE_DIR}/knowledge/rules.json")
 
 enable_testing()
-add_executable(medic-tests tests/test_main.cpp tests/test_fixes.cpp tests/test_ui.cpp tests/test_report.cpp tests/test_update.cpp tests/test_sign.cpp tests/test_error_codes.cpp)
+add_executable(medic-tests tests/test_main.cpp tests/test_fixes.cpp tests/test_ui.cpp tests/test_report.cpp tests/test_update.cpp tests/test_sign.cpp tests/test_error_codes.cpp tests/test_codes_update.cpp)
 find_package(Threads REQUIRED)
 target_link_libraries(medic-tests PRIVATE medic_ui Threads::Threads)
 target_compile_definitions(medic-tests PRIVATE

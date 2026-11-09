@@ -3,7 +3,9 @@
 
 #include "medic/collectors.hpp"
 
+#include <algorithm>
 #include <chrono>
+#include <cstdio>
 #include <ctime>
 
 namespace medic::ui {
@@ -103,6 +105,112 @@ medic::RuleUpdateResult LocalService::rollback_rule_update() {
     return r;
 }
 
+bool LocalService::reload_error_codes() {
+    std::string text;
+    if (!p_.fs().read_file(medic::kErrorCodesPath, text)) return false;
+    try {
+        error_codes_ = medic::load_error_codes_from_string(text);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+namespace {
+
+std::string gib_text(double bytes) {
+    char buf[32];
+    std::snprintf(buf, sizeof buf, "%.1f GiB", bytes / (1024.0 * 1024.0 * 1024.0));
+    return buf;
+}
+
+std::string fact_string(const medic::Facts& f, const char* path) {
+    const nlohmann::json* v = f.get(path);
+    return v && v->is_string() ? v->get<std::string>() : std::string();
+}
+
+bool starts_with(const std::string& s, const char* prefix) { return s.rfind(prefix, 0) == 0; }
+
+}  // namespace
+
+// "Was Medic gerade sieht": Fakten des letzten Check-ups, ausgewaehlt nach dem `context` des Eintrags. Es wird nichts neu gesammelt
+// (ein Check-up dauert Sekunden) und nichts geschrieben.
+CodeContext LocalService::code_context(const medic::ErrorCode& code) {
+    CodeContext c;
+    if (code.context.empty() || !facts_.get("fw.version")) return c;  // kein Kontext verlangt bzw. noch kein Check-up
+    c.available = true;
+    const std::string fw = fact_string(facts_, "fw.version");
+    for (const std::string& kind : code.context) {
+        if (kind == "fw") {
+            c.lines.push_back({"fw", {{"fw", fw.empty() ? std::string("?") : fw}}});
+        } else if (kind == "storage" || kind == "drives") {
+            const nlohmann::json* m = facts_.get("storage.mounts");
+            bool any = false;
+            if (m && m->is_array())
+                for (const auto& s : *m) {
+                    if (!s.is_object() || !s.contains("total") || !s["total"].is_number()) continue;
+                    const double total = s["total"].get<double>(), free_b = s.contains("free") && s["free"].is_number() ? s["free"].get<double>() : 0;
+                    if (total < 1e9) continue;  // leere Mountpunkte melden die Groesse eines winzigen Dateisystems
+                    const std::string mount = s.value("mount", std::string("?")), fstype = s.value("fstype", std::string());
+                    const bool external = starts_with(mount, "/mnt/usb") || starts_with(mount, "/mnt/ext");
+                    char pct[16];
+                    std::snprintf(pct, sizeof pct, "%.0f", 100.0 * free_b / total);
+                    if (kind == "storage") {
+                        c.lines.push_back({"storage", {{"mount", mount}, {"free", gib_text(free_b)}, {"total", gib_text(total)}, {"pct", pct}}});
+                        any = true;
+                    } else if (external) {
+                        c.lines.push_back({s.value("readonly", false) ? "drive_ro" : "drive", {{"mount", mount}, {"fstype", fstype.empty() ? std::string("?") : fstype}, {"total", gib_text(total)}}});
+                        any = true;
+                    }
+                }
+            if (!any) c.lines.push_back({kind == "storage" ? "storage_none" : "drive_none", {}});
+        } else if (kind == "smp") {
+            const std::string v = fact_string(facts_, "smp.version");
+            if (v.empty()) {
+                c.lines.push_back({"smp_missing", {}});
+            } else {
+                c.lines.push_back({"smp", {{"v", v}}});
+                const bool leak = std::any_of(last_findings_.begin(), last_findings_.end(), [](const medic::Finding& f) { return f.rule_id == "smp.leak_pre_beta11"; });
+                c.lines.push_back({leak ? "smp_leak" : "smp_no_leak", {}});
+            }
+        } else if (kind == "need_backport") {
+            const nlohmann::json* n = facts_.get("games.need_backport");
+            if (n && n->is_array() && !n->empty()) {
+                std::string list;
+                for (const auto& g : *n) list += (list.empty() ? "" : ", ") + g.value("titleid", std::string("?")) + " (" + g.value("required_fw", std::string("?")) + ")";
+                c.lines.push_back({"need_backport", {{"list", list}, {"fw", fw}}});
+            } else {
+                c.lines.push_back({"need_backport_none", {{"fw", fw.empty() ? std::string("?") : fw}}});
+            }
+        }
+    }
+    return c;
+}
+
+medic::RuleUpdateOffer LocalService::check_codes_update() {
+    medic::RuleUpdateOffer o = medic::check_rule_update(p_.fs(), error_codes_.db_version, nullptr, keys_ ? &*keys_ : nullptr, medic::KnowledgeKind::ErrorCodes);
+    o.old_rule_count = error_codes_.codes.size();
+    return o;
+}
+
+medic::RuleUpdateResult LocalService::install_codes_update() {
+    const medic::ErrorCodeSet before = error_codes_;
+    medic::RuleUpdateResult r = medic::install_rule_update(p_, error_codes_.db_version, clock_(), keys_ ? &*keys_ : nullptr, medic::KnowledgeKind::ErrorCodes);
+    if (r.ok) {
+        codes_before_install_ = before;
+        reload_error_codes();
+    }
+    return r;
+}
+
+medic::RuleUpdateResult LocalService::rollback_codes_update() {
+    medic::RuleUpdateResult r = medic::rollback_rule_update(p_, clock_(), medic::KnowledgeKind::ErrorCodes);
+    if (!r.ok) return r;
+    if (!r.backup_path.empty()) reload_error_codes();                      // die bisherige Datei ist wieder aktiv
+    else if (codes_before_install_) error_codes_ = *codes_before_install_;  // es galt die mitgelieferte Datei
+    return r;
+}
+
 std::string LocalService::rule_update_url() { return medic::configured_update_url(p_.fs()); }
 
 medic::RuleDownloadResult LocalService::download_rule_update() {
@@ -118,6 +226,11 @@ ReportResult LocalService::make_report(medic::ReportLang lang) {
     ReportResult r;
     const std::string ts = clock_();
     medic::ReportInput in = medic::make_report_input(p_, facts_, rules_, last_findings_, ts);
+    if (const medic::ErrorCode* e = error_codes_.find(reported_error_)) {
+        in.error_code = e->id;
+        in.error_title_de = e->title_de;
+        in.error_title_en = e->title_en;
+    }
 
     // Der einzige Schreibzugriff ausserhalb der Fix-Engine: eine Markdown-Datei in /data/ps5medic/reports/.
     const std::string path = medic::report_path_for(ts);

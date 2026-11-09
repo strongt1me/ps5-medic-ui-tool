@@ -82,15 +82,30 @@ struct ErrRow {
     bool small = false;
     Color col = 0;
     int indent = 0, gap = 0;   // gap: Abstand ueber der Zeile (zwischen Abschnitten)
+    bool label = false;        // Abschnittsueberschrift: steht nie allein am unteren Rand
 };
 
 int row_height(const ErrRow& r) { return (r.small ? small() : body()).line_height() + 4 + r.gap; }
 
-std::vector<ErrRow> error_rows(const medic::ErrorCode& e, Lang lang) {
+// Text einer Kontextzeile: ctx.<kind> mit den Werten der Zeile.
+std::string format_ctx(const Strings& S, const ContextLine& l) {
+    std::string s = S("ctx." + l.kind);
+    for (const auto& [name, value] : l.args) {
+        const std::string token = "{" + name + "}";
+        for (std::size_t pos = s.find(token); pos != std::string::npos; pos = s.find(token, pos + value.size())) s.replace(pos, token.size(), value);
+    }
+    return s;
+}
+
+std::vector<ErrRow> error_rows(const medic::ErrorCode& e, Lang lang, const CodeContext& ctx) {
     const auto& S = Strings::get(lang);
     const bool de = lang == Lang::De;
     std::vector<ErrRow> rows;
-    auto label = [&](const std::string& text, int gap) { rows.push_back({text, "", true, kDim, 0, gap}); };
+    auto label = [&](const std::string& text, int gap) {
+        ErrRow r{text, "", true, kDim, 0, gap};
+        r.label = true;
+        rows.push_back(r);
+    };
     auto paragraph = [&](const std::string& text, bool small_font, Color col, const std::string& marker, int indent) {
         const auto lines = wrap_text(small_font ? small() : body(), text, kErrTextW - indent);
         for (std::size_t i = 0; i < lines.size(); ++i) rows.push_back({lines[i], i == 0 ? marker : std::string(), small_font, col, indent, 0});
@@ -110,6 +125,13 @@ std::vector<ErrRow> error_rows(const medic::ErrorCode& e, Lang lang) {
         for (const auto& n : notes) paragraph(n, false, kText, "-", kStepIndent);
     }
 
+    if (!e.context.empty()) {  // Angaben der Konsole aus dem letzten Check-up (nur lesen)
+        label(S("errors.live"), 18);
+        if (!ctx.available) paragraph(S("errors.live_none"), false, kDim, "", 0);
+        else
+            for (const auto& l : ctx.lines) paragraph(format_ctx(S, l), false, kText, "-", kStepIndent);
+    }
+
     if (e.level == "community") {
         label(S("errors.community"), 18);
         paragraph(S("errors.community_note"), false, kWarn, "", 0);
@@ -121,6 +143,8 @@ std::vector<ErrRow> error_rows(const medic::ErrorCode& e, Lang lang) {
         label(S("errors.source_more"), 8);
         paragraph(s, true, kText, "", 0);
     }
+    label(S("errors.checked"), 8);
+    paragraph(e.checked, true, kText, "", 0);
     return rows;
 }
 
@@ -129,6 +153,33 @@ int max_first_row(const std::vector<ErrRow>& rows) {
     int h = 0, first = static_cast<int>(rows.size());
     while (first > 0 && h + row_height(rows[static_cast<std::size_t>(first - 1)]) <= kErrAvail) h += row_height(rows[static_cast<std::size_t>(--first)]);
     return first;
+}
+
+// QR-Code schwarz auf weiss mit Ruhezone von 4 Modulen (wie fuer Scanner noetig), mittig im Feld (ax, ay, aw, ah).
+void draw_qr_code(Canvas& c, const medic::QrCode& qr, int ax, int ay, int aw, int ah) {
+    const int quiet = 4, modules = qr.size + 2 * quiet;
+    const int px = std::clamp(std::min(aw, ah) / modules, 3, 9);
+    const int side = modules * px, ox = ax + (aw - side) / 2, oy = ay + (ah - side) / 2;
+    const Color white = rgb(255, 255, 255), black = rgb(0, 0, 0);
+    c.fill_rect(ox, oy, side, side, white);
+    for (int row = 0; row < qr.size; ++row)
+        for (int col = 0; col < qr.size;) {
+            if (!qr.dark(col, row)) {
+                ++col;
+                continue;
+            }
+            int run = 1;
+            while (qr.dark(col + run, row)) ++run;
+            c.fill_rect(ox + (quiet + col) * px, oy + (quiet + row) * px, run * px, px, black);
+            col += run;
+        }
+}
+
+// Quelle des Eintrags und weitere Quellen, in dieser Reihenfolge.
+std::vector<std::string> error_sources(const medic::ErrorCode& e) {
+    std::vector<std::string> v = {e.source};
+    v.insert(v.end(), e.more_sources.begin(), e.more_sources.end());
+    return v;
 }
 
 // Index des ersten Fehlercodes im Text (Muster XX-123456-1, z. B. CE-108262-9), den das Nachschlagewerk kennt; sonst -1.
@@ -242,7 +293,34 @@ void App::open_error_for_finding() {
     err_top_ = std::clamp(idx - (kErrVisible - 1) / 2, 0, std::max(n - kErrVisible, 0));
     err_scroll_ = 0;
     err_from_finding_ = true;
+    refresh_error_context();
     screen_ = Screen::ErrorCodeDetail;
+}
+
+// Angaben der Konsole zum gewaehlten Code (nur lesen, aus dem letzten Check-up) und Zustand des Scrollens neu setzen.
+void App::refresh_error_context() {
+    err_ctx_ = current_error() ? svc_.code_context(*current_error()) : CodeContext{};
+    scroll_streak_ = 0;
+}
+
+// Quadrat im Detail: Quelle als QR-Code. Medic ruft die Adresse nie selbst auf; das Handy liest sie.
+void App::open_error_source() {
+    const medic::ErrorCode* e = current_error();
+    if (!e) return;
+    err_src_ = 0;
+    src_qr_ok_ = medic::qr_encode(e->source, src_qr_);
+    screen_ = Screen::ErrorCodeSource;
+}
+
+// Hoch/Runter im Detail: eine Zeile pro Druck, beim Halten (Wiederholungen kommen im Abstand weniger Bilder) bis zu vier Zeilen.
+void App::scroll_error_detail(int dir) {
+    constexpr int kRepeatTicks = 12;
+    if (dir != scroll_dir_ || tick_ - last_scroll_tick_ > kRepeatTicks) scroll_streak_ = 0;
+    else ++scroll_streak_;
+    scroll_dir_ = dir;
+    last_scroll_tick_ = tick_;
+    const int step = 1 + std::min(scroll_streak_ / 4, 3);
+    err_scroll_ = std::clamp(err_scroll_ + dir * step, 0, error_scroll_max());
 }
 
 const medic::ErrorCode* App::current_error() const {
@@ -252,18 +330,47 @@ const medic::ErrorCode* App::current_error() const {
 
 void App::open_rules_update() {
     offer_ = svc_.check_rule_update();
+    codes_offer_ = svc_.check_codes_update();
     update_stage_ = UpdateStage::Offer;
     downloaded_ = false;
     screen_ = Screen::RulesUpdate;
 }
 
-// Nach einer Installation oder einem Rollback gelten andere Regeln: die bisherigen Befunde sind veraltet.
-void App::finish_rules_change(bool ok) {
-    update_stage_ = ok ? UpdateStage::DoneOk : UpdateStage::DoneFail;
-    if (!ok) return;
-    has_result_ = false;
-    result_ = CheckResult{};
-    sel_ = top_ = 0;
+// Installiert, was geprueft und angeboten ist (Regeln und/oder Fehlercodes). Aufgerufen nur nach Kreuz auf dem Angebot.
+void App::install_updates() {
+    rules_attempted_ = offer_.state == medic::RuleUpdateOffer::State::Ready;
+    codes_attempted_ = codes_offer_.state == medic::RuleUpdateOffer::State::Ready;
+    update_result_ = rules_attempted_ ? svc_.install_rule_update() : medic::RuleUpdateResult{};
+    codes_result_ = codes_attempted_ ? svc_.install_codes_update() : medic::RuleUpdateResult{};
+    update_was_rollback_ = false;
+    finish_updates();
+}
+
+// Nimmt die letzte Installation zurueck, je Datei nur wenn es dort etwas zuruckzunehmen gibt. Nur nach Kreuz auf der Rueckfrage.
+void App::rollback_updates() {
+    rules_attempted_ = offer_.can_rollback;
+    codes_attempted_ = codes_offer_.can_rollback;
+    update_result_ = rules_attempted_ ? svc_.rollback_rule_update() : medic::RuleUpdateResult{};
+    codes_result_ = codes_attempted_ ? svc_.rollback_codes_update() : medic::RuleUpdateResult{};
+    update_was_rollback_ = true;
+    finish_updates();
+}
+
+// Nach einer Installation oder einem Rollback der Regeln gelten andere Regeln: die bisherigen Befunde sind veraltet.
+// Neue Fehlercodes ersetzen die geladene Liste (die Auswahl dort beginnt wieder oben).
+void App::finish_updates() {
+    const bool rules_ok = rules_attempted_ && update_result_.ok;
+    const bool codes_ok = codes_attempted_ && codes_result_.ok;
+    update_stage_ = (!rules_attempted_ || update_result_.ok) && (!codes_attempted_ || codes_result_.ok) ? UpdateStage::DoneOk : UpdateStage::DoneFail;
+    if (codes_ok) {
+        errors_ = svc_.error_codes();
+        err_sel_ = err_top_ = err_scroll_ = 0;
+    }
+    if (rules_ok) {
+        has_result_ = false;
+        result_ = CheckResult{};
+        sel_ = top_ = 0;
+    }
 }
 
 void App::begin_fix(int index, Screen origin) {
@@ -369,11 +476,9 @@ void App::handle(Button b) {
         case Screen::RulesUpdate:
             switch (update_stage_) {
                 case UpdateStage::Offer:
-                    if (b == Button::Cross && offer_.state == medic::RuleUpdateOffer::State::Ready) {
-                        update_result_ = svc_.install_rule_update();
-                        update_was_rollback_ = false;
-                        finish_rules_change(update_result_.ok);
-                    } else if (b == Button::Triangle && offer_.can_rollback) {
+                    if (b == Button::Cross && (offer_.state == medic::RuleUpdateOffer::State::Ready || codes_offer_.state == medic::RuleUpdateOffer::State::Ready)) {
+                        install_updates();
+                    } else if (b == Button::Triangle && (offer_.can_rollback || codes_offer_.can_rollback)) {
                         update_stage_ = UpdateStage::ConfirmRollback;
                     } else if (b == Button::Square) {
                         download_url_ = svc_.rule_update_url();
@@ -398,9 +503,7 @@ void App::handle(Button b) {
                     break;
                 case UpdateStage::ConfirmRollback:
                     if (b == Button::Cross) {
-                        update_result_ = svc_.rollback_rule_update();
-                        update_was_rollback_ = true;
-                        finish_rules_change(update_result_.ok);
+                        rollback_updates();
                     } else if (b == Button::Circle) {
                         update_stage_ = UpdateStage::Offer;
                     }
@@ -422,22 +525,44 @@ void App::handle(Button b) {
             else if (b == Button::Cross) {
                 if (current_error()) {
                     err_scroll_ = 0;
+                    err_from_finding_ = false;
+                    refresh_error_context();
                     screen_ = Screen::ErrorCodeDetail;
                 }
             } else if (b == Button::Circle) screen_ = Screen::Start;
             break;
         case Screen::ErrorCodeDetail:
             // Hoch/Runter scrollt den Text, Links/Rechts und L1/R1 blaettern zum vorherigen/naechsten Code.
-            if (b == Button::Up) err_scroll_ = std::max(err_scroll_ - 1, 0);
-            else if (b == Button::Down) err_scroll_ = std::min(err_scroll_ + 1, error_scroll_max());
-            else if (!err_from_finding_ && (b == Button::Left || b == Button::L1 || b == Button::Right || b == Button::R1)) {
+            if (b == Button::Up || b == Button::Down) {
+                scroll_error_detail(b == Button::Down ? 1 : -1);
+            } else if (!err_from_finding_ && (b == Button::Left || b == Button::L1 || b == Button::Right || b == Button::R1)) {
                 const int before = err_sel_;
                 move_selection(err_sel_, err_top_, static_cast<int>(errors_.codes.size()), kErrVisible, (b == Button::Left || b == Button::L1) ? -1 : 1);
-                if (err_sel_ != before) err_scroll_ = 0;
+                if (err_sel_ != before) {
+                    err_scroll_ = 0;
+                    refresh_error_context();
+                }
+            } else if (b == Button::Square) {
+                open_error_source();
+            } else if (b == Button::Triangle) {  // fuer den Bericht vermerken bzw. wieder entfernen (nur im Speicher, geschrieben wird erst beim Bericht)
+                if (const medic::ErrorCode* e = current_error()) {
+                    reported_error_ = reported_error_ == e->id ? std::string() : e->id;
+                    svc_.set_reported_error(reported_error_);
+                }
             } else if (b == Button::Circle) {
                 screen_ = err_from_finding_ ? Screen::Detail : Screen::ErrorCodes;
                 err_from_finding_ = false;
             }
+            break;
+        case Screen::ErrorCodeSource:  // QR-Code der Quelle: nur Anzeige
+            if (const medic::ErrorCode* e = current_error()) {
+                const int n = static_cast<int>(error_sources(*e).size());
+                if ((b == Button::Left || b == Button::L1 || b == Button::Right || b == Button::R1) && n > 1) {
+                    err_src_ = std::clamp(err_src_ + ((b == Button::Left || b == Button::L1) ? -1 : 1), 0, n - 1);
+                    src_qr_ok_ = medic::qr_encode(error_sources(*e)[static_cast<std::size_t>(err_src_)], src_qr_);
+                }
+            }
+            if (b == Button::Circle) screen_ = Screen::ErrorCodeDetail;
             break;
     }
 }
@@ -456,6 +581,7 @@ void App::update() {
         download_result_ = svc_.download_rule_update();
         if (download_result_.ok) {
             offer_ = svc_.check_rule_update();  // Echtheit, Schema und Version prueft der Kern, nicht der Download
+            codes_offer_ = svc_.check_codes_update();
             downloaded_ = true;
             update_stage_ = UpdateStage::Offer;
         } else {
@@ -483,6 +609,7 @@ void App::render(Canvas& c) const {
         case Screen::RulesUpdate: draw_rules_update(c); break;
         case Screen::ErrorCodes: draw_error_codes(c); break;
         case Screen::ErrorCodeDetail: draw_error_detail(c); break;
+        case Screen::ErrorCodeSource: draw_error_source(c); break;
     }
 }
 
@@ -654,29 +781,15 @@ void App::draw_report(Canvas& c) const {
     paragraph(body(), S("report.scan"), kText, 4);
     if (report_.truncated) paragraph(small(), S("report.truncated"), kWarn, 3);
     paragraph(small(), S("report.anon"), kDim, 5);
+    if (!reported_error_.empty()) paragraph(small(), S.fmt("report.error_code", {{"code", reported_error_}}), kOk, 2);
 
-    // Rechts: QR-Code (schwarz auf weiss mit Ruhezone von 4 Modulen, wie fuer Scanner noetig)
+    // Rechts: QR-Code
     const int ax = 1036, ay = 150, aw = 788, ah = 800;
     if (!qr_ok_) {
         c.fill_round_rect(ax, ay + 80, aw, 240, 20, kPanel);
         body().draw(c, ax + pad, ay + 140, S("report.qr_failed"), kWarn, aw - 2 * pad);
     } else {
-        const int quiet = 4, modules = qr_.size + 2 * quiet;
-        const int px = std::clamp(std::min(aw, ah) / modules, 3, 9);
-        const int side = modules * px, ox = ax + (aw - side) / 2, oy = ay + (ah - side) / 2;
-        const Color white = rgb(255, 255, 255), black = rgb(0, 0, 0);
-        c.fill_rect(ox, oy, side, side, white);
-        for (int row = 0; row < qr_.size; ++row)
-            for (int col = 0; col < qr_.size;) {
-                if (!qr_.dark(col, row)) {
-                    ++col;
-                    continue;
-                }
-                int run = 1;
-                while (qr_.dark(col + run, row)) ++run;
-                c.fill_rect(ox + (quiet + col) * px, oy + (quiet + row) * px, run * px, px, black);
-                col += run;
-            }
+        draw_qr_code(c, qr_, ax, ay, aw, ah);
     }
     draw_hints(c, {{PadGlyph::Circle, S("common.back")}});
 }
@@ -939,28 +1052,45 @@ void App::draw_rules_update(Canvas& c) const {
     };
 
     paragraph(small(), S.fmt("update.current", {{"v", offer_.old_version.empty() ? "?" : offer_.old_version}, {"n", std::to_string(offer_.old_rule_count)}}), kDim, 1);
+    if (codes_offer_.state != medic::RuleUpdateOffer::State::None || !codes_offer_.old_version.empty())
+        paragraph(small(), S.fmt("update.current_codes", {{"v", codes_offer_.old_version.empty() ? "?" : codes_offer_.old_version}, {"n", std::to_string(codes_offer_.old_rule_count)}}), kDim, 1);
 
     std::vector<std::pair<PadGlyph, std::string>> hints;
     switch (update_stage_) {
         case UpdateStage::Offer:
             if (downloaded_) paragraph(small(), S.fmt("update.downloaded_from", {{"url", download_url_}}), kDim, 2);
             if (offer_.state == medic::RuleUpdateOffer::State::None) {
-                paragraph(body(), S("update.none"), kText, 2);
-                paragraph(small(), S("update.howto"), kDim, 5);
+                if (codes_offer_.state == medic::RuleUpdateOffer::State::None) {  // gar nichts da: Anleitung
+                    paragraph(body(), S("update.none"), kText, 2);
+                    paragraph(small(), S("update.howto"), kDim, 5);
+                }
             } else if (offer_.state == medic::RuleUpdateOffer::State::Ready) {
                 paragraph(body(), S.fmt("update.ready", {{"v", offer_.new_version}, {"n", std::to_string(offer_.new_rule_count)}}), kOk, 2);
                 if (offer_.auth == "signature") paragraph(small(), S.fmt("update.auth_sig", {{"key", offer_.signed_by}, {"sha", offer_.sha256.substr(0, 16)}}), kDim, 2);
                 else paragraph(small(), S.fmt("update.sha", {{"sha", offer_.sha256.substr(0, 16)}}), kDim, 2);
                 paragraph(small(), S("update.backup_note"), kDim, 3);
-                hints.emplace_back(PadGlyph::Cross, S("update.install"));
             } else {
                 paragraph(body(), reason_text(offer_.reason), kWarn, 4);
                 if (!offer_.detail.empty()) paragraph(small(), offer_.detail, kDim, 3);
             }
-            if (offer_.can_rollback) {
-                paragraph(small(), S.fmt("update.can_rollback", {{"v", offer_.installed_version}}), kDim, 3);
-                hints.emplace_back(PadGlyph::Triangle, S("update.rollback"));
+            if (codes_offer_.state == medic::RuleUpdateOffer::State::Ready) {  // dasselbe fuer die Fehlercode-Datei
+                paragraph(body(), S.fmt("update.codes_ready", {{"v", codes_offer_.new_version}, {"n", std::to_string(codes_offer_.new_rule_count)}}), kOk, 2);
+                if (codes_offer_.auth == "signature") paragraph(small(), S.fmt("update.auth_sig", {{"key", codes_offer_.signed_by}, {"sha", codes_offer_.sha256.substr(0, 16)}}), kDim, 2);
+                else paragraph(small(), S.fmt("update.sha", {{"sha", codes_offer_.sha256.substr(0, 16)}}), kDim, 2);
+            } else if (codes_offer_.state == medic::RuleUpdateOffer::State::Rejected) {
+                paragraph(body(), S("update.codes_label") + " " + reason_text(codes_offer_.reason), kWarn, 3);
+                if (!codes_offer_.detail.empty()) paragraph(small(), codes_offer_.detail, kDim, 2);
             }
+            if (downloaded_ && !download_result_.codes_error.empty()) {
+                const std::string reason = download_result_.codes_error == "http_status" ? S.fmt("update.error.http_file", {{"file", download_result_.codes_file}})
+                                                                                       : reason_text(download_result_.codes_error);
+                paragraph(small(), S.fmt("update.codes_download_failed", {{"reason", reason}}), kWarn, 2);
+            }
+            if (offer_.state == medic::RuleUpdateOffer::State::Ready || codes_offer_.state == medic::RuleUpdateOffer::State::Ready)
+                hints.emplace_back(PadGlyph::Cross, S("update.install"));
+            if (offer_.can_rollback) paragraph(small(), S.fmt("update.can_rollback", {{"v", offer_.installed_version}}), kDim, 3);
+            if (codes_offer_.can_rollback) paragraph(small(), S.fmt("update.can_rollback_codes", {{"v", codes_offer_.installed_version}}), kDim, 3);
+            if (offer_.can_rollback || codes_offer_.can_rollback) hints.emplace_back(PadGlyph::Triangle, S("update.rollback"));
             hints.emplace_back(PadGlyph::Square, S("update.download"));
             hints.emplace_back(PadGlyph::Circle, S("common.back"));
             break;
@@ -990,23 +1120,37 @@ void App::draw_rules_update(Canvas& c) const {
             hints = {{PadGlyph::Cross, S("update.rollback")}, {PadGlyph::Circle, S("common.cancel")}};
             break;
         case UpdateStage::DoneOk:
-            paragraph(body(), S.fmt(update_was_rollback_ ? "update.rolled_back" : "update.installed", {{"v", update_result_.new_version}}), kOk, 2);
-            paragraph(small(), S("update.next"), kDim, 2);
-            if (!update_result_.backup_path.empty()) paragraph(small(), S.fmt("update.backup_path", {{"path", update_result_.backup_path}}), kDim, 3);
+        case UpdateStage::DoneFail: {
+            // Je Datei, die versucht wurde: Erfolg oder Fehler. Nur Regeln: wie bisher.
+            if (rules_attempted_) {
+                if (update_result_.ok) {
+                    paragraph(body(), S.fmt(update_was_rollback_ ? "update.rolled_back" : "update.installed", {{"v", update_result_.new_version}}), kOk, 2);
+                    paragraph(small(), S("update.next"), kDim, 2);
+                    if (!update_result_.backup_path.empty()) paragraph(small(), S.fmt("update.backup_path", {{"path", update_result_.backup_path}}), kDim, 3);
+                } else {
+                    paragraph(body(), S("update.failed"), kWarn, 2);
+                    paragraph(small(), reason_text(update_result_.error), kDim, 4);
+                }
+            }
+            if (codes_attempted_) {
+                if (codes_result_.ok) {
+                    paragraph(body(), S.fmt(update_was_rollback_ ? "update.codes_rolled_back" : "update.codes_installed", {{"v", codes_result_.new_version}}), kOk, 2);
+                    if (!codes_result_.backup_path.empty()) paragraph(small(), S.fmt("update.backup_path", {{"path", codes_result_.backup_path}}), kDim, 3);
+                } else {
+                    paragraph(body(), S("update.codes_failed"), kWarn, 2);
+                    paragraph(small(), reason_text(codes_result_.error), kDim, 4);
+                }
+            }
             hints = {{PadGlyph::Cross, S("common.back")}};
             break;
-        case UpdateStage::DoneFail:
-            paragraph(body(), S("update.failed"), kWarn, 2);
-            paragraph(small(), reason_text(update_result_.error), kDim, 4);
-            hints = {{PadGlyph::Cross, S("common.back")}};
-            break;
+        }
     }
     draw_hints(c, hints);
 }
 
 int App::error_scroll_max() const {
     const medic::ErrorCode* e = current_error();
-    return e ? max_first_row(error_rows(*e, lang_)) : 0;
+    return e ? max_first_row(error_rows(*e, lang_, err_ctx_)) : 0;
 }
 
 void App::draw_error_codes(Canvas& c) const {
@@ -1066,12 +1210,16 @@ void App::draw_error_detail(Canvas& c) const {
     const std::string level = S("errors.level." + e->level);
     const int bw = small().width(level) + 24;
     draw_badge(c, W - M - bw, 138, level, level_color(*e));
-    if (!err_from_finding_) text_right(c, small(), W - M, 204, S.fmt("errors.position", {{"i", std::to_string(err_sel_ + 1)}, {"n", std::to_string(n)}}), kDim);
+    {
+        std::string pos = err_from_finding_ ? std::string() : S.fmt("errors.position", {{"i", std::to_string(err_sel_ + 1)}, {"n", std::to_string(n)}});
+        if (reported_error_ == e->id) pos += (pos.empty() ? "" : " · ") + S("errors.in_report");
+        text_right(c, small(), W - M, 204, pos, reported_error_ == e->id ? kOk : kDim);
+    }
     body().draw(c, M, 196, elide(body(), lang_ == Lang::De ? e->title_de : e->title_en, cw - 220), kDim);
 
     // Text: Zeilen ab err_scroll_, soweit sie in das Panel passen
     c.fill_round_rect(M, kErrPanelY, cw, kErrPanelH, 20, kPanel);
-    const auto rows = error_rows(*e, lang_);
+    const auto rows = error_rows(*e, lang_, err_ctx_);
     const int max_first = max_first_row(rows);
     const int first = std::clamp(err_scroll_, 0, max_first);
     int y = kErrPanelY + kErrPadY;
@@ -1080,6 +1228,7 @@ void App::draw_error_detail(Canvas& c) const {
         const ErrRow& r = rows[i];
         const int h = row_height(r);
         if (y + h > y_end) break;
+        if (r.label && i + 1 < rows.size() && y + h + row_height(rows[i + 1]) > y_end) break;  // Ueberschrift nicht allein am Rand
         const Font& f = r.small ? small() : body();
         if (!r.marker.empty()) f.draw(c, M + kErrPadX, y + r.gap, r.marker, kDim);
         f.draw(c, M + kErrPadX + r.indent, y + r.gap, r.text, r.col);
@@ -1097,6 +1246,46 @@ void App::draw_error_detail(Canvas& c) const {
     std::vector<std::pair<PadGlyph, std::string>> hints;
     if (max_first > 0) hints.emplace_back(PadGlyph::UpDown, S("errors.scroll"));
     if (n > 1 && !err_from_finding_) hints.emplace_back(PadGlyph::Shoulders, S("common.browse"));
+    hints.emplace_back(PadGlyph::Square, S("errors.hint_source"));
+    hints.emplace_back(PadGlyph::Triangle, S(reported_error_ == e->id ? "errors.report_remove" : "errors.report_add"));
+    hints.emplace_back(PadGlyph::Circle, S("common.back"));
+    draw_hints(c, hints);
+}
+
+// QR-Code der Quelle: Die Konsole kann keine Adresse oeffnen, das Handy liest sie. PS5 Medic ruft sie nie selbst auf.
+void App::draw_error_source(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    const medic::ErrorCode* e = current_error();
+    if (!e) return;
+    const auto sources = error_sources(*e);
+    const int idx = std::clamp(err_src_, 0, static_cast<int>(sources.size()) - 1);
+    title().draw(c, M, 132, S("errors.source_title"), kText);
+    small().draw(c, M + 4, 192, e->id, kDim);
+
+    const int px0 = M, py0 = 230, pw = 880, pad = 36, tw = pw - 2 * pad;
+    c.fill_round_rect(px0, py0, pw, 700, 20, kPanel);
+    int y = py0 + 30;
+    small().draw(c, px0 + pad, y, S.fmt("errors.source_of", {{"i", std::to_string(idx + 1)}, {"n", std::to_string(sources.size())}}), kDim);
+    y += small().line_height() + 14;
+    for (const auto& l : wrap_text(body(), sources[static_cast<std::size_t>(idx)], tw, 8)) {
+        body().draw(c, px0 + pad, y, l, kText);
+        y += body().line_height() + 4;
+    }
+    y += 26;
+    for (const auto& l : wrap_text(small(), S("errors.source_scan"), tw, 5)) {
+        small().draw(c, px0 + pad, y, l, kDim);
+        y += small().line_height() + 4;
+    }
+
+    const int ax = 1036, ay = 150, aw = 788, ah = 800;
+    if (!src_qr_ok_) {
+        c.fill_round_rect(ax, ay + 80, aw, 240, 20, kPanel);
+        body().draw(c, ax + pad, ay + 140, S("errors.source_qr_failed"), kWarn, aw - 2 * pad);
+    } else {
+        draw_qr_code(c, src_qr_, ax, ay, aw, ah);
+    }
+    std::vector<std::pair<PadGlyph, std::string>> hints;
+    if (sources.size() > 1) hints.emplace_back(PadGlyph::Shoulders, S("common.browse"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }

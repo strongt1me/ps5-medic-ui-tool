@@ -115,6 +115,47 @@ RuleDownloadResult download_rule_update(Platform& p, IHttpClient& http, const st
 
     r.ok = true;
     r.bytes = items[0].body.size();
+
+    // 4. Fehlercodes: optional, beide Dateien oder keine. Ein Fehler hier macht den Regel-Download nicht ungueltig.
+    Item codes[] = {{"error_codes.json", kMaxRulesBytes, {}}, {"error_codes.json.sig", kMaxSigBytes, {}}};
+    bool offered = true;
+    for (auto& it : codes) {
+        const HttpResponse resp = http.get(join_url(base_url, it.name), it.max, kTimeoutMs);
+        if (!resp.error.empty()) {
+            r.codes_error = "net_" + resp.error;
+            r.codes_file = it.name;
+            offered = false;
+            break;
+        }
+        if (resp.status != 200) {
+            offered = false;
+            if (&it != &codes[0] || resp.status != 404) {  // 404 bei der Datei selbst: der Server bietet keine Fehlercodes an
+                r.codes_error = "http_status";
+                r.codes_file = it.name;
+            }
+            break;
+        }
+        it.body = resp.body;
+    }
+    if (!offered) return r;
+    for (const char* name : {"error_codes.json", "error_codes.json.sha256", "error_codes.json.sig"})
+        if (p.fs().exists(dir_file(name)) && !p.fs_rw()->rename(dir_file(name), aside + "/" + name)) {
+            r.codes_error = "write_failed";
+            r.codes_file = name;
+            return r;
+        }
+    for (auto& it : codes)
+        if (!p.fs_rw()->write_file(dir_file(it.name), it.body)) {
+            r.codes_error = "write_failed";
+            r.codes_file = it.name;
+            return r;
+        }
+    std::string log2;
+    p.fs().read_file(kRulesUpdateLog, log2);
+    if (!log2.empty() && log2.back() != '\n') log2 += '\n';
+    log2 += nlohmann::json({{"type", "error_codes_download"}, {"ts", timestamp}, {"url", base_url}, {"bytes", codes[0].body.size()}, {"sha256", sha256_hex(codes[0].body)}}).dump() + "\n";
+    p.fs_rw()->write_file(kRulesUpdateLog, log2);
+    r.codes_ok = true;
     return r;
 }
 

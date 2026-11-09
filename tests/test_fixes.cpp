@@ -400,7 +400,7 @@ json comparable_facts(const Facts& f) {
     json out = json::object();
     for (const char* k : {"smp.titles", "smp.deep_sources", "smp.hidden_sources", "smp.mounts", "smp.images", "smp.scan_roots", "smp.fakelib_enabled",
                           "smp.debug", "smp.scan_depth", "proc.running", "fw.version", "kstuff.version", "kstuff.origin", "smp.version",
-                          "net.port_9021", "jb.seconds_after_boot", "jb.first_process", "ps5theme.version", "storage.mounts"}) {
+                          "net.port_9021", "jb.seconds_after_boot", "jb.first_process", "ps5theme.version", "storage.mounts", "games.fw", "games.need_backport"}) {
         const json* v = f.get(k);
         if (!v) continue;
         out[k] = *v;

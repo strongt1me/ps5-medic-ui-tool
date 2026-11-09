@@ -46,6 +46,31 @@ struct FakeService : IMedicService {
     int downloads = 0;
     ErrorCodeSet errors;  // Fehlercode-Nachschlagewerk (leer: keine Datei geladen)
     int error_loads = 0;
+    // Update der Fehlercode-Datei, Vermerk fuer den Bericht
+    RuleUpdateOffer codes_offer;
+    RuleUpdateResult codes_install_result{true, "", "2026.12.10", ""};
+    RuleUpdateResult codes_rollback_result{true, "", "2026.11.10", ""};
+    int codes_checks = 0, codes_installs = 0, codes_rollbacks = 0;
+    ErrorCodeSet errors_after_codes_install;  // gilt nach einer erfolgreichen Installation (leer: bleibt)
+    std::string reported;
+    int reported_calls = 0;
+    RuleUpdateOffer check_codes_update() override {
+        ++codes_checks;
+        return codes_offer;
+    }
+    RuleUpdateResult install_codes_update() override {
+        ++codes_installs;
+        if (codes_install_result.ok && !errors_after_codes_install.codes.empty()) errors = errors_after_codes_install;
+        return codes_install_result;
+    }
+    RuleUpdateResult rollback_codes_update() override {
+        ++codes_rollbacks;
+        return codes_rollback_result;
+    }
+    void set_reported_error(const std::string& id) override {
+        reported = id;
+        ++reported_calls;
+    }
     const ErrorCodeSet& error_codes() override {
         ++error_loads;
         return errors;
@@ -962,7 +987,8 @@ void rules_download_service_tests() {
         press(app, {Button::Cross});
         app.render(cv);
         app.update();
-        CHECK(http.asked.size() == 2 && http.asked[0] == base + "rules.json" && http.asked[1] == base + "rules.json.sig", "Download-E2E: genau zwei Abrufe, rules.json und rules.json.sig");
+        CHECK(http.asked.size() == 3 && http.asked[0] == base + "rules.json" && http.asked[1] == base + "rules.json.sig" && http.asked[2] == base + "error_codes.json",
+              "Download-E2E: rules.json, rules.json.sig und die Anfrage nach error_codes.json (404), nicht mehr");
         CHECK(!fs::exists(t.dir / "fs/data/ps5medic/knowledge/rules.json"), "Download-E2E: bis zur Bestaetigung bleiben die aktiven Regeln unberuehrt");
         app.render(cv);
         const auto offer = svc.check_rule_update();
@@ -1469,8 +1495,17 @@ void error_codes_flow_tests() {
         for (Button b : {Button::Triangle, Button::Square, Button::Options, Button::Left, Button::Right}) a.handle(b);
         CHECK(a.screen() == App::Screen::ErrorCodes, "Nur lesen: Dreieck, Quadrat, Options, Links, Rechts aendern in der Liste nichts");
         press(a, {Button::Cross});
-        for (Button b : {Button::Triangle, Button::Square, Button::Options, Button::Cross}) a.handle(b);
-        CHECK(a.screen() == App::Screen::ErrorCodeDetail, "Nur lesen: Dreieck, Quadrat, Options, Kreuz aendern in den Details nichts");
+        for (Button b : {Button::Options, Button::Cross}) a.handle(b);
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail, "Nur lesen: Options und Kreuz aendern in den Details nichts");
+        press(a, {Button::Triangle});  // vermerkt den Code nur im Speicher fuer den Bericht
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.reported_error() == a.selected_error_id(), "Nur lesen: Dreieck vermerkt den Code fuer den Bericht, sonst nichts");
+        press(a, {Button::Square});  // QR-Code der Quelle: reine Anzeige
+        CHECK(a.screen() == App::Screen::ErrorCodeSource, "Nur lesen: Quadrat zeigt die Quelle als QR-Code");
+        a.render(cv);
+        press(a, {Button::Triangle, Button::Square, Button::Cross, Button::Options});
+        CHECK(a.screen() == App::Screen::ErrorCodeSource, "Nur lesen: in der Quellenansicht tun Dreieck, Quadrat, Kreuz und Options nichts");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail, "Nur lesen: Kreis geht aus der Quellenansicht zum Eintrag");
         a.render(cv);
         CHECK(s2.checks == 0 && s2.plans == 0 && s2.applies == 0 && s2.undos == 0 && s2.reports == 0 && s2.update_checks == 0 && s2.installs == 0 &&
                   s2.rollbacks == 0 && s2.downloads == 0,
@@ -1537,7 +1572,7 @@ void error_codes_flow_tests() {
 void error_codes_real_data_tests() {
     const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
     const ErrorCodeSet codes = load_error_codes_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/error_codes.json");
-    CHECK(codes.codes.size() >= 19, "Fehlercodes (Datei): mindestens die 19 belegten Codes");
+    CHECK(codes.codes.size() >= 36, "Fehlercodes (Datei): mindestens die 36 belegten Codes");
 
     TempCopy t("b8_pos");
     const auto before = full_tree(t.dir);
@@ -1555,10 +1590,10 @@ void error_codes_real_data_tests() {
         open_error_codes_via_ui(a);
         CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes (Datei): Liste offen");
         a.render(cv);
-        press(a, {Button::R1, Button::R1, Button::R1});
+        for (int i = 0; i < 30 && a.error_selected() != static_cast<int>(codes.codes.size()) - 1; ++i) press(a, {Button::R1});
         a.render(cv);
         CHECK(a.error_selected() == static_cast<int>(codes.codes.size()) - 1, "Fehlercodes (Datei): R1 bis zum letzten Code");
-        press(a, {Button::L1, Button::L1, Button::L1, Button::L1});
+        for (int i = 0; i < 30 && a.error_selected() != 0; ++i) press(a, {Button::L1});
         CHECK(a.error_selected() == 0, "Fehlercodes (Datei): L1 bis zum ersten Code");
         press(a, {Button::Cross});
         for (std::size_t i = 0; i < codes.codes.size(); ++i) {
@@ -1641,8 +1676,8 @@ void error_link_tests() {
         CHECK(a.error_selected() == 7, "Verweis: im verlinkten Eintrag wird nicht geblaettert");
         press(a, {Button::Down, Button::Up});
         CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.error_scroll() == 0, "Verweis: Scrollen geht (kurzer Eintrag bleibt oben)");
-        press(a, {Button::Triangle, Button::Square, Button::Cross});
-        CHECK(a.screen() == App::Screen::ErrorCodeDetail, "Verweis: Dreieck, Quadrat und Kreuz tun im Eintrag nichts");
+        press(a, {Button::Cross, Button::Options});
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail, "Verweis: Kreuz und Options tun im Eintrag nichts");
         press(a, {Button::Circle});
         CHECK(a.screen() == App::Screen::Detail && a.selected() == 0, "Verweis: Kreis geht zurueck zum Befund");
         a.render(cv);
@@ -1730,6 +1765,638 @@ void error_link_real_data_tests() {
     Strings::missing().clear();
 }
 
+// ---- Quelle als QR, Vermerk fuer den Bericht, Kontext, Scrollen, Update der Fehlercodes ------------------------------------------
+
+void error_source_tests() {
+    FakeService svc;
+    svc.errors = mk_errors(12);
+    svc.errors.codes[2].source = "https://example.org/" + std::string(3200, 'x');  // zu lang fuer einen QR-Code
+    Canvas cv(App::kWidth, App::kHeight);
+    Strings::missing().clear();
+
+    App a(svc);
+    open_error_codes_via_ui(a);
+    press(a, {Button::Cross});
+    a.render(cv);
+    const std::uint64_t detail = canvas_hash(cv);
+    press(a, {Button::Square});
+    CHECK(a.screen() == App::Screen::ErrorCodeSource && a.error_source_index() == 0, "Quelle: Quadrat zeigt die Hauptquelle als QR-Code");
+    a.render(cv);
+    CHECK(canvas_hash(cv) != detail, "Quelle: die Anzeige unterscheidet sich vom Eintrag");
+    press(a, {Button::Left, Button::Right, Button::L1, Button::R1});
+    CHECK(a.screen() == App::Screen::ErrorCodeSource && a.error_source_index() == 0, "Quelle: mit nur einer Quelle blaettern Links/Rechts nichts");
+    press(a, {Button::Circle});
+    CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.selected_error_id() == svc.errors.codes[0].id, "Quelle: Kreis geht zum Eintrag zurueck");
+
+    press(a, {Button::Right, Button::Square});  // Code 1 hat eine weitere Quelle
+    CHECK(a.screen() == App::Screen::ErrorCodeSource && a.error_source_index() == 0, "Quelle: Code mit weiterer Quelle beginnt bei der ersten");
+    a.render(cv);
+    const std::uint64_t first = canvas_hash(cv);
+    press(a, {Button::Right});
+    CHECK(a.error_source_index() == 1, "Quelle: Rechts zeigt die weitere Quelle");
+    a.render(cv);
+    CHECK(canvas_hash(cv) != first, "Quelle: andere Adresse, anderer QR-Code");
+    press(a, {Button::Right, Button::R1});
+    CHECK(a.error_source_index() == 1, "Quelle: nach der letzten bleibt es stehen");
+    press(a, {Button::Left});
+    CHECK(a.error_source_index() == 0, "Quelle: Links geht zur vorigen");
+    press(a, {Button::Right, Button::Circle, Button::Square});
+    CHECK(a.screen() == App::Screen::ErrorCodeSource && a.error_source_index() == 0, "Quelle: beim erneuten Oeffnen wieder die erste");
+    press(a, {Button::Circle});
+
+    press(a, {Button::Right, Button::Square});  // Code 2: Adresse zu lang fuer den QR-Code
+    CHECK(a.screen() == App::Screen::ErrorCodeSource, "Quelle: zu lange Adresse oeffnet die Ansicht trotzdem");
+    a.render(cv);
+    press(a, {Button::Circle});
+
+    // Aus einem Befund heraus: Kreis geht Schritt fuer Schritt zurueck.
+    FakeService fsvc;
+    fsvc.errors = mk_errors(12);
+    fsvc.result.findings = {finding_mentioning("a.known", "CE-100007-1")};
+    App b(fsvc);
+    run_check_via_ui(b, cv);
+    press(b, {Button::Cross, Button::Square, Button::Square});
+    CHECK(b.screen() == App::Screen::ErrorCodeSource, "Quelle: auch aus einem verlinkten Eintrag");
+    press(b, {Button::Circle});
+    CHECK(b.screen() == App::Screen::ErrorCodeDetail, "Quelle: Kreis zum verlinkten Eintrag");
+    press(b, {Button::Circle});
+    CHECK(b.screen() == App::Screen::Detail, "Quelle: danach zum Befund");
+
+    // Beide Sprachen
+    for (Lang l : {Lang::De, Lang::En}) {
+        App c(svc, l);
+        open_error_codes_via_ui(c);
+        press(c, {Button::Cross, Button::Right, Button::Square, Button::Right});
+        c.render(cv);
+    }
+    CHECK(Strings::missing().empty(), "Quelle: alle gezeichneten Texte existieren in beiden Sprachen (" + (Strings::missing().empty() ? std::string() : Strings::missing().front()) + ")");
+    Strings::missing().clear();
+}
+
+void error_report_mark_tests() {
+    FakeService svc;
+    svc.errors = mk_errors(12);
+    svc.result.findings = {mk_finding("a.info", Severity::Info, false)};
+    Canvas cv(App::kWidth, App::kHeight);
+    Strings::missing().clear();
+
+    App a(svc);
+    open_error_codes_via_ui(a);
+    press(a, {Button::Cross});
+    const std::string id0 = a.selected_error_id();
+    a.render(cv);
+    const std::uint64_t plain = canvas_hash(cv);
+    press(a, {Button::Triangle});
+    CHECK(a.reported_error() == id0 && svc.reported == id0 && svc.reported_calls == 1, "Bericht: Dreieck vermerkt den Code (nur im Dienst, es wird nichts geschrieben)");
+    a.render(cv);
+    CHECK(canvas_hash(cv) != plain, "Bericht: der Eintrag zeigt den Vermerk (andere Taste, andere Kopfzeile)");
+    press(a, {Button::Right});
+    CHECK(a.reported_error() == id0 && a.selected_error_id() != id0, "Bericht: der Vermerk bleibt beim Blaettern bestehen");
+    a.render(cv);
+    press(a, {Button::Left, Button::Triangle});
+    CHECK(a.reported_error().empty() && svc.reported.empty() && svc.reported_calls == 2, "Bericht: noch einmal Dreieck nimmt den Vermerk zurueck");
+    press(a, {Button::Triangle, Button::Right, Button::Triangle});
+    CHECK(a.reported_error() == a.selected_error_id() && svc.reported == a.reported_error(), "Bericht: es gibt nur einen vermerkten Code, ein anderer ersetzt ihn");
+    CHECK(svc.reports == 0, "Bericht: Vermerken schreibt keinen Bericht");
+
+    // Berichtsbildschirm nennt den Code
+    press(a, {Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
+    run_check_via_ui(a, cv);
+    press(a, {Button::Square});
+    CHECK(a.screen() == App::Screen::Report, "Bericht: Bericht geoeffnet");
+    a.render(cv);
+    const std::uint64_t with_code = canvas_hash(cv);
+    FakeService other;
+    other.result = svc.result;
+    App b(other);
+    run_check_via_ui(b, cv);
+    press(b, {Button::Square});
+    b.render(cv);
+    CHECK(with_code != canvas_hash(cv), "Bericht: der Bildschirm nennt den vermerkten Code");
+    for (Lang l : {Lang::De, Lang::En}) {
+        App c(svc, l);
+        open_error_codes_via_ui(c);
+        press(c, {Button::Cross, Button::Triangle});
+        c.render(cv);
+        press(c, {Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
+        run_check_via_ui(c, cv);
+        press(c, {Button::Square});
+        c.render(cv);
+    }
+    CHECK(Strings::missing().empty(), "Bericht: alle gezeichneten Texte existieren in beiden Sprachen");
+    Strings::missing().clear();
+}
+
+// Mit dem echten Dienst: der vermerkte Code steht im Bericht (Markdown und Kurzfassung), in beiden Sprachen.
+void error_report_service_tests() {
+    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+    const ErrorCodeSet codes = load_error_codes_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/error_codes.json");
+    TempCopy t("b8_pos");
+    auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+    LocalService svc(*platform, rules, [] { return std::string("20261108T120000Z"); });
+    svc.set_error_codes(codes);
+    Canvas cv(App::kWidth, App::kHeight);
+    App app(svc);
+    open_error_codes_via_ui(app);
+    for (int i = 0; i < 80 && app.selected_error_id() != "CE-100028-1"; ++i) press(app, {Button::Down});
+    press(app, {Button::Cross, Button::Triangle});
+    CHECK(app.reported_error() == "CE-100028-1", "Bericht (Dienst): CE-100028-1 vermerkt");
+    press(app, {Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
+    run_check_via_ui(app, cv);
+    press(app, {Button::Square});
+    CHECK(app.screen() == App::Screen::Report, "Bericht (Dienst): Bericht erstellt");
+    const std::string path = t.dir.string() + "/fs" + report_path_for("20261108T120000Z");
+    const std::string de = slurp(path);
+    CHECK(de.find("## Gemeldeter Fehlercode") != std::string::npos && de.find("`CE-100028-1`") != std::string::npos && de.find("Nicht genug freier Platz auf der SSD") != std::string::npos,
+          "Bericht (Dienst): der deutsche Bericht nennt Code und Titel");
+    const ReportResult en = svc.make_report(ReportLang::En);
+    CHECK(slurp(path).find("## Reported error code") != std::string::npos && slurp(path).find("Not enough free space on the SSD") != std::string::npos,
+          "Bericht (Dienst): der englische Bericht nennt Code und Titel");
+    CHECK(en.qr_text.find("Error code CE-100028-1") != std::string::npos, "Bericht (Dienst): die Kurzfassung fuer den QR-Code nennt den Code");
+    CHECK(svc.make_report(ReportLang::De).qr_text.find("Fehlercode CE-100028-1") != std::string::npos, "Bericht (Dienst): Kurzfassung deutsch");
+
+    // Zurueckgenommen: nichts davon im Bericht
+    press(app, {Button::Circle, Button::Circle});  // Report -> Findings -> Start
+    open_error_codes_via_ui(app);
+    for (int i = 0; i < 80 && app.selected_error_id() != "CE-100028-1"; ++i) press(app, {Button::Down});
+    press(app, {Button::Cross, Button::Triangle});
+    CHECK(app.reported_error().empty(), "Bericht (Dienst): Vermerk zurueckgenommen");
+    const ReportResult none = svc.make_report(ReportLang::De);
+    CHECK(none.qr_text.find("Fehlercode") == std::string::npos && slurp(path).find("Gemeldeter Fehlercode") == std::string::npos, "Bericht (Dienst): ohne Vermerk steht kein Fehlercode im Bericht");
+
+    // Unbekannte Kennung (z. B. Datei ausgetauscht): ignoriert
+    svc.set_reported_error("CE-999999-9");
+    CHECK(svc.make_report(ReportLang::De).qr_text.find("CE-999999-9") == std::string::npos, "Bericht (Dienst): eine unbekannte Kennung kommt nicht in den Bericht");
+}
+
+// "Was Medic gerade sieht": aus den Fakten des letzten Check-ups, nur lesend.
+void error_context_tests() {
+    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+    const ErrorCodeSet codes = load_error_codes_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/error_codes.json");
+    auto kinds = [](const CodeContext& c) {
+        std::vector<std::string> v;
+        for (const auto& l : c.lines) v.push_back(l.kind);
+        return v;
+    };
+    auto line = [](const CodeContext& c, const std::string& kind) -> const ContextLine* {
+        for (const auto& l : c.lines)
+            if (l.kind == kind) return &l;
+        return nullptr;
+    };
+    auto context_for = [&](const std::string& fixture, const std::string& id, bool run_check) {
+        TempCopy t(fixture);
+        auto platform = make_snapshot_platform(t.dir.string());
+        LocalService svc(*platform, rules);
+        svc.set_error_codes(codes);
+        if (run_check) svc.run_check();
+        return svc.code_context(*codes.find(id));
+    };
+
+    {  // vor dem ersten Check-up gibt es nichts zu zeigen
+        const CodeContext c = context_for("g1_pos", "CE-107520-5", false);
+        CHECK(!c.available && c.lines.empty(), "Kontext: ohne Check-up nichts verfuegbar");
+    }
+    {  // Eintraege ohne context zeigen nie etwas
+        const CodeContext c = context_for("g1_pos", "CE-108255-1", true);
+        CHECK(!c.available && c.lines.empty(), "Kontext: Eintrag ohne context bleibt leer");
+    }
+    {  // Firmware und Titel, die eine neuere Firmware verlangen
+        const CodeContext c = context_for("g1_pos", "CE-107520-5", true);
+        CHECK(c.available && kinds(c) == std::vector<std::string>({"fw", "need_backport"}), "Kontext: Spiel-Code zeigt Firmware und betroffene Titel");
+        const ContextLine* f = line(c, "fw");
+        const ContextLine* n = line(c, "need_backport");
+        CHECK(f && f->args.at("fw") == "12.00" && n && n->args.at("list") == "PPSA00001 (13.60)" && n->args.at("fw") == "12.00", "Kontext: 12.00 und PPSA00001 (13.60)");
+        const CodeContext none = context_for("g1_neg", "CE-107520-5", true);
+        CHECK(kinds(none) == std::vector<std::string>({"fw", "need_backport_none"}), "Kontext: ohne betroffene Titel steht das da");
+        const CodeContext bp = context_for("g1_neg_backport", "CE-107520-5", true);
+        CHECK(kinds(bp) == std::vector<std::string>({"fw", "need_backport_none"}), "Kontext: mit Backport-Ordner gilt der Titel als versorgt");
+    }
+    {  // Speicher: freier Platz je grossem Laufwerk
+        const CodeContext c = context_for("g1_pos", "CE-100028-1", true);
+        const ContextLine* s = line(c, "storage");
+        CHECK(c.available && s && s->args.at("mount") == "/data" && s->args.at("free") == "465.7 GiB" && s->args.at("total") == "838.2 GiB" && s->args.at("pct") == "56",
+              "Kontext: freier Platz /data mit GiB und Prozent");
+    }
+    {  // Laufwerke: nur echte USB-/Erweiterungs-Laufwerke, Platzhalter (winzige tmpfs) zaehlen nicht
+        for (bool ro : {false, true}) {
+            TempCopy t("g1_neg");
+            json sys = {{"fw", "12.00"}, {"model", "CFI-TEST"},
+                        {"storage", json::array({{{"mount", "/data"}, {"total", 900000000000LL}, {"free", 500000000000LL}},
+                                                 {{"mount", "/mnt/usb0"}, {"total", 512000000000LL}, {"free", 100000000000LL}, {"fstype", "exfatfs"}, {"ro", ro}},
+                                                 {{"mount", "/mnt/usb1"}, {"total", 2097152}, {"free", 0}, {"fstype", "tmpfs"}}})}};
+            std::ofstream(t.dir / "system.json", std::ios::binary | std::ios::trunc) << sys.dump();
+            auto platform = make_snapshot_platform(t.dir.string());
+            LocalService svc(*platform, rules);
+            svc.set_error_codes(codes);
+            svc.run_check();
+            const CodeContext c = svc.code_context(*codes.find("CE-109737-7"));
+            const ContextLine* d = line(c, ro ? "drive_ro" : "drive");
+            CHECK(c.lines.size() == 1 && d && d->args.at("mount") == "/mnt/usb0" && d->args.at("fstype") == "exfatfs" && d->args.at("total") == "476.8 GiB",
+                  std::string("Kontext: Laufwerk /mnt/usb0 exfatfs, ohne den Platzhalter") + (ro ? " (schreibgeschuetzt)" : ""));
+        }
+        const CodeContext none = context_for("g1_pos", "CE-100006-7", true);
+        CHECK(kinds(none) == std::vector<std::string>({"drive_none"}), "Kontext: ohne Laufwerk steht das da");
+    }
+    {  // ShadowMount+: Version und Befund zum Speicherleck
+        const CodeContext leak = context_for("smp10_pos_leak", "CE-108262-9", true);
+        CHECK(kinds(leak) == std::vector<std::string>({"smp", "smp_leak"}) && line(leak, "smp")->args.at("v") == "1.7beta10", "Kontext: ShadowMount+ 1.7beta10 ist vom Leck betroffen");
+        const CodeContext fine = context_for("smp10_neg_beta11", "CE-108262-9", true);
+        CHECK(kinds(fine) == std::vector<std::string>({"smp", "smp_no_leak"}), "Kontext: 1.7beta11 ohne Befund zum Leck");
+        const CodeContext missing = context_for("g1_pos", "CE-108262-9", true);
+        CHECK(kinds(missing) == std::vector<std::string>({"smp_missing"}), "Kontext: ohne ShadowMount+-Version steht das da");
+    }
+
+    // Anzeige: mit Check-up andere Seite als ohne, in beiden Sprachen ohne fehlende Texte
+    Strings::missing().clear();
+    Canvas cv(App::kWidth, App::kHeight);
+    for (Lang l : {Lang::De, Lang::En}) {
+        TempCopy t("g1_pos");
+        auto platform = make_snapshot_platform(t.dir.string());
+        LocalService svc(*platform, rules);
+        svc.set_error_codes(codes);
+        App a(svc, l);
+        open_error_codes_via_ui(a);
+        for (int i = 0; i < 80 && a.selected_error_id() != "CE-107520-5"; ++i) press(a, {Button::Down});
+        press(a, {Button::Cross});
+        for (int i = 0; i < 40; ++i) a.handle(Button::Down);
+        a.render(cv);
+        const std::uint64_t without = canvas_hash(cv);
+        press(a, {Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
+        run_check_via_ui(a, cv);
+        press(a, {Button::Circle});  // Findings -> Start
+        open_error_codes_via_ui(a);
+        for (int i = 0; i < 80 && a.selected_error_id() != "CE-107520-5"; ++i) press(a, {Button::Down});
+        press(a, {Button::Cross});
+        for (int i = 0; i < 40; ++i) a.handle(Button::Down);
+        a.render(cv);
+        CHECK(canvas_hash(cv) != without, "Kontext: nach dem Check-up zeigt der Eintrag den Zustand der Konsole");
+    }
+    CHECK(Strings::missing().empty(), "Kontext: alle gezeichneten Texte existieren in beiden Sprachen (" + (Strings::missing().empty() ? std::string() : Strings::missing().front()) + ")");
+    Strings::missing().clear();
+    {  // jede Kontextart hat in beiden Sprachen ihren Text
+        for (const char* kind : {"fw", "storage", "storage_none", "drive", "drive_ro", "drive_none", "smp", "smp_missing", "smp_leak", "smp_no_leak", "need_backport", "need_backport_none"})
+            for (Lang l : {Lang::De, Lang::En}) CHECK(Strings::get(l).has(std::string("ctx.") + kind), std::string("Kontext: Text ctx.") + kind);
+    }
+    Strings::missing().clear();
+}
+
+// Beim Halten von Hoch/Runter scrollt der Text schneller; einzelne Druecke bleiben eine Zeile.
+void error_scroll_accel_tests() {
+    FakeService svc;
+    svc.errors = mk_errors(12);
+    for (int k = 13; k <= 40; ++k) {  // ein sehr langer Eintrag, damit das Beschleunigen nicht am Ende haengen bleibt
+        svc.errors.codes[0].steps_de.push_back("Schritt " + std::to_string(k) + ": noch ein Satz, der auf mehrere Zeilen umbricht und viel Text enthaelt, damit der Eintrag lang wird.");
+        svc.errors.codes[0].steps_en.push_back("Step " + std::to_string(k) + ": another sentence that wraps onto several lines and contains a lot of text so that the entry gets long.");
+    }
+    auto open_long = [&](App& a) {
+        open_error_codes_via_ui(a);
+        press(a, {Button::Cross});
+    };
+    App probe(svc);
+    open_long(probe);
+    const int end = scroll_to_end(probe);
+    CHECK(end >= 24, "Scrollen: der Pruefling ist lang genug (" + std::to_string(end) + ")");
+
+    {  // einzeln, mit Pause dazwischen: genau eine Zeile je Druck
+        App a(svc);
+        open_long(a);
+        for (int i = 0; i < 10; ++i) {
+            a.handle(Button::Down);
+            for (int k = 0; k < 30; ++k) a.update();
+        }
+        CHECK(a.error_scroll() == 10, "Scrollen: zehn einzelne Druecke = zehn Zeilen");
+    }
+    {  // gehalten (Wiederholung etwa alle 7 Bilder): 1, 1, 1, 1, dann 2, dann 3 ...
+        App a(svc);
+        open_long(a);
+        for (int i = 0; i < 10; ++i) {
+            a.handle(Button::Down);
+            for (int k = 0; k < 7; ++k) a.update();
+        }
+        CHECK(a.error_scroll() == 18, "Scrollen: zehn Wiederholungen beschleunigen auf 18 Zeilen (" + std::to_string(a.error_scroll()) + ")");
+        a.handle(Button::Up);
+        CHECK(a.error_scroll() == 17, "Scrollen: eine Richtungsaenderung beginnt wieder mit einer Zeile");
+        for (int k = 0; k < 30; ++k) a.update();
+        a.handle(Button::Down);
+        CHECK(a.error_scroll() == 18, "Scrollen: nach einer Pause wieder eine Zeile");
+        for (int i = 0; i < 100; ++i) {
+            a.handle(Button::Down);
+            for (int k = 0; k < 7; ++k) a.update();
+        }
+        CHECK(a.error_scroll() == end, "Scrollen: beschleunigt, aber nie ueber das Ende hinaus");
+        for (int i = 0; i < 100; ++i) {
+            a.handle(Button::Up);
+            for (int k = 0; k < 7; ++k) a.update();
+        }
+        CHECK(a.error_scroll() == 0, "Scrollen: beschleunigt zurueck bis ganz oben, nie darueber");
+    }
+}
+
+// ---- Update der Fehlercode-Datei im Bildschirm Regel-Update ---------------------------------------------------------------------
+
+void codes_update_flow_tests() {
+    Canvas cv(App::kWidth, App::kHeight);
+    Strings::missing().clear();
+    auto go_to_update = [](App& a) { press(a, {Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross}); };
+    auto ready = [](const std::string& v, std::size_t n) {
+        RuleUpdateOffer o;
+        o.state = RuleUpdateOffer::State::Ready;
+        o.new_version = v;
+        o.new_rule_count = n;
+        o.auth = "signature";
+        o.signed_by = "0123456789abcdef";
+        o.sha256 = std::string(64, 'a');
+        return o;
+    };
+    FakeService base;
+    base.errors = mk_errors(5);
+    base.result.findings = {mk_finding("a.crit", Severity::Critical, false)};
+
+    {  // nur Fehlercodes bereit
+        FakeService svc = base;
+        svc.codes_offer = ready("2026.12.10", 7);
+        svc.errors_after_codes_install = mk_errors(3);
+        App a(svc);
+        run_check_via_ui(a, cv);
+        press(a, {Button::Circle});
+        go_to_update(a);
+        CHECK(a.screen() == App::Screen::RulesUpdate, "Codes-Flow: Regel-Update offen");
+        a.render(cv);
+        press(a, {Button::Cross});
+        CHECK(svc.codes_installs == 1 && svc.installs == 0, "Codes-Flow: Kreuz installiert nur die Fehlercodes");
+        a.render(cv);
+        press(a, {Button::Cross});
+        CHECK(a.screen() == App::Screen::Settings, "Codes-Flow: Kreuz kommt zurueck");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Start && a.finding_count() == 1, "Codes-Flow: Fehlercodes aendern die Befunde nicht");
+        open_error_codes_via_ui(a);
+        CHECK(a.selected_error_id() == svc.errors_after_codes_install.codes[0].id && a.error_selected() == 0, "Codes-Flow: die neue Liste gilt sofort");
+    }
+    {  // beides bereit
+        FakeService svc = base;
+        svc.offer = ready("2026.12.20", 60);
+        svc.codes_offer = ready("2026.12.10", 7);
+        App a(svc);
+        run_check_via_ui(a, cv);
+        CHECK(a.finding_count() == 1, "Codes-Flow: Befund vorhanden");
+        press(a, {Button::Circle});
+        go_to_update(a);
+        a.render(cv);
+        press(a, {Button::Cross});
+        CHECK(svc.installs == 1 && svc.codes_installs == 1 && a.finding_count() == 0, "Codes-Flow: Regeln und Fehlercodes zusammen, die alten Befunde sind danach veraltet");
+        a.render(cv);
+    }
+    {  // Regeln gehen, Fehlercodes scheitern: Fehlerbildschirm, Regeln gelten trotzdem
+        FakeService svc = base;
+        svc.offer = ready("2026.12.20", 60);
+        svc.codes_offer = ready("2026.12.10", 7);
+        svc.codes_install_result = {false, "write_failed", "", ""};
+        App a(svc);
+        run_check_via_ui(a, cv);
+        press(a, {Button::Circle});
+        go_to_update(a);
+        press(a, {Button::Cross});
+        a.render(cv);
+        CHECK(svc.installs == 1 && svc.codes_installs == 1 && a.finding_count() == 0, "Codes-Flow: gescheiterte Fehlercodes machen die installierten Regeln nicht rueckgaengig");
+        press(a, {Button::Cross});
+        CHECK(a.screen() == App::Screen::Settings, "Codes-Flow: Fehlerbildschirm schliesst mit Kreuz");
+    }
+    {  // Regeln scheitern, Fehlercodes gehen
+        FakeService svc = base;
+        svc.offer = ready("2026.12.20", 60);
+        svc.install_result = {false, "verify_failed", "", ""};
+        svc.codes_offer = ready("2026.12.10", 7);
+        App a(svc);
+        run_check_via_ui(a, cv);
+        press(a, {Button::Circle});
+        go_to_update(a);
+        press(a, {Button::Cross});
+        a.render(cv);
+        CHECK(a.finding_count() == 1, "Codes-Flow: scheiternde Regeln lassen die Befunde stehen");
+    }
+    {  // Fehlercodes abgelehnt: angezeigt, nichts zu installieren
+        FakeService svc = base;
+        svc.codes_offer.state = RuleUpdateOffer::State::Rejected;
+        svc.codes_offer.reason = "sig_invalid";
+        svc.codes_offer.old_version = "2026.11.10";
+        App a(svc);
+        go_to_update(a);
+        a.render(cv);
+        press(a, {Button::Cross});
+        CHECK(svc.codes_installs == 0 && svc.installs == 0 && a.screen() == App::Screen::RulesUpdate, "Codes-Flow: abgelehnte Datei wird nicht installiert");
+    }
+    {  // Zuruecknehmen: nur wo es etwas gibt
+        FakeService svc = base;
+        svc.codes_offer.can_rollback = true;
+        svc.codes_offer.installed_version = "2026.12.10";
+        App a(svc);
+        go_to_update(a);
+        a.render(cv);
+        press(a, {Button::Triangle});
+        a.render(cv);
+        press(a, {Button::Cross});
+        CHECK(svc.codes_rollbacks == 1 && svc.rollbacks == 0, "Codes-Flow: Rollback nur fuer die Fehlercodes");
+        a.render(cv);
+        FakeService both = base;
+        both.offer.can_rollback = both.codes_offer.can_rollback = true;
+        both.offer.installed_version = both.codes_offer.installed_version = "2026.12.10";
+        App b(both);
+        go_to_update(b);
+        press(b, {Button::Triangle, Button::Cross});
+        CHECK(both.rollbacks == 1 && both.codes_rollbacks == 1, "Codes-Flow: sind beide zuruecknehmbar, wird beides zurueckgenommen");
+    }
+    {  // nichts da: die Anleitung wie bisher
+        FakeService svc = base;
+        App a(svc);
+        go_to_update(a);
+        a.render(cv);
+        press(a, {Button::Cross});
+        CHECK(a.screen() == App::Screen::RulesUpdate && svc.installs == 0 && svc.codes_installs == 0, "Codes-Flow: ohne Angebot tut Kreuz nichts");
+    }
+    {  // Download: Fehlercodes nur teilweise geholt
+        FakeService svc = base;
+        svc.url = "http://192.0.2.10:8000/regeln/";
+        svc.download_result.ok = true;
+        svc.download_result.codes_error = "http_status";
+        svc.download_result.codes_file = "error_codes.json.sig";
+        svc.offer = ready("2026.12.20", 60);
+        App a(svc);
+        go_to_update(a);
+        press(a, {Button::Square, Button::Cross});
+        a.render(cv);
+        a.update();
+        a.render(cv);
+        CHECK(a.screen() == App::Screen::RulesUpdate && svc.downloads == 1, "Codes-Flow: Download gelaufen");
+        for (const char* err : {"net_timeout", "write_failed"}) {
+            svc.download_result.codes_error = err;
+            press(a, {Button::Circle, Button::Down, Button::Cross, Button::Square, Button::Cross});
+            a.render(cv);
+            a.update();
+            a.render(cv);
+        }
+    }
+    CHECK(Strings::missing().empty(), "Codes-Flow: alle gezeichneten Texte existieren in beiden Sprachen (" + (Strings::missing().empty() ? std::string() : Strings::missing().front()) + ")");
+    Strings::missing().clear();
+    for (Lang l : {Lang::De, Lang::En}) {  // in beiden Sprachen
+        FakeService svc = base;
+        svc.offer = ready("2026.12.20", 60);
+        svc.codes_offer = ready("2026.12.10", 7);
+        svc.codes_offer.can_rollback = svc.offer.can_rollback = true;
+        App a(svc, l);
+        go_to_update(a);
+        a.render(cv);
+        press(a, {Button::Triangle});
+        a.render(cv);
+        press(a, {Button::Circle, Button::Cross});
+        a.render(cv);
+        press(a, {Button::Cross});
+        a.render(cv);
+    }
+    CHECK(Strings::missing().empty(), "Codes-Flow: auch auf Englisch");
+    Strings::missing().clear();
+}
+
+// Echter Dienst, echte Dateien: Datei-Update, Rollback und Download mit Signatur ueber die Oberflaeche.
+void codes_update_service_tests() {
+    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+    const std::string codes_path = std::string(MEDIC_SOURCE_DIR) + "/knowledge/error_codes.json";
+    const ErrorCodeSet shipped = load_error_codes_from_file(codes_path);
+    json cj = json::parse(slurp(codes_path));
+    cj["db_version"] = "2026.12.31";
+    const std::string new_text = cj.dump(2) + "\n";
+    auto spit = [](const fs::path& p, const std::string& t) {
+        fs::create_directories(p.parent_path());
+        std::ofstream(p, std::ios::binary | std::ios::trunc) << t;
+    };
+    auto clock = [] { return std::string("20261109T170000Z"); };
+    auto go_to_update = [](App& a) { press(a, {Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross}); };
+    Canvas cv(App::kWidth, App::kHeight);
+    Strings::missing().clear();
+
+    {  // Datei-Update mit Pruefsumme, danach Rollback
+        TempCopy t("b2_pos");
+        spit(t.dir / "fs/data/ps5medic/knowledge/update/error_codes.json", new_text);
+        spit(t.dir / "fs/data/ps5medic/knowledge/update/error_codes.json.sha256", sha256_hex(new_text) + "  error_codes.json\n");
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+        LocalService svc(*platform, rules, clock);
+        svc.set_error_codes(shipped);
+        const auto offer = svc.check_codes_update();
+        CHECK(offer.state == RuleUpdateOffer::State::Ready && offer.new_version == "2026.12.31" && offer.old_version == shipped.db_version && offer.old_rule_count == shipped.codes.size(),
+              "Codes-E2E: Angebot kennt alte und neue Fehlercodes");
+        CHECK(svc.check_rule_update().state == RuleUpdateOffer::State::None, "Codes-E2E: das Regel-Angebot bleibt leer");
+        App a(svc);
+        go_to_update(a);
+        a.render(cv);
+        press(a, {Button::Cross});
+        a.render(cv);
+        CHECK(slurp(t.dir / "fs/data/ps5medic/knowledge/error_codes.json") == new_text && svc.error_codes().db_version == "2026.12.31", "Codes-E2E: Kreuz installiert, die neuen Fehlercodes gelten sofort");
+        CHECK(!fs::exists(t.dir / "fs/data/ps5medic/knowledge/rules.json"), "Codes-E2E: die Regeln bleiben unberuehrt");
+        press(a, {Button::Cross, Button::Down, Button::Cross});  // zurueck, wieder oeffnen
+        CHECK(svc.check_codes_update().can_rollback, "Codes-E2E: Rollback moeglich");
+        a.render(cv);
+        press(a, {Button::Triangle});
+        a.render(cv);
+        press(a, {Button::Cross});
+        a.render(cv);
+        CHECK(!fs::exists(t.dir / "fs/data/ps5medic/knowledge/error_codes.json") && svc.error_codes().db_version == shipped.db_version, "Codes-E2E: Rollback legt die Datei beiseite, die mitgelieferten Fehlercodes gelten wieder");
+    }
+    {  // Download mit Signatur: Regeln und Fehlercodes zusammen
+        json nj = json::parse(slurp(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json"));
+        nj["db_version"] = "2026.12.30";
+        const std::string rules_text = nj.dump(2) + "\n";
+        medic::Ed25519Seed seed;
+        seed.fill(0x66);
+        const medic::Ed25519KeyPair key = medic::ed25519_keypair_from_seed(seed);
+        const std::vector<medic::TrustedKey> trusted = {medic::make_trusted_key(key.pk)};
+        const std::string base = "http://192.0.2.10:8000/regeln/";
+        TempCopy t("b2_pos");
+        spit(t.dir / "fs/data/ps5medic/config.ini", "update_url=" + base + "\n");
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+        LocalService svc(*platform, rules, clock);
+        svc.set_error_codes(shipped);
+        ScriptedHttp http;
+        http.files[base + "rules.json"] = rules_text;
+        http.files[base + "rules.json.sig"] = medic::make_signature_file(key, rules_text);
+        http.files[base + "error_codes.json"] = new_text;
+        http.files[base + "error_codes.json.sig"] = medic::make_signature_file(key, new_text);
+        svc.set_http_client(&http);
+        svc.set_trusted_keys(trusted);
+        App a(svc);
+        go_to_update(a);
+        press(a, {Button::Square});
+        a.render(cv);
+        CHECK(http.asked.empty(), "Codes-E2E: die Rueckfrage allein benutzt das Netz nicht");
+        press(a, {Button::Cross});
+        a.render(cv);
+        a.update();
+        CHECK(http.asked.size() == 4 && http.asked[2] == base + "error_codes.json" && http.asked[3] == base + "error_codes.json.sig", "Codes-E2E: vier Abrufe, nur zur eingetragenen Adresse");
+        a.render(cv);
+        CHECK(svc.check_codes_update().state == RuleUpdateOffer::State::Ready && svc.check_codes_update().auth == "signature", "Codes-E2E: die geholten Fehlercodes sind mit Signatur geprueft");
+        press(a, {Button::Cross});
+        a.render(cv);
+        CHECK(svc.run_check().rules_version == "2026.12.30" && svc.error_codes().db_version == "2026.12.31", "Codes-E2E: ein Kreuz installiert beides, beide gelten sofort");
+        CHECK(slurp(t.dir / "fs/data/ps5medic/knowledge/error_codes.json") == new_text, "Codes-E2E: die Datei liegt im Wissensordner");
+    }
+    {  // untergeschobene Datei: ungueltige Signatur wird abgelehnt, nichts installiert
+        medic::Ed25519Seed seed;
+        seed.fill(0x66);
+        const medic::Ed25519KeyPair key = medic::ed25519_keypair_from_seed(seed);
+        medic::Ed25519Seed other_seed;
+        other_seed.fill(0x77);
+        const medic::Ed25519KeyPair other = medic::ed25519_keypair_from_seed(other_seed);
+        const std::string base = "http://192.0.2.10:8000/regeln/";
+        json nj = json::parse(slurp(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json"));
+        nj["db_version"] = "2026.12.30";
+        const std::string rules_text = nj.dump(2) + "\n";
+        TempCopy t("b2_pos");
+        spit(t.dir / "fs/data/ps5medic/config.ini", "update_url=" + base + "\n");
+        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+        LocalService svc(*platform, rules, clock);
+        svc.set_error_codes(shipped);
+        ScriptedHttp http;
+        http.files[base + "rules.json"] = rules_text;
+        http.files[base + "rules.json.sig"] = medic::make_signature_file(key, rules_text);
+        http.files[base + "error_codes.json"] = new_text;
+        http.files[base + "error_codes.json.sig"] = medic::make_signature_file(other, new_text);  // falscher Schluessel
+        svc.set_http_client(&http);
+        svc.set_trusted_keys({medic::make_trusted_key(key.pk)});
+        App a(svc);
+        go_to_update(a);
+        press(a, {Button::Square, Button::Cross});
+        a.render(cv);
+        a.update();
+        a.render(cv);
+        CHECK(svc.check_codes_update().state == RuleUpdateOffer::State::Rejected && svc.check_codes_update().reason == "sig_unknown_key", "Codes-E2E: Fehlercodes mit fremdem Schluessel werden abgelehnt");
+        CHECK(svc.check_rule_update().state == RuleUpdateOffer::State::Ready, "Codes-E2E: die gueltig signierten Regeln bleiben angeboten");
+        press(a, {Button::Cross});
+        a.render(cv);
+        CHECK(svc.error_codes().db_version == shipped.db_version && !fs::exists(t.dir / "fs/data/ps5medic/knowledge/error_codes.json"), "Codes-E2E: die abgelehnte Datei wird nicht installiert");
+    }
+    CHECK(Strings::missing().empty(), "Codes-E2E: keine fehlenden Texte");
+    Strings::missing().clear();
+}
+
+// Jeder Text der UI (beide Sprachen) besteht nur aus Zeichen, die es in der eingebauten Schrift gibt.
+void i18n_glyph_tests() {
+    std::string missing;
+    std::set<std::string> glyphs;
+    for (Lang l : {Lang::De, Lang::En}) {
+        const auto& S = Strings::get(l);
+        for (const auto& k : S.keys()) {
+            const std::string s = S(k);
+            for (std::size_t i = 0; i < s.size();) {
+                const std::size_t start = i;
+                next_codepoint(s, i);
+                glyphs.insert(s.substr(start, i - start));
+            }
+        }
+    }
+    for (const auto& g : glyphs)
+        for (auto id : {Font::Id::Small, Font::Id::Body})
+            if (g != " " && glyph_missing(Font::get(id), g)) missing += g + " ";
+    CHECK(missing.empty(), "i18n: alle Zeichen der Texte gibt es in der Schrift (fehlen: " + missing + ")");
+}
+
 }  // namespace
 
 void ui_tests() {
@@ -1752,4 +2419,12 @@ void ui_tests() {
     error_codes_real_data_tests();
     error_link_tests();
     error_link_real_data_tests();
+    error_source_tests();
+    error_report_mark_tests();
+    error_report_service_tests();
+    error_context_tests();
+    error_scroll_accel_tests();
+    codes_update_flow_tests();
+    codes_update_service_tests();
+    i18n_glyph_tests();
 }

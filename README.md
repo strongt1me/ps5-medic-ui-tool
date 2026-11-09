@@ -6,7 +6,7 @@
 
 Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedient. Ein Knopfdruck: *Check-up starten*.
 
-> Stand: Version 0.4.0-dev. Getestet auf einer PS5 Pro (FW 12.00) mit ShadowMount+ 1.7beta11 und websrv v0.33. Andere Firmwares und Setups sind nicht getestet; die Regeln sind deshalb versionsgebunden formuliert und einzeln als *bestätigt* oder *noch nicht bestätigt* gekennzeichnet.
+> Stand: Version 0.4.0-dev. Getestet auf einer PS5 Pro (FW 12.00) mit ShadowMount+ 1.7beta12. Andere Firmwares und Setups sind nicht getestet; die Regeln sind deshalb versionsgebunden formuliert und einzeln als *bestätigt* oder *noch nicht bestätigt* gekennzeichnet.
 
 ## Was es kann
 
@@ -14,8 +14,8 @@ Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedien
 - **Reparieren** (5 Fixes): Image umbenennen (Klammern), ShadowMount+-Einstellung setzen, BackPork aus der Autoload-Liste nehmen, doppelte Kopie derselben TITLE_ID verschieben, Anleitung bei verschachtelten Images. Vorher zeigt die Vorschau genau, was geändert wird.
 - **Rückgängig**: Jede Reparatur steht im Verlauf und lässt sich zurücknehmen.
 - **Bericht**: Taste □ in der Befundliste schreibt einen Markdown-Bericht nach `/data/ps5medic/reports/` und zeigt eine Kurzfassung als **QR-Code** (mit dem Handy scannen, Text kopieren, ins Forum oder in ein Issue einfügen). IP- und MAC-Adressen, Benutzer- und Konto-IDs sowie Seriennummern werden entfernt; Datei- und Ordnernamen bleiben drin, bitte vor dem Teilen prüfen. Fehlerartige Logzeilen, die zu keiner Regel passen, stehen als **Unbekannte Fehlerzeilen** im Bericht: Stoff für neue Regeln.
-- **Regel-Update**: Einstellungen, Regel-Update. Neue `rules.json` samt SHA-256-Prüfsumme per FTP oder USB-Kopie auf die Konsole legen **oder** mit □ von der eigenen Adresse herunterladen (`update_url` in `/data/ps5medic/config.ini`; nur mit gültiger Ed25519-Signatur des Autors). PS5 Medic prüft die Datei und installiert sie nach ✕ (mit Backup und Rückgängig).
-- **Fehlercodes**: Start, „Fehlercodes“. Nachschlagewerk zu 19 Meldungen wie CE-108262-9 (Erklärung, Schritte laut Sony, Quelle; Codes ohne Sony-Seite sind als Community-Angabe gekennzeichnet). Nur lesen und erklären, es wird nichts verändert.
+- **Regel-Update**: Einstellungen, Regel-Update. Neue `rules.json` (und `error_codes.json`) samt SHA-256-Prüfsumme per FTP oder USB-Kopie auf die Konsole legen **oder** mit □ von der eigenen Adresse herunterladen (`update_url` in `/data/ps5medic/config.ini`; nur mit gültiger Ed25519-Signatur des Autors). PS5 Medic prüft die Datei und installiert sie nach ✕ (mit Backup und Rückgängig).
+- **Fehlercodes**: Start, „Fehlercodes“. Nachschlagewerk zu 36 Meldungen wie CE-108262-9 (Erklärung, Schritte laut Sony, Quelle als Text und QR-Code, Prüfdatum; Codes ohne Sony-Seite sind als Community-Angabe gekennzeichnet; nach einem Check-up zeigt der Eintrag, was Medic an der Konsole sieht). Nur lesen und erklären, es wird nichts verändert. Nennt ein Befund einen Code, springt □ zum Eintrag; △ vermerkt einen Code für den Bericht.
 - Deutsch und Englisch (Einstellungen).
 
 ## Sicherheit
@@ -29,17 +29,15 @@ Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedien
 ## Voraussetzungen
 
 - Eine bereits gejailbreakte PS5 mit ELF-Loader (Port 9021) und FTP (hier Port 2121).
-- Für den Start mit DualSense: [websrv](https://github.com/ps5-payload-dev/websrv) mit Homebrew-Launcher (getestet: v0.33). Nur über dessen „Big App"-Lader bekommt ein Payload den App-Kontext, den die Konsole zum Öffnen des Controllers verlangt (Hintergrund: [docs/PHASE3.md](docs/PHASE3.md)). Ohne websrv läuft nur der Diagnose-Payload (`ps5medic.elf`).
+- Für den Start mit DualSense braucht die UI einen App-Kontext (sonst öffnet die Konsole den Controller nicht, Hintergrund: [docs/PHASE3.md](docs/PHASE3.md)). Den gibt ihr der mitgelieferte **Launcher** (`ps5medic-launcher.elf`, ein Port-9021-Payload); **websrv ist nicht mehr nötig**. Ohne Launcher läuft nur der Diagnose-Payload (`ps5medic.elf`).
 
 ## Installation
 
-1. Den Ordner `PS5MEDIC` aus dem Release per FTP nach `/data/homebrew/` kopieren (er enthält `ps5medicui.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` und das Icon).
-2. `websrv` starten (Payload Manager, Autoloader oder Port 9021).
-3. Im Launcher (`http://<PS5-IP>:8080`) die Kachel **PS5 Medic** öffnen. Alternativ vom PC: `make launch-ui PS5_HOST=<PS5-IP>`.
+1. Den Ordner `PS5MEDIC` aus dem Release per FTP nach `/data/homebrew/` kopieren (er enthält `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` und das Icon).
+2. `ps5medic-launcher.elf` an Port 9021 senden (Payload Manager, oder vom PC: `make send-launcher PS5_HOST=<PS5-IP>`). Er legt die Kachel **PS5 Medic** auf dem Startbildschirm an und startet die UI gleich, wenn keine App läuft.
+3. Später öffnet die Kachel die UI. Nach einem Neustart der Konsole den Launcher erneut senden (oder in die Autoload-Liste des Payload Managers eintragen); die Kachel bleibt.
 
-Wichtig: `websrv` beendet beim Start einer Homebrew-App eine laufende Big App, also auch ein Spiel.
-
-**Optional: Kachel unter „Medien“.** Ein winziger Starter-Titel (`FAKE42007`) legt PS5 Medic auf den Startbildschirm; er bittet `websrv`, die UI zu starten. Bauen und Installieren: [docs/TITLE.md](docs/TITLE.md) (braucht ein ps5-native-app-boilerplate-Checkout; nicht im Release-Paket).
+Der Launcher schließt nur den Browser, den die Kachel öffnet, und Homebrew-Fake-Apps; ein laufendes Spiel schließt er nie. Einzelheiten: [docs/TITLE.md](docs/TITLE.md). Der alte Weg über websrv (`make launch-ui`) bleibt als Ausweichmöglichkeit.
 
 ## Bedienung
 
@@ -70,7 +68,7 @@ Für die Konsole braucht man das [ps5-payload-sdk](https://github.com/ps5-payloa
 ```bash
 make ps5-ui                         # Vollbild-UI (ps5medicui.elf)
 make ps5                            # Diagnose-Payload (ps5medic.elf)
-make launch-ui PS5_HOST=192.168.1.x # hochladen und über websrv starten
+make send-launcher PS5_HOST=192.168.1.x # Launcher an Port 9021 senden (Kachel + UI); make launch-ui = alter Weg über websrv
 make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
 ```
 
