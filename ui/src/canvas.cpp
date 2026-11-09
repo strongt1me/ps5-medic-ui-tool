@@ -122,6 +122,13 @@ void Canvas::draw_pad_glyph(PadGlyph g, int cx, int cy, int size, Color c) {
                     {fx + 0.14f * s, fy - k, fx + 0.34f * s, fy}, {fx + 0.34f * s, fy, fx + 0.14f * s, fy + k}};
             break;
         }
+        case PadGlyph::Shoulders: {  // "L R": die beiden Schultertasten
+            const float h = 0.26f * s, lx = fx - 0.40f * s, lw = 0.26f * s, rx = fx + 0.14f * s, rw = 0.26f * s;
+            segs = {{lx, fy - h, lx, fy + h}, {lx, fy + h, lx + lw, fy + h},                                          // L
+                    {rx, fy - h, rx, fy + h}, {rx, fy - h, rx + rw, fy - h}, {rx + rw, fy - h, rx + rw, fy},          // R: Stamm, Bogen oben
+                    {rx + rw, fy, rx, fy}, {rx + 0.08f * s, fy, rx + rw, fy + h}};                                   // R: Bogen unten, Bein
+            break;
+        }
     }
     const int pad = static_cast<int>(half) + 2;
     for (int py = cy - size / 2 - pad; py <= cy + size / 2 + pad; ++py)

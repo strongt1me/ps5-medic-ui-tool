@@ -47,6 +47,7 @@ private:
     void start_check();
     void begin_fix(int index, Screen origin);
     void move_selection(int& sel, int& top, int count, int visible, int delta);
+    void page_selection(int& sel, int& top, int count, int visible, int dir);
     void open_history();
     void open_report();
     void open_rules_update();

@@ -74,6 +74,8 @@
   "undo.ok_sub": "Transaction {txn} was reverted.",
   "undo.fail": "Undo failed",
   "common.report": "Report",
+  "common.page": "Page",
+  "common.browse": "Browse",
   "report.title": "Report",
   "report.saved": "Report saved: {path}",
   "report.err.no_write": "The report could not be saved (no write access). The QR code still contains the short version.",

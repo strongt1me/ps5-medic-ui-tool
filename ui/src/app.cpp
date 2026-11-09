@@ -102,6 +102,25 @@ void App::move_selection(int& sel, int& top, int count, int visible, int delta) 
     top = std::clamp(top, 0, std::max(count - visible, 0));
 }
 
+// L1/R1: eine ganze Seite weiter bzw. zurueck. Der Ausschnitt springt um eine Seite, die Auswahl bleibt in der Zeile
+// auf der Seite (an den Enden wird begrenzt).
+void App::page_selection(int& sel, int& top, int count, int visible, int dir) {
+    if (count <= 0) {
+        sel = top = 0;
+        return;
+    }
+    const int max_top = std::max(count - visible, 0);
+    const int new_top = std::clamp(top + dir * visible, 0, max_top);
+    if (new_top == top) {  // schon auf der ersten bzw. letzten Seite: zum Anfang bzw. Ende springen
+        sel = dir > 0 ? std::min(top + visible, count) - 1 : top;
+        return;
+    }
+    sel = std::clamp(sel + (new_top - top), 0, count - 1);
+    top = new_top;
+    if (sel < top) sel = top;
+    if (sel >= top + visible) sel = std::min(top + visible - 1, count - 1);
+}
+
 void App::open_history() {
     hist_ = svc_.history();
     std::reverse(hist_.begin(), hist_.end());  // neueste zuerst
@@ -152,8 +171,10 @@ void App::begin_fix(int index, Screen origin) {
 void App::handle(Button b) {
     switch (screen_) {
         case Screen::Start:
-            if (b == Button::Up) start_sel_ = std::max(start_sel_ - 1, 0);
-            else if (b == Button::Down) start_sel_ = std::min(start_sel_ + 1, 2);
+            if (b == Button::Up || b == Button::L1) start_sel_ = std::max(start_sel_ - 1, 0);
+            else if (b == Button::Down || b == Button::R1) start_sel_ = std::min(start_sel_ + 1, 2);
+            else if (b == Button::Left && start_sel_ == 2) start_sel_ = 1;   // die beiden kleinen Knoepfe liegen nebeneinander
+            else if (b == Button::Right && start_sel_ == 1) start_sel_ = 2;
             else if (b == Button::Cross) {
                 if (start_sel_ == 0) start_check();
                 else if (start_sel_ == 1) open_history();
@@ -165,6 +186,8 @@ void App::handle(Button b) {
         case Screen::Findings:
             if (b == Button::Up) move_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, -1);
             else if (b == Button::Down) move_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, 1);
+            else if (b == Button::L1) page_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, -1);
+            else if (b == Button::R1) page_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, 1);
             else if (b == Button::Cross) {
                 if (result_.findings.empty()) start_check();
                 else screen_ = Screen::Detail;
@@ -173,7 +196,10 @@ void App::handle(Button b) {
             else if (b == Button::Circle) screen_ = Screen::Start;
             break;
         case Screen::Detail:
-            if (b == Button::Triangle) begin_fix(sel_, Screen::Detail);
+            // Zum vorherigen/naechsten Befund blaettern, ohne zur Liste zurueckzugehen (Steuerkreuz/Stick links-rechts oder L1/R1).
+            if (b == Button::Left || b == Button::L1) move_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, -1);
+            else if (b == Button::Right || b == Button::R1) move_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, 1);
+            else if (b == Button::Triangle) begin_fix(sel_, Screen::Detail);
             else if (b == Button::Circle) screen_ = Screen::Findings;
             break;
         case Screen::FixPreview:
@@ -196,6 +222,8 @@ void App::handle(Button b) {
         case Screen::History:
             if (b == Button::Up) move_selection(hist_sel_, hist_top_, static_cast<int>(hist_.size()), kHistVisible, -1);
             else if (b == Button::Down) move_selection(hist_sel_, hist_top_, static_cast<int>(hist_.size()), kHistVisible, 1);
+            else if (b == Button::L1) page_selection(hist_sel_, hist_top_, static_cast<int>(hist_.size()), kHistVisible, -1);
+            else if (b == Button::R1) page_selection(hist_sel_, hist_top_, static_cast<int>(hist_.size()), kHistVisible, 1);
             else if (b == Button::Cross) {
                 if (hist_sel_ >= 0 && hist_sel_ < static_cast<int>(hist_.size()) && hist_[static_cast<std::size_t>(hist_sel_)].state == "applied") {
                     undo_target_ = hist_[static_cast<std::size_t>(hist_sel_)];
@@ -213,8 +241,8 @@ void App::handle(Button b) {
             } else if (b == Button::Circle) screen_ = Screen::History;
             break;
         case Screen::Settings:
-            if (b == Button::Up) settings_sel_ = 0;
-            else if (b == Button::Down) settings_sel_ = 1;
+            if (b == Button::Up || b == Button::L1) settings_sel_ = 0;
+            else if (b == Button::Down || b == Button::R1) settings_sel_ = 1;
             else if (settings_sel_ == 0 && (b == Button::Left || b == Button::Right || b == Button::Cross)) lang_ = lang_ == Lang::De ? Lang::En : Lang::De;
             else if (settings_sel_ == 1 && b == Button::Cross) open_rules_update();
             else if (b == Button::Circle) screen_ = Screen::Start;
@@ -446,7 +474,9 @@ void App::draw_findings(Canvas& c) const {
         c.fill_round_rect(W - 64, thumb_y, 8, thumb_h, 4, kDim);
     }
 
-    std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}};
+    std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
+    if (n > kListVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
+    hints.emplace_back(PadGlyph::Cross, S("common.open"));
     if (const auto* f = current_finding(); f && !f->fix.empty()) hints.emplace_back(PadGlyph::Triangle, S(is_hint_fix(f->fix) ? "common.guide" : "common.repair"));
     hints.emplace_back(PadGlyph::Square, S("common.report"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
@@ -557,6 +587,7 @@ void App::draw_detail(Canvas& c) const {
     else body().draw(c, M + 8, y, S("detail.fix_none"), kDim, cw - 16);
 
     std::vector<std::pair<PadGlyph, std::string>> hints;
+    if (result_.findings.size() > 1) hints.emplace_back(PadGlyph::Shoulders, S("common.browse"));
     if (!f->fix.empty()) hints.emplace_back(PadGlyph::Triangle, S(is_hint_fix(f->fix) ? "common.guide" : "common.repair"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
@@ -689,6 +720,7 @@ void App::draw_history(Canvas& c) const {
     }
     const bool can_undo = hist_sel_ >= 0 && hist_sel_ < n && hist_[static_cast<std::size_t>(hist_sel_)].state == "applied";
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
+    if (n > kHistVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
     if (can_undo) hints.emplace_back(PadGlyph::Cross, S("common.undo"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);

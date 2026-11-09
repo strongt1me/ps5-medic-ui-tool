@@ -7,6 +7,7 @@
 #include "medic/http.hpp"
 #include "medic/sha256.hpp"
 #include "medic/signature.hpp"
+#include "medic_ui/pad_nav.hpp"
 #include "medic_ui/png.hpp"
 
 #include <algorithm>
@@ -203,7 +204,7 @@ void canvas_tests() {
     CHECK(c.at(2, 2) != rgb(0, 255, 0), "Canvas: Rundrechteck rundet die Ecke");
     Canvas g(60, 60);
     g.clear(rgb(0, 0, 0));
-    for (auto gl : {PadGlyph::Cross, PadGlyph::Circle, PadGlyph::Square, PadGlyph::Triangle, PadGlyph::UpDown, PadGlyph::LeftRight}) {
+    for (auto gl : {PadGlyph::Cross, PadGlyph::Circle, PadGlyph::Square, PadGlyph::Triangle, PadGlyph::UpDown, PadGlyph::LeftRight, PadGlyph::Shoulders}) {
         Canvas t(60, 60);
         t.clear(rgb(0, 0, 0));
         t.draw_pad_glyph(gl, 30, 30, 44, rgb(255, 255, 255));
@@ -1055,6 +1056,253 @@ void report_service_tests() {
     }
 }
 
+// ---- Steuerung: linker Stick, Steuerkreuz-Wiederholung, L1/R1 ------------------------------------
+
+using Buttons = std::vector<Button>;
+
+void pad_nav_tests() {
+    {  // Stick: Schwelle, sofortiger Schritt, Wiederholung nur fuer Hoch/Runter
+        PadNav n;
+        Buttons out;
+        n.stick(0, 15000, 0, out);
+        n.poll(1000, out);
+        CHECK(out.empty(), "Stick: Ausschlag unter der Schwelle (Drift) loest nichts aus");
+        n.stick(0, 20000, 1000, out);
+        CHECK(out == Buttons{Button::Down}, "Stick: nach unten loest sofort einen Schritt aus");
+        out.clear();
+        n.poll(1399, out);
+        CHECK(out.empty(), "Stick: vor Ablauf der Wartezeit keine Wiederholung");
+        n.poll(1400, out);
+        CHECK(out == Buttons{Button::Down}, "Stick: gehalten wiederholt Runter nach 400 ms");
+        out.clear();
+        n.poll(1450, out);
+        CHECK(out.empty(), "Stick: Wiederholung im Takt, nicht in jedem Bild");
+        n.poll(1510, out);
+        CHECK(out == Buttons{Button::Down}, "Stick: danach alle 110 ms");
+        out.clear();
+        n.stick(0, 10000, 1520, out);  // Hysterese: zwischen kOff und kOn bleibt er gedrueckt
+        n.poll(1620, out);
+        CHECK(out == Buttons{Button::Down}, "Stick: Hysterese haelt die Richtung bei leichtem Zurueckgehen");
+        out.clear();
+        n.stick(0, 5000, 1630, out);
+        n.poll(2000, out);
+        CHECK(out.empty(), "Stick: losgelassen, keine Wiederholung mehr");
+        n.stick(0, -30000, 2100, out);
+        CHECK(out == Buttons{Button::Up}, "Stick: nach oben (Y negativ)");
+    }
+    {  // Links/Rechts: genau ein Schritt, keine Wiederholung (in den Einstellungen wuerde sonst die Sprache flackern)
+        PadNav n;
+        Buttons out;
+        n.stick(-25000, 0, 0, out);
+        n.poll(5000, out);
+        n.poll(5200, out);
+        CHECK(out == Buttons{Button::Left}, "Stick: links ist ein einzelner Schritt");
+        out.clear();
+        n.stick(0, 0, 5300, out);
+        n.stick(25000, 3000, 5400, out);
+        CHECK(out == Buttons{Button::Right}, "Stick: rechts");
+    }
+    {  // Diagonale: nur die staerkere Achse zaehlt; Richtungswechsel loest neu aus
+        PadNav n;
+        Buttons out;
+        n.stick(20000, 22000, 0, out);
+        CHECK(out == Buttons{Button::Down}, "Stick: Diagonale waehlt die staerkere Achse");
+        out.clear();
+        n.stick(26000, 22000, 10, out);
+        CHECK(out == Buttons{Button::Right}, "Stick: Richtungswechsel loest sofort aus");
+        out.clear();
+        n.stick(-32768, 0, 20, out);  // kleinster moeglicher Achsenwert
+        CHECK(out == Buttons{Button::Left}, "Stick: Extremwert -32768 ist gueltig");
+    }
+    {  // Steuerkreuz: sofort, Vorrang vor dem Stick, Wiederholung beim Halten
+        PadNav n;
+        Buttons out;
+        n.dpad(Button::Down, true, 0, out);
+        CHECK(out == Buttons{Button::Down}, "Kreuz: Druck loest sofort aus (auch ohne Bild dazwischen)");
+        n.dpad(Button::Down, false, 10, out);
+        n.poll(2000, out);
+        CHECK(out == Buttons{Button::Down}, "Kreuz: kurzes Antippen ergibt genau einen Schritt");
+        out.clear();
+        n.dpad(Button::Down, true, 3000, out);
+        out.clear();
+        n.poll(3400, out);
+        n.poll(3510, out);
+        CHECK(out == (Buttons{Button::Down, Button::Down}), "Kreuz: gehalten wiederholt");
+        out.clear();
+        n.dpad(Button::Down, false, 3520, out);
+        n.poll(4000, out);
+        CHECK(out.empty(), "Kreuz: losgelassen hoert die Wiederholung auf");
+    }
+    {  // Kreuz hat Vorrang vor dem Stick; nach dem Loslassen kein Extra-Schritt
+        PadNav n;
+        Buttons out;
+        n.stick(0, 30000, 0, out);
+        out.clear();
+        n.dpad(Button::Up, true, 100, out);
+        CHECK(out == Buttons{Button::Up}, "Kreuz: hat Vorrang vor dem Stick");
+        out.clear();
+        n.dpad(Button::Up, false, 150, out);
+        CHECK(out.empty(), "Kreuz: Loslassen loest keinen Schritt des noch gehaltenen Sticks aus");
+        n.poll(600, out);
+        CHECK(out == Buttons{Button::Down}, "Kreuz: der gehaltene Stick laeuft danach weiter");
+    }
+    {  // Zwei Kreuz-Tasten: die zuletzt gedrueckte gilt, beim Loslassen faellt sie auf die andere zurueck
+        PadNav n;
+        Buttons out;
+        n.dpad(Button::Up, true, 0, out);
+        n.dpad(Button::Down, true, 5, out);
+        CHECK(out == (Buttons{Button::Up, Button::Down}), "Kreuz: zuletzt gedrueckte Richtung gilt");
+        out.clear();
+        n.dpad(Button::Down, false, 10, out);
+        CHECK(out.empty(), "Kreuz: Rueckfall auf die noch gehaltene Taste ohne Extra-Schritt");
+    }
+    {  // Fremde Tasten und Zuruecksetzen
+        PadNav n;
+        Buttons out;
+        n.dpad(Button::Cross, true, 0, out);
+        n.dpad(Button::L1, true, 0, out);
+        n.poll(10000, out);
+        CHECK(out.empty(), "Kreuz: nur Richtungstasten werden verarbeitet (Stick und Nav loesen nie Kreuz/Kreis aus)");
+        n.stick(0, 30000, 0, out);
+        out.clear();
+        n.reset();
+        n.poll(10000, out);
+        CHECK(out.empty(), "reset: nichts bleibt gedrueckt");
+        n.stick(0, 30000, 10000, out);
+        CHECK(out == Buttons{Button::Down}, "reset: der Stick funktioniert danach wieder");
+    }
+}
+
+void shoulder_and_stick_flow_tests() {
+    FakeService svc;
+    svc.result.findings = {mk_finding("a.crit", Severity::Critical, true), mk_finding("b.warn", Severity::Warning, false), mk_finding("c.info", Severity::Info, true)};
+    svc.plan = mk_plan();
+    Canvas cv(App::kWidth, App::kHeight);
+    Strings::missing().clear();
+
+    {  // Start: L1/R1 wie Hoch/Runter, Links/Rechts zwischen den beiden kleinen Knoepfen
+        App a(svc);
+        press(a, {Button::R1, Button::Cross});
+        CHECK(a.screen() == App::Screen::History, "Start: R1 waehlt den naechsten Eintrag (Verlauf)");
+        press(a, {Button::Circle, Button::R1, Button::Cross});
+        CHECK(a.screen() == App::Screen::Settings, "Start: R1 noch einmal waehlt die Einstellungen");
+        press(a, {Button::Circle, Button::Left, Button::Cross});
+        CHECK(a.screen() == App::Screen::History, "Start: Links springt von Einstellungen zu Verlauf");
+        press(a, {Button::Circle, Button::Right, Button::Cross});
+        CHECK(a.screen() == App::Screen::Settings, "Start: Rechts springt von Verlauf zu Einstellungen");
+        press(a, {Button::Circle, Button::L1, Button::L1, Button::Left, Button::Right, Button::Cross});
+        CHECK(a.screen() == App::Screen::Running, "Start: L1 geht hoch; oben bleiben Links/Rechts wirkungslos, Kreuz startet den Check");
+    }
+    {  // Einstellungen: L1/R1 wie Hoch/Runter
+        App a(svc);
+        press(a, {Button::Down, Button::Down, Button::Cross});
+        CHECK(a.screen() == App::Screen::Settings, "Einstellungen offen");
+        press(a, {Button::R1, Button::Cross});
+        CHECK(a.screen() == App::Screen::RulesUpdate, "Einstellungen: R1 waehlt Regel-Update");
+        press(a, {Button::Circle, Button::L1, Button::Right});
+        CHECK(a.lang() == Lang::En, "Einstellungen: L1 waehlt die Sprache, Rechts wechselt sie");
+    }
+    {  // Details: zwischen den Befunden blaettern
+        App a(svc);
+        run_check_via_ui(a, cv);
+        press(a, {Button::Cross});
+        CHECK(a.screen() == App::Screen::Detail && a.selected() == 0, "Details: offen beim ersten Befund");
+        press(a, {Button::R1});
+        CHECK(a.screen() == App::Screen::Detail && a.selected() == 1, "Details: R1 zeigt den naechsten Befund");
+        press(a, {Button::Right, Button::Right});
+        CHECK(a.selected() == 2, "Details: Rechts blaettert weiter und stoppt am letzten Befund");
+        a.render(cv);
+        press(a, {Button::L1});
+        CHECK(a.selected() == 1, "Details: L1 zeigt den vorherigen Befund");
+        press(a, {Button::Left, Button::Left, Button::Left});
+        CHECK(a.selected() == 0 && a.screen() == App::Screen::Detail, "Details: Links stoppt am ersten Befund");
+        const int plans = svc.plans;
+        press(a, {Button::R1, Button::Triangle});  // Befund 1 hat keine Reparatur
+        CHECK(a.screen() == App::Screen::Detail && svc.plans == plans, "Details: Reparatur gilt dem angezeigten Befund (ohne Fix passiert nichts)");
+        press(a, {Button::R1, Button::Triangle});  // Befund 2 hat eine
+        CHECK(a.screen() == App::Screen::FixPreview && svc.plans == plans + 1, "Details: Reparatur gilt dem angezeigten Befund (mit Fix kommt die Vorschau)");
+        press(a, {Button::Circle, Button::Circle});
+        CHECK(a.screen() == App::Screen::Findings && a.selected() == 2, "Details: die Liste steht danach beim zuletzt gezeigten Befund");
+    }
+    {  // Befundliste: seitenweise
+        FakeService big;
+        for (int i = 0; i < 25; ++i) big.result.findings.push_back(mk_finding("rule." + std::to_string(i), Severity::Warning, false));
+        App a(big);
+        run_check_via_ui(a, cv);
+        press(a, {Button::L1});
+        CHECK(a.selected() == 0, "Liste: L1 auf der ersten Seite bleibt oben");
+        press(a, {Button::R1});
+        CHECK(a.selected() == 4, "Liste: R1 blaettert eine Seite (4 Zeilen)");
+        a.render(cv);
+        press(a, {Button::Down});
+        press(a, {Button::R1});
+        CHECK(a.selected() == 9, "Liste: R1 behaelt die Zeile auf der Seite bei");
+        for (int i = 0; i < 10; ++i) a.handle(Button::R1);
+        CHECK(a.selected() == 24, "Liste: R1 endet beim letzten Befund");
+        a.render(cv);
+        press(a, {Button::L1});
+        CHECK(a.selected() == 20, "Liste: L1 geht eine Seite zurueck");
+        for (int i = 0; i < 10; ++i) a.handle(Button::L1);
+        CHECK(a.selected() == 0, "Liste: L1 endet beim ersten Befund");
+        a.render(cv);
+        press(a, {Button::Cross});
+        CHECK(a.screen() == App::Screen::Detail && a.selected() == 0, "Liste: Kreuz oeffnet weiter den gewaehlten Befund");
+    }
+    {  // Kurze Liste: L1/R1 springen zum Anfang/Ende
+        App a(svc);
+        run_check_via_ui(a, cv);
+        press(a, {Button::R1});
+        CHECK(a.selected() == 2, "Liste: R1 in einer kurzen Liste springt zum Ende");
+        press(a, {Button::L1});
+        CHECK(a.selected() == 0, "Liste: L1 in einer kurzen Liste springt zum Anfang");
+    }
+    {  // Verlauf: seitenweise; die gewaehlte Zeile bestimmt, was rueckgaengig gemacht wird
+        FakeService h;
+        for (int i = 0; i < 14; ++i) {
+            TxnInfo t = mk_history()[1];  // "undone"
+            t.txn = "T" + std::to_string(i);
+            t.state = i == 7 ? "applied" : "undone";  // die UI zeigt neueste zuerst: Index 7 steht an Position 6
+            h.hist.push_back(t);
+        }
+        App a(h);
+        press(a, {Button::Down, Button::Cross});
+        CHECK(a.screen() == App::Screen::History, "Verlauf offen");
+        press(a, {Button::R1, Button::Cross});
+        CHECK(a.screen() == App::Screen::UndoConfirm, "Verlauf: R1 blaettert eine Seite (6 Zeilen) auf die 'applied'-Zeile");
+        press(a, {Button::Cross});
+        CHECK(h.undos == 1 && h.last_undo == "T7", "Verlauf: zurueckgenommen wird die gewaehlte Transaktion");
+    }
+    {  // Beschriftungen aller neuen Hinweise existieren in beiden Sprachen
+        FakeService big;
+        for (int i = 0; i < 25; ++i) big.result.findings.push_back(mk_finding("rule." + std::to_string(i), Severity::Info, true));
+        for (int i = 0; i < 9; ++i) big.hist.push_back(mk_history()[1]);
+        for (Lang l : {Lang::De, Lang::En}) {
+            App a(big, l);
+            run_check_via_ui(a, cv);
+            a.render(cv);
+            press(a, {Button::Cross});
+            a.render(cv);
+            press(a, {Button::Circle, Button::Circle, Button::Down, Button::Cross});
+            a.render(cv);
+        }
+        CHECK(Strings::missing().empty(), "Hinweise: 'Seite' und 'Blaettern' gibt es in beiden Sprachen");
+    }
+    {  // Sicherheit: die Richtungstasten (also auch der Stick) bestaetigen und aendern nichts
+        App a(svc);
+        run_check_via_ui(a, cv);
+        press(a, {Button::Triangle});
+        CHECK(a.screen() == App::Screen::FixPreview, "Vorschau offen");
+        PadNav n;
+        Buttons out;
+        n.stick(0, 30000, 0, out);
+        n.stick(30000, 0, 10, out);
+        n.stick(0, -30000, 20, out);
+        n.poll(1000, out);
+        for (Button b : out) a.handle(b);
+        CHECK(a.screen() == App::Screen::FixPreview && svc.applies == 0, "Stick: bestaetigt keine Reparatur");
+    }
+}
+
 }  // namespace
 
 void ui_tests() {
@@ -1071,4 +1319,6 @@ void ui_tests() {
     rules_update_service_tests();
     rules_download_flow_tests();
     rules_download_service_tests();
+    pad_nav_tests();
+    shoulder_and_stick_flow_tests();
 }

@@ -74,6 +74,8 @@
   "undo.ok_sub": "Die Transaktion {txn} wurde zurückgenommen.",
   "undo.fail": "Rückgängig machen fehlgeschlagen",
   "common.report": "Bericht",
+  "common.page": "Seite",
+  "common.browse": "Blättern",
   "report.title": "Bericht",
   "report.saved": "Bericht gespeichert: {path}",
   "report.err.no_write": "Der Bericht konnte nicht gespeichert werden (kein Schreibzugriff). Der QR-Code enthält trotzdem die Kurzfassung.",

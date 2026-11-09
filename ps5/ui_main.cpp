@@ -8,6 +8,7 @@
 
 #include "medic/rules.hpp"
 #include "medic_ui/app.hpp"
+#include "medic_ui/pad_nav.hpp"
 #include "medic_ui/service.hpp"
 
 #include <SDL2/SDL.h>
@@ -22,6 +23,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include <ps5/klog.h>
 
@@ -223,7 +225,11 @@ int main() {
     bool running = true;
     unsigned frame = 0;
     int logged_buttons = 0;  // nur die ersten Tasten loggen, damit die Datei nicht waechst
+    int logged_axes = 0;     // ebenso die ersten Stick-Ausschlaege (zeigt, ob der Treiber die Achsen meldet)
     int logged_screens = 0;
+    PadNav nav;              // Steuerkreuz und linker Stick -> Richtungstasten mit Wiederholung
+    int stick_x = 0, stick_y = 0;
+    std::vector<Button> pressed;  // Tasten dieses Durchlaufs, in Reihenfolge
     App::Screen last_screen = app.screen();
     bool first_frame_logged = false;
     bool present_error_logged = false;
@@ -241,18 +247,40 @@ int main() {
                     if (pad && ev.cdevice.which == SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(pad))) {
                         SDL_GameControllerClose(pad);
                         pad = nullptr;
+                        nav.reset();
+                        stick_x = stick_y = 0;
                     }
                     break;
                 case SDL_CONTROLLERBUTTONDOWN:
-                    if (logged_buttons < 20) {
-                        trace("Taste " + std::to_string(ev.cbutton.button) + (map_button(ev.cbutton.button) ? "" : " (unbelegt)"));
+                case SDL_CONTROLLERBUTTONUP: {
+                    const bool down = ev.type == SDL_CONTROLLERBUTTONDOWN;
+                    const auto b = map_button(ev.cbutton.button);
+                    if (down && logged_buttons < 20) {
+                        trace("Taste " + std::to_string(ev.cbutton.button) + (b ? "" : " (unbelegt)"));
                         ++logged_buttons;
                     }
-                    if (auto b = map_button(ev.cbutton.button)) app.handle(*b);
+                    if (!b) break;
+                    if (*b == Button::Up || *b == Button::Down || *b == Button::Left || *b == Button::Right) nav.dpad(*b, down, SDL_GetTicks(), pressed);
+                    else if (down) pressed.push_back(*b);
+                    break;
+                }
+                case SDL_CONTROLLERAXISMOTION:
+                    // Nur der linke Stick steuert (wie das Steuerkreuz); Sticks und Trigger der rechten Seite bleiben ohne Wirkung.
+                    if (ev.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX || ev.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
+                        if (logged_axes < 10 && std::abs(ev.caxis.value) > PadNav::kOn) {
+                            trace("Stick-Achse " + std::to_string(ev.caxis.axis) + ": " + std::to_string(ev.caxis.value));
+                            ++logged_axes;
+                        }
+                        (ev.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX ? stick_x : stick_y) = ev.caxis.value;
+                        nav.stick(stick_x, stick_y, SDL_GetTicks(), pressed);
+                    }
                     break;
                 default: break;
             }
         }
+        nav.poll(SDL_GetTicks(), pressed);  // gehaltenes Hoch/Runter wiederholen
+        for (const Button b : pressed) app.handle(b);
+        pressed.clear();
 
         if (!pad && SDL_GetTicks() >= next_pad_try) {
             next_pad_try = SDL_GetTicks() + 1000;
