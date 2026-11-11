@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/collectors.hpp"
+#include "medic/history.hpp"
 
 #include "medic/rules.hpp"
 #include "medic/sqlite_check.hpp"
@@ -12,6 +13,7 @@
 #include <regex>
 #include <set>
 #include <sstream>
+#include <tuple>
 
 namespace medic {
 namespace {
@@ -1248,6 +1250,28 @@ void collect_game_files(const Platform& p, Facts& f) {
     f.set("games.case_mismatch", std::move(mismatches));
 }
 
+// Vergleich mit den eigenen frueheren Messungen (Verlauf der Check-ups, history.hpp): Abweichung der jetzigen Temperatur vom Median der
+// bis zu kMetricWindow frueheren Pruefungen, erst ab fuenf frueheren Werten. Die Ids sind die der Messwerte in rules.json.
+// sys.temp.cpu_delta, sys.temp.soc_delta (Grad Celsius), baseline.temp_samples
+void collect_baseline(const Platform& p, Facts& f) {
+    const auto history = load_history(p.fs());
+    std::size_t max_samples = 0;
+    for (const auto& [metric, fact, delta] : {std::tuple{"cpu_temp", "sys.temp.cpu_c", "sys.temp.cpu_delta"}, {"soc_temp", "sys.temp.soc_c", "sys.temp.soc_delta"}}) {
+        const json* now = f.get(fact);
+        if (!now || !now->is_number()) continue;
+        std::vector<double> past;
+        for (auto it = history.rbegin(); it != history.rend() && past.size() < kMetricWindow; ++it)
+            if (const auto m = it->metrics.find(metric); m != it->metrics.end()) past.push_back(m->second);
+        if (past.size() < 5) continue;
+        std::sort(past.begin(), past.end());
+        const std::size_t n = past.size();
+        const double median = n % 2 ? past[n / 2] : (past[n / 2 - 1] + past[n / 2]) / 2.0;
+        f.set(delta, now->get<double>() - median);
+        max_samples = std::max(max_samples, n);
+    }
+    if (max_samples) f.set("baseline.temp_samples", static_cast<long>(max_samples));
+}
+
 Facts collect_all(const Platform& p) {
     Facts f;
     collect_firmware(p, f);
@@ -1266,6 +1290,7 @@ Facts collect_all(const Platform& p) {
     collect_system_logs(p, f);
     collect_databases(p, f);
     collect_game_files(p, f);
+    collect_baseline(p, f);
     return f;
 }
 

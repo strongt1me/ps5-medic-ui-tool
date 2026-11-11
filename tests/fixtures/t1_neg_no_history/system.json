@@ -1,0 +1,1 @@
+{"fw": "12.00", "model": "CFI-TEST", "storage": [{"mount": "/data", "total": 900000000000, "free": 400000000000}], "components": {}, "temp": {"cpu": 70, "soc": 60}}

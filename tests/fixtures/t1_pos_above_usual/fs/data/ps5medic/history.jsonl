@@ -1,0 +1,6 @@
+{"ts": "20261101T100000Z", "rules": "t", "fw": "12.00", "findings": [], "metrics": {"cpu_temp": 45, "soc_temp": 40}}
+{"ts": "20261102T100000Z", "rules": "t", "fw": "12.00", "findings": [], "metrics": {"cpu_temp": 45, "soc_temp": 40}}
+{"ts": "20261103T100000Z", "rules": "t", "fw": "12.00", "findings": [], "metrics": {"cpu_temp": 45, "soc_temp": 40}}
+{"ts": "20261104T100000Z", "rules": "t", "fw": "12.00", "findings": [], "metrics": {"cpu_temp": 45, "soc_temp": 40}}
+{"ts": "20261105T100000Z", "rules": "t", "fw": "12.00", "findings": [], "metrics": {"cpu_temp": 45, "soc_temp": 40}}
+{"ts": "20261106T100000Z", "rules": "t", "fw": "12.00", "findings": [], "metrics": {"cpu_temp": 45, "soc_temp": 40}}

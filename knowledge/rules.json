@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.27",
+  "db_version": "2026.11.28",
   "metrics": [
     {"id": "cpu_temp", "fact": "sys.temp.cpu_c", "unit": "°C", "text": {"de": "CPU-Temperatur", "en": "CPU temperature"}},
     {"id": "soc_temp", "fact": "sys.temp.soc_c", "unit": "°C", "text": {"de": "SoC-Temperatur", "en": "SoC temperature"}},
@@ -1314,6 +1314,39 @@
         "reason": {
           "de": "Die Dateien und das Layout (payloads/.layout = 2) sind gelesen. Die Aussage 'nie unterstützt' ist die des Entwicklers (Issue 135); dass genau diese Dateien nicht erkannt werden, ist aus Layout und Aussage abgeleitet, nicht an einer Datei der Test-Konsole beobachtet.",
           "en": "The files and the layout (payloads/.layout = 2) are read. 'Never supported' is the developer's statement (issue 135); that exactly these files are not recognised is derived from the layout and that statement, not observed with a file on the test console."
+        }
+      }
+    },
+    {
+      "id": "sys.temp_above_usual",
+      "severity": "info",
+      "confirm_runs": 2,
+      "when": {
+        "any": [
+          {
+            "fact": "sys.temp.cpu_delta",
+            "gt": "12"
+          },
+          {
+            "fact": "sys.temp.soc_delta",
+            "gt": "12"
+          }
+        ]
+      },
+      "text": {
+        "de": "Die Konsole ist deutlich wärmer als bei deinen früheren Prüfungen: CPU oder SoC liegen mehr als 12 °C über dem Median der letzten Prüfungen (mindestens fünf). Das ist ein Vergleich mit den eigenen Messungen, keine feste Grenze. Ein laufendes Spiel, eine warme Umgebung oder eingeschränkte Belüftung kommen als Gründe infrage; bleibt es bei mehreren Prüfungen im Leerlauf, Lüftungsschlitze freihalten und bei Dauerproblemen die Konsole reinigen. Der Befund gilt erst nach zwei Prüfungen in Folge als bestätigt.",
+        "en": "The console is clearly warmer than in your earlier checks: CPU or SoC are more than 12 °C above the median of the last checks (at least five). This compares against your own measurements, it is not a fixed limit. A running game, a warm room or restricted ventilation are possible reasons; if it stays that way over several idle checks, keep the vents clear and clean the console if the problem persists. The finding counts as confirmed only after two checks in a row."
+      },
+      "evidence": "sys.temp.cpu_c",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Die jetzige Temperatur und der Median der eigenen früheren Messungen sind gelesen. Die Schwelle von 12 °C ist eine eigene Annahme, und die früheren Messungen können unter anderer Last oder Umgebung entstanden sein.",
+          "en": "The current temperature and the median of your own earlier measurements are read. The 12 °C threshold is our own assumption, and the earlier measurements may have been taken under a different load or environment."
         }
       }
     },

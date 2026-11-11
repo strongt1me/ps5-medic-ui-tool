@@ -319,6 +319,7 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
     for (const char* f : {"/data/shadowmount/manual.lst", "/data/ps5_autoloader/autoload.txt", "/data/pldmgr/autoload.txt", "/data/pldmgr/pldmgr_config.txt"})
         ex.copy_text(f, /*tail=*/false);
     ex.copy_text("/data/shadowmount/debug.log", /*tail=*/true);
+    ex.copy_text("/data/ps5medic/history.jsonl", /*tail=*/true);  // Verlauf der Check-ups (nur Regel-IDs und Zahlen): Grundlage der Vergleiche mit frueheren Messungen
     // Marke der Konfigurationsumwandlung von SM+ (nur das Vorhandensein zaehlt; die Sicherung selbst kann Zugangsdaten enthalten)
     if (const auto* v = facts.get("smp.v1_backup_ready"); v && v->is_boolean() && v->get<bool>()) ex.write("/data/shadowmount/config-v1-backup/ready.ini", "");
 

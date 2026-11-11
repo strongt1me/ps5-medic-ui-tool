@@ -334,3 +334,22 @@ Aus der Recherche (`docs/DIAGNOSE.md`) sind drei Kandidaten aufgenommen, jeweils
 Alle drei tragen eine ausdrückliche Verlässlichkeit mit Grund (mittel). Fixtures (synthetisch): `m1_*`, `m2_*`, `pl1_*` mit je einem Negativ. Der Export schreibt `payloads/.layout` nach dem Spiegeln (das Spiegeln hätte die Datei sonst leer überschrieben). Auf der Test-Konsole (Layout 2, keine losen Dateien) feuert keine der drei Regeln.
 
 **Nicht übernommen:** „Payload nach kstuff in der Autoload-Reihenfolge“ (Original nicht belegt, siehe älterer Nachtrag); Laufwerk abziehen (hinterlässt keine Datei, die Regel `smp.usb_game_closed_on_rest` und die Neustart-Befunde decken das Umfeld); verwaiste Kachel (laut Maintainer in 1.6test12 behoben, die Test-Konsole hat 1.7beta12); Dateimodus 0644/0755 (#192, ungelöst, der Folgefehler blieb); Kontowerkzeuge (nur beschreibbar mit Registry-Zugriff, den der Medic nicht hat, siehe D15).
+
+## Nachtrag: Sensorik, Batch 5 (11. Nov. 2026)
+
+**Relative Temperaturregel.** `sys.temp_above_usual` (Hinweis, `verified: todo`, Verlässlichkeit niedrig, `confirm_runs: 2`) vergleicht die jetzige CPU- und SoC-Temperatur mit dem **eigenen Median** der bis zu 20 früheren Prüfungen aus `history.jsonl` (Messwerte `cpu_temp`/`soc_temp`) und meldet mehr als 12 °C darüber, erst ab fünf früheren Werten. Neue Fakten `sys.temp.cpu_delta`, `sys.temp.soc_delta`, `baseline.temp_samples` (Collector `collect_baseline`). Das ergänzt die feste Schwelle von `sys.temp_high` (85 °C), ersetzt sie nicht: „ungewöhnlich warm für diese Konsole“ statt „heiß nach einer erfundenen Grenze“. Die 12 °C sind eine Annahme; die früheren Messungen können unter anderer Last entstanden sein (steht im Grund der Regel). Fixtures `t1_*` (synthetisch, mit eigenem `history.jsonl`: zu wenige Werte, kein Verlauf, üblich, nur SoC); der Snapshot-Export nimmt `history.jsonl` mit (nur Regel-IDs und Zahlen).
+
+**Sensor-Erkundung (Proof of Concept, kein Produktfeature).** `ps5/probe_sensors.cpp` (`make ps5-probe`, Senden an Port 9021) prüft eine feste Liste **nur lesender** Kernel-Funktionen aus den SDK-Stubs (Symboltabelle von `libkernel_sys.so`; Signaturen unbekannt) je **in einem eigenen Kindprozess** (`fork`): Export per `dlsym`, Aufruf mit Zeiger auf einen genullten Puffer, Ausgabe nach stdout und `/data/ps5medic/probe_sensors.txt`. Keine Setz-, Steuer- oder Schreibfunktionen in der Liste. Lauf an der Test-Konsole (PS5 Pro, FW 12.00, 11. Nov. 2026): `fork` funktioniert im Payload; alle 17 Namen sind exportiert. Der erste Lauf ruft zusätzlich `f(0, buf)` auf; bei `sceKernelGetSocPowerConsumption` stürzte dabei der Kindprozess ab und der Elternprozess endete ohne Ergebnis. Seitdem gibt es diese Form nur für Funktionen mit Index (`SocSensorTemperature`), und die Ausgabe wird zeilenweise geschrieben.
+
+| Funktion | Ergebnis an der Test-Konsole | Stand |
+|---|---|---|
+| `GetCpuTemperature(int*)`, `GetSocSensorTemperature(int, int*)` | 37 / 35 °C (Kontrolle, SDK-Beispiel) | bekannt, in Gebrauch |
+| `GetCpuFrequency()` | 800 000 000 (Hz, SDK-Beispiel) | dokumentiert; im Leerlauf nur der gerade eingestellte Takt, kein Gesundheitswert |
+| `GetSocPowerConsumption(buf)` | ret 0, zwei Zahlen; erste schwankt (1282, 1309, 2030), zweite 677 bis 686 | **Bedeutung und Einheit unbelegt** |
+| `GetCpuCoreClock(buf)`, `GetSocClock(buf)` | 3200/3200 und 1254/500 | Einheit (vermutlich MHz) unbelegt |
+| `IccGetPowerOperatingTime(buf)` | zweites Wort 7 853 880, nach 4,5 Minuten unverändert | grobe Einheit oder seltene Aktualisierung; unbelegt |
+| `IccGetPowerNumberOfBootShutdown(buf)` | 757 und 755 | plausibel Starts und Abschaltungen; unbelegt |
+| `AvailableFlexibleMemorySize(buf)`, `GetTscFrequency()`, `GetMainSocId()`, `GetCpumode(buf)`, `IsM2DeviceAttached(buf)`, `IccGetPowerUpCause(buf)` | Zahlen/0 | Bedeutung teils plausibel, unbelegt |
+| `GetCurrentFanDuty`, `GetCpuUsage`, `GetBioUsageAll` | Fehler (andere Argumente nötig) | Signatur unbekannt |
+
+Entscheidung: **nichts davon geht als Fakt oder Regel ins Produkt**, solange Einheit und Bedeutung nicht an einer zweiten Quelle belegt sind (Leitregel 1). Nächster Schritt wäre, die Signaturen und Einheiten aus den Disassemblies der Funktionen (REA, libkernel der Konsole) zu belegen; Lüfter-Auslastung und Leistungsaufnahme wären dann die wertvollsten Messwerte für den Verlauf.
