@@ -25,3 +25,7 @@ Dann `tools/ps5loop.py grab --title medic` (Bild der Medic-UI) und `tools/ps5loo
 - Der Payload lauscht **ohne Anmeldung auf Port 9112** im LAN. Nur in einem vertrauten Netz laufen lassen und danach beenden (`quit`).
 - Der Client braucht am PC `JxrDecApp` und `magick`, wenn Bilder des ganzen Bildschirms entschlüsselt werden.
 - Nach dem Zwischenfall vom 11. Nov. 2026 (Lasttest, siehe `docs/RULES.md`) wird DevLoop nur mit ausdrücklicher Freigabe an der Test-Konsole gestartet.
+
+## Geprüft
+
+An der Test-Konsole (FW 12.00, 11. Nov. 2026) ausprobiert: `devloop-shot` per FTP angelegt, nach wenigen Sekunden war die Datei weg und `/data/ps5medic/screenshots/medic-<ms>.png` lag da (1920 × 1080, rund 6 MB, die Startseite der UI); das Bild wurde per FTP geholt und auf der Konsole gelöscht. DevLoop selbst (virtuelles Pad, Port 9112) wurde nicht gestartet.
