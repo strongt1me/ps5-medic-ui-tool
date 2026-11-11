@@ -1205,6 +1205,43 @@ void collect_databases(const Platform& p, Facts& f) {
     f.set("db.files", std::move(files));
 }
 
+// Spielordner: Dateinamen, die sich nur in Gross-/Kleinschreibung von dem unterscheiden, was das Spiel laedt. UFS (interne SSD, UFS2-Images) und
+// nullfs darueber unterscheiden Gross- und Kleinschreibung, exFAT und FAT nicht. Belegt (ShadowMount+ #159 und #173, Eigentuemer: "Rename it" bzw.
+// "use exfat or rename files", mehrere Nutzer bestaetigen): Unity-Spiele laden Media/Modules/Il2CppUserAssemblies.prx; liegt dort
+// Il2cppUserAssemblies.prx, stuerzt das Spiel gleich nach dem Start ab (SIGSEGV in der eboot.bin, Adresse 0x0). Nur dieser eine Name ist bekannt;
+// was ein Spiel sonst laedt, laesst sich von aussen nicht wissen. case_sensitive: 1 = Dateisystem unterscheidet (Befund), 0 = exFAT/FAT (harmlos).
+void collect_game_files(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    const auto storage = p.sys().storage();
+    auto fstype_of = [&](const std::string& path) {
+        std::string best_mount, best_type;
+        for (const auto& s : storage)
+            if (path.compare(0, s.mount.size(), s.mount) == 0 && (path.size() == s.mount.size() || path[s.mount.size()] == '/' || s.mount == "/") && s.mount.size() >= best_mount.size()) {
+                best_mount = s.mount;
+                best_type = s.fstype;
+            }
+        return best_type;
+    };
+    json mismatches = json::array();
+    const json* titles = f.get("smp.titles");
+    std::set<std::string> done;
+    if (titles && titles->is_array())
+        for (const auto& t : *titles) {
+            if (!t.is_object() || !t.contains("path") || !t["path"].is_string() || !t.contains("titleid") || !t["titleid"].is_string()) continue;
+            const std::string path = t["path"].get<std::string>();
+            if (!done.insert(path).second || !fs.is_dir(path)) continue;
+            const std::string dir = join_path(path, "Media/Modules");
+            for (const auto& e : fs.list_dir(dir)) {
+                if (e.is_dir || lower(e.name) != "il2cppuserassemblies.prx" || e.name == "Il2CppUserAssemblies.prx") continue;
+                const std::string type = fstype_of(dir);
+                const bool insensitive = type == "exfatfs" || type == "msdosfs";
+                mismatches.push_back({{"titleid", t["titleid"]}, {"path", join_path(dir, e.name)}, {"expected", "Il2CppUserAssemblies.prx"}, {"actual", e.name},
+                                      {"fstype", type}, {"case_sensitive", insensitive ? 0 : 1}});
+            }
+        }
+    f.set("games.case_mismatch", std::move(mismatches));
+}
+
 Facts collect_all(const Platform& p) {
     Facts f;
     collect_firmware(p, f);
@@ -1222,6 +1259,7 @@ Facts collect_all(const Platform& p) {
     collect_savedata(p, f);
     collect_system_logs(p, f);
     collect_databases(p, f);
+    collect_game_files(p, f);
     return f;
 }
 

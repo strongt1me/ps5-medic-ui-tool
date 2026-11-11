@@ -56,7 +56,7 @@ int main() {
 
     out("Firmware: " + platform->sys().firmware() + "  Modell: " + platform->sys().model());
     out("Konsolenstart (Epoch): " + std::to_string(platform->sys().boot_epoch()));
-    for (const char* k : {"smp.version", "net.port_9021", "jb.seconds_after_boot", "jb.first_process", "ps5theme.version", "apps.oversized", "smp.api.bind", "smp.api.port", "smp.api.state", "sys.temp.cpu_c", "sys.temp.soc_c", "boot.unclean_total", "boot.unclean_14d", "boot.log_last", "errors.total", "db.count", "savedata.current_account"})
+    for (const char* k : {"smp.version", "net.port_9021", "jb.seconds_after_boot", "jb.first_process", "ps5theme.version", "apps.oversized", "smp.api.bind", "smp.api.port", "smp.api.state", "sys.temp.cpu_c", "sys.temp.soc_c", "boot.unclean_total", "boot.unclean_14d", "boot.log_last", "errors.total", "db.count", "savedata.current_account", "games.case_mismatch"})
         if (const auto* v = facts.get(k)) out(std::string("Fakt ") + k + ": " + v->dump());
     if (const auto* dbs = facts.get("db.files"); dbs && dbs->is_array())  // Datenbank-Pruefung je Datei: Pruefung 1 = ok, 0 = Fehler, -1 = nicht geprueft
         for (const auto& e : *dbs) out("  db " + e.value("path", std::string()) + "  Groesse " + e["size"].dump() + "  Pruefung " + e["integrity"].dump() + (e["integrity_skip"].get<std::string>().empty() ? std::string() : "  (nicht geprueft: " + e["integrity_skip"].get<std::string>() + ")"));

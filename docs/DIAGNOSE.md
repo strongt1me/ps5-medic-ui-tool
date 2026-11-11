@@ -21,6 +21,7 @@ Ziel: PS5 Medic wird zum vollständigen System- und Spiele-Doktor, der Hardware-
 | Datenbanken, Stufe 1 | `collect_databases` (Kopf, Größe, Journal) | `db.header_invalid`, `db.truncated`, `db.journal_pending` | sqlite.org/fileformat2.html |
 | Datenbanken, Stufe 2 | `sqlite_check.cpp` (`integrity_check` auf einer Kopie im Speicher, WAL eingerechnet) | `db.integrity_failed` | Idee nach PS5 Cleanup (GPL-3.0-or-later), eigener Code |
 | Fehlercodes | Katalog `error_codes.json` (40 Codes) | – | Sony-Seiten, update-freier Wortlaut |
+| Spielordner | `collect_game_files` (Dateiname nur in der Groß-/Kleinschreibung falsch) | `game.il2cpp_case` (mit Fix `rename_case_prx`), `game.il2cpp_case_latent` | ShadowMount+ #159, #173 (Originale gelesen) |
 
 Details und Befunde: `docs/RULES.md` (Nachträge vom 10. und 11. Nov.). Auf der Test-Konsole sind alle neuen Quellen aus dem Payload ohne Rechteanhebung lesbar (geprüft).
 
@@ -32,7 +33,7 @@ Sicherheitsleiter: Dateien lesen, bekannte SDK-Sensoren lesen, Unbekanntes im Ki
 |---|---|---|
 | 1 Fundament | Befund-Datensatz mit `status`, `urgency`, `confidence` mit Grund und getrennter Evidenz; Collector-Abdeckung (`not_tested`); Fix-Pipeline mit Dry-Run; Regelpaket-Governance | offen |
 | 2 Beobachtete Quellen | Startverlauf, Fehlerverlauf, Datenbanken, Fehlercodes ergänzen; offen: Inventar (Downloads, doppelte Pakete, Waisen), Verknüpfungen, Log-Größen | teilweise gebaut |
-| 3 Jailbreak-Stack | Regeln mit Maintainer-Deckung (Autoload nach kstuff, Schreibweise `.prx` auf UFS, Laufwerk abziehen, verwaiste Kachel), reversible Fixes | offen |
+| 3 Jailbreak-Stack | Regeln mit Maintainer-Deckung, reversible Fixes: **gebaut** `game.il2cpp_case` (+ `_latent`); „Autoload nach kstuff“ im Original nicht belegt (siehe `docs/RULES.md`); offen: Laufwerk abziehen (nur Hinweis), verwaiste Kachel, Payload-Manager-Layout | teilweise gebaut |
 | 4 Verlauf | `history.jsonl`, Baselines, Vorher/Nachher-Diff, `pending` → `confirmed` | offen |
 | 5 Sensorik und Thermik | Proof of Concept im Kindprozess an der Test-Konsole, danach relative Regeln | offen |
 | 6 Datei- und Image-Plausibilität | Kopfparser SELF/ELF, exFAT, PKG, TRP, PSF; „nicht prüfbar“ statt Befund bei verschlüsselten Segmenten | offen |

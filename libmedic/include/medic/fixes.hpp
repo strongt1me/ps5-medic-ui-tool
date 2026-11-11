@@ -13,6 +13,7 @@
 //
 // Fix-Parameter (fix_params in der Regel):
 //   rename_image_parentheses            keine
+//   rename_case_prx                     keine; liest games.case_mismatch[] (case_sensitive 1), benennt auf den erwarteten Namen im selben Ordner um
 //   smp_set_key                         section, key, legacy_key (optional), file (Standard config.ini),
 //                                       mode "set" (Standard) | "add",
 //                                       value | from {array, field, agg: "max"|"distinct"}

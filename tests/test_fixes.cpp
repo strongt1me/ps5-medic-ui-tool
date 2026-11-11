@@ -824,7 +824,7 @@ void fix_tests() {
     const FixCase cases[] = {
         {"b2_pos", "smp.parentheses_in_pfs_name", true}, {"b3_pos", "smp.autotoggle_crash_1360", true},
         {"b5_autoload", "smp.backpork_conflict", false}, {"b5_autoload_pldmgr", "smp.backpork_conflict", false},
-        {"b3_pos_default", "smp.autotoggle_crash_1360", true},{"b8_pos", "smp.duplicate_titleid", true}, {"d1_pos", "smp.duplicate_titleid", true},
+        {"b3_pos_default", "smp.autotoggle_crash_1360", true},{"b8_pos", "smp.duplicate_titleid", true}, {"d1_pos", "smp.duplicate_titleid", true}, {"gc1_pos", "game.il2cpp_case", true},
         {"b9_pos", "smp.custom_scanpath_hides_defaults", true}, {"b10_pos", "smp.scan_depth", true},
         {"b13_pos", "smp.debug_off", true},
         {"smp2_pos_blackbox", "smp.v1_keys_in_v2", true}, {"al1_pos_pldmgr", "autoload.elfldr_without_delay", true},

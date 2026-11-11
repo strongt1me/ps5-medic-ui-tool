@@ -335,6 +335,22 @@ static void new_fact_tests() {
         const std::string sample = medic::sqlite_broken_sample();
         CHECK(sample.size() >= 1536 && !medic::sqlite_integrity_check(sample).ok && medic::sqlite_integrity_check(sample).ran, "Datenbank: das synthetische Beispiel fuer den Export ist beschaedigt");
     }
+    {  // Spielordner: Dateiname nur in Gross-/Kleinschreibung falsch (UFS unterscheidet, exFAT nicht)
+        auto cm = [&](const char* fixture) -> json {
+            const auto f = facts_of(fixture);
+            const json* a = f.get("games.case_mismatch");
+            return a && a->is_array() && a->size() == 1 ? (*a)[0] : json();
+        };
+        const json pos = cm("gc1_pos");
+        CHECK(pos.is_object() && pos["titleid"] == "PPSA77500" && pos["actual"] == "Il2cppUserAssemblies.prx" && pos["expected"] == "Il2CppUserAssemblies.prx" &&
+                  pos["case_sensitive"] == 1 && pos["path"] == "/data/homebrew/PPSA77500/Media/Modules/Il2cppUserAssemblies.prx",
+              "Spielordner: Il2cppUserAssemblies.prx auf nullfs -> Dateiname weicht ab, Dateisystem unterscheidet");
+        const json ex = cm("gc1_neg_exfat");
+        CHECK(ex.is_object() && ex["fstype"] == "exfatfs" && ex["case_sensitive"] == 0, "Spielordner: auf exFAT harmlos (case_sensitive 0)");
+        const auto good = facts_of("gc1_neg_correct");
+        CHECK(good.get("games.case_mismatch") && good.get("games.case_mismatch")->empty(), "Spielordner: richtiger Name -> nichts");
+        CHECK(facts_of("a3_neg").get("games.case_mismatch") && facts_of("a3_neg").get("games.case_mismatch")->empty(), "Spielordner: ohne Spiele eine leere Liste");
+    }
     {  // C3: freier Platz in Prozent
         auto c3 = facts_of("c3_pos");
         const json* m = c3.get("storage.mounts");

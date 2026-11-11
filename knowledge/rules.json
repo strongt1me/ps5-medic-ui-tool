@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.21",
+  "db_version": "2026.11.23",
   "rules": [
     {
       "id": "hen.etahen_with_kstufflite_latest_fw",
@@ -421,6 +421,40 @@
       "fix": null,
       "source": "https://www.sqlite.org/pragma.html#pragma_integrity_check",
       "verified": "doc"
+    },
+    {
+      "id": "game.il2cpp_case",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "games.case_mismatch[].case_sensitive", "eq": "1" }
+        ]
+      },
+      "text": {
+        "de": "In einem Spielordner heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Ordner Media/Modules). Auf der internen SSD und in UFS-Images unterscheidet das Dateisystem Groß- und Kleinschreibung: Das Spiel findet die Datei nicht und stürzt gleich nach dem Start ab (SIGSEGV in der eboot.bin, Adresse 0x0). Auf exFAT-Laufwerken fällt der Unterschied nicht auf. Der Entwickler von ShadowMount+ rät dazu: umbenennen oder das Image als exFAT bauen. Der Fix benennt die Datei um; Sicherung im Journal und Rückgängig inklusive.",
+        "en": "In a game folder the file is called Il2cppUserAssemblies.prx instead of Il2CppUserAssemblies.prx (Unity game, folder Media/Modules). On the internal SSD and in UFS images the file system distinguishes upper and lower case: the game does not find the file and crashes right after launch (SIGSEGV in eboot.bin, address 0x0). On exFAT drives the difference goes unnoticed. The ShadowMount+ developer advises to rename it or build the image as exFAT. The fix renames the file; journal entry and undo included."
+      },
+      "evidence": "games.case_mismatch[].path",
+      "fix": "rename_case_prx",
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/159",
+      "verified": "community"
+    },
+    {
+      "id": "game.il2cpp_case_latent",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "games.case_mismatch[].case_sensitive", "eq": "0" }
+        ]
+      },
+      "text": {
+        "de": "In einem Spielordner auf einem exFAT- oder FAT-Laufwerk heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Ordner Media/Modules). Dort fällt der Unterschied nicht auf, das Spiel startet. Sobald der Ordner auf die interne SSD kopiert oder in ein UFS-Image gepackt wird, unterscheidet das Dateisystem Groß- und Kleinschreibung: Das Spiel findet die Datei nicht und stürzt gleich nach dem Start ab. Vor dem Umzug die Datei am PC auf Il2CppUserAssemblies.prx umbenennen. Einen automatischen Fix gibt es hier nicht.",
+        "en": "In a game folder on an exFAT or FAT drive the file is called Il2cppUserAssemblies.prx instead of Il2CppUserAssemblies.prx (Unity game, folder Media/Modules). There the difference goes unnoticed and the game starts. As soon as the folder is copied to the internal SSD or packed into a UFS image, the file system distinguishes upper and lower case: the game does not find the file and crashes right after launch. Rename the file to Il2CppUserAssemblies.prx on the PC before the move. There is no automatic fix here."
+      },
+      "evidence": "games.case_mismatch[].path",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/159",
+      "verified": "community"
     },
     {
       "id": "smp.debug_off",

@@ -80,6 +80,32 @@ void plan_rename_parentheses(FixPlan& plan, const Facts& facts, const IFileSyste
     }
 }
 
+// ---- rename_case_prx ----------------------------------------------------
+// Benennt Dateien, deren Name sich nur in Gross-/Kleinschreibung vom erwarteten unterscheidet, auf den erwarteten Namen um (games.case_mismatch[]).
+
+void plan_rename_case(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    std::set<std::string> targets;
+    for (const auto& m : array_fact(facts, "games.case_mismatch")) {
+        if (m.value("case_sensitive", 0) != 1) continue;
+        const std::string path = str_of(m, "path"), expected = str_of(m, "expected");
+        if (path.empty() || expected.empty() || expected.find('/') != std::string::npos) continue;
+        const std::string to = join_path(dir_of(path), expected);
+        if (fs.exists(to) || !targets.insert(to).second) {
+            plan.warnings.push_back("Uebersprungen (Ziel existiert bereits): " + to);
+            continue;
+        }
+        Change c;
+        c.kind = Change::Kind::Rename;
+        c.path = path;
+        c.to = to;
+        c.note_de = "Dateinamen auf die erwartete Gross-/Kleinschreibung bringen (" + base_of(path) + " -> " + expected + ")";
+        c.note_en = "Rename the file to the expected letter case (" + base_of(path) + " -> " + expected + ")";
+        plan.changes.push_back(std::move(c));
+    }
+    plan.hint_de = "Nur der Name wird geaendert (gleicher Ordner); Rueckgaengig stellt den alten Namen wieder her.";
+    plan.hint_en = "Only the name changes (same folder); undo restores the old name.";
+}
+
 // ---- smp_set_key --------------------------------------------------------
 
 void plan_set_key(FixPlan& plan, const Finding& f, const Facts& facts, const IFileSystem& fs) {
@@ -377,6 +403,8 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
         plan.warnings.push_back("Dieser Befund hat keinen automatischen Fix");
     } else if (finding.fix == "rename_image_parentheses") {
         plan_rename_parentheses(plan, facts, fs);
+    } else if (finding.fix == "rename_case_prx") {
+        plan_rename_case(plan, facts, fs);
     } else if (finding.fix == "smp_set_key") {
         plan_set_key(plan, finding, facts, fs);
     } else if (finding.fix == "smp_translate_v1_keys") {

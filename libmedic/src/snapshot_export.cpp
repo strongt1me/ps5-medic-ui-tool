@@ -456,6 +456,11 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
         }
     }
 
+    // Dateien mit abweichender Gross-/Kleinschreibung (Befund game.il2cpp_case): nur die leere Datei unter ihrem echten Namen
+    if (const auto* l = facts.get("games.case_mismatch"); l && l->is_array())
+        for (const auto& e : *l)
+            if (e.is_object() && e.contains("path") && e["path"].is_string()) ex.write(e["path"].get<std::string>(), std::string());
+
     // Scanpfade (wirksame und Standard, damit auch "versteckte" Spiele sichtbar bleiben) und gemountete Images
     std::vector<std::string> roots = strings_of(facts, "smp.scan_roots");
     for (auto& d : strings_of(facts, "smp.default_scan_roots")) roots.push_back(d);
