@@ -14,6 +14,7 @@ add_library(medic STATIC
   libmedic/src/collectors_stack.cpp
   libmedic/src/rules.cpp
   libmedic/src/checks.cpp
+  libmedic/src/games.cpp
   libmedic/src/history.cpp
   libmedic/src/selftest.cpp
   libmedic/src/error_codes.cpp

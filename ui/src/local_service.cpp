@@ -65,6 +65,11 @@ CheckResult LocalService::run_check() {
     return r;
 }
 
+std::vector<medic::GameInfo> LocalService::games() {
+    if (!facts_.get("fw.version")) return {};  // noch kein Check-up
+    return medic::collect_game_infos(facts_, last_findings_);
+}
+
 medic::FixPlan LocalService::plan_fix(const medic::Finding& f) { return medic::plan_fix(f, facts_, p_.fs()); }
 
 medic::ApplyResult LocalService::apply_fix(const medic::FixPlan& plan) {

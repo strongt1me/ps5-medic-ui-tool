@@ -14,7 +14,7 @@ namespace medic::ui {
 namespace {
 
 constexpr int W = App::kWidth, H = App::kHeight, M = 96;
-constexpr int kListVisible = 4, kHistVisible = 6, kErrVisible = 8, kChkVisible = 8, kCmpVisible = 13;
+constexpr int kListVisible = 4, kHistVisible = 6, kErrVisible = 8, kChkVisible = 8, kCmpVisible = 13, kGameVisible = 8, kGdVisible = 5;
 
 const Color kBg = rgb(14, 18, 24), kPanel = rgb(23, 29, 38), kPanelHi = rgb(33, 42, 56), kLine = rgb(42, 52, 66);
 const Color kText = rgb(232, 237, 242), kDim = rgb(141, 153, 168), kAccent = rgb(76, 154, 255);
@@ -320,6 +320,7 @@ const medic::Finding* App::current_finding() const {
 // ---- Logik ------------------------------------------------------------------
 
 void App::start_check() {
+    detail_from_game_ = false;
     screen_ = Screen::Running;
     pending_check_ = true;
     running_rendered_ = false;
@@ -417,6 +418,12 @@ void App::open_compare(int index) {
     cmp_diff_ = medic::compare_checks(cmp_new_, cmp_old_);
     cmp_top_ = 0;
     screen_ = Screen::CheckCompare;
+}
+
+void App::open_games() {
+    games_ = svc_.games();
+    game_sel_ = game_top_ = gd_sel_ = gd_top_ = 0;
+    screen_ = Screen::GameList;
 }
 
 void App::open_report() {
@@ -550,15 +557,20 @@ void App::handle(Button b) {
     switch (screen_) {
         case Screen::Start:
             if (b == Button::Up || b == Button::L1) start_sel_ = std::max(start_sel_ - 1, 0);
-            else if (b == Button::Down || b == Button::R1) start_sel_ = std::min(start_sel_ + 1, 4);
-            else if (b == Button::Left && start_sel_ >= 2) --start_sel_;   // die drei kleinen Knoepfe liegen nebeneinander
-            else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < 4) ++start_sel_;
+            else if (b == Button::Down || b == Button::R1) start_sel_ = std::min(start_sel_ + 1, 5);
+            else if (b == Button::Left && start_sel_ >= 2) --start_sel_;   // die fuenf kleinen Knoepfe liegen nebeneinander
+            else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < 5) ++start_sel_;
             else if (b == Button::Cross) {
                 if (start_sel_ == 0) start_check();
                 else if (start_sel_ == 1) open_checks();
                 else if (start_sel_ == 2) screen_ = Screen::Settings;
                 else if (start_sel_ == 3) open_error_codes();
-                else open_selftest();
+                else if (start_sel_ == 4) open_selftest();
+                else if (has_result_) open_games();
+                else {  // ohne Check-up gibt es nichts zu zeigen: erst pruefen, dann die Liste
+                    after_check_games_ = true;
+                    start_check();
+                }
             } else if (b == Button::Circle) quit_ = true;
             break;
         case Screen::Running:
@@ -588,11 +600,12 @@ void App::handle(Button b) {
                 if (!viewing_old_) begin_fix(sel_, Screen::Detail);
             }
             else if (b == Button::Square) open_error_for_finding();
-            else if (b == Button::Circle) screen_ = Screen::Findings;
+            else if (b == Button::Circle) screen_ = detail_from_game_ ? Screen::GameDetail : Screen::Findings;
             break;
         case Screen::FixPreview:
             if (b == Button::Cross && !plan_.empty()) {
                 const medic::ApplyResult r = svc_.apply_fix(plan_);
+                detail_from_game_ = false;
                 done_kind_ = DoneKind::Fix;
                 done_ok_ = r.ok;
                 done_text_ = r.ok ? r.txn : r.error;
@@ -624,6 +637,38 @@ void App::handle(Button b) {
             else if (b == Button::Square) open_history();
             else if (b == Button::Circle) screen_ = Screen::Start;
             break;
+        case Screen::GameList:
+            if (b == Button::Up) move_selection(game_sel_, game_top_, static_cast<int>(games_.size()), kGameVisible, -1);
+            else if (b == Button::Down) move_selection(game_sel_, game_top_, static_cast<int>(games_.size()), kGameVisible, 1);
+            else if (b == Button::L1) page_selection(game_sel_, game_top_, static_cast<int>(games_.size()), kGameVisible, -1);
+            else if (b == Button::R1) page_selection(game_sel_, game_top_, static_cast<int>(games_.size()), kGameVisible, 1);
+            else if (b == Button::Cross) {
+                if (!games_.empty()) {
+                    gd_sel_ = gd_top_ = 0;
+                    screen_ = Screen::GameDetail;
+                }
+            } else if (b == Button::Circle) screen_ = Screen::Start;
+            break;
+        case Screen::GameDetail: {
+            const int n = game_sel_ >= 0 && game_sel_ < static_cast<int>(games_.size()) ? static_cast<int>(games_[static_cast<std::size_t>(game_sel_)].findings.size()) : 0;
+            if (b == Button::Up) move_selection(gd_sel_, gd_top_, n, kGdVisible, -1);
+            else if (b == Button::Down) move_selection(gd_sel_, gd_top_, n, kGdVisible, 1);
+            else if (b == Button::L1 || b == Button::R1 || b == Button::Left || b == Button::Right) {  // vorheriges bzw. naechstes Spiel
+                move_selection(game_sel_, game_top_, static_cast<int>(games_.size()), kGameVisible, (b == Button::L1 || b == Button::Left) ? -1 : 1);
+                gd_sel_ = gd_top_ = 0;
+            } else if (b == Button::Cross) {
+                if (n > 0) {
+                    const std::size_t idx = games_[static_cast<std::size_t>(game_sel_)].findings[static_cast<std::size_t>(gd_sel_)];
+                    if (idx < result_.findings.size()) {
+                        sel_ = static_cast<int>(idx);
+                        top_ = std::clamp(sel_ - kListVisible + 1, 0, std::max(static_cast<int>(result_.findings.size()) - kListVisible, 0));
+                        detail_from_game_ = true;
+                        screen_ = Screen::Detail;
+                    }
+                }
+            } else if (b == Button::Circle) screen_ = Screen::GameList;
+            break;
+        }
         case Screen::CheckCompare: {
             const int rows = static_cast<int>(cmp_diff_.added.size() + cmp_diff_.resolved.size() + cmp_diff_.unchanged.size()) + 3;
             const int max_top = std::max(rows - kCmpVisible, 0);
@@ -786,6 +831,10 @@ void App::update() {
         has_result_ = true;
         sel_ = top_ = 0;
         screen_ = Screen::Findings;
+        if (after_check_games_) {
+            after_check_games_ = false;
+            open_games();
+        }
     }
     if (screen_ == Screen::SelfTest && st_state_ == StState::Running && st_rendered_) step_selftest();
     if (verify_ == Verify::Pending && verify_rendered_ && screen_ == Screen::FixDone) {  // Re-Detect nach der Reparatur
@@ -832,6 +881,8 @@ void App::render(Canvas& c) const {
         case Screen::UndoConfirm: draw_undo_confirm(c); break;
         case Screen::CheckList: draw_checklist(c); break;
         case Screen::CheckCompare: draw_compare(c); break;
+        case Screen::GameList: draw_gamelist(c); break;
+        case Screen::GameDetail: draw_gamedetail(c); break;
         case Screen::Settings: draw_settings(c); break;
         case Screen::Report: draw_report(c); break;
         case Screen::RulesUpdate: draw_rules_update(c); break;
@@ -1169,19 +1220,19 @@ void App::draw_start(Canvas& c) const {
         }
     }
 
-    // Vier kleine Kacheln mit Symbolfeld (Verlauf, Einstellungen, Fehlercodes, Selbsttest)
-    const int gap = 24, cw = (W - 2 * M - 3 * gap) / 4;
-    const char* keys[4][2] = {{"start.history", "start.history_sub"}, {"start.settings", "start.settings_sub"}, {"start.errors", "start.errors_sub"}, {"start.selftest", "start.selftest_sub"}};
-    const Icon icons[4] = {Icon::History, Icon::Gear, Icon::Book, Icon::Checklist};
-    const Color tints[4] = {kTintViolet, kTintSlate, kTintOrange, kTintTeal};
-    for (int i = 0; i < 4; ++i) {
+    // Fuenf kleine Kacheln mit Symbolfeld (Verlauf, Einstellungen, Fehlercodes, Selbsttest, Spiele)
+    const int gap = 18, cw = (W - 2 * M - 4 * gap) / 5;
+    const char* keys[5][2] = {{"start.history", "start.history_sub"}, {"start.settings", "start.settings_sub"}, {"start.errors", "start.errors_sub"}, {"start.selftest", "start.selftest_sub"}, {"start.games", "start.games_sub"}};
+    const Icon icons[5] = {Icon::History, Icon::Gear, Icon::Book, Icon::Checklist, Icon::Gamepad};
+    const Color tints[5] = {kTintViolet, kTintSlate, kTintOrange, kTintTeal, kTintPink};
+    for (int i = 0; i < 5; ++i) {
         const int x = M + i * (cw + gap);
         card(c, x, 380, cw, 190, start_sel_ == i + 1);
-        draw_icon_badge(c, icons[i], x + 28, 404, 76, tints[i]);
-        body().draw(c, x + 120, 404 + (76 - body().line_height()) / 2, S(keys[i][0]), kText, cw - 148);
-        int ty = 498;
-        for (const auto& l : wrap_text(small(), S(keys[i][1]), cw - 56, 2)) {
-            small().draw(c, x + 28, ty, l, kDim);
+        draw_icon_badge(c, icons[i], x + 22, 404, 64, tints[i]);
+        body().draw(c, x + 98, 404 + (64 - body().line_height()) / 2, S(keys[i][0]), kText, cw - 112);
+        int ty = 488;
+        for (const auto& l : wrap_text(small(), S(keys[i][1]), cw - 44, 2)) {
+            small().draw(c, x + 22, ty, l, kDim);
             ty += small().line_height() + 2;
         }
     }
@@ -1671,6 +1722,203 @@ void App::draw_checklist(Canvas& c) const {
     hints.emplace_back(PadGlyph::Cross, S("checks.view"));
     if (chk_sel_ + 1 < n) hints.emplace_back(PadGlyph::Triangle, S("checks.compare"));
     hints.emplace_back(PadGlyph::Square, S("checks.repairs"));
+    hints.emplace_back(PadGlyph::Circle, S("common.back"));
+    draw_hints(c, hints);
+}
+
+void App::draw_gamelist(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    title_icon(c, Icon::Gamepad, kTintPink, S("games.title"));
+    const int n = static_cast<int>(games_.size());
+    if (n == 0) {
+        c.fill_round_rect(M, 260, W - 2 * M, 200, 20, kPanel);
+        int ty = 300;
+        for (const auto& l : wrap_text(body(), S("games.empty"), W - 2 * M - 80, 3)) {
+            body().draw(c, M + 40, ty, l, kDim);
+            ty += body().line_height() + 4;
+        }
+        draw_hints(c, {{PadGlyph::Circle, S("common.back")}});
+        return;
+    }
+    small().draw(c, M + 4, 196, elide(small(), S("games.sub"), W - 2 * M - 300), kDim);
+    const int last = std::min(n, game_top_ + kGameVisible);
+    if (n > kGameVisible) text_right(c, small(), W - M, 148, S.fmt("findings.range", {{"from", std::to_string(game_top_ + 1)}, {"to", std::to_string(last)}, {"n", std::to_string(n)}}), kDim);
+    const int cw = W - 2 * M, ch = 76, gap = 8, y0 = 232;
+    int y = y0;
+    for (int i = game_top_; i < last; ++i, y += ch + gap) {
+        const auto& g = games_[static_cast<std::size_t>(i)];
+        card(c, M, y, cw, ch, i == game_sel_);
+        const bool has = !g.findings.empty();
+        const Icon ic = has ? sev_icon(g.worst) : Icon::Gamepad;
+        const Color col = has ? sev_color(g.worst) : kTintSlate;
+        c.fill_round_rect(M + 18, y + 10, 56, 56, 18, rgba((col >> 16) & 0xFF, (col >> 8) & 0xFF, col & 0xFF, 40));
+        draw_icon(c, ic, M + 46, y + 38, 38, col, col);
+        body().draw(c, M + 94, y + 6, elide(body(), g.name.empty() ? g.titleid : g.name, cw - 640), kText);
+        std::string kind = S("games.kind_none");
+        if (!g.sources.empty()) {
+            const auto it = std::find_if(g.sources.begin(), g.sources.end(), [](const medic::GameSource& s2) { return s2.active; });
+            kind = S((it != g.sources.end() ? it->kind : g.sources.front().kind) == "image" ? "games.kind_image" : "games.kind_folder");
+        }
+        small().draw(c, M + 94, y + 42, elide(small(), (g.name.empty() ? std::string() : g.titleid + "  ·  ") + kind, cw - 640), kDim);
+        int x = M + cw - 32;
+        if (!has) {
+            text_right(c, small(), x, y + 24, S("games.no_trace"), kDim);
+        } else {
+            int cnt[3] = {0, 0, 0};  // Info, Warnung, Kritisch
+            for (const auto fi : g.findings)
+                if (fi < result_.findings.size()) {
+                    const auto sv = result_.findings[fi].severity;
+                    ++cnt[sv == medic::Severity::Critical ? 2 : (sv == medic::Severity::Warning ? 1 : 0)];
+                }
+            const medic::Severity order[3] = {medic::Severity::Info, medic::Severity::Warning, medic::Severity::Critical};
+            for (int k = 0; k < 3; ++k) {
+                if (!cnt[k]) continue;
+                const std::string num = std::to_string(cnt[k]);
+                const int w = body().width(num);
+                body().draw(c, x - w, y + 20, num, kText);
+                draw_icon(c, sev_icon(order[k]), x - w - 26, y + 38, 34, sev_color(order[k]), sev_color(order[k]));
+                x -= w + 26 + 34;
+            }
+        }
+    }
+    if (n > kGameVisible) {  // Scrollleiste
+        const int track_h = kGameVisible * (ch + gap) - gap;
+        const int thumb_h = std::max(40, track_h * kGameVisible / n);
+        const int thumb_y = y0 + (track_h - thumb_h) * game_top_ / std::max(n - kGameVisible, 1);
+        c.fill_round_rect(W - 64, y0, 8, track_h, 4, kPanel);
+        c.fill_round_rect(W - 64, thumb_y, 8, thumb_h, 4, kDim);
+    }
+    std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
+    if (n > kGameVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
+    hints.emplace_back(PadGlyph::Cross, S("common.open"));
+    hints.emplace_back(PadGlyph::Circle, S("common.back"));
+    draw_hints(c, hints);
+}
+
+void App::draw_gamedetail(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    if (game_sel_ < 0 || game_sel_ >= static_cast<int>(games_.size())) return;
+    const auto& g = games_[static_cast<std::size_t>(game_sel_)];
+    const int total = static_cast<int>(games_.size());
+    title_icon(c, Icon::Gamepad, kTintPink, elide(title(), g.name.empty() ? g.titleid : g.name, W - 2 * M - 420));
+    text_right(c, small(), W - M, 148, S.fmt("games.pos", {{"i", std::to_string(game_sel_ + 1)}, {"n", std::to_string(total)}}), kDim);
+    small().draw(c, M + 4, 196, (g.name.empty() ? std::string() : g.titleid + "  ·  ") + S.fmt("games.console_fw", {{"fw", result_.fw.empty() ? "?" : result_.fw}}), kDim);
+
+    // Links: was Medic zu diesem Titel gefunden hat
+    const int px = M, py = 232, pw = 840, ph = 694, pad = 32, lw = 230, vw = pw - 2 * pad - lw;
+    c.fill_round_rect(px, py, pw, ph, 20, kPanel);
+    int y = py + 26;
+    const int pitch = body().line_height() + 14;
+    auto row = [&](const std::string& label, const std::string& value, Color col, bool first = true) {
+        if (first) small().draw(c, px + pad, y + (body().line_height() - small().line_height()) / 2 + 2, label, kDim);
+        body().draw(c, px + pad + lw, y, elide(body(), value, vw), col);
+        y += pitch;
+    };
+    // Gefunden in
+    if (g.sources.empty()) {
+        row(S("games.d.where"), S("games.d.where_none"), kDim);
+    } else {
+        for (std::size_t i = 0; i < g.sources.size() && i < 2; ++i) {
+            const auto& s = g.sources[i];
+            std::string v = S(s.kind == "image" ? "games.kind_image" : "games.kind_folder") + (s.active ? "  " + S("games.d.active") : std::string());
+            row(S("games.d.where"), v, s.active ? kText : kDim, i == 0);
+            if (!s.path.empty()) {
+                small().draw(c, px + pad + lw, y - 8, elide(small(), s.path, vw), kDim);
+                y += small().line_height() + 2;
+            }
+        }
+        if (g.sources.size() > 2) row("", S.fmt("games.d.more", {{"n", std::to_string(g.sources.size() - 2)}}), kDim, false);
+        if (g.sources.front().dup_count > 1) row("", S.fmt("games.d.dup", {{"n", std::to_string(g.sources.front().dup_count)}}), kWarn, false);
+    }
+    // Systemdatenbank
+    if (g.orphan) row(S("games.d.reg"), S("games.d.reg_orphan"), kWarn);
+    else if (g.registered == 1) row(S("games.d.reg"), S("games.d.reg_yes"), kText);
+    else if (g.registered == 0) row(S("games.d.reg"), S("games.d.reg_no"), kWarn);
+    else row(S("games.d.reg"), S("games.d.reg_unknown"), kDim);
+    // Firmware
+    if (g.required_fw.empty()) {
+        row(S("games.d.fw"), S("games.d.fw_none"), kDim);
+    } else {
+        const std::string fw = result_.fw.empty() ? "?" : result_.fw;
+        if (g.needs_backport) row(S("games.d.fw"), S.fmt("games.d.fw_need", {{"req", g.required_fw}, {"fw", fw}}), kWarn);
+        else if (g.backport == 1) row(S("games.d.fw"), S.fmt("games.d.fw_backport", {{"req", g.required_fw}, {"fw", fw}}), kText);
+        else row(S("games.d.fw"), S.fmt("games.d.fw_line", {{"req", g.required_fw}, {"fw", fw}}), kText);
+    }
+    // Dateien
+    {
+        bool any = false;
+        auto file_row = [&](const char* key, Color col) {
+            row(S("games.d.files"), S(key), col, !any);
+            any = true;
+        };
+        if (g.eboot_bad) file_row("games.d.eboot", kCrit);
+        if (g.case_mismatch) file_row("games.d.case", kWarn);
+        if (g.oversized) file_row("games.d.oversized", kInfo);
+        if (!any) row(S("games.d.files"), S("games.d.files_none"), kDim);
+    }
+    // Fehler der Konsole
+    if (g.errors.empty()) {
+        row(S("games.d.errors"), S("games.d.errors_none"), kDim);
+    } else {
+        for (std::size_t i = 0; i < g.errors.size() && i < 2; ++i) {
+            const auto& e = g.errors[i];
+            std::string v = g.errors.size() > 2 && i == 1 ? S.fmt("games.d.errors_more", {{"n", std::to_string(g.errors.size() - 1)}}) : g.errors[i].code + "   " + S.fmt("games.d.error_n", {{"n", std::to_string(e.count)}}) + (e.last.empty() ? std::string() : ", " + S.fmt("games.d.error_last", {{"day", e.last}}));
+            row(S("games.d.errors"), v, kWarn, i == 0);
+        }
+    }
+    if (g.foreign_saves > 0) row(S("games.d.saves"), S.fmt("games.d.saves_foreign", {{"n", std::to_string(g.foreign_saves)}}), kWarn);
+    // Log
+    if (!g.log_lines.empty()) {
+        y += 6;
+        small().draw(c, px + pad, y, S("games.d.log"), kDim);
+        y += small().line_height() + 6;
+        for (const auto& l : g.log_lines) {
+            small().draw(c, px + pad, y, elide(small(), l, pw - 2 * pad), kText);
+            y += small().line_height() + 4;
+        }
+    }
+
+    // Rechts: moegliche Gruende = die Befunde dieses Titels
+    const int rx = M + pw + 24, rw = W - M - rx;
+    small().draw(c, rx + 4, py - 2, S("games.d.reasons"), kDim);
+    const int n = static_cast<int>(g.findings.size());
+    if (n == 0) {
+        c.fill_round_rect(rx, py + 36, rw, 250, 20, kPanel);
+        int ty = py + 64;
+        for (const auto& l : wrap_text(body(), S("games.d.reasons_none"), rw - 64, 6)) {
+            body().draw(c, rx + 32, ty, l, kDim);
+            ty += body().line_height() + 4;
+        }
+    } else {
+        const int ch = 120, gap = 10;
+        int cy = py + 36;
+        const int last = std::min(n, gd_top_ + kGdVisible);
+        for (int i = gd_top_; i < last; ++i, cy += ch + gap) {
+            const std::size_t fi = g.findings[static_cast<std::size_t>(i)];
+            if (fi >= result_.findings.size()) continue;
+            const auto& f = result_.findings[fi];
+            const Color sc = sev_color(f.severity);
+            card(c, rx, cy, rw, ch, i == gd_sel_);
+            c.fill_round_rect(rx, cy + 14, 8, ch - 28, 4, sc);
+            draw_icon(c, sev_icon(f.severity), rx + 44, cy + 36, 40, sc, sc);
+            const int tx = rx + 82;
+            const int bw = draw_badge(c, tx, cy + 12, S(sev_key(f.severity)), sc);
+            small().draw(c, tx + bw + 14, cy + 16, elide(small(), f.rule_id, rw - 82 - bw - 40), kDim);
+            const auto lines = wrap_text(small(), finding_text(f), rw - 82 - 24, 2);
+            for (std::size_t k = 0; k < lines.size(); ++k) small().draw(c, tx, cy + 54 + static_cast<int>(k) * (small().line_height() + 2), lines[k], kText);
+        }
+        if (n > kGdVisible) {
+            const int track_h = kGdVisible * (ch + gap) - gap;
+            const int thumb_h = std::max(40, track_h * kGdVisible / n);
+            const int thumb_y = py + 36 + (track_h - thumb_h) * gd_top_ / std::max(n - kGdVisible, 1);
+            c.fill_round_rect(W - 64, py + 36, 8, track_h, 4, kPanel);
+            c.fill_round_rect(W - 64, thumb_y, 8, thumb_h, 4, kDim);
+        }
+    }
+    std::vector<std::pair<PadGlyph, std::string>> hints;
+    if (n > 1) hints.emplace_back(PadGlyph::UpDown, S("common.select"));
+    if (total > 1) hints.emplace_back(PadGlyph::Shoulders, S("games.browse"));
+    if (n > 0) hints.emplace_back(PadGlyph::Cross, S("games.open_finding"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }

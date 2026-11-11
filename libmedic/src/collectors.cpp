@@ -653,7 +653,7 @@ void collect_game_firmware(const Platform& p, Facts& f) {
                 backport = true;
                 break;
             }
-        games.push_back({{"titleid", app.name}, {"required_fw", required}, {"sdk_fw", decode_param_fw(param, "sdkVersion")}, {"backport", backport}});
+        games.push_back({{"titleid", app.name}, {"name", app_title_name(param, app.name)}, {"required_fw", required}, {"sdk_fw", decode_param_fw(param, "sdkVersion")}, {"backport", backport}});
         if (!fw.empty() && !backport && compare_versions(required, fw) > 0)
             need.push_back({{"titleid", app.name}, {"required_fw", required}, {"desc", app.name + ": " + required}});
     }

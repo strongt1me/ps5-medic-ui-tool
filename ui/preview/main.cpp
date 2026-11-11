@@ -170,6 +170,24 @@ int main(int argc, char** argv) {
             }
             png("19_selftest_done.png");
         }
+        {  // Pro Spiel: Liste, Einzelansicht, Befund aus der Einzelansicht
+            App ga(svc, lang);
+            auto png = [&](const char* name) {
+                ga.render(canvas);
+                if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
+                ++shots;
+            };
+            for (int i = 0; i < 5; ++i) ga.handle(Button::Down);
+            png("20_start_games.png");
+            ga.handle(Button::Cross);  // ohne Check-up: erst pruefen
+            ga.render(canvas);
+            ga.update();
+            png("21_game_list.png");
+            ga.handle(Button::Cross);
+            png("22_game_detail.png");
+            ga.handle(Button::Cross);
+            png("23_game_finding.png");
+        }
         std::cout << shots << " Bilder in " << out.string() << "\n";
     } catch (const std::exception& e) {
         std::cerr << "Fehler: " << e.what() << "\n";

@@ -1441,8 +1441,8 @@ void error_codes_flow_tests() {
         CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes: Rechts von den Einstellungen waehlt Fehlercodes");
         press(a, {Button::Circle, Button::Left, Button::Cross});
         CHECK(a.screen() == App::Screen::Settings, "Fehlercodes: Links geht zurueck zu den Einstellungen");
-        press(a, {Button::Circle, Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross});
-        CHECK(a.screen() == App::Screen::SelfTest, "Selbsttest: weiter nach unten bleibt beim letzten Knopf (Selbsttest)");
+        press(a, {Button::Circle, Button::Down, Button::Down, Button::Cross});
+        CHECK(a.screen() == App::Screen::SelfTest, "Selbsttest: von den Einstellungen zweimal Runter und Kreuz oeffnet den Selbsttest");
         press(a, {Button::Circle, Button::Up, Button::Up, Button::Up, Button::Up, Button::Up, Button::Cross});
         CHECK(a.screen() == App::Screen::Running, "Fehlercodes: Hoch bis oben, dort startet Kreuz den Check-up");
     }
@@ -2876,6 +2876,114 @@ void checks_archive_tests() {
     }
 }
 
+void games_tests() {
+    using json = nlohmann::json;
+    // Kern: Fakten und Befunde -> eine Zeile je Titel (nur synthetische Namen und IDs)
+    {
+        Facts f;
+        f.set("fw.version", "12.00");
+        f.set("games.fw", json::array({{{"titleid", "PPSA00001"}, {"name", "Testspiel Eins"}, {"required_fw", "13.60"}, {"sdk_fw", "12.00"}, {"backport", false}},
+                                       {{"titleid", "PPSA00002"}, {"name", "PPSA00002"}, {"required_fw", "11.60"}, {"sdk_fw", ""}, {"backport", true}}}));
+        f.set("games.need_backport", json::array({{{"titleid", "PPSA00001"}, {"required_fw", "13.60"}, {"desc", "PPSA00001: 13.60"}}}));
+        f.set("smp.titles", json::array({{{"titleid", "PPSA00001"}, {"path", "/mnt/usb0/Eins.exfat"}, {"root", "/mnt/usb0"}, {"level", 1}, {"dup_count", 2}, {"active", true}},
+                                         {{"titleid", "PPSA00001"}, {"path", "/mnt/usb0/PPSA00001-Ordner"}, {"root", "/mnt/usb0"}, {"level", 1}, {"dup_count", 2}, {"active", false}}}));
+        f.set("smp.images", json::array({{{"name", "Eins.exfat"}, {"ext", ".exfat"}, {"path", "/mnt/usb0/Eins.exfat"}}}));
+        f.set("appdb.entries", json::array({{{"titleid", "PPSA00002"}, {"path", "/user/app/PPSA00002"}}}));
+        f.set("appdb.orphans", json::array());
+        f.set("appdb.unregistered", json::array({{{"titleid", "PPSA00001"}, {"path", "/user/app/PPSA00001"}}}));
+        f.set("errors.pairs", json::array({{{"code", "CE-00000-0"}, {"titleid", "PPSA00002"}, {"count", 3}, {"last", "2026-11-10"}}, {{"code", "CE-00000-0"}, {"titleid", ""}, {"count", 9}, {"last", ""}}}));
+        f.set("savedata.foreign", json::array({{{"titleid", "PPSA00002"}, {"name", "Slot1"}}, {{"titleid", "PPSA00002"}, {"name", "Slot2"}}}));
+        f.set("games.eboot_problems", json::array({{{"titleid", "PPSA00002"}}}));
+        f.set("smp.log.lines", json::array({"[A] ohne Titel", "[REG] FAIL PPSA00002 0x80F50005", "[B] PPSA00001 ok"}));
+        Finding warn;
+        warn.rule_id = "t.warn";
+        warn.severity = Severity::Warning;
+        warn.evidence = {"PPSA00001: 13.60"};
+        Finding crit;
+        crit.rule_id = "t.crit";
+        crit.severity = Severity::Critical;
+        crit.evidence = {"Pfad /user/app/x", "PPSA00099 steht nur hier"};
+        Finding other;
+        other.rule_id = "t.none";
+        other.evidence = {"kein Titel"};
+        const auto games = collect_game_infos(f, {warn, crit, other});
+        CHECK(games.size() == 3, "Spiele: drei Titel (zwei aus Fakten, einer nur aus einer Evidenz)");
+        CHECK(games.size() == 3 && games[0].titleid == "PPSA00099" && games[0].worst == Severity::Critical && games[0].findings == std::vector<std::size_t>{1}, "Spiele: kritischster Titel zuerst, Befund-Index stimmt");
+        CHECK(games.size() == 3 && games[1].titleid == "PPSA00001" && games[1].worst == Severity::Warning && games[1].findings == std::vector<std::size_t>{0}, "Spiele: Warnung vor Titel ohne Befund");
+        CHECK(games.size() == 3 && games[2].titleid == "PPSA00002" && games[2].findings.empty(), "Spiele: Titel ohne Befund zuletzt");
+        const auto& g1 = games[1];
+        CHECK(g1.name == "Testspiel Eins" && g1.required_fw == "13.60" && g1.needs_backport && g1.backport == 0 && g1.installed == 1, "Spiele: Name, Firmware, Backport");
+        CHECK(g1.sources.size() == 2 && g1.sources[0].kind == "image" && g1.sources[0].active && g1.sources[1].kind == "folder" && g1.sources[1].dup_count == 2, "Spiele: Quellen mit Art, Nutzung und Duplikat");
+        CHECK(g1.registered == 0, "Spiele: Ordner ohne Eintrag in der Systemdatenbank");
+        const auto& g2 = games[2];
+        CHECK(g2.name.empty() && g2.registered == 1 && g2.backport == 1 && !g2.needs_backport, "Spiele: Name nur wenn bekannt, Eintrag vorhanden");
+        CHECK(g2.errors.size() == 1 && g2.errors[0].count == 3 && g2.errors[0].last == "2026-11-10", "Spiele: Fehler der Konsole nur des Titels (Fehler ohne Titel zaehlen nicht)");
+        CHECK(g2.foreign_saves == 2 && g2.eboot_bad && !g2.case_mismatch, "Spiele: Spielstaende und Dateipruefung");
+        CHECK(g2.log_lines.size() == 1 && g2.log_lines[0].find("PPSA00002") != std::string::npos && g1.log_lines.size() == 1, "Spiele: Logzeilen mit der Titel-ID");
+        // Ohne gelesene Systemdatenbank bleibt die Registrierung unbekannt
+        Facts g;
+        g.set("fw.version", "12.00");
+        g.set("games.fw", json::array({{{"titleid", "PPSA00003"}, {"name", "PPSA00003"}, {"required_fw", ""}, {"sdk_fw", ""}, {"backport", false}}}));
+        const auto only = collect_game_infos(g, {});
+        CHECK(only.size() == 1 && only[0].registered == -1 && only[0].findings.empty(), "Spiele: Registrierung unbekannt, wenn die Systemdatenbank nicht gelesen wurde");
+        CHECK(collect_game_infos(Facts{}, {}).empty(), "Spiele: ohne Fakten keine Titel");
+    }
+
+    // Oberflaeche mit dem echten Kern gegen eine Fixture mit Spielen (synthetisch)
+    {
+        const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+        auto platform = make_snapshot_platform(std::string(MEDIC_SOURCE_DIR) + "/tests/fixtures/g1_pos");
+        LocalService svc(*platform, rules, [] { return std::string("20261111T120000Z"); });
+        CHECK(svc.games().empty(), "Spiele: vor dem Check-up nichts");
+        App app(svc);
+        Canvas cv(App::kWidth, App::kHeight);
+        press(app, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross});  // letzter Knopf: Spiele (zu weit unten bleibt dort)
+        CHECK(app.screen() == App::Screen::Running, "Spiele: ohne Check-up wird erst geprueft");
+        app.render(cv);
+        app.update();
+        CHECK(app.screen() == App::Screen::GameList, "Spiele: nach dem Check-up die Liste");
+        app.render(cv);
+        const auto games = svc.games();
+        CHECK(!games.empty(), "Spiele: Liste hat Titel");
+        press(app, {Button::Down, Button::Up, Button::R1, Button::L1});
+        CHECK(app.screen() == App::Screen::GameList, "Spiele: Tasten in der Liste");
+        press(app, {Button::Cross});
+        CHECK(app.screen() == App::Screen::GameDetail, "Spiele: Kreuz oeffnet den Titel");
+        app.render(cv);
+        press(app, {Button::R1, Button::L1, Button::Down, Button::Up});
+        CHECK(app.screen() == App::Screen::GameDetail, "Spiele: Tasten in der Einzelansicht");
+        app.render(cv);
+        const bool has_finding = !games.empty() && !games[0].findings.empty();
+        CHECK(has_finding, "Spiele: der erste Titel hat einen Befund (Firmware-Anforderung)");
+        press(app, {Button::Cross});
+        CHECK(app.screen() == (has_finding ? App::Screen::Detail : App::Screen::GameDetail), "Spiele: Kreuz oeffnet den Befund");
+        app.render(cv);
+        press(app, {Button::Circle});
+        CHECK(app.screen() == App::Screen::GameDetail, "Spiele: Kreis aus dem Befund zurueck zum Titel");
+        press(app, {Button::Circle});
+        CHECK(app.screen() == App::Screen::GameList, "Spiele: Kreis zurueck zur Liste");
+        press(app, {Button::Circle});
+        CHECK(app.screen() == App::Screen::Start, "Spiele: Kreis zurueck zum Start");
+        press(app, {Button::Cross});  // Start-Auswahl steht noch auf Spiele: jetzt ohne neuen Check-up
+        CHECK(app.screen() == App::Screen::GameList, "Spiele: mit vorhandenem Check-up gleich die Liste");
+        press(app, {Button::Circle, Button::Up, Button::Up, Button::Up, Button::Up, Button::Up, Button::Cross});
+        CHECK(app.screen() == App::Screen::Running, "Spiele: Start-Auswahl 0 ist weiter der Check-up");
+    }
+    // Leere Liste
+    {
+        FakeService fk;
+        App app(fk);
+        Canvas cv(App::kWidth, App::kHeight);
+        press(app, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross});
+        app.render(cv);
+        app.update();
+        CHECK(app.screen() == App::Screen::GameList, "Spiele: leere Liste wird gezeigt");
+        app.render(cv);
+        press(app, {Button::Cross, Button::Down, Button::Up, Button::R1, Button::L1});
+        CHECK(app.screen() == App::Screen::GameList, "Spiele: leere Liste, Tasten tun nichts");
+    }
+}
+
 void icon_tests() {
     // Jedes Symbol malt in jeder Groesse sichtbar und innerhalb seines Feldes; Akzentfarbe und Hauptfarbe kommen vor (wo das Symbol einen Akzent hat)
     const Color bg = rgb(0, 0, 0), main_c = rgb(255, 0, 0), acc_c = rgb(0, 0, 255);
@@ -2938,6 +3046,7 @@ void ui_tests() {
     confidence_ui_tests();
     selftest_ui_tests();
     checks_archive_tests();
+    games_tests();
     icon_tests();
     shot_hook_tests();
     usertest_ui_tests();

@@ -6,6 +6,7 @@
 #include "medic/checks.hpp"
 #include "medic/error_codes.hpp"
 #include "medic/fixes.hpp"
+#include "medic/games.hpp"
 #include "medic/platform.hpp"
 #include "medic/http.hpp"
 #include "medic/report.hpp"
@@ -79,6 +80,9 @@ public:
         (void)out;
         return false;
     }
+    // Ansicht "Pro Spiel" (libmedic/include/medic/games.hpp): aus den Fakten und Befunden des letzten Check-ups dieser Sitzung; Befund-Indizes
+    // gelten fuer dessen Befundliste. Leer, solange noch kein Check-up gelaufen ist. Liest nichts neu und schreibt nichts.
+    virtual std::vector<medic::GameInfo> games() { return {}; }
     virtual medic::UndoResult undo(const std::string& txn) = 0;
     // Bericht zum letzten Check-up: schreibt ihn (nur) nach /data/ps5medic/reports/ und liefert die QR-Kurzfassung.
     // Die UI ruft das nur auf Quadrat-Taste auf.
@@ -167,6 +171,7 @@ public:
     std::vector<medic::TxnInfo> history() override;
     std::vector<medic::CheckSummary> checks() override;
     bool load_check(const std::string& id, medic::StoredCheck& out) override;
+    std::vector<medic::GameInfo> games() override;
     medic::UndoResult undo(const std::string& txn) override;
     ReportResult make_report(medic::ReportLang lang) override;
     medic::RuleUpdateOffer check_rule_update() override;

@@ -23,7 +23,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, CheckList, CheckCompare };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, CheckList, CheckCompare, GameList, GameDetail };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
 
@@ -60,6 +60,7 @@ private:
     void open_stored(int index);
     void leave_stored();
     void open_compare(int index);
+    void open_games();
     void open_report();
     void open_rules_update();
     void open_error_codes();
@@ -89,6 +90,8 @@ private:
     void draw_undo_confirm(Canvas& c) const;
     void draw_checklist(Canvas& c) const;
     void draw_compare(Canvas& c) const;
+    void draw_gamelist(Canvas& c) const;
+    void draw_gamedetail(Canvas& c) const;
     void draw_settings(Canvas& c) const;
     void draw_report(Canvas& c) const;
     void draw_rules_update(Canvas& c) const;
@@ -153,6 +156,13 @@ private:
     medic::StoredCheck cmp_new_, cmp_old_;
     medic::CheckDiff cmp_diff_;
     int cmp_top_ = 0;
+
+    // Pro Spiel: Liste der Titel (aus dem letzten Check-up dieser Sitzung) und die Einzelansicht; aus der Einzelansicht oeffnet Kreuz einen Befund
+    // im Detail-Bildschirm ("detail_from_game_": Kreis geht dorthin zurueck)
+    std::vector<medic::GameInfo> games_;
+    int game_sel_ = 0, game_top_ = 0, gd_sel_ = 0, gd_top_ = 0;
+    bool detail_from_game_ = false;
+    bool after_check_games_ = false;  // Spiele ohne Check-up gewaehlt: nach dem Check-up direkt die Liste zeigen
 
     // Selbsttest: List (letzte Ergebnisse), Confirm (Hinweis vor dem Lauf), Running (ein Test je update()), Done
     enum class StState { List, Confirm, Running, Done };
