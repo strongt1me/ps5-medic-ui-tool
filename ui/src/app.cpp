@@ -3,6 +3,8 @@
 
 #include "medic_ui/font.hpp"
 
+#include "medic/history.hpp"
+
 #include <algorithm>
 
 namespace medic::ui {
@@ -839,7 +841,18 @@ void App::draw_detail(Canvas& c) const {
         const std::string line = S.fmt("confidence.line", {{"level", S.has(lvl_key) ? S(lvl_key) : conf.level}, {"basis", S.has(basis_key) ? S(basis_key) : conf.basis}});
         text_right(c, small(), W - M, y + 4, line, conf.level == "high" ? kOk : (conf.level == "low" ? kWarn : kText));
     }
-    y += 58;
+    {
+        // Dringlichkeit und Verlauf (neu / seit wann), eine kleine Zeile unter der Kopfzeile
+        const std::string urg = medic::urgency_of(*f);
+        std::string line = S.fmt("detail.urgency", {{"u", S("urgency." + urg)}});
+        if (f->status == "new") line += "  ·  " + S("detail.history_new");
+        else if (f->status == "recurring") {
+            const std::string day = f->first_seen.size() >= 8 ? f->first_seen.substr(0, 4) + "-" + f->first_seen.substr(4, 2) + "-" + f->first_seen.substr(6, 2) : f->first_seen;
+            line += "  ·  " + S.fmt("detail.history_recurring", {{"since", day}, {"n", std::to_string(f->seen_runs)}});
+        }
+        small().draw(c, M + 4, y + 44, line, urg == "high" ? kWarn : kDim);
+        y += 82;
+    }
 
     // Erklaerung
     {

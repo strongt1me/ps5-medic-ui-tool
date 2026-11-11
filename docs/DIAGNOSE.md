@@ -33,10 +33,10 @@ Sicherheitsleiter: Dateien lesen, bekannte SDK-Sensoren lesen, Unbekanntes im Ki
 
 | Batch | Inhalt | Stand |
 |---|---|---|
-| 1 Fundament | **gebaut:** Collector-Abdeckung („nicht geprüft“, siehe `docs/RULES.md`); Fix-Pipeline mit Vorschau (Reparatur-Vorschau mit Diff, Bestätigung, Journal, Rückgängig) und **erneuter Prüfung nach der Reparatur** (die UI sagt, ob die Regel noch gemeldet wird); **Konfidenz mit Grund** (`confidence`: Stufe, Grundlage, Grund je Regel; siehe `docs/RULES.md`); **Regelpaket-Governance** (Formatstufe `requires_level`, Rollback-Schutz bestand; Ablaufdatum bewusst nicht); offen: Befund-Datensatz mit `status` und `urgency` (hängt am Verlauf, Batch 4) | teilweise gebaut |
+| 1 Fundament | **gebaut:** Collector-Abdeckung („nicht geprüft“, siehe `docs/RULES.md`); Fix-Pipeline mit Vorschau (Reparatur-Vorschau mit Diff, Bestätigung, Journal, Rückgängig) und **erneuter Prüfung nach der Reparatur** (die UI sagt, ob die Regel noch gemeldet wird); **Konfidenz mit Grund** (`confidence`: Stufe, Grundlage, Grund je Regel; siehe `docs/RULES.md`); **Regelpaket-Governance** (Formatstufe `requires_level`, Rollback-Schutz bestand; Ablaufdatum bewusst nicht); **Befund-Datensatz** mit `status`, `first_seen`, `seen_runs` und Dringlichkeit (über den Verlauf, siehe Batch 4) | **Batch 1 gebaut** |
 | 2 Beobachtete Quellen | Startverlauf, Fehlerverlauf, Datenbanken, Fehlercodes ergänzen; offen: Inventar (Downloads, doppelte Pakete, Waisen), Verknüpfungen, Log-Größen | teilweise gebaut |
 | 3 Jailbreak-Stack | Regeln mit Maintainer-Deckung, reversible Fixes: **gebaut** `game.il2cpp_case` (+ `_latent`); „Autoload nach kstuff“ im Original nicht belegt (siehe `docs/RULES.md`); offen: Laufwerk abziehen (nur Hinweis), verwaiste Kachel, Payload-Manager-Layout | teilweise gebaut |
-| 4 Verlauf | `history.jsonl`, Baselines, Vorher/Nachher-Diff, `pending` → `confirmed` | offen |
+| 4 Verlauf | **gebaut:** `history.jsonl` (Regel-IDs je Check-up), Vergleich mit der letzten Prüfung, „behoben seit“, Dringlichkeit; offen: Baselines für Messwerte, Vorher/Nachher-Diff der Fakten, `pending` → `confirmed` | teilweise gebaut |
 | 5 Sensorik und Thermik | Proof of Concept im Kindprozess an der Test-Konsole, danach relative Regeln | offen |
 | 6 Datei- und Image-Plausibilität | Kopfparser SELF/ELF, exFAT, PKG, TRP, PSF; „nicht prüfbar“ statt Befund bei verschlüsselten Segmenten | offen |
 | 7 Selbsttest-Framework | Registry, Statusmodell, `test.*`-Fakten, Marker `selftest.running`; nur lesende Tests | offen |

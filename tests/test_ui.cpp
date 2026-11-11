@@ -3,6 +3,7 @@
 // ueber LocalService gegen eine Fixture-Kopie.
 #include "check.hpp"
 #include "medic/error_codes.hpp"
+#include "medic/history.hpp"
 #include "medic_ui/app.hpp"
 #include "medic_ui/font.hpp"
 #include "medic/http.hpp"
@@ -653,9 +654,13 @@ void end_to_end_tests() {
     CHECK(tree(t.dir) == before, "E2E: nach dem Rueckgaengigmachen ist der Dateibaum wieder wie vorher");
 }
 
-std::set<std::string> full_tree(const fs::path& root) {  // anders als tree(): auch /data/ps5medic
+std::set<std::string> full_tree(const fs::path& root) {  // anders als tree(): auch /data/ps5medic (ohne den Verlauf der Check-ups: jede Pruefung haengt an history.jsonl an)
     std::set<std::string> t;
-    for (auto& e : fs::recursive_directory_iterator(root)) t.insert(fs::relative(e.path(), root).generic_string());
+    for (auto& e : fs::recursive_directory_iterator(root)) {
+        std::string rel = fs::relative(e.path(), root).generic_string();
+        if (rel == "fs/data/ps5medic/history.jsonl" || rel == "fs/data/ps5medic") continue;  // der Ordner entsteht mit dem Verlauf; seine Dateien zaehlen weiter
+        t.insert(std::move(rel));
+    }
     return t;
 }
 
@@ -2512,6 +2517,52 @@ void confidence_ui_tests() {
     CHECK(differs(high, low), "Verlaesslichkeit: Stufen sind unterscheidbar");
 }
 
+// Verlauf: der Dienst schreibt jede Pruefung in history.jsonl und vergleicht mit der letzten; die Details zeigen Dringlichkeit und Verlauf.
+void history_ui_tests() {
+    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+    TempCopy t("b8_pos");
+    auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+    int tick = 0;
+    LocalService svc(*platform, rules, [&] { return std::string("20261111T1") + std::to_string(10 + tick++) + "00Z"; });
+    const auto r1 = svc.run_check();
+    CHECK(!r1.findings.empty() && r1.findings[0].status.empty() && r1.resolved.empty(), "Verlauf: erste Pruefung ohne Vergleich");
+    const auto r2 = svc.run_check();
+    CHECK(r2.findings.size() == r1.findings.size() && r2.findings[0].status == "recurring" && r2.findings[0].seen_runs == 2, "Verlauf: zweite Pruefung meldet denselben Befund als wiederkehrend");
+    CHECK(load_history(platform->fs()).size() == 2, "Verlauf: beide Pruefungen stehen in history.jsonl");
+    const auto rep = svc.make_report(ReportLang::De);
+    CHECK(rep.saved, "Verlauf: Bericht gespeichert");
+    std::string body;
+    platform->fs().read_file(rep.path, body);
+    CHECK(body.find("Verlauf: seit 2026-11-11 (2 Prüfungen in Folge)") != std::string::npos, "Verlauf: der Bericht nennt die Folge");
+
+    auto differs = [](const Canvas& a, const Canvas& b) {
+        for (int y = 0; y < a.height(); y += 2)
+            for (int x = 0; x < a.width(); x += 2)
+                if (a.at(x, y) != b.at(x, y)) return true;
+        return false;
+    };
+    auto detail = [&](const std::string& status, int runs, Canvas& cv) {
+        FakeService fk;
+        fk.result.fw = "12.00";
+        fk.result.model = "CFI-7021";
+        fk.result.rules_version = "t";
+        Finding f = mk_finding("a.warn", Severity::Warning, false);
+        f.status = status;
+        f.first_seen = "20261105T080000Z";
+        f.seen_runs = runs;
+        fk.result.findings = {f};
+        App app(fk);
+        run_check_via_ui(app, cv);
+        press(app, {Button::Cross});
+        app.render(cv);
+    };
+    Canvas none(App::kWidth, App::kHeight), fresh(App::kWidth, App::kHeight), rec(App::kWidth, App::kHeight);
+    detail("", 0, none);
+    detail("new", 1, fresh);
+    detail("recurring", 4, rec);
+    CHECK(differs(none, fresh) && differs(fresh, rec) && differs(none, rec), "Verlauf: die Details zeigen neu und wiederkehrend verschieden");
+}
+
 }  // namespace
 
 void ui_tests() {
@@ -2523,6 +2574,7 @@ void ui_tests() {
     coverage_ui_tests();
     redetect_ui_tests();
     confidence_ui_tests();
+    history_ui_tests();
     edge_tests();
     end_to_end_tests();
     undo_in_new_session_tests();

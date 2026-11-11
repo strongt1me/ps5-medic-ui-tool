@@ -24,6 +24,7 @@ struct CheckResult {
     std::string fw, model, rules_version;
     std::vector<medic::Finding> findings;
     std::vector<medic::CoverageResult> coverage;  // Pruefbereiche; nicht gepruefte sind "nicht geprueft", nie "in Ordnung"
+    std::vector<std::string> resolved;            // Regeln, die die letzte Pruefung noch meldete und die jetzt fehlen
 };
 
 struct ReportResult {
@@ -139,6 +140,7 @@ private:
     std::string reported_error_;  // fuer den Bericht vermerkter Fehlercode
     medic::Facts facts_;
     std::vector<medic::Finding> last_findings_;
+    std::vector<std::string> last_resolved_;
     std::optional<medic::ErrorCodeSet> codes_before_install_;  // dito fuer die Fehlercodes
     bool reload_error_codes();
     std::optional<medic::RuleSet> rules_before_install_;  // fuer den Rollback, wenn es vorher keine Datei im Wissensordner gab

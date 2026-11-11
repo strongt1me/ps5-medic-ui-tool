@@ -10,6 +10,7 @@
 #include "medic/collectors.hpp"
 #include "medic/diff.hpp"
 #include "medic/fixes.hpp"
+#include "medic/history.hpp"
 #include "medic/platform.hpp"
 #include "medic/qr.hpp"
 #include "medic/report.hpp"
@@ -118,6 +119,7 @@ int cmd_check(const Args& a) {
                                        {"fix", f.fix.empty() ? nlohmann::json(nullptr) : nlohmann::json(f.fix)},
                                        {"source", f.source},
                                        {"verified", f.verified},
+                                       {"urgency", medic::urgency_of(f)},
                                        {"confidence", {{"level", conf.level}, {"basis", conf.basis}, {"reason", a.lang == "de" ? conf.reason_de : conf.reason_en}}}});
         }
         std::cout << out.dump(2) << "\n";

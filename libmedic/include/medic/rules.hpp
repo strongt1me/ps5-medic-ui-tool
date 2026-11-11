@@ -48,6 +48,10 @@ struct Finding {
     std::string source;
     std::string verified;
     Confidence confidence;  // leer: Standard aus `verified` (effective_confidence)
+    // Aus dem Verlauf der Check-ups (history.hpp); leer, wenn es keinen frueheren Check-up gibt.
+    std::string status;      // new (nicht in der letzten Pruefung) | recurring (auch in der letzten Pruefung)
+    std::string first_seen;  // Zeitstempel der ersten Pruefung der aktuellen Folge ("YYYYMMDDTHHMMSSZ")
+    int seen_runs = 0;       // Pruefungen in Folge, diese eingeschlossen
 };
 
 // Verlaesslichkeit des Befunds; fehlende Felder (Befunde aus Tests oder alten Regeldateien) kommen aus `verified`.

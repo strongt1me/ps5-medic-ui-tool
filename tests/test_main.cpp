@@ -524,6 +524,7 @@ int main() {
     error_code_tests();
     codes_update_tests();
     text_policy_tests();
+    history_tests();
     ui_tests();
     std::cout << g_pass << " Pruefungen ok, " << g_fail << " fehlgeschlagen\n";
     return g_fail ? 1 : 0;

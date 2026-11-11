@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/report.hpp"
 
+#include "medic/history.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -462,6 +464,21 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
             if (!reason.empty()) o << (de ? ". Grund: " : ". Reason: ") << reason;
             o << "\n";
         }
+        {
+            const std::string urgency = urgency_of(x);
+            o << "- " << (de ? "Dringlichkeit: " : "Urgency: ") << (urgency == "high" ? (de ? "hoch" : "high") : (urgency == "medium" ? (de ? "mittel" : "medium") : (de ? "niedrig" : "low")));
+            if (x.status == "new") o << (de ? ". Verlauf: neu seit der letzten Prüfung" : ". History: new since the last check");
+            else if (x.status == "recurring") {
+                const std::string day = x.first_seen.size() >= 8 ? x.first_seen.substr(0, 4) + "-" + x.first_seen.substr(4, 2) + "-" + x.first_seen.substr(6, 2) : x.first_seen;
+                o << (de ? ". Verlauf: seit " : ". History: since ") << day << " (" << x.seen_runs << (de ? " Prüfungen in Folge)" : " checks in a row)");
+            }
+            o << "\n";
+        }
+        o << "\n";
+    }
+    if (!in.resolved.empty()) {
+        o << (de ? "## Seit der letzten Prüfung behoben (" : "## Resolved since the last check (") << in.resolved.size() << ")\n\n";
+        for (const auto& id : in.resolved) o << "- " << id << "\n";
         o << "\n";
     }
 
