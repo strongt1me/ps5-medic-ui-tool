@@ -370,6 +370,21 @@ void plan_content_tests() {
         Ctx k = make_ctx(tmp.dir, "smp.duplicate_titleid", FixOptions{"/mnt/usb0/PPSA01234.ffpfs"});
         CHECK(k.plan.changes.size() == 1 && k.plan.changes[0].path == "/data/homebrew/GameA", "duplicate: keep waehlt die andere Quelle");
     }
+    {  // Ordner und Image desselben Titels: die Link-Datei von SM+ (/user/app/<TITLE_ID>/mount_img.lnk) ordnet dem Image (ohne ID im Namen) den Titel zu;
+       // behalten wird die Quelle, die SM+ nutzt (das Image), der Ordner geht weg. Nach Pfadreihenfolge allein bliebe der Ordner (P < T).
+        TempCopy tmp("d1_pos");
+        Ctx c = make_ctx(tmp.dir, "smp.duplicate_titleid");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].path == "/mnt/usb0/homebrew/PPSA77001" && c.plan.changes[0].to == "/mnt/usb0/homebrew/.duplicates/PPSA77001",
+              "duplicate: Ordner und Image desselben Titels, die von SM+ genutzte Quelle bleibt");
+        auto p = make_snapshot_platform(tmp.dir.string(), false);
+        const Facts f = collect_all(*p);
+        int active = 0, with_id = 0;
+        for (const auto& t : *f.get("smp.titles")) {
+            if (t["titleid"] == "PPSA77001") ++with_id;
+            if (t["titleid"] == "PPSA77001" && t["active"] == true) ++active;
+        }
+        CHECK(with_id == 2 && active == 1, "duplicate: beide Quellen haben die TITLE_ID, genau eine ist aktiv");
+    }
     {
         TempCopy tmp("b10_pos");
         Ctx c = make_ctx(tmp.dir, "smp.scan_depth");
@@ -809,7 +824,7 @@ void fix_tests() {
     const FixCase cases[] = {
         {"b2_pos", "smp.parentheses_in_pfs_name", true}, {"b3_pos", "smp.autotoggle_crash_1360", true},
         {"b5_autoload", "smp.backpork_conflict", false}, {"b5_autoload_pldmgr", "smp.backpork_conflict", false},
-        {"b3_pos_default", "smp.autotoggle_crash_1360", true},{"b8_pos", "smp.duplicate_titleid", true},
+        {"b3_pos_default", "smp.autotoggle_crash_1360", true},{"b8_pos", "smp.duplicate_titleid", true}, {"d1_pos", "smp.duplicate_titleid", true},
         {"b9_pos", "smp.custom_scanpath_hides_defaults", true}, {"b10_pos", "smp.scan_depth", true},
         {"b13_pos", "smp.debug_off", true},
         {"smp2_pos_blackbox", "smp.v1_keys_in_v2", true}, {"al1_pos_pldmgr", "autoload.elfldr_without_delay", true},

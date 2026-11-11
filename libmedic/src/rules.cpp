@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/rules.hpp"
+#include "medic/text_policy.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -333,6 +334,7 @@ RuleSet load_rules_from_string(const std::string& text) {
     if (j.is_discarded()) fail("Datei", "kein gueltiges JSON");
     if (!j.is_object()) fail("Datei", "Wurzel muss ein Objekt sein");
     if (!j.contains("schema_version") || j["schema_version"] != 1) fail("Datei", "schema_version muss 1 sein");
+    require_no_system_update_advice(j, "rules");  // nie ein Systemupdate nennen (docs/RULES.md, Textregel)
     RuleSet rs;
     rs.db_version = need_string(j, "db_version", "Datei");
     if (!j.contains("rules") || !j["rules"].is_array()) fail("Datei", "'rules' fehlt oder ist kein Array");

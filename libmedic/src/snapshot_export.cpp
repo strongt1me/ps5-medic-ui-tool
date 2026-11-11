@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/snapshot_export.hpp"
 
+#include "medic/sqlite_check.hpp"
+
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <cstdint>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <set>
 
 namespace fs = std::filesystem;
@@ -89,6 +94,75 @@ std::string elf_stub(const std::string& state, const std::string& real_head) {
     h[6] = 1;
     h[0x36] = 56;  // e_phentsize, e_phnum = 0
     return h;
+}
+
+// Kleine PSF-Datei (param.sfo-Format) mit den Feldern, die der Collector liest. ACCOUNT_ID als 16 Hexzeichen.
+std::string psf_bytes(const std::string& account_hex, const std::string& titleid, const std::string& dir_name, const std::string& main_title) {
+    struct Field {
+        const char* key;
+        bool binary;
+        std::string value;
+    };
+    std::vector<Field> fields = {{"ACCOUNT_ID", true, account_hex}, {"MAINTITLE", false, main_title}, {"SAVEDATA_DIRECTORY", false, dir_name}, {"TITLE_ID", false, titleid}};
+    auto le = [](std::string& out, std::uint32_t v, int bytes) {
+        for (int i = 0; i < bytes; ++i) out += static_cast<char>((v >> (8 * i)) & 0xff);
+    };
+    std::string keys, data, entries;
+    for (const auto& f : fields) {
+        std::string value;
+        if (f.binary) {
+            for (std::size_t i = 0; i + 1 < f.value.size(); i += 2) value += static_cast<char>(std::stoi(f.value.substr(i, 2), nullptr, 16));
+        } else {
+            value = f.value + '\0';
+        }
+        le(entries, static_cast<std::uint32_t>(keys.size()), 2);
+        le(entries, f.binary ? 0x0004 : 0x0204, 2);
+        le(entries, static_cast<std::uint32_t>(value.size()), 4);
+        le(entries, static_cast<std::uint32_t>(value.size()), 4);
+        le(entries, static_cast<std::uint32_t>(data.size()), 4);
+        keys += std::string(f.key) + '\0';
+        data += value;
+    }
+    while (keys.size() % 4 != 0) keys += '\0';
+    const std::uint32_t key_table = 20 + static_cast<std::uint32_t>(entries.size());
+    std::string out("\0PSF", 4);
+    le(out, 0x101, 4);
+    le(out, key_table, 4);
+    le(out, key_table + static_cast<std::uint32_t>(keys.size()), 4);
+    le(out, static_cast<std::uint32_t>(fields.size()), 4);
+    return out + entries + keys + data;
+}
+
+// Zeile des Startverlaufs im Format der Konsole (UTC), z. B. "Mon, 12 Oct 2026 16:52:51 +0000 Shutdown".
+std::string vsh_line(std::int64_t epoch, const std::string& msg) {
+    const std::time_t t = static_cast<std::time_t>(epoch);
+    std::tm tmv{};
+    gmtime_r(&t, &tmv);
+    char buf[64];
+    std::strftime(buf, sizeof buf, "%a, %d %b %Y %H:%M:%S +0000", &tmv);
+    return std::string(buf) + " " + msg + "\n";
+}
+
+// Ersatz fuer eine SQLite-Datei mit genau den Merkmalen, die der Collector liest: Seitengroesse, Seitenzahl im Kopf (Aenderungszaehler gleich
+// "Version-valid-for") und Dateigroesse. Der Inhalt ist leer; es wird nie ein echter Inhalt exportiert.
+std::string sqlite_stub(unsigned page, std::uint64_t header_pages, std::uint64_t size) {
+    std::string s(static_cast<std::size_t>(std::max<std::uint64_t>(size, 100)), '\0');
+    s.replace(0, 16, std::string("SQLite format 3\0", 16));
+    auto put32 = [&](std::size_t o, std::uint32_t v) {
+        for (int i = 0; i < 4; ++i) s[o + static_cast<std::size_t>(i)] = static_cast<char>((v >> (24 - 8 * i)) & 0xff);
+    };
+    const unsigned enc = page == 65536 ? 1 : page;
+    s[16] = static_cast<char>(enc >> 8);
+    s[17] = static_cast<char>(enc & 0xff);
+    s[18] = 1;
+    s[19] = 1;
+    s[21] = 64;
+    s[22] = 32;
+    s[23] = 32;
+    put32(24, 1);
+    put32(28, static_cast<std::uint32_t>(header_pages));
+    put32(92, 1);
+    return s;
 }
 
 class Exporter {
@@ -289,6 +363,96 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
             if (e.contains("sdk_fw") && e["sdk_fw"].is_string())
                 if (const std::string sdk = encode(e["sdk_fw"].get<std::string>()); !sdk.empty()) param["sdkVersion"] = sdk;
             ex.write("/user/app/" + e["titleid"].get<std::string>() + "/sce_sys/param.json", param.dump());
+        }
+    }
+
+    // Link-Dateien von ShadowMount+ (Pfad des Images bzw. Ordners je Titel): damit entsteht der Duplikat-Befund (Ordner und Image
+    // desselben Titels) auch am PC aus dem Export.
+    if (const auto* l = facts.get("smp.mount_links"); l && l->is_array())
+        for (const auto& e : *l) {
+            if (!e.is_object() || !e.contains("titleid") || !e["titleid"].is_string() || !e.contains("kind") || !e["kind"].is_string() || !e.contains("path") || !e["path"].is_string()) continue;
+            const std::string kind = e["kind"].get<std::string>();
+            if (kind != "image" && kind != "folder") continue;
+            ex.write("/user/app/" + e["titleid"].get<std::string>() + "/" + (kind == "image" ? "mount_img.lnk" : "mount.lnk"), e["path"].get<std::string>());
+        }
+
+    // Spielstaende mit fremder Konto-ID (Befund savedata.foreign_account): nur die kleinen Metadaten (PSF), mit Platzhalter statt der
+    // echten Konto-IDs (Konto-IDs gehoeren nicht in einen Export); das Ergebnis am PC bleibt dasselbe, weil nur "gleich/verschieden" zaehlt.
+    if (const auto* l = facts.get("savedata.foreign"); l && l->is_array()) {
+        std::map<std::string, std::string> placeholder;  // echte ID -> Platzhalter
+        std::set<std::string> memory_written;
+        for (const auto& e : *l) {
+            auto str = [&](const char* k) { return e.is_object() && e.contains(k) && e[k].is_string() ? e[k].get<std::string>() : std::string(); };
+            const std::string path = str("path"), titleid = str("titleid"), name = str("name"), uid = str("uid");
+            if (path.empty() || titleid.empty() || name.empty() || uid.empty() || !safe_name(uid) || !safe_name(titleid)) continue;
+            auto it = placeholder.emplace(str("account"), std::string()).first;
+            if (it->second.empty()) it->second = "0" + std::to_string(placeholder.size() + 1) + "00000000000000";  // 0200..., 0300...
+            ex.write(path, psf_bytes(it->second, titleid, name, str("title")));
+            const std::string dir = "/user/home/" + uid + "/savedata_prospero_meta/user/" + titleid;
+            if (memory_written.insert(uid).second) ex.write(dir + "/sce_bu_sce_sdmemory.sfo", psf_bytes("0100000000000000", titleid, "sce_sdmemory", "Gespeicherte Daten"));
+        }
+    }
+
+    // Startverlauf und Fehlerverlauf: nur das, was die Befunde brauchen (Zeitpunkte der Neustarts ohne Herunterfahren, wiederholte Fehler je Titel).
+    if (const auto* u = facts.get("boot.unclean"); u && u->is_array()) {
+        std::string log;
+        std::int64_t last_epoch = 0;
+        for (const auto& e : *u) {
+            if (!e.is_object() || !e.contains("epoch") || !e["epoch"].is_number_integer()) continue;
+            const std::int64_t t = e["epoch"].get<std::int64_t>();
+            const std::string cause = e.contains("cause") && e["cause"].is_string() ? e["cause"].get<std::string>() : std::string("MAIN_SOC");
+            log += vsh_line(t - 7200, "Boot up (build#1, MAIN_SOC)");
+            log += vsh_line(t, "Boot up (build#1, " + cause + ")");
+            log += vsh_line(t + 60, "Shutdown");
+            last_epoch = std::max(last_epoch, t + 60);
+        }
+        if (const auto* le = facts.get("boot.log_last_epoch"); le && le->is_number_integer()) {
+            const std::int64_t t = le->get<std::int64_t>();
+            if (t > last_epoch) log += vsh_line(t, "Shutdown");
+        }
+        if (!log.empty()) ex.write("/system_data/priv/vshlog/vshlog.0.txt", log);
+    }
+    if (const auto* l = facts.get("errors.pairs"); l && l->is_array()) {
+        int n = 0;
+        for (const auto& e : *l) {
+            if (!e.is_object() || !e.contains("code") || !e["code"].is_string() || !e.contains("count") || !e["count"].is_number_integer()) continue;
+            const std::string title = e.contains("titleid") && e["titleid"].is_string() ? e["titleid"].get<std::string>() : std::string();
+            const std::int64_t when = e.contains("last_epoch") && e["last_epoch"].is_number_integer() ? e["last_epoch"].get<std::int64_t>() : 0;
+            const int count = std::min<int>(e["count"].get<int>(), 100);
+            for (int i = 0; i < count && n < 400; ++i, ++n) {
+                char name[32];
+                std::snprintf(name, sizeof name, "%08X.json", n);
+                json j = {{"shortError", e["code"]}, {"titleId", title}, {"tick", (when + 62135596800LL) * 1000000LL}};
+                ex.write(std::string("/system_data/priv/error/history/") + name, j.dump());
+            }
+        }
+    }
+
+    // Datenbanken mit Befund (Kopf kaputt, abgeschnitten, unfertiges Journal): nur Ersatzdateien mit denselben Merkmalen, nie der Inhalt.
+    if (const auto* l = facts.get("db.files"); l && l->is_array()) {
+        for (const auto& e : *l) {
+            auto num = [&](const char* k) { return e.is_object() && e.contains(k) && e[k].is_number_integer() ? e[k].get<std::int64_t>() : std::int64_t(0); };
+            if (!e.is_object() || !e.contains("path") || !e["path"].is_string()) continue;
+            const std::string path = e["path"].get<std::string>();
+            const bool bad = num("header_bad") != 0, trunc = num("truncated") != 0, unaligned = num("unaligned") != 0, hot = num("journal_hot") != 0;
+            if (num("integrity") == 0 && num("readable") != 0) {  // Inhalt beschaedigt: nur eine synthetische beschaedigte Datenbank, nie der echte Inhalt
+                const std::string sample = sqlite_broken_sample();
+                if (!sample.empty()) ex.write(path, sample);
+                continue;
+            }
+            if (!(bad || trunc || unaligned || hot) || num("readable") == 0) continue;
+            const std::uint64_t size = static_cast<std::uint64_t>(num("size"));
+            if (size > (8u << 20)) {
+                ex.warnings.push_back("Datenbank zu gross fuer den Ersatz, uebersprungen: " + path);
+                continue;
+            }
+            if (bad) {
+                ex.write(path, std::string(100, '\0'));
+                continue;
+            }
+            const unsigned page = static_cast<unsigned>(num("page_size"));
+            ex.write(path, sqlite_stub(page, static_cast<std::uint64_t>(num("header_pages")), size));
+            if (hot) ex.write(path + "-journal", std::string("\xd9\xd5\x05\xf9\x20\xa1\x63\xd7", 8) + std::string(504, '\0'));
         }
     }
 

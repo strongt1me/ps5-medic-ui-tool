@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/error_codes.hpp"
+#include "medic/text_policy.hpp"
 
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -125,6 +126,7 @@ ErrorCodeSet load_error_codes_from_string(const std::string& text) {
     if (j.is_discarded()) fail("Datei", "kein gueltiges JSON");
     if (!j.is_object()) fail("Datei", "Wurzel muss ein Objekt sein");
     if (!j.contains("schema_version") || j["schema_version"] != 1) fail("Datei", "schema_version muss 1 sein");
+    require_no_system_update_advice(j, "error_codes");  // nie ein Systemupdate nennen (docs/RULES.md, Textregel)
     for (auto it = j.begin(); it != j.end(); ++it) {
         const std::string& k = it.key();
         if (k != "schema_version" && k != "db_version" && k != "codes" && (k.empty() || k[0] != '_')) fail("Datei", "unbekannter Schluessel '" + k + "'");

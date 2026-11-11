@@ -2,6 +2,7 @@
 #include "medic/collectors.hpp"
 
 #include "medic/rules.hpp"
+#include "medic/sqlite_check.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -301,6 +302,7 @@ std::uint64_t exfat_cluster_size(const IFileSystem& fs, const std::string& path)
 struct Entry {
     std::string path, name, ext, titleid, root;  // root = Scanpfad, unter dem der Eintrag gefunden wurde
     bool is_image = false;
+    bool active = false;  // diese Quelle nutzt SM+ gerade (Link-Datei unter /user/app/<TITLE_ID>/)
     std::uint64_t size = 0;
     int level = 0;  // 1 = direkt im Scanpfad
 };
@@ -776,7 +778,39 @@ void collect_shadowmount(const Platform& p, Facts& f) {
         }
         f.set("smp.missing_drive_paths", std::move(missing));
     }
+    // SM+ legt je installiertem Titel /user/app/<TITLE_ID>/mount_img.lnk (Pfad des Images) bzw. mount.lnk (Pfad des Ordners; bei
+    // Images der Einhaengepunkt unter /mnt/shadowmnt) an (echtes Log und echte Dateien der Test-Konsole, 10. Nov. 2026). Damit bekommt
+    // ein Image ohne TITLE_ID im Namen (z. B. Spiel.exfat) seine TITLE_ID, und ein Ordner desselben Titels daneben wird als Duplikat
+    // erkannt: SM+ nutzt nur eine Quelle und meldet bei jedem Start "Duplikat <TITLE_ID> ignoriert". "active" = die von SM+ genutzte.
+    std::map<std::string, std::string> active_source;  // Quellpfad -> TITLE_ID
+    json links = json::array();
+    {
+        static const std::regex id_re("^PPSA[0-9]{5}$");
+        for (const auto& app : fs.list_dir("/user/app")) {
+            if (!app.is_dir || !std::regex_match(app.name, id_re)) continue;
+            for (const char* kind : {"image", "folder"}) {
+                std::string text;
+                if (!fs.read_file(join_path(join_path("/user/app", app.name), std::string(kind) == "image" ? "mount_img.lnk" : "mount.lnk"), text)) continue;
+                const auto nl = text.find_first_of("\r\n");
+                if (nl != std::string::npos) text.erase(nl);
+                text = trim(text);
+                while (!text.empty() && text.back() == '\0') text.pop_back();
+                if (text.size() < 2 || text.size() > 512 || text[0] != '/') continue;
+                if (std::string(kind) == "folder" && starts_with_dir(text, "/mnt/shadowmnt")) continue;  // Einhaengepunkt eines Images, keine Quelle
+                active_source[text] = app.name;
+                links.push_back({{"titleid", app.name}, {"kind", kind}, {"path", text}});
+            }
+        }
+    }
+    f.set("smp.mount_links", std::move(links));
+
     auto entries = scan_roots(fs, roots);
+    for (auto& [path, e] : entries) {
+        const auto it = active_source.find(path);
+        if (it == active_source.end()) continue;
+        if (e.titleid.empty() && e.is_image) e.titleid = it->second;
+        if (e.titleid == it->second) e.active = true;
+    }
 
     json images = json::array(), deep = json::array();
     std::map<std::string, int> count;
@@ -795,7 +829,7 @@ void collect_shadowmount(const Platform& p, Facts& f) {
             deep.push_back({{"path", e.path}, {"level", e.level}, {"titleid", e.titleid}});
             continue;
         }
-        if (!e.titleid.empty()) titles.push_back({{"titleid", e.titleid}, {"path", e.path}, {"root", e.root}, {"level", e.level}, {"dup_count", count[e.titleid]}});
+        if (!e.titleid.empty()) titles.push_back({{"titleid", e.titleid}, {"path", e.path}, {"root", e.root}, {"level", e.level}, {"dup_count", count[e.titleid]}, {"active", e.active}});
     }
     f.set("smp.images", std::move(images));
     f.set("smp.titles", std::move(titles));
@@ -864,6 +898,313 @@ void collect_shadowmount(const Platform& p, Facts& f) {
     collect_mounts(fs, f);
 }
 
+// Spielstaende und Konto: Die Metadaten jedes Spielstands (/user/home/<uid>/savedata_prospero_meta/user/<TITLE_ID>/[sce_bu_]<Name>.sfo,
+// Format PSF) tragen ACCOUNT_ID, die Konto-ID, mit der er erstellt wurde. Der "Spielstandspeicher" sce_sdmemory legt das System bei jedem
+// Spielstart neu an, seine ACCOUNT_ID ist daher die des jetzt aktiven Kontos. Beobachtung auf der Test-Konsole (10. Nov. 2026): Alle
+// Spielstaende bis zum 3. Nov. tragen eine andere Konto-ID als die Speicher seit dem 7. Nov.; drei verschiedene Titel mit der alten ID
+// zeigten im Spiel "Die gespeicherten Daten koennen nicht geladen werden, weil sie beschaedigt sind" (Eintrag "Beschaedigte Daten"),
+// obwohl ihre Abbilder strukturell gesund sind. Ein Block-Vergleich von Abbild und Sicherung taugt dafuer nicht: auch die Abbilder
+// von Spielstaenden, die nichts melden, weichen dort massiv ab. Die Liste in den Einstellungen zeigt alte Spielstaende trotzdem normal.
+// Ohne eindeutige aktuelle Konto-ID (kein Speicher oder zwei verschiedene) wird nichts gemeldet.
+static bool parse_psf(const std::string& d, std::map<std::string, std::string>& out) {
+    auto u16 = [&](std::size_t o) { return static_cast<std::uint32_t>(static_cast<unsigned char>(d[o])) | static_cast<std::uint32_t>(static_cast<unsigned char>(d[o + 1])) << 8; };
+    auto u32 = [&](std::size_t o) { return u16(o) | u16(o + 2) << 16; };
+    if (d.size() < 20 || d.compare(0, 4, std::string("\0PSF", 4)) != 0) return false;
+    const std::uint32_t key_table = u32(8), data_table = u32(12), count = u32(16);
+    if (count > 64 || 20 + static_cast<std::uint64_t>(count) * 16 > d.size()) return false;
+    for (std::uint32_t i = 0; i < count; ++i) {
+        const std::size_t e = 20 + static_cast<std::size_t>(i) * 16;
+        const std::uint32_t key_off = u16(e), fmt = u16(e + 2), len = u32(e + 4), data_off = u32(e + 12);
+        const std::uint64_t kpos = static_cast<std::uint64_t>(key_table) + key_off, dpos = static_cast<std::uint64_t>(data_table) + data_off;
+        if (kpos >= d.size() || dpos + len > d.size() || len > 4096) continue;
+        const auto kend = d.find('\0', static_cast<std::size_t>(kpos));
+        if (kend == std::string::npos) continue;
+        const std::string key = d.substr(static_cast<std::size_t>(kpos), kend - static_cast<std::size_t>(kpos));
+        std::string raw = d.substr(static_cast<std::size_t>(dpos), len);
+        if (fmt == 0x0204) {
+            while (!raw.empty() && raw.back() == '\0') raw.pop_back();
+            out[key] = raw;
+        } else {
+            static const char* hex = "0123456789abcdef";
+            std::string h;
+            for (unsigned char c : raw) h += {hex[c >> 4], hex[c & 15]};
+            out[key] = h;
+        }
+    }
+    return true;
+}
+
+void collect_savedata(const Platform& p, Facts& f) {
+    static const std::regex id_re("^PPSA[0-9]{5}$"), account_re("^[0-9a-f]{16}$");
+    const IFileSystem& fs = p.fs();
+    json foreign = json::array();
+    std::string first_current;
+    for (const auto& user : fs.list_dir("/user/home")) {
+        if (!user.is_dir) continue;
+        const std::string meta = join_path(join_path("/user/home", user.name), "savedata_prospero_meta/user");
+        struct Save {
+            std::string titleid, name, title, account, path;
+            bool memory;
+        };
+        std::vector<Save> saves;
+        std::set<std::string> seen;
+        for (const auto& title : fs.list_dir(meta)) {
+            if (!title.is_dir || !std::regex_match(title.name, id_re)) continue;
+            for (const auto& file : fs.list_dir(join_path(meta, title.name))) {
+                if (file.is_dir || file.size > 65536 || file.name.size() < 5 || file.name.compare(file.name.size() - 4, 4, ".sfo") != 0) continue;
+                std::string data;
+                std::map<std::string, std::string> psf;
+                const std::string path = join_path(join_path(meta, title.name), file.name);
+                if (!fs.read_file(path, data) || !parse_psf(data, psf)) continue;
+                const std::string account = psf.count("ACCOUNT_ID") ? psf["ACCOUNT_ID"] : std::string();
+                if (!std::regex_match(account, account_re) || account == "0000000000000000") continue;
+                std::string name = psf.count("SAVEDATA_DIRECTORY") ? psf["SAVEDATA_DIRECTORY"] : file.name.substr(0, file.name.size() - 4);
+                if (name.empty() || !seen.insert(title.name + "/" + name).second) continue;
+                saves.push_back({title.name, name, psf.count("MAINTITLE") ? psf["MAINTITLE"] : std::string(), account, path, name == "sce_sdmemory"});
+            }
+        }
+        std::set<std::string> current;
+        for (const auto& s : saves)
+            if (s.memory) current.insert(s.account);
+        if (current.size() != 1) continue;
+        const std::string& now = *current.begin();
+        if (first_current.empty()) first_current = now;
+        for (const auto& s : saves) {
+            if (s.memory || s.account == now) continue;
+            foreign.push_back({{"uid", user.name}, {"titleid", s.titleid}, {"name", s.name}, {"title", s.title}, {"account", s.account},
+                               {"current", now}, {"path", s.path}, {"label", s.titleid + " " + s.name + (s.title.empty() ? std::string() : " (" + s.title + ")")}});
+        }
+    }
+    if (!first_current.empty()) f.set("savedata.current_account", first_current);
+    f.set("savedata.foreign", std::move(foreign));
+}
+
+// Startverlauf und Fehlerverlauf der Systemsoftware (beides auf der Test-Konsole am 10. Nov. 2026 gelesen, nur lesend).
+// /system_data/priv/vshlog/vshlog.0.txt: eine Zeile je Ereignis, z. B. "Mon, 12 Oct 2026 16:52:51 +0000 Boot up (build#..., MAIN_SOC)",
+// "... Shutdown for reboot", "... Shutdown". Jeder normale Neustart steht als "Shutdown for reboot" vor dem naechsten "Boot up" (40 von 49).
+// Folgt ein "Boot up" direkt auf ein anderes "Boot up", ging die Sitzung ohne protokolliertes Herunterfahren zu Ende; das passt zu
+// Absturz oder Stromverlust (abgeleitet, nicht bestaetigt). Fenster: 14 Tage vor dem letzten Eintrag, damit die Pruefung am PC gegen
+// einen Snapshot dasselbe ergibt wie auf der Konsole.
+// /system_data/priv/error/history/*.json: je Fehlermeldung eine JSON-Datei (Ring, 100 Stueck): shortError, titleId, tick (Mikrosekunden
+// seit Jahr 1). Die Regeln werten Paare aus Code und Titel aus.
+static std::int64_t days_from_civil(int y, int m, int d) {
+    y -= m <= 2 ? 1 : 0;
+    const int era = (y >= 0 ? y : y - 399) / 400;
+    const int yoe = y - era * 400;
+    const int doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
+    const int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    return static_cast<std::int64_t>(era) * 146097 + doe - 719468;
+}
+
+static std::string iso_from_epoch(std::int64_t t) {
+    std::int64_t days = t / 86400;
+    std::int64_t rem = t % 86400;
+    if (rem < 0) {
+        rem += 86400;
+        --days;
+    }
+    days += 719468;
+    const std::int64_t era = (days >= 0 ? days : days - 146096) / 146097;
+    const int doe = static_cast<int>(days - era * 146097);
+    const int yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    int y = yoe + static_cast<int>(era) * 400;
+    const int doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    const int mp = (5 * doy + 2) / 153;
+    const int d = doy - (153 * mp + 2) / 5 + 1;
+    const int m = mp < 10 ? mp + 3 : mp - 9;
+    if (m <= 2) ++y;
+    char buf[40];
+    std::snprintf(buf, sizeof buf, "%04d-%02d-%02dT%02d:%02d:%02dZ", y, m, d, static_cast<int>(rem / 3600), static_cast<int>(rem % 3600 / 60), static_cast<int>(rem % 60));
+    return buf;
+}
+
+// "Mon, 12 Oct 2026 16:52:51 +0200 Boot up (...)" -> Unix-Sekunden (UTC) und Rest der Zeile.
+static bool parse_vsh_line(const std::string& line, std::int64_t& epoch, std::string& msg) {
+    static const std::regex re(R"(^\w{3}, (\d{1,2}) (\w{3}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) ([+-])(\d{2})(\d{2}) (.*)$)");
+    static const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    std::smatch m;
+    if (!std::regex_match(line, m, re)) return false;
+    int mon = 0;
+    for (int i = 0; i < 12; ++i)
+        if (m[2].str() == months[i]) mon = i + 1;
+    if (!mon) return false;
+    const std::int64_t local = days_from_civil(std::stoi(m[3]), mon, std::stoi(m[1])) * 86400 + std::stoi(m[4]) * 3600 + std::stoi(m[5]) * 60 + std::stoi(m[6]);
+    const int off = (std::stoi(m[8]) * 3600 + std::stoi(m[9]) * 60) * (m[7].str() == "-" ? -1 : 1);
+    epoch = local - off;
+    msg = m[10].str();
+    return true;
+}
+
+void collect_system_logs(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    {  // Startverlauf
+        std::string text;
+        if (fs.read_file("/system_data/priv/vshlog/vshlog.0.txt", text) && text.size() <= (1u << 20)) {
+            struct Ev {
+                std::int64_t t;
+                bool boot;
+                std::string cause;
+            };
+            std::vector<Ev> evs;
+            for (auto line : split_lines(text)) {
+                while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.pop_back();
+                std::int64_t t = 0;
+                std::string msg;
+                if (!parse_vsh_line(line, t, msg)) continue;
+                Ev e{t, msg.compare(0, 7, "Boot up") == 0, std::string()};
+                if (e.boot) {
+                    static const std::regex cause_re(R"(, (\w+)\)\s*$)");
+                    std::smatch m;
+                    if (std::regex_search(msg, m, cause_re)) e.cause = m[1].str();
+                }
+                evs.push_back(std::move(e));
+            }
+            if (!evs.empty()) {
+                std::int64_t last = evs[0].t;
+                for (const auto& e : evs) last = std::max(last, e.t);
+                json unclean = json::array();
+                int boots = 0, n14 = 0;
+                for (std::size_t i = 0; i < evs.size(); ++i) {
+                    if (!evs[i].boot) continue;
+                    ++boots;
+                    if (i == 0 || !evs[i - 1].boot) continue;
+                    unclean.push_back({{"ts", iso_from_epoch(evs[i].t)}, {"epoch", evs[i].t}, {"cause", evs[i].cause}});
+                    if (evs[i].t >= last - 14 * 86400) ++n14;
+                }
+                f.set("boot.log_last", iso_from_epoch(last));
+                f.set("boot.log_last_epoch", last);
+                f.set("boot.boots_total", boots);
+                f.set("boot.unclean_total", static_cast<int>(unclean.size()));
+                f.set("boot.unclean_14d", n14);
+                f.set("boot.unclean", std::move(unclean));
+            }
+        }
+    }
+    {  // Fehlerverlauf
+        const std::string dir = "/system_data/priv/error/history";
+        struct Agg {
+            int count = 0;
+            std::int64_t last = 0;
+        };
+        std::map<std::pair<std::string, std::string>, Agg> pairs;
+        int total = 0, seen = 0;
+        static const std::regex code_re("^[A-Za-z0-9]{1,4}-[0-9]{3,6}(-[0-9]{1,2})?$|^0x[0-9A-Fa-f]{8}$"), title_re("^[A-Z]{4}[0-9]{5}$|^NPXS[0-9]{5}$");
+        for (const auto& e : fs.list_dir(dir)) {
+            if (e.is_dir || e.size > 4096 || e.name.size() < 6 || e.name.compare(e.name.size() - 5, 5, ".json") != 0) continue;
+            if (++seen > 400) break;
+            std::string t;
+            if (!fs.read_file(join_path(dir, e.name), t)) continue;
+            if (t.compare(0, 3, "\xEF\xBB\xBF") == 0) t.erase(0, 3);
+            const json j = json::parse(t, nullptr, false);
+            if (!j.is_object() || !j.contains("shortError") || !j["shortError"].is_string()) continue;
+            const std::string code = j["shortError"].get<std::string>();
+            if (!std::regex_match(code, code_re)) continue;
+            std::string title = j.contains("titleId") && j["titleId"].is_string() ? j["titleId"].get<std::string>() : std::string();
+            if (!title.empty() && !std::regex_match(title, title_re)) title.clear();
+            std::int64_t when = 0;
+            if (j.contains("tick") && j["tick"].is_number_integer()) when = j["tick"].get<std::int64_t>() / 1000000 - 62135596800LL;
+            Agg& a = pairs[{code, title}];
+            ++a.count;
+            a.last = std::max(a.last, when);
+            ++total;
+        }
+        json arr = json::array();
+        for (const auto& [key, a] : pairs) {
+            const std::string day = a.last > 0 ? iso_from_epoch(a.last).substr(0, 10) : std::string();
+            arr.push_back({{"code", key.first}, {"titleid", key.second}, {"count", a.count}, {"last", day}, {"last_epoch", a.last},
+                           {"label", key.first + " - " + (key.second.empty() ? std::string("System") : key.second) + " - " + std::to_string(a.count) + "x" + (day.empty() ? std::string() : ", zuletzt " + day)}});
+        }
+        f.set("errors.total", total);
+        f.set("errors.pairs", std::move(arr));
+    }
+}
+
+// Datenbanken der Systemsoftware (SQLite), Stufe 1: nur Kopf, Groesse und Journal, ohne die Datenbank zu oeffnen. Pfade und Zustand
+// auf der Test-Konsole am 10. Nov. 2026 per FTP gelesen: 15 Dateien, alle mit gueltigem Kopf, und die Seitenzahl im Kopf ergibt genau die
+// Dateigroesse. SQLite-Dateiformat (sqlite.org/fileformat2.html): Kopf 100 Bytes; Seitengroesse bei 16 (1 = 65536); Nutzlast-Anteile bei
+// 21..23 sind immer 64/32/32; Aenderungszaehler bei 24, Seitenzahl bei 28 und "Version-valid-for" bei 92 -- die Seitenzahl im Kopf gilt nur,
+// wenn Aenderungszaehler und Version-valid-for gleich sind. Ein Journal ("<db>-journal") mit der Kennung d9 d5 05 f9 20 a1 63 d7 am Anfang
+// ist eine unfertige Transaktion; SQLite rollt sie beim naechsten Oeffnen zurueck.
+void collect_databases(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    std::vector<std::string> dirs = {"/system_data/priv/mms", "/system_data/priv/license", "/system_data/priv/pbtc", "/system_data/priv/cache/httpcache/nobackup",
+                                     "/system_data/priv/system_logger2/nobackup/database"};
+    for (const char* root : {"/system_data/savedata_prospero", "/system_data/savedata"})
+        for (const auto& u : fs.list_dir(root))
+            if (u.is_dir) dirs.push_back(join_path(join_path(root, u.name), "db/user"));
+    auto be16 = [](const std::string& s, std::size_t o) { return (static_cast<unsigned>(static_cast<unsigned char>(s[o])) << 8) | static_cast<unsigned char>(s[o + 1]); };
+    auto be32 = [&](const std::string& s, std::size_t o) { return (be16(s, o) << 16) | be16(s, o + 2); };
+    json files = json::array();
+    int count = 0;
+    for (const auto& dir : dirs) {
+        std::map<std::string, std::uint64_t> sizes;
+        for (const auto& e : fs.list_dir(dir))
+            if (!e.is_dir) sizes[e.name] = e.size;
+        for (const auto& [name, size] : sizes) {
+            if (name.size() < 4 || name.compare(name.size() - 3, 3, ".db") != 0) continue;
+            if (++count > 64) break;
+            const std::string path = join_path(dir, name);
+            json d = {{"path", path}, {"name", name}, {"size", size}, {"readable", 0}, {"header_bad", 0}, {"truncated", 0}, {"unaligned", 0},
+                      {"page_size", 0}, {"header_pages", 0}, {"journal_hot", 0}, {"journal_size", -1}, {"wal_size", -1}, {"integrity", -1}, {"integrity_note", ""}, {"integrity_skip", ""}};
+            std::string head;
+            if (fs.read_range(path, 0, 100, head) && head.size() == 100) {
+                d["readable"] = 1;
+                unsigned page = be16(head, 16);
+                if (page == 1) page = 65536;
+                const bool page_ok = page >= 512 && page <= 65536 && (page & (page - 1)) == 0;
+                const bool magic_ok = head.compare(0, 16, std::string("SQLite format 3\0", 16)) == 0;
+                const bool fractions_ok = static_cast<unsigned char>(head[21]) == 64 && static_cast<unsigned char>(head[22]) == 32 && static_cast<unsigned char>(head[23]) == 32;
+                d["header_bad"] = magic_ok && page_ok && fractions_ok ? 0 : 1;
+                if (!d["header_bad"].get<int>()) {
+                    const std::uint64_t pages = be32(head, 28);
+                    d["page_size"] = page;
+                    d["header_pages"] = pages;
+                    d["unaligned"] = size % page != 0 ? 1 : 0;
+                    // Die Seitenzahl im Kopf gilt nur, wenn Aenderungszaehler und "Version-valid-for" uebereinstimmen.
+                    if (be32(head, 24) == be32(head, 92) && pages > 0 && size < pages * page) d["truncated"] = 1;
+                }
+            }
+            if (const auto j = sizes.find(name + "-journal"); j != sizes.end()) {
+                d["journal_size"] = j->second;
+                std::string jh;
+                if (j->second >= 8 && fs.read_range(path + "-journal", 0, 8, jh) && jh.size() == 8 && jh == std::string("\xd9\xd5\x05\xf9\x20\xa1\x63\xd7", 8)) d["journal_hot"] = 1;
+            }
+            if (const auto w = sizes.find(name + "-wal"); w != sizes.end()) d["wal_size"] = w->second;
+            // Stufe 2: integrity_check auf einer Kopie im Arbeitsspeicher (SQLite ohne Dateizugriff). Nicht geprueft wird bei auffaelligem Kopf, offenem
+            // Rollback-Journal, Dateien ueber 32 MiB und wenn sich Datei oder WAL beim zweimaligen Lesen unterscheiden (die Konsole schreibt gerade).
+            // Ein WAL mit Eintraegen wird in die Kopie eingerechnet, wie SQLite es beim Oeffnen tut. Der Grund steht in "integrity_skip"; "nicht
+            // getestet" ist ein eigener Zustand und heisst nie "gesund".
+            constexpr std::uint64_t kMaxIntegrityBytes = 32u << 20;
+            const std::int64_t wal_size = d["wal_size"].get<std::int64_t>();
+            std::string skip;
+            if (d["readable"] != 1) skip = "unlesbar";
+            else if (d["header_bad"] == 1 || d["truncated"] == 1 || d["unaligned"] == 1) skip = "kopf";
+            else if (d["journal_hot"] == 1) skip = "journal";
+            else if (size < 512) skip = "klein";
+            else if (size > kMaxIntegrityBytes) skip = "gross";
+            else if (wal_size > static_cast<std::int64_t>(kMaxIntegrityBytes)) skip = "wal_gross";
+            if (skip.empty()) {
+                std::string first, second, wal1, wal2;
+                const bool wal_used = wal_size > 32;
+                if (!fs.read_file(path, first) || !fs.read_file(path, second) || (wal_used && (!fs.read_file(path + "-wal", wal1) || !fs.read_file(path + "-wal", wal2)))) skip = "unlesbar";
+                else if (first != second || wal1 != wal2 || first.size() != size) skip = "aendert_sich";
+                else {
+                    const SqliteCheck c = sqlite_integrity_check(first, wal1);
+                    if (!c.ran) skip = "nicht_startbar";
+                    else {
+                        d["integrity"] = c.ok ? 1 : 0;
+                        if (!c.ok) d["integrity_note"] = c.note;
+                    }
+                }
+            }
+            d["integrity_skip"] = skip;
+            files.push_back(std::move(d));
+        }
+    }
+    f.set("db.count", static_cast<int>(files.size()));
+    f.set("db.files", std::move(files));
+}
+
 Facts collect_all(const Platform& p) {
     Facts f;
     collect_firmware(p, f);
@@ -878,6 +1219,9 @@ Facts collect_all(const Platform& p) {
     collect_autoload(p, f);
     collect_payload_files(p, f);
     collect_helpers(p, f);
+    collect_savedata(p, f);
+    collect_system_logs(p, f);
+    collect_databases(p, f);
     return f;
 }
 

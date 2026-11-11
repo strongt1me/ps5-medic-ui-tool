@@ -14,6 +14,8 @@ add_library(medic STATIC
   libmedic/src/collectors_stack.cpp
   libmedic/src/rules.cpp
   libmedic/src/error_codes.cpp
+  libmedic/src/text_policy.cpp
+  libmedic/src/sqlite_check.cpp
   libmedic/src/sha256.cpp
   libmedic/src/ini.cpp
   libmedic/src/fixes.cpp
@@ -29,10 +31,14 @@ add_library(medic STATIC
   libmedic/src/posix_http.cpp
   libmedic/src/rule_download.cpp
   third_party/qrcodegen/qrcodegen.cpp
-  third_party/tweetnacl/tweetnacl.c)
+  third_party/tweetnacl/tweetnacl.c
+  third_party/sqlite3/sqlite3.c)
 target_include_directories(medic PUBLIC libmedic/include third_party)
 target_compile_options(medic PRIVATE -Wall -Wextra)
 set_source_files_properties(third_party/qrcodegen/qrcodegen.cpp third_party/tweetnacl/tweetnacl.c PROPERTIES COMPILE_OPTIONS "-w")  # Fremdcode unveraendert lassen
+# SQLite ohne Dateizugriff (nur Speicher-Datenbanken, siehe libmedic/src/sqlite_check.cpp)
+set_source_files_properties(third_party/sqlite3/sqlite3.c PROPERTIES COMPILE_OPTIONS "-w;-O1"
+  COMPILE_DEFINITIONS "SQLITE_OS_OTHER=1;SQLITE_THREADSAFE=0;SQLITE_TEMP_STORE=3;SQLITE_OMIT_LOAD_EXTENSION=1;SQLITE_OMIT_SHARED_CACHE=1;SQLITE_OMIT_DEPRECATED=1;SQLITE_OMIT_LOCALTIME=1;SQLITE_OMIT_PROGRESS_CALLBACK=1;SQLITE_DEFAULT_MEMSTATUS=0;SQLITE_DQS=0;SQLITE_MAX_MMAP_SIZE=0")
 
 # Plattformunabhaengige UI (Canvas, Schrift, Bildschirme). Die PS5-Anbindung (VideoOut, Controller) kommt separat.
 add_library(medic_ui STATIC
@@ -61,7 +67,7 @@ target_link_libraries(medic-cli PRIVATE medic)
 target_compile_definitions(medic-cli PRIVATE MEDIC_DEFAULT_RULES="${CMAKE_SOURCE_DIR}/knowledge/rules.json")
 
 enable_testing()
-add_executable(medic-tests tests/test_main.cpp tests/test_fixes.cpp tests/test_ui.cpp tests/test_report.cpp tests/test_update.cpp tests/test_sign.cpp tests/test_error_codes.cpp tests/test_codes_update.cpp)
+add_executable(medic-tests tests/test_main.cpp tests/test_fixes.cpp tests/test_ui.cpp tests/test_report.cpp tests/test_update.cpp tests/test_sign.cpp tests/test_error_codes.cpp tests/test_codes_update.cpp tests/test_text_policy.cpp)
 find_package(Threads REQUIRED)
 target_link_libraries(medic-tests PRIVATE medic_ui Threads::Threads)
 target_compile_definitions(medic-tests PRIVATE

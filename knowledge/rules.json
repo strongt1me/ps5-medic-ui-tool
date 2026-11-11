@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.12",
+  "db_version": "2026.11.21",
   "rules": [
     {
       "id": "hen.etahen_with_kstufflite_latest_fw",
@@ -181,8 +181,8 @@
         ]
       },
       "text": {
-        "de": "Dieselbe TITLE_ID liegt in mehreren Quellen vor. ShadowMount+ erwartet pro TITLE_ID nur eine Quelle – die überzähligen Kopien entfernen (verschieben).",
-        "en": "The same TITLE_ID exists in more than one source. ShadowMount+ expects a single source per TITLE_ID – move the extra copies away."
+        "de": "Dieselbe TITLE_ID liegt in mehreren Quellen vor (z. B. ein Spielordner und ein Image desselben Spiels). ShadowMount+ nutzt nur eine und zeigt bei jedem Start die Meldung „Duplikat … ignoriert“ – die überzähligen Kopien entfernen (verschieben); die von ShadowMount+ genutzte Quelle bleibt.",
+        "en": "The same TITLE_ID exists in more than one source (e.g. a game folder and an image of the same game). ShadowMount+ uses only one and shows the message “Duplicate … ignored” at every start – move the extra copies away; the source ShadowMount+ uses stays."
       },
       "evidence": "smp.titles[].path",
       "fix": "move_duplicate_titleid",
@@ -258,6 +258,168 @@
       "evidence": "smp.images[].path",
       "fix": null,
       "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc"
+    },
+    {
+      "id": "savedata.foreign_account",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "savedata.foreign[].titleid", "exists": true }
+        ]
+      },
+      "text": {
+        "de": "Diese Spielstände wurden mit einer anderen Konto-ID erstellt als der, die jetzt aktiv ist (ACCOUNT_ID in den Metadaten unter savedata_prospero_meta; die jetzige ID steht in den Spielstand-Speichern, die das System bei jedem Spielstart neu anlegt). Spielstände gehören zum Konto, mit dem sie erstellt wurden. Das passiert zum Beispiel, wenn die Konto-ID durch eine erneute Offline-Aktivierung geändert wurde (so auf der Test-Konsole; eine Community-Anleitung für PS4 rät, die Aktivierung nur einmal auszuführen und vorher die Spielstände zu sichern). Mit einem anderen Konto meldet die Konsole „Die gespeicherten Daten können nicht geladen werden, weil sie beschädigt sind“ (Eintrag „Beschädigte Daten“), und zwar bei jedem Laden und Speichern, weil das Spiel immer wieder auf denselben Spielstand zugreift. Die Liste in den Einstellungen zeigt solche Spielstände trotzdem normal an. Die Dateien selbst sind damit nicht bewiesen beschädigt. Weg: wieder das Konto verwenden, mit dem die Spielstände erstellt wurden (dieselbe Konto-ID). Medic ändert weder das Konto noch Spielstände. Neue Spielstände mit dem jetzigen Konto sind möglich; die alten bleiben unangetastet in savedata_prospero. Die alten Spielstände nicht löschen, bevor klar ist, ob das alte Konto wieder verwendet wird, und vor jeder Änderung der Konto-ID die Ordner savedata_prospero und savedata_prospero_meta sowie /system_data/savedata_prospero per FTP sichern.",
+        "en": "These saves were created with a different account ID than the one that is active now (ACCOUNT_ID in the metadata under savedata_prospero_meta; the current ID is in the save-data memories the system re-creates at every game start). Saves belong to the account that created them. This happens for example when the account ID was changed by running the offline activation again (so on the test console; a community guide for PS4 advises to run the activation only once and to back up saves first). With another account the console reports “The saved data cannot be loaded because it is corrupted” (entry “Corrupted data”) on every load and save, because the game keeps accessing the same save. The list in the settings still shows such saves normally. This does not prove the files themselves are damaged. Way out: use the account that created the saves again (same account ID). Medic changes neither the account nor saves. New saves with the current account are possible; the old ones stay untouched in savedata_prospero. Do not delete the old saves before it is clear whether the old account will be used again, and before any change of the account ID copy the folders savedata_prospero and savedata_prospero_meta and /system_data/savedata_prospero via FTP."
+      },
+      "evidence": "savedata.foreign[].label",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo"
+    },
+    {
+      "id": "errors.recurring_title",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "errors.pairs[].code", "matches": "^CE-" },
+          { "fact": "errors.pairs[].titleid", "matches": "^(PPSA|CUSA)[0-9]{5}$" },
+          { "fact": "errors.pairs[].count", "gt": "2" }
+        ]
+      },
+      "text": {
+        "de": "Der Fehlerverlauf der Systemsoftware (/system_data/priv/error/history) enthält denselben CE-Fehlercode mehrfach für denselben Titel. Ein Titel, der immer wieder denselben Fehler meldet, startet oder läuft nicht stabil; die Meldung „Bei diesem Spiel oder dieser App ist ein Fehler aufgetreten“ gehört oft dazu. Code, Titel, Anzahl und letzter Tag stehen unten. Was der Code bedeutet und was Sony oder die Gemeinschaft dazu schreiben, steht unter „Fehlercodes nachschlagen“. Bei Titeln aus Ordnern oder Images auf einer gejailbreakten Konsole kommen unter anderem Backport-Ordner, FakeLib-Einstellungen und fehlende Dateien infrage; der Verlauf allein sagt nicht, welche Ursache zutrifft.",
+        "en": "The error history of the system software (/system_data/priv/error/history) contains the same CE error code several times for the same title. A title that keeps reporting the same error does not start or run reliably; the message “An error has occurred in this game or application” often goes with it. Code, title, count and last day are listed below. What the code means and what Sony or the community say about it is under “Look up error codes”. For titles from folders or images on a jailbroken console, backport folders, FakeLib settings and missing files are possible causes; the history alone does not say which one applies."
+      },
+      "evidence": "errors.pairs[].label",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo"
+    },
+    {
+      "id": "errors.recurring_system_app",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "errors.pairs[].code", "matches": "^CE-" },
+          { "fact": "errors.pairs[].titleid", "matches": "^NPXS[0-9]{5}$" },
+          { "fact": "errors.pairs[].count", "gt": "2" }
+        ]
+      },
+      "text": {
+        "de": "Eine Systemanwendung (Titel NPXS…) hat im Fehlerverlauf denselben CE-Fehlercode mehrfach gemeldet. Das sind oft Verbindungs- oder Serverfehler, etwa wenn Sony-Server durch einen DNS-Filter (z. B. nanoDNS) oder ein Netzwerkproblem nicht erreichbar sind. Aus dem Verlauf allein kann Medic das nicht unterscheiden; ein Hinweis auf defekte Hardware ist es für sich genommen nicht. Der Code lässt sich unter „Fehlercodes nachschlagen“ ansehen.",
+        "en": "A system application (title NPXS…) reported the same CE error code several times in the error history. These are often connection or server errors, for example when Sony servers are unreachable because of a DNS filter (e.g. nanoDNS) or a network problem. Medic cannot tell this apart from the history alone; by itself it does not point to defective hardware. The code can be looked up under “Look up error codes”."
+      },
+      "evidence": "errors.pairs[].label",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo"
+    },
+    {
+      "id": "sys.unclean_boot",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "boot.unclean_14d", "gt": "2" },
+          { "fact": "boot.unclean[].ts", "exists": true }
+        ]
+      },
+      "text": {
+        "de": "Der Startverlauf der Konsole (/system_data/priv/vshlog) zeigt in den letzten 14 Tagen mindestens drei Neustarts, vor denen kein Herunterfahren protokolliert ist. Jeder normale Neustart steht im Verlauf als „Shutdown for reboot“. Fehlt es, endete die Sitzung ohne ordentliches Herunterfahren; das passt zu einem Absturz, einem Watchdog-Neustart oder Stromverlust. Aus dem Verlauf allein lässt sich die Ursache nicht bestimmen. Auf einer gejailbreakten Konsole kommen unter anderem Payload-Fehler, ein während des Betriebs abgezogenes Laufwerk, Überhitzung und eine wackelige Stromversorgung infrage. Prüfe der Reihe nach: Temperaturen (siehe Hinweise), Laufwerke und deren Kabel, zuletzt gestartete Payloads und die Steckdose bzw. Steckerleiste. Die Zeitpunkte stehen unten.",
+        "en": "The boot history of the console (/system_data/priv/vshlog) shows at least three restarts in the last 14 days that are not preceded by a logged shutdown. Every normal restart appears in the history as “Shutdown for reboot”. If it is missing, the session ended without a proper shutdown; this fits a crash, a watchdog restart or a power loss. The cause cannot be determined from the history alone. On a jailbroken console, payload errors, a drive unplugged while running, overheating and an unstable power supply are possible. Check in this order: temperatures (see the notes), drives and their cables, payloads started most recently, and the wall socket or power strip. The times are listed below."
+      },
+      "evidence": "boot.unclean[].ts",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo"
+    },
+    {
+      "id": "sys.unclean_boot_history",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "boot.unclean_total", "gt": "0" },
+          { "fact": "boot.unclean_14d", "lt": "3" },
+          { "fact": "boot.unclean[].ts", "exists": true }
+        ]
+      },
+      "text": {
+        "de": "Der Startverlauf der Konsole (/system_data/priv/vshlog) enthält Neustarts, vor denen kein Herunterfahren protokolliert ist (z. B. nach einem Stromausfall, einem Absturz oder einem erzwungenen Ausschalten). In den letzten 14 Tagen waren es höchstens zwei, das ist unauffällig. Häufen sich solche Neustarts, meldet Medic das als Warnung.",
+        "en": "The boot history of the console (/system_data/priv/vshlog) contains restarts that are not preceded by a logged shutdown (for example after a power cut, a crash or a forced power-off). There were at most two in the last 14 days, which is unremarkable. If such restarts pile up, Medic reports it as a warning."
+      },
+      "evidence": "boot.unclean[].ts",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo"
+    },
+    {
+      "id": "db.header_invalid",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "db.files[].header_bad", "eq": "1" },
+          { "fact": "db.files[].readable", "eq": "1" }
+        ]
+      },
+      "text": {
+        "de": "Der Kopf einer Datenbank der Systemsoftware ist ungültig (keine SQLite-Kennung, unmögliche Seitengröße oder falsche Kopfwerte). Die Systemsoftware speichert damit Apps, Lizenzen, Spielstände, Downloads und Benachrichtigungen; eine beschädigte Datei kann zu fehlenden Kacheln, Fehlern beim Installieren oder zu den Meldungen „Datenbank beschädigt“ führen. Zuerst die Konsole einmal normal neu starten und erneut prüfen, denn ein unterbrochener Schreibvorgang wird beim nächsten Öffnen oft bereinigt. Bleibt der Befund, ist die Datei beschädigt. Sony bietet im Sicherheitsmodus „Datenbank neu erstellen“ an. Ob das Einträge von per ShadowMount+ eingebundenen Titeln verändert, ist nicht geprüft: vorher notieren, welche Titel installiert sind, und Spielstände sichern. Medic ändert Datenbanken nicht.",
+        "en": "The header of a system software database is invalid (no SQLite signature, impossible page size or wrong header values). The system software uses these databases for apps, licences, save data, downloads and notifications; a damaged file can cause missing tiles, install errors or “database corrupted” messages. First restart the console normally and check again, because an interrupted write is often cleaned up the next time the file is opened. If the finding stays, the file is damaged. Sony offers “Rebuild database” in safe mode. Whether that changes entries of titles mounted by ShadowMount+ has not been checked: note which titles are installed beforehand and back up save data. Medic does not change databases."
+      },
+      "evidence": "db.files[].path",
+      "fix": null,
+      "source": "https://www.sqlite.org/fileformat2.html",
+      "verified": "doc"
+    },
+    {
+      "id": "db.truncated",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "db.files[].readable", "eq": "1" },
+          { "fact": "db.files[].truncated", "eq": "1" }
+        ]
+      },
+      "text": {
+        "de": "Eine Datenbank der Systemsoftware ist kleiner, als ihr Kopf angibt (abgeschnittene Datei). Das passiert, wenn ein Schreibvorgang durch Absturz, Stromverlust oder vollen Speicher abgebrochen wurde. Gehe wie bei einem ungültigen Datenbank-Kopf vor: Konsole normal neu starten und erneut prüfen; bleibt der Befund, ist die Datei beschädigt (Sicherheitsmodus „Datenbank neu erstellen“ ist Sonys Weg, Wirkung auf per ShadowMount+ eingebundene Titel ungeprüft). Medic ändert Datenbanken nicht.",
+        "en": "A system software database is smaller than its header says (truncated file). This happens when a write was interrupted by a crash, power loss or full storage. Proceed as for an invalid database header: restart the console normally and check again; if the finding stays, the file is damaged (safe mode “Rebuild database” is Sony's way, effect on titles mounted by ShadowMount+ unchecked). Medic does not change databases."
+      },
+      "evidence": "db.files[].path",
+      "fix": null,
+      "source": "https://www.sqlite.org/fileformat2.html",
+      "verified": "doc"
+    },
+    {
+      "id": "db.journal_pending",
+      "severity": "info",
+      "when": {
+        "all": [
+          { "fact": "db.files[].journal_hot", "eq": "1" }
+        ]
+      },
+      "text": {
+        "de": "Neben einer Datenbank der Systemsoftware liegt ein Journal mit offener Transaktion (Kennung d9 d5 05 f9 20 a1 63 d7). Das ist normal, solange die Konsole gerade schreibt, und bleibt zurück, wenn ein Schreibvorgang abgebrochen wurde; SQLite macht die Transaktion beim nächsten Öffnen der Datenbank rückgängig. Bleibt der Befund nach einem normalen Neustart bestehen, deutet das auf eine unterbrochene Sitzung hin (siehe Befund zu Neustarts ohne Herunterfahren).",
+        "en": "Next to a system software database there is a journal with an open transaction (signature d9 d5 05 f9 20 a1 63 d7). That is normal while the console is writing, and it stays behind when a write was interrupted; SQLite rolls the transaction back the next time the database is opened. If the finding stays after a normal restart, it points to an interrupted session (see the finding about restarts without shutdown)."
+      },
+      "evidence": "db.files[].path",
+      "fix": null,
+      "source": "https://www.sqlite.org/fileformat2.html",
+      "verified": "doc"
+    },
+    {
+      "id": "db.integrity_failed",
+      "severity": "warning",
+      "when": {
+        "all": [
+          { "fact": "db.files[].integrity", "eq": "0" }
+        ]
+      },
+      "text": {
+        "de": "Die Prüfung einer Datenbank der Systemsoftware hat Fehler gefunden (SQLite integrity_check auf einer Kopie im Arbeitsspeicher; die echte Datei wird nie geöffnet oder geändert). Kopf und Größe sind in Ordnung, der Inhalt aber nicht: Seiten oder Einträge sind beschädigt. Das kann zu fehlenden Kacheln, Installationsfehlern oder Meldungen wie „Datenbank beschädigt“ führen. Zuerst die Konsole normal neu starten und erneut prüfen, denn die Prüfung kann nur Dateien bewerten, die sich währenddessen nicht ändern. Bleibt der Befund, ist die Datei beschädigt. Sony bietet im Sicherheitsmodus „Datenbank neu erstellen“ an. Ob das Einträge von per ShadowMount+ eingebundenen Titeln verändert, ist nicht geprüft: vorher notieren, welche Titel installiert sind, und Spielstände sichern. Medic ändert Datenbanken nicht.",
+        "en": "The check of a system software database found errors (SQLite integrity_check on a copy in memory; the real file is never opened or changed). Header and size are fine, but the content is not: pages or entries are damaged. This can cause missing tiles, install errors or messages like “database corrupted”. First restart the console normally and check again, because the check can only judge files that do not change while it runs. If the finding stays, the file is damaged. Sony offers “Rebuild database” in safe mode. Whether that changes entries of titles mounted by ShadowMount+ has not been checked: note which titles are installed beforehand and back up save data. Medic does not change databases."
+      },
+      "evidence": "db.files[].path",
+      "fix": null,
+      "source": "https://www.sqlite.org/pragma.html#pragma_integrity_check",
       "verified": "doc"
     },
     {
@@ -395,8 +557,8 @@
         ]
       },
       "text": {
-        "de": "Für diese Spiele verlangt die param.json eine neuere Firmware, als die Konsole hat (Evidenz: Titel und verlangte Version), und in den Scanpfaden liegt kein Backport-Ordner backports/<TITLE_ID>/. Die Konsole startet laut Backport-Toolkit nichts, was für eine neuere Firmware gebaut ist: Das Spiel braucht einen Backport für die genutzte Firmware oder AMPR Emu bzw. AMPR Emu NG. Ein Systemupdate ist hier nicht der Weg, es kann den Jailbreak beenden. Dass solche Spiele nicht starten, ist an dieser Konsole noch nicht bestätigt.",
-        "en": "For these games the param.json demands a newer firmware than the console has (evidence: title and required version), and the scan paths contain no backport folder backports/<TITLE_ID>/. According to the backport toolkit the console refuses to start anything built for a newer firmware: the game needs a backport for the firmware in use, or AMPR Emu / AMPR Emu NG. A system update is not the way here, it can end the jailbreak. That such games fail to start is not yet confirmed on this console."
+        "de": "Für diese Spiele verlangt die param.json eine höhere Firmware-Version, als die Konsole hat (Evidenz: Titel und verlangte Version), und in den Scanpfaden liegt kein Backport-Ordner backports/<TITLE_ID>/. Die Konsole startet laut Backport-Toolkit nichts, was für eine höhere Firmware-Version gebaut ist: Das Spiel braucht einen Backport für die genutzte Firmware oder AMPR Emu bzw. AMPR Emu NG. Dass solche Spiele nicht starten, ist an dieser Konsole noch nicht bestätigt.",
+        "en": "For these games the param.json demands a higher firmware version than the console has (evidence: title and required version), and the scan paths contain no backport folder backports/<TITLE_ID>/. According to the backport toolkit the console refuses to start anything built for a higher firmware version: the game needs a backport for the firmware in use, or AMPR Emu / AMPR Emu NG. That such games fail to start is not yet confirmed on this console."
       },
       "evidence": "games.need_backport[].desc",
       "fix": null,

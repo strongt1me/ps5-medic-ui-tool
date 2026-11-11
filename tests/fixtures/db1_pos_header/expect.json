@@ -1,0 +1,1 @@
+{"expect": ["db.header_invalid"], "neg_for": ["db.truncated", "db.journal_pending"]}

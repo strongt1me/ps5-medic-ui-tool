@@ -31,6 +31,7 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 - Keine Exploits, keine Jailbreak-Ketten, keine Firmware-Änderungen.
 - Keine Funktionen zum Beschaffen, Entsperren oder Verteilen von Spielen, Keys oder Firmware. Der Medic repariert die **Umgebung**, nicht Inhalte.
 - Keine Schreibzugriffe auf `/system`, `/system_ex` oder Flash.
+- **Nie ein Update der Systemsoftware/Firmware anzeigen oder dazu raten**, bei keinem Fehler und in keinem Text (Marc, 10. Nov. 2026). Erzwingt `libmedic/src/text_policy.cpp` (Lader + Tests); Einzelheiten in `docs/RULES.md`.
 
 ## Lizenz & Sichtbarkeit (Entscheidung von Marc, 8. Nov. 2026)
 - Lizenz: **GPL-3.0-or-later** (`LICENSE`). Jede neue eigene Quelldatei bekommt als erste Zeile (nach einer Shebang) `SPDX-License-Identifier: GPL-3.0-or-later` (`//` bzw. `#`). Nicht für `third_party/`.

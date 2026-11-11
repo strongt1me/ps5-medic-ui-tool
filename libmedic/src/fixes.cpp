@@ -325,15 +325,18 @@ void plan_move_duplicates(FixPlan& plan, const Facts& facts, const IFileSystem& 
     struct Src {
         std::string path, root;
         long level;
+        bool active;  // die Quelle, die ShadowMount+ gerade nutzt (Link-Datei unter /user/app/<TITLE_ID>/)
     };
     std::map<std::string, std::vector<Src>> groups;
     for (const auto& t : array_fact(facts, "smp.titles"))
         if (t.value("dup_count", 0) > 1)
-            groups[str_of(t, "titleid")].push_back({str_of(t, "path"), str_of(t, "root"), t.value("level", 0L)});
+            groups[str_of(t, "titleid")].push_back({str_of(t, "path"), str_of(t, "root"), t.value("level", 0L), t.value("active", false)});
 
     std::set<std::string> targets;
     for (auto& [id, srcs] : groups) {
+        // Behalten wird standardmaessig die Quelle, die SM+ schon nutzt (sonst wuerde der Fix das laufende Spiel wegnehmen), danach die flachste.
         std::sort(srcs.begin(), srcs.end(), [](const Src& a, const Src& b) {
+            if (a.active != b.active) return a.active;
             return a.level != b.level ? a.level < b.level : a.path < b.path;
         });
         std::size_t keep = 0;

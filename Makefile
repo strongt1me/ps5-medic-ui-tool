@@ -34,7 +34,7 @@ PS5_CXX := $(PS5_PAYLOAD_SDK)/bin/prospero-clang++
 PS5_CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Ilibmedic/include -Ithird_party -Ips5 -Iui/include -Iui/src -I$(PS5_HOMEBREW)/include
 
 PS5_CORE_SRCS := $(wildcard libmedic/src/*.cpp) third_party/qrcodegen/qrcodegen.cpp ps5/ps5_platform.cpp
-PS5_C_SRCS := third_party/tweetnacl/tweetnacl.c
+PS5_C_SRCS := third_party/tweetnacl/tweetnacl.c third_party/sqlite3/sqlite3.c
 # png.cpp bleibt aussen vor: nur fuer die PC-Vorschau (medic-ui-preview) gebraucht, nicht auf der Konsole.
 PS5_UI_SRCS := ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp ui/src/i18n.cpp ui/src/i18n_embedded.cpp \
                ui/src/app.cpp ui/src/local_service.cpp
@@ -83,7 +83,10 @@ $(PS5_BUILD)/%.o: %.cpp
 $(PS5_BUILD)/%.o: %.c
 	@test -x $(PS5_CXX) || { echo "ps5-payload-sdk nicht gefunden: $(PS5_PAYLOAD_SDK) (PS5_PAYLOAD_SDK=... setzen)"; exit 1; }
 	@mkdir -p $(dir $@)
-	$(PS5_CXX) -x c -std=gnu11 -O2 -w -MMD -MP -c $< -o $@
+	$(PS5_CXX) -x c -std=gnu11 -O2 -w $(PS5_C_EXTRA) -MMD -MP -c $< -o $@
+
+# SQLite ohne Dateizugriff (nur Speicher-Datenbanken, siehe libmedic/src/sqlite_check.cpp)
+$(PS5_BUILD)/third_party/sqlite3/sqlite3.o: PS5_C_EXTRA := -DSQLITE_OS_OTHER=1 -DSQLITE_THREADSAFE=0 -DSQLITE_TEMP_STORE=3 -DSQLITE_OMIT_LOAD_EXTENSION=1 -DSQLITE_OMIT_SHARED_CACHE=1 -DSQLITE_OMIT_DEPRECATED=1 -DSQLITE_OMIT_LOCALTIME=1 -DSQLITE_OMIT_PROGRESS_CALLBACK=1 -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_MAX_MMAP_SIZE=0
 
 $(PS5_ELF): $(PS5_OBJS)
 	$(PS5_CXX) $^ -lkernel_sys -o $@

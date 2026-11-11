@@ -1,0 +1,1 @@
+{"expect": ["sys.unclean_boot_history"], "neg_for": ["sys.unclean_boot"]}

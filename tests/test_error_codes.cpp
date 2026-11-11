@@ -3,6 +3,7 @@
 // knowledge/error_codes.json. Die Anzeige in der UI pruefen die Tests in test_ui.cpp.
 #include "check.hpp"
 #include "medic/error_codes.hpp"
+#include "medic/text_policy.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -166,7 +167,8 @@ void content_tests() {
         "NP-102944-0", "NP-102945-1", "CE-108889-4", "WS-116328-1", "CE-107520-5",                                    // neueste Systemsoftware
         "CE-100005-6", "CE-100009-0", "CE-100095-5", "CE-100096-6", "CE-106487-6", "CE-107527-2", "CE-107622-8",      // Spiele und Apps: laden, starten,
         "CE-107750-0", "CE-107891-6", "CE-109573-5", "CE-117740-0", "NP-104291-7",                                    // installieren, Fehler beim Spielen, Lizenz
-        "CE-105733-9", "CE-107098-5", "0x80268001", "0x80551618", "0x80960005", "0x809F8032"};                        // nur Community (keine Sony-Seite)
+        "CE-105733-9", "CE-107098-5", "0x80268001", "0x80551618", "0x80960005", "0x809F8032",                        // nur Community (keine Sony-Seite)
+        "CE-100008-9", "NW-102261-2", "WV-109145-0", "WV-109168-5"};                                                  // aus dem Fehlerverlauf der Konsole (11. Nov. 2026), Sony-Seiten
     std::set<std::string> have;
     for (const ErrorCode& c : set.codes) have.insert(c.id);
     CHECK(have == expected, "error_codes.json: genau die belegten Codes (" + std::to_string(set.codes.size()) + ")");
@@ -213,50 +215,35 @@ void content_tests() {
     // Sonys Platzangabe gilt nur fuer CE-107872-5; bei CE-100028-1 nennt Sony keine Menge.
     if (const ErrorCode* c = set.find("CE-107872-5")) CHECK(c->text_de.find("doppelt") != std::string::npos && c->text_en.find("twice") != std::string::npos, "CE-107872-5: doppelter freier Platz");
     if (const ErrorCode* c = set.find("CE-100028-1")) CHECK(c->text_de.find("keinen konkreten Platzbedarf") != std::string::npos, "CE-100028-1: keine Platzmenge erfunden");
-    // Spiele auf einer gejailbreakten Konsole: kein Systemupdate als Loesung. Wo Sony nur das Update nennt, steht stattdessen der Hinweis
-    // auf einen Backport fuer die genutzte Firmware oder AMPR Emu / AMPR Emu NG (Marc, 9. Nov.); bei den Codes mit mehreren Sony-Schritten
-    // entfaellt nur der Update-Schritt.
-    auto recommends_update = [](const ErrorCode& c) {
-        return mentions(c.steps_de, "Systemsoftware aktualisieren") || mentions(c.steps_de, "Systemsoftware und") || mentions(c.steps_de, "Systemupdate") ||
-               mentions(c.steps_en, "pdate the system software") || mentions(c.steps_en, "system update");
-    };
+    // Textregel (Marc, 10. Nov. 2026): kein Eintrag nennt je ein Update der Systemsoftware/Firmware, weder als Schritt noch als Hinweis
+    // (die Lader lehnen so einen Text ab, siehe test_text_policy.cpp). Bei Spielen auf einer gejailbreakten Konsole steht stattdessen der
+    // Hinweis auf einen Backport fuer die genutzte Firmware oder AMPR Emu / AMPR Emu NG (Marc, 9. Nov.).
+    for (const ErrorCode& c : set.codes) {
+        std::string all = c.title_de + "\n" + c.title_en + "\n" + c.text_de + "\n" + c.text_en;
+        for (const auto* v : {&c.steps_de, &c.steps_en, &c.notes_de, &c.notes_en})
+            for (const std::string& s : *v) all += "\n" + s;
+        CHECK(medic::find_system_update_advice(all).empty(), "Textregel: " + c.id + " nennt kein Update der Systemsoftware/Firmware: " + medic::find_system_update_advice(all));
+        CHECK(!mentions(c.notes_de, "fehlt hier mit Absicht") && !mentions(c.notes_en, "left out on purpose"), "Textregel: " + c.id + " erklaert keine Auslassung eines Update-Schritts");
+    }
     for (const char* id : {"NP-102944-0", "NP-102945-1", "CE-108889-4", "WS-116328-1", "CE-107520-5", "CE-106485-4"}) {
         const ErrorCode* c = set.find(id);
         CHECK(c != nullptr, std::string("Spiele: ") + id + " vorhanden");
         if (!c) continue;
         const std::string tag = std::string("Spiele: ") + id + ": ";
-        CHECK(!recommends_update(*c), tag + "kein Systemupdate als Schritt");
         CHECK(mentions(c->steps_de, "Backport") && mentions(c->steps_en, "backport"), tag + "Schritt nennt den Backport fuer die genutzte Firmware");
         CHECK(mentions(c->steps_de, "AMPR Emu NG") && mentions(c->steps_en, "AMPR Emu NG") && mentions(c->steps_de, "AMPR Emu oder") && mentions(c->steps_en, "AMPR Emu or"),
               tag + "Schritt nennt AMPR Emu und AMPR Emu NG");
         CHECK(mentions(c->steps_de, "libSceAmpr.sprx") && mentions(c->steps_de, "fakelib/") && mentions(c->steps_de, "ShadowMount+"), tag + "Einrichtung laut README von AMPR Emu NG");
         CHECK(mentions(c->notes_de, "Szene (nicht von Sony)") && mentions(c->notes_en, "scene (not from Sony)"), tag + "Szenewissen ist als nicht von Sony gekennzeichnet");
         CHECK(mentions(c->notes_de, "nicht belegt") && mentions(c->notes_en, "not documented"), tag + "Hinweis: die Zuordnung des Codes zu diesem Fall ist nicht belegt");
-        CHECK(mentions(c->notes_de, "Systemupdate wird hier nicht empfohlen") && mentions(c->notes_de, "stellt weder Spiele noch Backports bereit"), tag + "Medic empfiehlt kein Update und liefert keine Spiele/Backports (de)");
-        CHECK(mentions(c->notes_en, "system update is not recommended") && mentions(c->notes_en, "neither games nor backports"), tag + "Medic empfiehlt kein Update und liefert keine Spiele/Backports (en)");
+        CHECK(mentions(c->notes_de, "stellt weder Spiele noch Backports bereit"), tag + "Medic liefert keine Spiele/Backports (de)");
+        CHECK(mentions(c->notes_en, "neither games nor backports"), tag + "Medic liefert keine Spiele/Backports (en)");
         CHECK(std::find(c->more_sources.begin(), c->more_sources.end(), "https://github.com/quer3q/ampr-emu-ng") != c->more_sources.end(), tag + "AMPR-Emu-NG-Quelle genannt");
     }
-    for (const char* id : {"CE-108262-9", "CE-107857-8"}) {
+    // Eintraege, deren Sony-Kette frueher ein Systemupdate enthielt, behalten ihre uebrigen Schritte
+    for (const char* id : {"CE-100096-6", "CE-106487-6", "CE-107750-0", "CE-109573-5", "CE-117740-0", "CE-108262-9", "CE-107857-8", "CE-100006-7"}) {
         const ErrorCode* c = set.find(id);
-        if (!c) continue;
-        CHECK(!recommends_update(*c), std::string("Spiele: ") + id + ": Sonys Systemupdate-Schritt entfaellt");
-        CHECK(mentions(c->notes_de, "fehlt hier mit Absicht") && mentions(c->notes_en, "left out on purpose"), std::string("Spiele: ") + id + ": Hinweis, warum der Schritt fehlt");
-    }
-    // Wo noch ein Systemupdate steht (Laufwerk-Fehler, kein Spiel), bleibt der Hinweis auf die Folge fuer den Jailbreak.
-    for (const ErrorCode& c : set.codes)
-        if (recommends_update(c)) CHECK(mentions(c.notes_de, "Jailbreak") && mentions(c.notes_en, "jailbreak"), "Systemupdate: Jailbreak-Hinweis bei " + c.id);
-    if (const ErrorCode* c = set.find("CE-100006-7")) CHECK(recommends_update(*c), "CE-100006-7: Laufwerk-Fehler behaelt Sonys Update-Schritt (kein Spiel)");
-    {  // Sonst empfiehlt kein einziger Eintrag ein Systemupdate (auch die spaeter dazugekommenen Spiele-Codes nicht)
-        std::set<std::string> updating;
-        for (const ErrorCode& c : set.codes)
-            if (recommends_update(c)) updating.insert(c.id);
-        CHECK(updating == std::set<std::string>({"CE-100006-7"}), "Systemupdate: nur der Laufwerk-Eintrag CE-100006-7 empfiehlt noch eines (" + std::to_string(updating.size()) + " Eintraege)");
-    }
-    // Die Eintraege, die ein Systemupdate bei Sony nennen und hier weglassen, sagen das in einem Hinweis
-    for (const char* id : {"CE-100096-6", "CE-106487-6", "CE-107750-0", "CE-109573-5", "CE-117740-0", "CE-108262-9", "CE-107857-8"}) {
-        const ErrorCode* c = set.find(id);
-        CHECK(c != nullptr, std::string("Auslassung: ") + id + " vorhanden");
-        if (c) CHECK(mentions(c->notes_de, "fehlt hier mit Absicht") && mentions(c->notes_en, "left out on purpose") && !c->steps_de.empty(), std::string("Auslassung: ") + id + " nennt den Grund");
+        CHECK(c != nullptr && !c->steps_de.empty(), std::string("Schritte bleiben: ") + id);
     }
 
     // Pruefdatum und Fingerabdruck (tools/check_error_sources.py): jeder Eintrag hat ein Datum, jede Sony-Seite einen Fingerabdruck

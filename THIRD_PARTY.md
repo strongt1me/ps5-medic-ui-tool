@@ -19,3 +19,12 @@ Im Repo (`third_party/websrv-hbldr/`): `hbldr.c/.h`, `elfldr.c/.h` und `pt.c/.h`
 Nicht im Repo, nur für `make ps5-ui` benötigt (Build-Schritte: `docs/PHASE3.md`):
 - [ps5-payload-dev/SDL](https://github.com/ps5-payload-dev/SDL) (SDL2, zlib-Lizenz) – VideoOut/Pad-Anbindung. Statisch gelinkt (`libSDL2.a`). **Geänderte Version:** `src/video/ps5/SDL_ps5video.c` fordert 32 statt 64 MB Bildspeicher an (eine Zeile, siehe `docs/PHASE3.md`).
 - [libsamplerate](https://libsndfile.github.io/libsamplerate/) 0.2.2 (BSD-2-Clause, Erik de Castro Lopo) – Abhängigkeit von SDL2s Audiopfad, auch wenn PS5 Medic selbst kein Audio ausgibt.
+
+## SQLite 3.54.1 (`third_party/sqlite3/`)
+
+Gemeinfrei (Public Domain), unveraendert aus der Amalgamation von sqlite.org (Pruefsumme in `third_party/sqlite3/README.md`). Wird ohne Dateizugriff
+uebersetzt und nur genutzt, um die Datenbanken der Systemsoftware im Arbeitsspeicher zu pruefen (`PRAGMA integrity_check` auf einer Kopie).
+
+Der Aufbau dieser Pruefung (SQLite ohne Dateisystem-Teil, Datenbank per `sqlite3_deserialize` aus einer Kopie oeffnen, WAL-Modus der Kopie auf
+Rollback-Journal umstellen) folgt der Idee von **PS5 Cleanup 1.0.7** (da_Chris86, https://github.com/xXBneutzerNameXx/PS5-Cleanup,
+GPL-3.0-or-later, `db/db_sqlite.c` und `db/db_pruefen.c`). Der Code in `libmedic/src/sqlite_check.cpp` ist eigen geschrieben.

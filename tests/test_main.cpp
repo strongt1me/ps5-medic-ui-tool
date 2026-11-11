@@ -3,6 +3,7 @@
 //  1. Unit-Tests (Versionsvergleich, Operatoren, Schema-Pruefung, Pfadschutz)
 //  2. Fixture-Tests: jeder Ordner in tests/fixtures/ wird mit knowledge/rules.json geprueft;
 //     expect.json {"expect":["regel.id", ...]} muss exakt der Menge der Befunde entsprechen.
+#include "medic/sqlite_check.hpp"
 #include "medic/collectors.hpp"
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
@@ -246,6 +247,94 @@ static void new_fact_tests() {
               "B11: die Zeilen des echten Logs verteilen sich auf drei Quellen");
         CHECK(count_of("a3_neg", "x") == 0, "B11: ohne solche Zeilen eine leere Liste");
     }
+    {  // Spielstaende: Konto-ID der Metadaten gegen die des Spielstand-Speichers (sce_sdmemory = jetziges Konto)
+        const auto pos = facts_of("d2_pos");
+        const json* fg = pos.get("savedata.foreign");
+        CHECK(str(pos, "savedata.current_account") == "0200000000000000", "Spielstand: aktuelle Konto-ID aus dem Spielstand-Speicher");
+        CHECK(fg && fg->is_array() && fg->size() == 2 && (*fg)[0]["titleid"] == "PPSA77300" && (*fg)[0]["name"] == "SaveSlot1" && (*fg)[0]["account"] == "0100000000000000" &&
+                  (*fg)[0]["label"] == "PPSA77300 SaveSlot1 (Testspiel)" && (*fg)[1]["titleid"] == "PPSA77301",
+              "Spielstand: zwei Spielstaende mit anderer Konto-ID, der Speicher und der Spielstand mit passender ID zaehlen nicht");
+        auto count_of = [&](const char* fixture) {
+            const auto f = facts_of(fixture);
+            const json* a2 = f.get("savedata.foreign");
+            return a2 && a2->is_array() ? static_cast<long>(a2->size()) : -1L;
+        };
+        CHECK(count_of("d2_neg_same_account") == 0 && str(facts_of("d2_neg_same_account"), "savedata.current_account") == "0200000000000000", "Spielstand: gleiche Konto-ID -> nichts");
+        CHECK(count_of("d2_neg_no_current") == 0 && !facts_of("d2_neg_no_current").get("savedata.current_account"), "Spielstand: ohne Spielstand-Speicher ist das jetzige Konto unbekannt -> nichts");
+        CHECK(count_of("d2_neg_two_currents") == 0, "Spielstand: zwei verschiedene Konto-IDs in den Speichern -> unklar, nichts melden");
+        CHECK(count_of("a3_neg") == 0, "Spielstand: ohne Metadaten eine leere Liste");
+    }
+    {  // Startverlauf (vshlog): Boot up direkt nach Boot up = Sitzung ohne protokolliertes Herunterfahren
+        const auto pos = facts_of("e2_pos");
+        CHECK(num(pos, "boot.unclean_total") == 3 && num(pos, "boot.unclean_14d") == 3, "Startverlauf: drei Neustarts ohne Herunterfahren, alle in 14 Tagen");
+        CHECK(str(pos, "boot.log_last") == "2026-11-10T08:19:27Z", "Startverlauf: letzter Eintrag als Zeitbezug");
+        const json* u = pos.get("boot.unclean");
+        CHECK(u && u->is_array() && u->size() == 3 && (*u)[2]["ts"] == "2026-11-09T08:19:27Z" && (*u)[2]["cause"] == "MAIN_SOC", "Startverlauf: Zeitpunkt und Startursache");
+        const auto info = facts_of("e2_info");
+        CHECK(num(info, "boot.unclean_total") == 2 && num(info, "boot.unclean_14d") == 1, "Startverlauf: ein alter und ein junger Eintrag -> nur einer im Fenster");
+        CHECK(num(facts_of("e2_neg_clean"), "boot.unclean_total") == 0 && num(facts_of("e2_neg_clean"), "boot.boots_total") == 3, "Startverlauf: normale Neustarts zaehlen nicht");
+        CHECK(!facts_of("a3_neg").get("boot.log_last"), "Startverlauf: ohne Datei kein Fakt");
+    }
+    {  // Fehlerverlauf: Paare aus Code und Titel
+        const auto pos = facts_of("e1_pos");
+        const json* pr = pos.get("errors.pairs");
+        long ce = -1, wv = -1;
+        if (pr && pr->is_array())
+            for (const auto& e : *pr) {
+                if (e["code"] == "CE-100001-1" && e["titleid"] == "PPSA77401") ce = e["count"].get<long>();
+                if (e["code"] == "WV-100002-0") wv = e["count"].get<long>();
+            }
+        CHECK(ce == 3 && wv == 6 && num(pos, "errors.total") == 9, "Fehlerverlauf: Paare gezaehlt (auch mit BOM am Dateianfang)");
+        CHECK(pr && (*pr)[0]["label"] == "CE-100001-1 - PPSA77401 - 3x, zuletzt 2026-11-07", "Fehlerverlauf: Beschriftung mit Code, Titel, Anzahl und letztem Tag");
+        CHECK(num(facts_of("a3_neg"), "errors.total") == 0, "Fehlerverlauf: ohne Verlauf Summe 0");
+    }
+    {  // Datenbanken (SQLite): Kopf, Groesse, Journal
+        auto dbf = [&](const char* fixture, const char* name) -> json {
+            const auto f = facts_of(fixture);
+            const json* a = f.get("db.files");
+            if (a && a->is_array())
+                for (const auto& e : *a)
+                    if (e["name"] == name) return e;
+            return json();
+        };
+        const json ok = dbf("db1_neg_ok", "app.db");
+        CHECK(ok.is_object() && ok["readable"] == 1 && ok["header_bad"] == 0 && ok["truncated"] == 0 && ok["page_size"] == 512 && ok["header_pages"] == 11 && ok["journal_size"] == -1,
+              "Datenbank: gesunde Datei, Seitengroesse und Seitenzahl aus dem Kopf");
+        CHECK(num(facts_of("db1_neg_ok"), "db.count") == 2, "Datenbank: beide Dateien gefunden");
+        CHECK(dbf("db1_pos_header", "app.db")["header_bad"] == 1, "Datenbank: falsche Kennung -> Kopf ungueltig");
+        CHECK(dbf("db1_pos_pagesize", "app.db")["header_bad"] == 1, "Datenbank: Seitengroesse 777 ist keine Zweierpotenz -> Kopf ungueltig");
+        CHECK(dbf("db1_pos_truncated", "app.db")["truncated"] == 1 && dbf("db1_pos_truncated", "app.db")["size"] == 2048, "Datenbank: Kopf sagt 10 Seiten, Datei hat 4 -> abgeschnitten");
+        CHECK(dbf("db1_neg_counter_mismatch", "app.db")["truncated"] == 0, "Datenbank: Seitenzahl im Kopf gilt nicht, wenn der Aenderungszaehler nicht passt");
+        CHECK(dbf("db1_pos_journal", "app.db")["journal_hot"] == 1 && dbf("db1_pos_journal", "app.db")["journal_size"] == 512, "Datenbank: Journal mit Kennung -> offene Transaktion");
+        CHECK(dbf("db1_neg_journal_cold", "app.db")["journal_hot"] == 0 && dbf("db1_neg_journal_cold", "app.db")["journal_size"] == 512, "Datenbank: Journal mit Nullen ist keine offene Transaktion");
+        CHECK(num(facts_of("a3_neg"), "db.count") == 0, "Datenbank: ohne Dateien Summe 0");
+    }
+    {  // Datenbanken, Stufe 2: integrity_check im Arbeitsspeicher
+        auto dbf = [&](const char* fixture, const char* name) -> json {
+            const auto f = facts_of(fixture);
+            const json* a = f.get("db.files");
+            if (a && a->is_array())
+                for (const auto& e : *a)
+                    if (e["name"] == name) return e;
+            return json();
+        };
+        CHECK(dbf("db2_neg_ok", "app.db")["integrity"] == 1 && dbf("db2_neg_ok", "app.db")["integrity_note"] == "", "Datenbank: gesunde echte SQLite-Datei besteht integrity_check");
+        const json bad = dbf("db2_pos_corrupt", "app.db");
+        CHECK(bad["integrity"] == 0 && !bad["integrity_note"].get<std::string>().empty() && bad["header_bad"] == 0 && bad["truncated"] == 0,
+              "Datenbank: Seite 2 zerstoert -> Kopf ok, integrity_check schlaegt fehl");
+        CHECK(dbf("db2_pos_corrupt", "appinfo.db")["integrity"] == 1, "Datenbank: die zweite, gesunde Datei bleibt unauffaellig");
+        CHECK(dbf("db2_wal_ok", "app.db")["integrity"] == 1 && dbf("db2_wal_ok", "app.db")["wal_size"] > 32 && dbf("db2_wal_ok", "app.db")["integrity_skip"] == "",
+              "Datenbank: Hauptdatei plus WAL mit Eintraegen -> WAL wird eingerechnet, Pruefung besteht");
+        CHECK(dbf("db2_wal_main_corrupt", "app.db")["integrity"] == 0, "Datenbank: zerstoerte Seite, die das WAL nicht ueberschreibt -> Fehler trotz WAL");
+        CHECK(dbf("db2_wal_garbage", "app.db")["integrity"] == 1, "Datenbank: WAL mit ungueltigem Kopf wird wie bei SQLite ignoriert");
+        CHECK(dbf("db1_pos_truncated", "app.db")["integrity_skip"] == "kopf" && dbf("db1_pos_journal", "app.db")["integrity_skip"] == "journal" &&
+                  dbf("db1_pos_header", "app.db")["integrity_skip"] == "kopf" && dbf("db1_neg_ok", "app.db")["integrity_skip"] == "",
+              "Datenbank: der Grund fuer eine ausgelassene Pruefung steht im Fakt integrity_skip");
+        CHECK(dbf("db2_neg_hot_journal", "app.db")["integrity"] == -1 && dbf("db2_neg_hot_journal", "app.db")["journal_hot"] == 1, "Datenbank: mit offenem Journal wird nicht geprueft");
+        CHECK(dbf("db1_neg_ok", "app.db")["integrity"] == 1 && dbf("db1_pos_truncated", "app.db")["integrity"] == -1, "Datenbank: abgeschnitten -> nicht geprueft, gesund -> geprueft");
+        const std::string sample = medic::sqlite_broken_sample();
+        CHECK(sample.size() >= 1536 && !medic::sqlite_integrity_check(sample).ok && medic::sqlite_integrity_check(sample).ran, "Datenbank: das synthetische Beispiel fuer den Export ist beschaedigt");
+    }
     {  // C3: freier Platz in Prozent
         auto c3 = facts_of("c3_pos");
         const json* m = c3.get("storage.mounts");
@@ -310,6 +399,7 @@ int main() {
     sign_tests();
     error_code_tests();
     codes_update_tests();
+    text_policy_tests();
     ui_tests();
     std::cout << g_pass << " Pruefungen ok, " << g_fail << " fehlgeschlagen\n";
     return g_fail ? 1 : 0;
