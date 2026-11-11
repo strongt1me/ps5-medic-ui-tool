@@ -1363,7 +1363,60 @@ void collect_klog(const Platform& p, Facts& f) {
         if (lines.size() < 120 && seen.insert(line).second) lines.push_back(line);
     }
     f.set("klog.total_lines", total);
-    f.set("klog.lines", std::move(lines));
+    f.set("klog.new_lines", lines);  // nur der Strom dieses Lesens; persist_klog haengt sie an die Datei
+    // Zeilen aus fruehren Check-ups desselben Konsolenstarts (Datei von persist_klog) dazunehmen: die neuen kommen zuletzt
+    json all = json::array();
+    std::set<std::string> have;
+    const std::int64_t boot = p.sys().boot_epoch();
+    std::string stored;
+    if (p.fs().read_file(kKlogBootPath, stored)) {
+        const auto old_lines = split_lines(stored);
+        if (!old_lines.empty() && old_lines[0] == "# boot " + std::to_string(boot) && boot != 0)
+            for (std::size_t i = 1; i < old_lines.size() && all.size() < 200; ++i)
+                if (!old_lines[i].empty() && have.insert(old_lines[i]).second) all.push_back(old_lines[i]);
+    }
+    f.set("klog.persisted_lines", static_cast<long>(all.size()));
+    for (const auto& l : lines)
+        if (all.size() < 200 && have.insert(l.get<std::string>()).second) all.push_back(l);
+    f.set("klog.lines", std::move(all));
+}
+
+bool persist_klog(Platform& p, const Facts& facts) {
+    IFileSystemRW* rw = p.fs_rw();
+    const json* fresh = facts.get("klog.new_lines");
+    if (!rw || !fresh || !fresh->is_array() || fresh->empty()) return false;
+    const std::int64_t boot = p.sys().boot_epoch();
+    if (boot == 0) return false;  // ohne bekannte Startzeit laesst sich nicht sagen, zu welchem Start die Zeilen gehoeren
+    const std::string header = "# boot " + std::to_string(boot);
+    std::string text;
+    std::vector<std::string> have;
+    if (p.fs().read_file(kKlogBootPath, text)) {
+        const auto lines = split_lines(text);
+        if (!lines.empty() && lines[0] == header) {
+            have.assign(lines.begin() + 1, lines.end());
+        } else if (!lines.empty() && lines[0].rfind("# boot ", 0) == 0) {
+            // anderer Konsolenstart: die alte Datei beiseite legen (nie loeschen); gelingt das nicht, wird nichts ueberschrieben
+            const std::string old_epoch = lines[0].substr(7);
+            if (old_epoch.empty() || old_epoch.find_first_not_of("0123456789") != std::string::npos) return false;
+            if (!rw->rename(kKlogBootPath, "/data/ps5medic/klog_boot_" + old_epoch + ".txt")) return false;
+        } else {
+            return false;  // fremde Datei gleichen Namens: nicht anfassen
+        }
+    }
+    std::set<std::string> seen(have.begin(), have.end());
+    std::string out = header + "\n";
+    for (const auto& l : have) out += l + "\n";
+    bool added = false;
+    for (const auto& l : *fresh) {
+        if (!l.is_string()) continue;
+        const std::string line = l.get<std::string>();
+        if (out.size() + line.size() + 1 > kKlogBootMaxBytes) break;
+        if (seen.insert(line).second) {
+            out += line + "\n";
+            added = true;
+        }
+    }
+    return (added || !p.fs().exists(kKlogBootPath)) && rw->write_file(kKlogBootPath, out);
 }
 
 Facts collect_all(const Platform& p) {

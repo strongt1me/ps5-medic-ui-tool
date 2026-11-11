@@ -1,0 +1,2 @@
+# boot 1794000000
+[kstuff.elf] Failed to get libSceNpTrophy handle, patch_shellui failed

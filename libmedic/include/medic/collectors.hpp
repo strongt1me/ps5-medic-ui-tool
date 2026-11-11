@@ -26,4 +26,12 @@ void collect_game_files(const Platform& p, Facts& f);    // games.case_mismatch[
 // Fuehrt alle Collectors aus.
 Facts collect_all(const Platform& p);
 
+// Gesammelter Kernel-Log je Konsolenstart (D10b): Weil das Lesen von klogsrv verbraucht, haengt die App die neu gelesenen, gefilterten Zeilen
+// (Fakt klog.new_lines) an diese Datei und liest sie beim naechsten Check-up wieder ein. Erste Zeile: "# boot <Startzeit>"; bei einem neuen
+// Konsolenstart wird die alte Datei nach klog_boot_<alte Startzeit>.txt verschoben (nie geloescht) und eine neue begonnen.
+constexpr const char* kKlogBootPath = "/data/ps5medic/klog_boot.txt";
+constexpr std::size_t kKlogBootMaxBytes = 256 * 1024;
+// Haengt die neuen Zeilen an (ohne Doppelte, hoechstens kKlogBootMaxBytes); false ohne Schreibzugriff, ohne neue Zeilen oder bei Fehler.
+bool persist_klog(Platform& p, const Facts& facts);
+
 }  // namespace medic

@@ -33,6 +33,7 @@ LocalService::LocalService(medic::Platform& platform, medic::RuleSet rules, std:
 
 CheckResult LocalService::run_check() {
     facts_ = medic::collect_all(p_);
+    medic::persist_klog(p_, facts_);  // gelesene Kernel-Log-Zeilen sichern (verbrauchendes Lesen, D10b)
     CheckResult r;
     r.fw = p_.sys().firmware();
     r.model = p_.sys().model();

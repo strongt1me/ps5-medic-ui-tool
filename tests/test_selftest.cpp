@@ -427,4 +427,46 @@ void selftest_tests() {
         auto r2 = run("hw.thermal.short_soak", Facts(), sp2, ctx);
         CHECK(r2.status == TestStatus::Passed && r2.reason == "no_heating", "Waermetest: ohne Anstieg und ohne Luefterregler = Grund no_heating");
     }
+    {  // Kernel-Log sammeln (D10b): anhaengen, Doppelte, Neustart rotiert, nie loeschen
+        Sandbox w;
+        std::unique_ptr<Platform> rw;  // die Plattform liest system.json und klog.txt beim Anlegen: nach jeder Aenderung neu anlegen
+        auto sys = [&](long long boot) {
+            spit(w.dir / "system.json", R"({"fw":"12.00","model":"T","storage":[],"components":{},"boot":)" + std::to_string(boot) + "}");
+            rw = make_snapshot_platform(w.dir.string(), true);
+        };
+        auto klog = [&](const std::string& text) {
+            spit(w.dir / "klog.txt", text);
+            rw = make_snapshot_platform(w.dir.string(), true);
+        };
+        const std::string l1 = "[kstuff.elf] patch_shellui failed", l2 = "[KERNEL] WARNING: etwas";
+        sys(1794000000);
+        klog("<118>" + l1 + "\n");
+        const Facts a = collect_all(*rw);
+        CHECK(persist_klog(*rw, a), "klog sammeln: erste Zeilen werden angehaengt");
+        const std::string text1 = slurp(w.real(kKlogBootPath));
+        CHECK(text1 == "# boot 1794000000\n" + l1 + "\n", "klog sammeln: Kopfzeile mit Startzeit, danach die Zeile");
+        CHECK(!persist_klog(*rw, collect_all(*rw)), "klog sammeln: nichts Neues = nichts geschrieben");
+        klog("<118>" + l1 + "\n<118>" + l2 + "\n");
+        CHECK(persist_klog(*rw, collect_all(*rw)) && slurp(w.real(kKlogBootPath)) == "# boot 1794000000\n" + l1 + "\n" + l2 + "\n", "klog sammeln: neue Zeile angehaengt, Doppelte nicht");
+        klog("");  // spaeterer Check-up: der Server liefert nichts mehr, die Datei enthaelt noch alles
+        const Facts later = collect_all(*rw);
+        CHECK(later.get("klog.persisted_lines")->get<long>() == 2 && later.get("klog.lines")->size() == 2 && later.get("klog.new_lines")->empty(), "klog sammeln: spaeterer Check-up sieht die gesammelten Zeilen");
+        // neuer Konsolenstart: alte Datei beiseite, neue beginnt
+        sys(1794999999);
+        klog("<118>[kstuff.elf] neu failed\n");
+        const Facts boot2 = collect_all(*rw);
+        CHECK(boot2.get("klog.persisted_lines")->get<long>() == 0, "klog sammeln: Zeilen eines frueheren Starts zaehlen nicht");
+        CHECK(persist_klog(*rw, boot2), "klog sammeln: neuer Start schreibt");
+        CHECK(slurp(w.real("/data/ps5medic/klog_boot_1794000000.txt")) == text1 + l2 + "\n" && slurp(w.real(kKlogBootPath)) == "# boot 1794999999\n[kstuff.elf] neu failed\n",
+              "klog sammeln: alte Datei verschoben (nie geloescht), neue begonnen");
+        // Schutz
+        auto ro = make_snapshot_platform(w.dir.string(), false);
+        CHECK(!persist_klog(*ro, boot2), "klog sammeln: ohne Schreibzugriff nichts");
+        sys(0);
+        CHECK(!persist_klog(*rw, collect_all(*rw)), "klog sammeln: ohne bekannte Startzeit nichts");
+        sys(1794999999);
+        spit(w.real(kKlogBootPath), "fremder Inhalt\n");
+        klog("<118>[kstuff.elf] noch eine failed\n");
+        CHECK(!persist_klog(*rw, collect_all(*rw)) && slurp(w.real(kKlogBootPath)) == "fremder Inhalt\n", "klog sammeln: fremde Datei gleichen Namens bleibt unangetastet");
+    }
 }
