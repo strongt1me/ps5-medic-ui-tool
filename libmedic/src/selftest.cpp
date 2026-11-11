@@ -13,6 +13,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <cstdlib>
 #include <ctime>
 
 #if defined(__x86_64__)
@@ -267,6 +268,9 @@ private:
 struct Burners {
     static constexpr int kMax = 8;
     std::atomic<bool> stop{false};
+    std::atomic<std::uint64_t> errors{0};  // Runden, deren Ergebnis von der Referenz abwich (stiller Rechenfehler)
+    std::uint32_t reference = 0;
+    bool use_fma = false, inject = false;
     std::atomic<std::uint64_t> iters[kMax];
     std::time_t deadline = 0;  // harte Frist nach der Uhr: unabhaengig vom Hauptthread, die Threads beenden sich selbst
     pthread_t th[kMax];
@@ -323,21 +327,31 @@ float fma_kernel(int) { return 0; }
 bool have_fma() { return false; }
 #endif
 
+// Eine Runde der Last mit festem Ergebnis (Bitmuster): Auf einer gesunden CPU ist es bei jeder Wiederholung und auf jedem Kern gleich.
+float int_kernel() {
+    volatile std::uint64_t x = 1;
+    for (int i = 0; i < 100000; ++i) x = x * 6364136223846793005ULL + 1442695040888963407ULL;
+    return static_cast<float>(static_cast<std::uint32_t>(x >> 40));
+}
+
+std::uint32_t round_bits(bool fma) {
+    const float r = fma ? fma_kernel(20000) : int_kernel();
+    std::uint32_t b;
+    std::memcpy(&b, &r, sizeof b);
+    return b;
+}
+
 void* burn_main(void* p) {
     auto* a = static_cast<BurnArg*>(p);
-    const bool fma = have_fma();
-    volatile std::uint64_t x = 1;
-    volatile float sink = 0;
+    std::uint64_t round = 0;
     for (;;) {
-        if (fma) {
-            sink = fma_kernel(20000);
-        } else {
-            for (int i = 0; i < 100000; ++i) x = x * 6364136223846793005ULL + 1442695040888963407ULL;
-        }
+        std::uint32_t bits = round_bits(a->b->use_fma);
+        if (a->b->inject && a->index == 0 && round == 2) bits ^= 0x400;  // Testhilfe: ein gekipptes Bit
+        if (bits != a->b->reference) a->b->errors.fetch_add(1, std::memory_order_relaxed);
+        ++round;
         a->b->iters[a->index].fetch_add(1, std::memory_order_relaxed);  // eine Runde = ein Zaehler (Einheit egal: nur das Verhaeltnis zaehlt)
         if (a->b->stop.load(std::memory_order_relaxed) || std::time(nullptr) >= a->b->deadline) break;
     }
-    (void)sink;
     return nullptr;
 }
 
@@ -347,7 +361,9 @@ void* burn_main(void* p) {
 // Frist, Join im Destruktor.
 class ThermalSession final : public BaseSession {
 public:
-    ThermalSession(Platform& p, const TestDef& d, const TestContext& c) : BaseSession(d), p_(p), ctx_(c) {
+    ThermalSession(Platform& p, const Facts& facts, const TestDef& d, const TestContext& c) : BaseSession(d), p_(p), ctx_(c) {
+        if (const json* n = facts.get("fan.controller.name"); n && n->is_string()) fan_controller_ = true;
+        if (const json* t = facts.get("fan.controller.target_c"); t && t->is_number()) fan_target_ = t->get<double>();
         const int t = temp();
         if (t < 0) {
             finish(TestStatus::Skipped, "sensors_unreadable");
@@ -426,6 +442,9 @@ private:
         phase_start_ = Clock::now();
         last_sample_ = 0;
         burners_.deadline = std::time(nullptr) + ctx_.thermal_burn_s + 3;  // harte Frist: Last plus 3 Sekunden Spielraum
+        burners_.use_fma = have_fma();
+        burners_.reference = round_bits(burners_.use_fma);  // Referenz im Hauptthread, vor den Rechenthreads
+        burners_.inject = ctx_.inject_compute_fault;
         for (int i = 0; i < cores_; ++i) {
             args_[i] = {&burners_, i};
             if (pthread_create(&burners_.th[i], nullptr, burn_main, &args_[i]) != 0) break;
@@ -449,6 +468,12 @@ private:
         result_.measurements.push_back({"end_c", static_cast<double>(last), "C"});
         result_.measurements.push_back({"cores", static_cast<double>(cores_), ""});
         std::string why = reason;
+        const std::uint64_t compute_errors = burners_.errors.load();
+        result_.measurements.push_back({"compute_errors", static_cast<double>(compute_errors), ""});
+        if (compute_errors > 0) {  // ein stiller Rechenfehler unter Last ist ein harter Befund, auch bei Abbruch
+            st = TestStatus::Failed;
+            why = "compute_mismatch";
+        }
         // Durchsatzabfall der Last: Mittel der ersten und der letzten 10 Messintervalle (erst ab 20 Intervallen aussagekraeftig).
         if (rates_.size() >= 20 && ctx_.thermal_burn_s >= 20) {  // kurze Laeufe (Tests) urteilen nicht ueber die Rate
             auto mean = [&](std::size_t a, std::size_t b) {
@@ -473,7 +498,9 @@ private:
             why = "slow_cooldown";
         }
         // Bestanden, aber kaum erwaermt: die Aussage ist schwach (Last zu schwach oder sehr gute Kuehlung), das steht im Ergebnis.
-        if (st == TestStatus::Passed && peak_ - rest_ < 5) why = "no_heating";
+        // Ein Luefterregler haelt die Temperatur niedrig: das wird genannt, und die Zieltemperatur steht im Ergebnis.
+        if (fan_controller_ && fan_target_ >= 0) result_.measurements.push_back({"fan_controller_target_c", fan_target_, "C"});
+        if (st == TestStatus::Passed && peak_ - rest_ < 5) why = fan_controller_ ? "fan_controller" : "no_heating";
         finish(st, why);
     }
 
@@ -488,6 +515,103 @@ private:
     Clock::time_point phase_start_ = Clock::now();
     int rest_ = 0, peak_ = 0, cores_ = 1;
     bool burning_ = false, cooling_ = false;
+    bool fan_controller_ = false;
+    double fan_target_ = -1;
+};
+
+// ---- Gruendlich: Speicher-Muster-Test (Userland) ------------------------------------------------------------------------------------
+
+// Belegt bis zu 128 MiB (bei Allokationsfehler halbiert, mindestens 16 MiB), beschreibt sie nacheinander mit sechs Mustern (0x00, 0xFF, 0x55,
+// 0xAA, laufende Eins, Zufall) und liest jedes Muster zurueck. Das prueft nur den Teil des Speichers, den ein Prozess bekommt: nicht den
+// gesamten GDDR6, keinen GPU-Zugriff, keine ECC. Jedes abweichende Wort ist ein Fehler; Wiederholung an derselben Adresse steht im Bericht.
+class MemorySession final : public BaseSession {
+public:
+    MemorySession(const TestDef& d, const TestContext& c) : BaseSession(d), inject_(c.inject_mem_fault) {
+        std::uint64_t size = std::max<std::uint64_t>(c.mem_bytes, kBlock);
+        while (size >= kBlock) {
+            buf_ = static_cast<std::uint64_t*>(std::malloc(static_cast<std::size_t>(size)));
+            if (buf_) break;
+            size /= 2;
+        }
+        if (!buf_ || size < kBlock) {
+            finish(TestStatus::Skipped, "no_memory");
+            return;
+        }
+        size_ = size - size % kBlock;
+        blocks_ = size_ / kBlock;
+    }
+    ~MemorySession() override { std::free(buf_); }
+
+    bool step() override {
+        if (done_) return true;
+        if (aborted_) {
+            conclude(TestStatus::Cancelled, abort_reason_);
+            return true;
+        }
+        std::uint64_t* p = buf_ + block_ * (kBlock / 8);
+        const std::size_t words = kBlock / 8;
+        if (phase_ == 0) {  // Muster schreiben
+            fill(p, words, pattern_, block_);
+            if (inject_ && pattern_ == 1 && block_ == 0) p[3] ^= 0x10;  // Testhilfe: ein gekipptes Bit
+        } else {  // zuruecklesen
+            std::vector<std::uint64_t> expect(words);
+            fill(expect.data(), words, pattern_, block_);
+            for (std::size_t i = 0; i < words; ++i)
+                if (p[i] != expect[i]) {
+                    ++bad_words_;
+                    if (first_bad_ < 0) first_bad_ = static_cast<double>(block_ * kBlock + i * 8);
+                }
+        }
+        if (++block_ >= blocks_) {
+            block_ = 0;
+            if (phase_ == 0) {
+                phase_ = 1;
+            } else {
+                phase_ = 0;
+                if (++pattern_ >= kPatterns) {
+                    conclude(bad_words_ ? TestStatus::Failed : TestStatus::Passed, bad_words_ ? "mem_mismatch" : "");
+                    return true;
+                }
+            }
+        }
+        progress_ = std::min(0.99, (static_cast<double>(pattern_) * 2 * blocks_ + (phase_ ? blocks_ : 0) + block_) / (static_cast<double>(kPatterns) * 2 * blocks_));
+        return false;
+    }
+
+private:
+    static constexpr std::size_t kBlock = 16u << 20;
+    static constexpr int kPatterns = 6;
+    static void fill(std::uint64_t* p, std::size_t words, int pattern, std::uint64_t block) {
+        std::uint64_t x = (block + 1) * 0x9E3779B97F4A7C15ULL;
+        for (std::size_t i = 0; i < words; ++i) {
+            switch (pattern) {
+                case 0: p[i] = 0x0000000000000000ULL; break;
+                case 1: p[i] = 0xFFFFFFFFFFFFFFFFULL; break;
+                case 2: p[i] = 0x5555555555555555ULL; break;
+                case 3: p[i] = 0xAAAAAAAAAAAAAAAAULL; break;
+                case 4: p[i] = 1ULL << ((i + block) % 64); break;  // laufende Eins
+                default:
+                    x ^= x >> 12;
+                    x ^= x << 25;
+                    x ^= x >> 27;
+                    p[i] = x * 0x2545F4914F6CDD1DULL;
+            }
+        }
+    }
+    void conclude(TestStatus st, const std::string& reason) {
+        result_.measurements.push_back({"bytes_tested", static_cast<double>(size_), "B"});
+        result_.measurements.push_back({"patterns", static_cast<double>(std::min(pattern_ + (phase_ ? 1 : 0), kPatterns)), ""});
+        result_.measurements.push_back({"bad_words", static_cast<double>(bad_words_), ""});
+        if (first_bad_ >= 0) result_.measurements.push_back({"first_bad_offset", first_bad_, "B"});
+        result_.measurements.push_back({"seconds", std::max(seconds_since(t0_), 1e-6), "s"});
+        finish(st, reason);
+    }
+
+    std::uint64_t* buf_ = nullptr;
+    std::uint64_t size_ = 0, blocks_ = 0, block_ = 0, bad_words_ = 0;
+    int phase_ = 0, pattern_ = 0;
+    double first_bad_ = -1;
+    bool inject_;
 };
 
 // ---- Gruendlich: Schreibtest --------------------------------------------------------------------------------------------------------
@@ -631,8 +755,11 @@ const std::vector<Entry>& entries() {
         {{"sw.db.headers", TestTier::Quick, "none", 2, "Datenbanken der Systemsoftware (Kopf und Größe)", "System software databases (header and size)", "Inhalt der Datenbanken (siehe Datenbank-Prüfung)", "database content (see the database check)"}, test_db_headers},
         {{"sw.files.sanity", TestTier::Quick, "none", 2, "Payloads, Images und eboot.bin (Kopf)", "Payloads, images and eboot.bin (header)", "Inhalt der Dateien, Entschlüsseln, Start des Spiels", "file contents, decryption, whether a game starts"}, test_files_sanity},
         {{"hw.storage.read_throughput", TestTier::Standard, "read", 20, "Lesetest einer Image-Datei", "Read test of an image file", "Schreibleistung, Verschleiß, ungelesene Bereiche; wiederholte Läufe können aus dem Zwischenspeicher lesen", "write speed, wear, unread areas; repeated runs may read from the cache"}, nullptr},
-        {{"hw.thermal.short_soak", TestTier::Thorough, "load", 80, "Wärmetest (kurze CPU-Last)", "Heat test (short CPU load)", "GPU-/Speicherwärme, Lüfter, Ursache (Staub, Wärmeleitmaterial); bei kühler Umgebung können Probleme verborgen bleiben", "GPU/memory heat, fan, cause (dust, thermal paste); in a cool room problems can stay hidden"}, nullptr},
+        {{"hw.thermal.short_soak", TestTier::Thorough, "load", 80, "Wärmetest (kurze CPU-Last)", "Heat test (short CPU load)", "GPU-/Speicherwärme, die Standardkühlung bei laufendem Lüfterregler (er hält die Konsole kühl), Ursache (Staub, Wärmeleitmaterial); in kühler Umgebung bleiben Probleme verborgen", "GPU/memory heat, the standard cooling while a fan controller runs (it keeps the console cool), cause (dust, thermal paste); in a cool room problems stay hidden"}, nullptr},
+        {{"hw.mem.userland_pattern", TestTier::Thorough, "load", 20, "Speicher-Muster-Test (128 MiB Arbeitsspeicher)", "Memory pattern test (128 MiB of working memory)", "Gesamter GDDR6, GPU-Zugriff, ECC; nur der Speicher, den ein Prozess bekommt", "all GDDR6, GPU access, ECC; only the memory a process gets"}, nullptr},
         {{"hw.storage.write_verify", TestTier::Thorough, "write", 30, "Schreibtest (eine Testdatei, 256 MiB)", "Write test (one test file, 256 MiB)", "Restlebensdauer, Verschleiß, Leistung außerhalb des Schreib-Caches; der Rücklesevergleich kann aus dem Zwischenspeicher kommen", "remaining lifetime, wear, speed beyond the write cache; the read-back may come from cache"}, nullptr},
+        {{"hw.pad.buttons", TestTier::User, "none", 60, "Controller-Tasten (Nutzer-Test)", "Controller buttons (user test)", "Sticks, Trigger, Drift, Funkqualität, Akkukapazität; nur ob jede Taste ankommt", "sticks, triggers, drift, radio quality, battery capacity; only whether every button arrives"}, nullptr},
+        {{"hw.display.pattern", TestTier::User, "none", 60, "Anzeige-Muster (Nutzer-Test)", "Display patterns (user test)", "Panel, HDMI-Anschluss und Kabel im Detail, Bildschärfe; die Beurteilung macht der Mensch (Standard: „weiß nicht“)", "panel, HDMI port and cable in detail, sharpness; the judgement is the human's (default: “don't know”)"}, nullptr},
     };
     return list;
 }
@@ -688,7 +815,10 @@ std::unique_ptr<TestSession> begin_selftest_session(Platform& p, const Facts& fa
         if (e.def.id != def.id) continue;
         if (e.fn) return std::make_unique<OneShotSession>(facts, e.def, e.fn);
         if (e.def.id == "hw.storage.read_throughput") return std::make_unique<ReadSession>(p, facts, e.def);
-        if (e.def.id == "hw.thermal.short_soak") return std::make_unique<ThermalSession>(p, e.def, ctx);
+        if (e.def.tier == TestTier::User)
+            return std::make_unique<OneShotSession>(facts, e.def, [](const Facts&, const TestDef& d) { return make_result(d, TestStatus::Skipped, "needs_user"); });
+        if (e.def.id == "hw.mem.userland_pattern") return std::make_unique<MemorySession>(e.def, ctx);
+        if (e.def.id == "hw.thermal.short_soak") return std::make_unique<ThermalSession>(p, facts, e.def, ctx);
         if (e.def.id == "hw.storage.write_verify") return std::make_unique<WriteSession>(p, facts, e.def, ctx);
     }
     return std::make_unique<OneShotSession>(facts, def, [](const Facts&, const TestDef& d) { return make_result(d, TestStatus::Error, "unknown_test"); });
@@ -710,6 +840,24 @@ TestResult run_selftest(Platform& p, const Facts& facts, const TestDef& def, con
     r.id = def.id;
     r.duration_s = seconds_since(t0);
     return r;
+}
+
+bool selftest_record(Platform& p, const std::string& ts, const TestResult& r) {
+    IFileSystemRW* rw = p.fs_rw();
+    if (!rw || !valid_ts(ts)) return false;
+    std::string finished = ts;
+    std::vector<TestResult> all = load_last_selftest(p.fs(), &finished);
+    if (finished.empty()) finished = ts;
+    bool replaced = false;
+    for (auto& x : all)
+        if (x.id == r.id) {
+            x = r;
+            replaced = true;
+        }
+    if (!replaced) all.push_back(r);
+    json arr = json::array();
+    for (const auto& x : all) arr.push_back(result_json(x));
+    return rw->write_file(kSelftestLastPath, json({{"finished", finished}, {"cancelled", false}, {"results", arr}}).dump(2) + "\n");
 }
 
 bool selftest_begin(Platform& p, const std::string& ts, const std::vector<std::string>& ids) {

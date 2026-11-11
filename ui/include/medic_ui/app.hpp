@@ -22,7 +22,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
 
@@ -89,6 +89,10 @@ private:
     void draw_error_detail(Canvas& c) const;
     void draw_error_source(Canvas& c) const;
     void draw_selftest(Canvas& c) const;
+    void draw_usertest(Canvas& c) const;
+    void open_usertest(bool pad);
+    void handle_usertest(Button b);
+    void finish_usertest(medic::TestStatus st, const std::string& reason, double missing);
 
     std::string finding_text(const medic::Finding& f) const;
     std::string fix_name(const std::string& id) const;
@@ -140,6 +144,14 @@ private:
     bool st_cancel_ = false, st_begun_ = false, st_item_started_ = false, st_abort_sent_ = false;
     int st_tier_ = 1;           // gewaehlte Stufe: 0 Schnell, 1 Standard, 2 Gruendlich
     double st_progress_ = 0;    // Fortschritt des laufenden Tests (0 bis 1)
+
+    // Nutzer-Tests: Pad-Tasten (jede Taste einmal druecken) und Anzeige (Farbflaechen, dann Urteil)
+    bool ut_pad_ = true;
+    bool ut_pressed_[11] = {};
+    int ut_presses_ = 0;
+    bool ut_last_circle_ = false;
+    int ut_color_ = 0;
+    bool ut_asking_ = false;
     mutable bool st_rendered_ = false;  // die Fortschrittsanzeige muss vor jedem Test gezeichnet worden sein
 
     enum class UpdateStage { Offer, ConfirmRollback, ConfirmDownload, Downloading, DownloadFail, DoneOk, DoneFail };

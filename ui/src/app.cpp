@@ -574,6 +574,8 @@ void App::handle(Button b) {
                     st_tier_ = 2;
                     st_state_ = StState::Confirm;
                 } else if (b == Button::Square) start_selftest(0);
+                else if (b == Button::L1) open_usertest(true);
+                else if (b == Button::R1) open_usertest(false);
                 else if (b == Button::Circle) screen_ = Screen::Start;
             } else if (st_state_ == StState::Confirm) {
                 if (b == Button::Cross) start_selftest(st_tier_);
@@ -582,6 +584,7 @@ void App::handle(Button b) {
                 st_cancel_ = true;  // wirkt nach dem laufenden Test
             }
             break;
+        case Screen::UserTest: handle_usertest(b); break;
         case Screen::ErrorCodeSource:  // QR-Code der Quelle: nur Anzeige
             if (const medic::ErrorCode* e = current_error()) {
                 const int n = static_cast<int>(error_sources(*e).size());
@@ -653,6 +656,7 @@ void App::render(Canvas& c) const {
             if (st_state_ == StState::Running) st_rendered_ = true;
             draw_selftest(c);
             break;
+        case Screen::UserTest: draw_usertest(c); break;
     }
 }
 
@@ -770,7 +774,7 @@ void App::draw_selftest(Canvas& c) const {
 
     // Liste: letztes Ergebnis je Test (bei Done das frische)
     small().draw(c, M + 4, 192, S("selftest.sub"), kDim);
-    int y = 236;
+    int y = 226;
     int passed = 0, warn = 0, failed = 0, skipped = 0;
     for (const auto& d : st_defs_) {
         const medic::TestResult* r = nullptr;
@@ -781,19 +785,128 @@ void App::draw_selftest(Canvas& c) const {
         else if (st == medic::TestStatus::Warn) ++warn;
         else if (st == medic::TestStatus::Failed || st == medic::TestStatus::Error) ++failed;
         else if (st == medic::TestStatus::Skipped) ++skipped;
-        c.fill_round_rect(M, y, W - 2 * M, 84, 16, kPanel);
-        body().draw(c, M + 32, y + 6, de ? d.name_de : d.name_en, kText, W - 2 * M - 420);
-        std::string sub = S(d.tier == medic::TestTier::Quick ? "selftest.tier_quick" : (d.tier == medic::TestTier::Standard ? "selftest.tier_standard" : "selftest.tier_thorough")) + " · " + S.fmt("selftest.est", {{"s", std::to_string(d.est_seconds)}});
+        c.fill_round_rect(M, y, W - 2 * M, 64, 14, kPanel);
+        body().draw(c, M + 32, y + 0, de ? d.name_de : d.name_en, kText, W - 2 * M - 420);
+        std::string sub = S(d.tier == medic::TestTier::Quick ? "selftest.tier_quick" : (d.tier == medic::TestTier::Standard ? "selftest.tier_standard" : (d.tier == medic::TestTier::Thorough ? "selftest.tier_thorough" : "selftest.tier_user"))) + " · " + S.fmt("selftest.est", {{"s", std::to_string(d.est_seconds)}});
         if (r && !r->reason.empty()) sub += " · " + (S.has("selftest.reason." + r->reason) ? S("selftest.reason." + r->reason) : r->reason);
-        small().draw(c, M + 32, y + 46, elide(small(), sub, W - 2 * M - 420), kDim);
+        small().draw(c, M + 32, y + 36, elide(small(), sub, W - 2 * M - 420), kDim);
         const std::string label = S(std::string("selftest.status.") + medic::to_string(st));
-        draw_badge(c, W - M - 32 - (small().width(label) + 24), y + 25, label, status_color(st));
-        y += 94;
+        draw_badge(c, W - M - 32 - (small().width(label) + 24), y + 15, label, status_color(st));
+        y += 70;
     }
     if (!st_last_.empty())
         small().draw(c, M + 4, y + 6, S.fmt("selftest.summary", {{"p", std::to_string(passed)}, {"w", std::to_string(warn)}, {"f", std::to_string(failed)}, {"s", std::to_string(skipped)}}), kDim);
     else small().draw(c, M + 4, y + 6, S("selftest.none_yet"), kDim);
-    draw_hints(c, {{PadGlyph::Cross, S("selftest.all")}, {PadGlyph::Square, S("selftest.quick")}, {PadGlyph::Triangle, S("selftest.thorough")}, {PadGlyph::Circle, S("common.back")}});
+    draw_hints(c, {{PadGlyph::Cross, S("selftest.all")}, {PadGlyph::Square, S("selftest.quick")}, {PadGlyph::Triangle, S("selftest.thorough")}, {PadGlyph::Shoulders, S("selftest.user")}, {PadGlyph::Circle, S("common.back")}});
+}
+
+void App::open_usertest(bool pad) {
+    ut_pad_ = pad;
+    for (bool& x : ut_pressed_) x = false;
+    ut_presses_ = 0;
+    ut_last_circle_ = false;
+    ut_color_ = 0;
+    ut_asking_ = false;
+    screen_ = Screen::UserTest;
+}
+
+void App::finish_usertest(medic::TestStatus st, const std::string& reason, double missing) {
+    medic::TestResult r;
+    r.id = ut_pad_ ? "hw.pad.buttons" : "hw.display.pattern";
+    r.status = st;
+    r.reason = reason;
+    if (ut_pad_) {
+        r.measurements.push_back({"buttons_pressed", static_cast<double>(ut_presses_), ""});
+        r.measurements.push_back({"buttons_missing", missing, ""});
+    }
+    if (st != medic::TestStatus::NotRun) {
+        svc_.selftest_record(r);
+        bool found = false;
+        for (auto& x : st_last_)
+            if (x.id == r.id) {
+                x = r;
+                found = true;
+            }
+        if (!found) st_last_.push_back(r);
+    }
+    screen_ = Screen::SelfTest;
+}
+
+// Pad: jede der elf Tasten einmal druecken; Kreis zweimal hintereinander beendet vorzeitig (ein einzelner Kreis zaehlt als Taste). Anzeige: Kreuz
+// blaettert durch sechs Farbflaechen, dann das Urteil (Kreuz nichts aufgefallen, Dreieck Auffaelligkeit, Kreis weiss nicht = uebersprungen).
+void App::handle_usertest(Button b) {
+    if (ut_pad_) {
+        const int idx = static_cast<int>(b);
+        if (idx >= 0 && idx < 11 && !ut_pressed_[idx]) {
+            ut_pressed_[idx] = true;
+            ++ut_presses_;
+        }
+        const bool again = b == Button::Circle && ut_last_circle_;
+        ut_last_circle_ = b == Button::Circle;
+        if (ut_presses_ == 11) {
+            finish_usertest(medic::TestStatus::Passed, "", 0);
+        } else if (again) {
+            const double missing = 11 - ut_presses_;
+            if (ut_presses_ >= 3) finish_usertest(medic::TestStatus::Warn, "buttons_missing", missing);
+            else finish_usertest(medic::TestStatus::Skipped, "not_tested", missing);
+        }
+        return;
+    }
+    if (!ut_asking_) {
+        if (b == Button::Cross) {
+            if (++ut_color_ >= 6) ut_asking_ = true;
+        } else if (b == Button::Circle) {
+            screen_ = Screen::SelfTest;  // abgebrochen: kein Ergebnis
+        }
+        return;
+    }
+    if (b == Button::Cross) finish_usertest(medic::TestStatus::Passed, "", 0);
+    else if (b == Button::Triangle) finish_usertest(medic::TestStatus::Warn, "user_reported", 0);
+    else if (b == Button::Circle) finish_usertest(medic::TestStatus::Skipped, "unknown", 0);
+}
+
+void App::draw_usertest(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    if (!ut_pad_ && !ut_asking_) {
+        // Vollbild-Farbflaechen (ruhig, ohne Blinken): schwarz, weiss, rot, gruen, blau, Verlauf
+        const Color cols[5] = {rgb(0, 0, 0), rgb(255, 255, 255), rgb(255, 0, 0), rgb(0, 255, 0), rgb(0, 0, 255)};
+        if (ut_color_ < 5) {
+            c.clear(cols[ut_color_]);
+        } else {
+            c.clear(rgb(0, 0, 0));
+            for (int x = 0; x < W; ++x) {
+                const int v = x * 255 / (W - 1);
+                c.fill_rect(x, 0, 1, H / 3, rgb(v, v, v));
+                c.fill_rect(x, H / 3, 1, H / 3, rgb(v, 0, 0));
+                c.fill_rect(x, 2 * H / 3, 1, H - 2 * H / 3, rgb(0, 0, v));
+            }
+        }
+        const Color hint = ut_color_ == 1 ? rgb(0, 0, 0) : rgb(255, 255, 255);
+        small().draw(c, 40, H - 60, S.fmt("usertest.display_hint", {{"i", std::to_string(ut_color_ + 1)}, {"n", "6"}}), hint);
+        return;
+    }
+    title().draw(c, M, 130, S(ut_pad_ ? "usertest.pad_title" : "usertest.display_title"), kText);
+    if (ut_pad_) {
+        small().draw(c, M + 4, 192, S("usertest.pad_sub"), kDim);
+        const char* names[11] = {"usertest.btn.up", "usertest.btn.down", "usertest.btn.left", "usertest.btn.right", "usertest.btn.cross", "usertest.btn.circle",
+                                 "usertest.btn.square", "usertest.btn.triangle", "usertest.btn.l1", "usertest.btn.r1", "usertest.btn.options"};
+        const int cols = 4, gap = 24, cw = (W - 2 * M - (cols - 1) * gap) / cols, ch = 130;
+        for (int i = 0; i < 11; ++i) {
+            const int x = M + (i % cols) * (cw + gap), y = 250 + (i / cols) * (ch + gap);
+            c.fill_round_rect(x, y, cw, ch, 16, ut_pressed_[i] ? kOk : kPanel);
+            body().draw(c, x + 32, y + 44, S(names[i]), ut_pressed_[i] ? kBg : kText, cw - 64);
+        }
+        small().draw(c, M + 4, 250 + 3 * (ch + gap) + 6, S.fmt("usertest.pad_count", {{"n", std::to_string(ut_presses_)}}), kDim);
+        draw_hints(c, {{PadGlyph::Circle, S("usertest.pad_exit")}});
+        return;
+    }
+    c.fill_round_rect(M, 230, W - 2 * M, 330, 24, kPanel);
+    int y = 270;
+    for (auto& l : wrap_text(body(), S("usertest.display_question"), W - 2 * M - 96, 6)) {
+        body().draw(c, M + 48, y, l, kText);
+        y += body().line_height() + 6;
+    }
+    draw_hints(c, {{PadGlyph::Cross, S("usertest.nothing")}, {PadGlyph::Triangle, S("usertest.noticed")}, {PadGlyph::Circle, S("usertest.dontknow")}});
 }
 
 void App::draw_chrome(Canvas& c) const {

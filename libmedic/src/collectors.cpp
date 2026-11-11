@@ -1322,6 +1322,19 @@ void collect_baseline(const Platform& p, Facts& f) {
     if (max_samples) f.set("baseline.temp_samples", static_cast<long>(max_samples));
 }
 
+// Lüfterregler (die eigene App des Entwicklers, PS5 Cooling Center): Sie regelt den Lüfter und haelt die Konsole kuehl; dann sagt ein Waermetest
+// wenig ueber die Standardkuehlung. Nur Vorhandensein, Modus und Zieltemperatur aus ihrer config.json (reine Zahlen und Modus).
+// fan.controller.name, fan.controller.mode, fan.controller.target_c
+void collect_fan_controller(const Platform& p, Facts& f) {
+    std::string text;
+    if (!p.fs().read_file("/data/PS5-Cooling-Center/config.json", text)) return;
+    const json j = json::parse(text, nullptr, false);
+    if (!j.is_object()) return;
+    f.set("fan.controller.name", std::string("PS5 Cooling Center"));
+    if (j.contains("mode") && j["mode"].is_string()) f.set("fan.controller.mode", j["mode"].get<std::string>());
+    if (j.contains("target_temp_c") && j["target_temp_c"].is_number()) f.set("fan.controller.target_c", j["target_temp_c"].get<double>());
+}
+
 Facts collect_all(const Platform& p) {
     Facts f;
     collect_firmware(p, f);
@@ -1342,6 +1355,7 @@ Facts collect_all(const Platform& p) {
     collect_game_files(p, f);
     collect_baseline(p, f);
     collect_selftest(p, f);
+    collect_fan_controller(p, f);
     return f;
 }
 

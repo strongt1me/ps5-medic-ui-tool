@@ -127,7 +127,7 @@ void selftest_tests() {
             risk_ok = risk_ok && (d.risk == "none" || d.risk == "read" || d.risk == "load" || d.risk == "write");
             if (d.tier != TestTier::Thorough && d.risk != "none" && d.risk != "read") risk_ok = false;  // Last und Schreiben nur in der Gruendlich-Stufe
         }
-        CHECK(reg.size() >= 7 && ids.size() == reg.size() && order_ok && text_ok && risk_ok, "Selbsttest: Registry (eindeutige IDs, Stufen-Reihenfolge, Last/Schreiben nur Gruendlich, Texte)");
+        CHECK(reg.size() >= 8 && ids.size() == reg.size() && order_ok && text_ok && risk_ok, "Selbsttest: Registry (eindeutige IDs, Stufen-Reihenfolge, Last/Schreiben nur Gruendlich, Texte)");
         CHECK(find_test("sw.db.headers") && !find_test("gibt.es.nicht"), "Selbsttest: Test per ID finden");
         CHECK(test_status_from_string("failed") == TestStatus::Failed && test_status_from_string("quatsch") == TestStatus::NotRun, "Selbsttest: Statusnamen");
     }
@@ -350,5 +350,81 @@ void selftest_tests() {
         stop.cancelled = [&] { return ++n > 1; };
         auto cancelled = run("hw.storage.write_verify", mount, spa, stop);
         CHECK(cancelled.status == TestStatus::Cancelled && fs::exists(a.real(kSelftestBudgetPath)), "Schreibtest: Abbruch = cancelled, das Budget zaehlt das Geschriebene");
+    }
+    {  // Rechenfehler unter Last und Speicher-Muster-Test
+        TestContext ctx;
+        ctx.thermal_burn_s = 1;
+        ctx.thermal_cool_s = 1;
+        ctx.step_ms = 40;
+        Sandbox b;
+        ScriptedPlatform sp(make_snapshot_platform(b.dir.string(), false), false);
+        sp.sys_.temps = {40};
+        const Facts none;
+        auto clean = run("hw.thermal.short_soak", none, sp, ctx);
+        CHECK(clean.status == TestStatus::Passed && measure(clean, "compute_errors") == 0, "Waermetest: ohne Fehler compute_errors 0");
+        TestContext fault = ctx;
+        fault.inject_compute_fault = true;
+        Sandbox b2;
+        ScriptedPlatform sp2(make_snapshot_platform(b2.dir.string(), false), false);
+        sp2.sys_.temps = {40};
+        auto bad = run("hw.thermal.short_soak", none, sp2, fault);
+        CHECK(bad.status == TestStatus::Failed && bad.reason == "compute_mismatch" && measure(bad, "compute_errors") >= 1, "Waermetest: abweichendes Rechenergebnis = failed (compute_mismatch)");
+
+        TestContext mem;
+        mem.mem_bytes = 16u << 20;  // ein Block
+        auto m1 = run("hw.mem.userland_pattern", none, sp, mem);
+        CHECK(m1.status == TestStatus::Passed && measure(m1, "bytes_tested") == (16u << 20) && measure(m1, "patterns") == 6 && measure(m1, "bad_words") == 0, "Speichertest: sechs Muster, keine Abweichung = passed");
+        mem.inject_mem_fault = true;
+        auto m2 = run("hw.mem.userland_pattern", none, sp, mem);
+        CHECK(m2.status == TestStatus::Failed && m2.reason == "mem_mismatch" && measure(m2, "bad_words") == 1 && measure(m2, "first_bad_offset") == 24, "Speichertest: gekipptes Bit = failed (mem_mismatch) mit Offset");
+        TestContext stop;
+        stop.mem_bytes = 32u << 20;
+        int n = 0;
+        stop.cancelled = [&] { return ++n > 2; };
+        CHECK(run("hw.mem.userland_pattern", none, sp, stop).status == TestStatus::Cancelled, "Speichertest: Abbruch = cancelled");
+    }
+    {  // Nutzer-Test eintragen
+        Sandbox w;
+        auto rw = make_snapshot_platform(w.dir.string(), true);
+        TestResult a;
+        a.id = "hw.display.pattern";
+        a.status = TestStatus::Warn;
+        a.reason = "user_reported";
+        CHECK(selftest_record(*rw, "20261111T120000Z", a), "Nutzer-Test: Eintrag ohne vorhandenes Ergebnis");
+        TestResult ok;
+        ok.id = "sw.db.headers";
+        ok.status = TestStatus::Passed;
+        CHECK(selftest_finish(*rw, "20261111T121000Z", {ok}, false) && selftest_record(*rw, "20261111T122000Z", a), "Nutzer-Test: Eintrag neben vorhandenen Ergebnissen");
+        TestResult b = a;
+        b.status = TestStatus::Passed;
+        b.reason = "";
+        CHECK(selftest_record(*rw, "20261111T123000Z", b), "Nutzer-Test: Eintrag ersetzt den gleichen Test");
+        std::string fin;
+        const auto all = load_last_selftest(rw->fs(), &fin);
+        int display = 0;
+        for (const auto& x : all) display += x.id == "hw.display.pattern" ? 1 : 0;
+        CHECK(all.size() == 2 && display == 1 && fin == "20261111T121000Z" && all[1].status == TestStatus::Passed, "Nutzer-Test: genau ein Eintrag je Test, Lauf-Zeit bleibt");
+        const auto sess = begin_selftest_session(*rw, Facts(), *find_test("hw.pad.buttons"));
+        CHECK(sess->step() && sess->result().status == TestStatus::Skipped && sess->result().reason == "needs_user", "Nutzer-Test: im Ablauf nur skipped (needs_user), nie bestanden");
+    }
+    {  // Luefterregler: Faktum aus config.json, im Waermetest genannt
+        Copy c("f1_fan_controller");
+        auto p = make_snapshot_platform(c.dir.string(), false);
+        const Facts f = collect_all(*p);
+        CHECK(f.get("fan.controller.name") && *f.get("fan.controller.name") == "PS5 Cooling Center" && *f.get("fan.controller.mode") == "automatic" && f.get("fan.controller.target_c")->get<double>() == 68, "Luefterregler: Fakten aus der config.json");
+        Sandbox b;
+        ScriptedPlatform sp(make_snapshot_platform(b.dir.string(), false), false);
+        sp.sys_.temps = {40};
+        TestContext ctx;
+        ctx.thermal_burn_s = 1;
+        ctx.thermal_cool_s = 1;
+        ctx.step_ms = 40;
+        auto r = run("hw.thermal.short_soak", f, sp, ctx);
+        CHECK(r.status == TestStatus::Passed && r.reason == "fan_controller" && measure(r, "fan_controller_target_c") == 68, "Waermetest: ohne Anstieg und mit Luefterregler = passed mit Grund fan_controller");
+        Sandbox b2;
+        ScriptedPlatform sp2(make_snapshot_platform(b2.dir.string(), false), false);
+        sp2.sys_.temps = {40};
+        auto r2 = run("hw.thermal.short_soak", Facts(), sp2, ctx);
+        CHECK(r2.status == TestStatus::Passed && r2.reason == "no_heating", "Waermetest: ohne Anstieg und ohne Luefterregler = Grund no_heating");
     }
 }

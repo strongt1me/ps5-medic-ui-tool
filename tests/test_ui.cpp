@@ -36,6 +36,8 @@ struct FakeService : IMedicService {
     UndoResult undo_result{true, ""};
     int checks = 0, plans = 0, applies = 0, undos = 0, reports = 0;
     int selftest_begins = 0, selftest_runs = 0, selftest_ends = 0;
+    std::vector<TestResult> recorded;
+    void selftest_record(const TestResult& r) override { recorded.push_back(r); }
     bool last_cancelled = false;
     std::vector<TestResult> last_results;
     bool selftest_begin(const std::vector<std::string>&) override {
@@ -2605,6 +2607,67 @@ void history_ui_tests() {
 }
 
 // Selbsttest in der UI: Liste, Hinweis vor dem Lauf, ein Test je update(), Abbruch nach dem laufenden Test, nur Schnelltests.
+// Nutzer-Tests in der UI: Pad-Tasten und Anzeige-Muster; Ergebnisse gehen an den Dienst, nie ohne Zutun als "bestanden".
+void usertest_ui_tests() {
+    Canvas cv(App::kWidth, App::kHeight);
+    auto open_list = [&](App& a) { press(a, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross}); };
+    {   // alle elf Tasten = bestanden
+        FakeService svc;
+        App a(svc);
+        open_list(a);
+        press(a, {Button::L1});
+        CHECK(a.screen() == App::Screen::UserTest, "Nutzer-Test: L1 oeffnet den Pad-Test");
+        a.render(cv);
+        press(a, {Button::Up, Button::Down, Button::Left, Button::Right, Button::Cross, Button::Square, Button::Triangle, Button::L1, Button::R1, Button::Options});
+        CHECK(a.screen() == App::Screen::UserTest && svc.recorded.empty(), "Nutzer-Test: zehn Tasten reichen nicht (Kreis fehlt noch)");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.size() == 1 && svc.recorded[0].id == "hw.pad.buttons" && svc.recorded[0].status == TestStatus::Passed, "Nutzer-Test: alle elf Tasten = bestanden, eingetragen");
+    }
+    {   // vorzeitig beenden: Kreis zweimal
+        FakeService svc;
+        App a(svc);
+        open_list(a);
+        press(a, {Button::L1, Button::Up, Button::Down, Button::Left, Button::Circle, Button::Circle});
+        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.size() == 1 && svc.recorded[0].status == TestStatus::Warn && svc.recorded[0].reason == "buttons_missing", "Nutzer-Test: fehlende Tasten = Warnung (buttons_missing)");
+    }
+    {   // kaum getestet = uebersprungen, nie bestanden
+        FakeService svc;
+        App a(svc);
+        open_list(a);
+        press(a, {Button::L1, Button::Circle, Button::Circle});
+        CHECK(svc.recorded.size() == 1 && svc.recorded[0].status == TestStatus::Skipped && svc.recorded[0].reason == "not_tested", "Nutzer-Test: fast nichts gedrueckt = skipped (not_tested)");
+    }
+    {   // Anzeige: sechs Muster, dann Urteil
+        FakeService svc;
+        App a(svc);
+        open_list(a);
+        press(a, {Button::R1});
+        for (int i = 0; i < 6; ++i) {
+            a.render(cv);
+            press(a, {Button::Cross});
+        }
+        a.render(cv);
+        CHECK(a.screen() == App::Screen::UserTest && svc.recorded.empty(), "Nutzer-Test: nach den Mustern kommt die Frage, noch kein Ergebnis");
+        press(a, {Button::Triangle});
+        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.size() == 1 && svc.recorded[0].id == "hw.display.pattern" && svc.recorded[0].status == TestStatus::Warn && svc.recorded[0].reason == "user_reported", "Nutzer-Test: Auffaelligkeit = Warnung (user_reported)");
+        FakeService s2;
+        App b(s2);
+        open_list(b);
+        press(b, {Button::R1, Button::Cross, Button::Cross, Button::Cross, Button::Cross, Button::Cross, Button::Cross, Button::Circle});
+        CHECK(s2.recorded.size() == 1 && s2.recorded[0].status == TestStatus::Skipped && s2.recorded[0].reason == "unknown", "Nutzer-Test: keine Antwort (Kreis) = skipped, weiss nicht");
+        FakeService s3;
+        App d(s3);
+        open_list(d);
+        press(d, {Button::R1, Button::Cross, Button::Circle});
+        CHECK(d.screen() == App::Screen::SelfTest && s3.recorded.empty(), "Nutzer-Test: Abbruch waehrend der Muster traegt nichts ein");
+        FakeService s4;
+        App e(s4);
+        open_list(e);
+        press(e, {Button::R1, Button::Cross, Button::Cross, Button::Cross, Button::Cross, Button::Cross, Button::Cross, Button::Cross});
+        CHECK(s4.recorded.size() == 1 && s4.recorded[0].status == TestStatus::Passed, "Nutzer-Test: 'nichts aufgefallen' = bestanden (Urteil des Nutzers)");
+    }
+}
+
 // Screenshot-Hook: ohne Anforderung passiert nichts; mit Anforderung genau ein neues PNG im eigenen Ordner, die Anforderung ist danach weg.
 void shot_hook_tests() {
     const fs::path dir = fs::temp_directory_path() / ("medic-shot-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
@@ -2682,7 +2745,12 @@ void selftest_ui_tests() {
         c.update();
     }
     int standard = 0, thorough = 0;
-    for (const auto& d : selftest_registry()) (d.tier == TestTier::Thorough ? thorough : standard) += 1;
+    int run_all = 0;
+    for (const auto& d : selftest_registry()) {
+        if (d.tier == TestTier::User) continue;  // Nutzer-Tests laufen nie im Ablauf
+        (d.tier == TestTier::Thorough ? thorough : standard) += 1;
+        ++run_all;
+    }
     CHECK(svc3.selftest_runs == standard && thorough > 0, "Selbsttest-UI: Standard startet keine Last- und Schreibtests");
     FakeService svc4;
     App d4(svc4);
@@ -2695,7 +2763,7 @@ void selftest_ui_tests() {
         d4.render(cv);
         d4.update();
     }
-    CHECK(svc4.selftest_runs == static_cast<int>(selftest_registry().size()), "Selbsttest-UI: Gruendlich nach Bestaetigung laeuft alle Tests");
+    CHECK(svc4.selftest_runs == run_all, "Selbsttest-UI: Gruendlich nach Bestaetigung laeuft alle Tests (ohne Nutzer-Tests)");
 }
 
 }  // namespace
@@ -2711,6 +2779,7 @@ void ui_tests() {
     confidence_ui_tests();
     selftest_ui_tests();
     shot_hook_tests();
+    usertest_ui_tests();
     history_ui_tests();
     edge_tests();
     end_to_end_tests();

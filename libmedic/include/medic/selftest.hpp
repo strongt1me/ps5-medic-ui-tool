@@ -4,7 +4,7 @@
 // write (schreibt EINE Testdatei im eigenen Ordner). Geschrieben wird ausserhalb des Schreibtests nur unter /data/ps5medic/selftest/ (Marker,
 // letztes Ergebnis, Budget; immer ueberschrieben, nie geloescht).
 //
-// Stufen: Schnell (nur Fakten), Standard (liest), Gruendlich (Last und Schreiben; nur nach ausdruecklicher Bestaetigung).
+// Stufen: Schnell (nur Fakten), Standard (liest), Gruendlich (Last, Speicher belegen und Schreiben; nur nach ausdruecklicher Bestaetigung).
 //
 // Statusmodell: passed (nicht aufgefallen, nie "gesund"), warn, failed, error (Test selbst gescheitert), cancelled (Abbruch, mit Grund),
 // skipped (Vorbedingung fehlt, nie passed), not_run (noch nicht gelaufen). Faellt eine Vorbedingung aus, ist der Test skipped, nie failed.
@@ -38,6 +38,7 @@ constexpr std::uint64_t kReadTestMaxBytes = 128ull << 20;  // Lesetest: hoechste
 constexpr int kReadTestMaxSeconds = 15;                    // und hoechstens 15 Sekunden
 constexpr std::uint64_t kWriteTestBytes = 256ull << 20;    // Schreibtest: 256 MiB, einmal geschrieben und einmal zurueckgelesen
 constexpr std::uint64_t kWriteBudgetBytes = 50ull << 30;   // kumulatives Schreibbudget des Tests (50 GiB)
+constexpr std::uint64_t kMemTestBytes = 128ull << 20;     // Speicher-Muster-Test: 128 MiB
 constexpr int kThermalCeilingC = 85;                       // Abbruch ab dieser Temperatur (vorlaeufig, nicht geeicht)
 constexpr int kThermalStartMaxC = 70;                      // darueber startet der Waermetest nicht
 
@@ -45,7 +46,8 @@ enum class TestStatus { NotRun, Passed, Warn, Failed, Error, Cancelled, Skipped 
 const char* to_string(TestStatus s);
 TestStatus test_status_from_string(const std::string& s);  // unbekannt: NotRun
 
-enum class TestTier { Quick, Standard, Thorough };
+// User: Tests, die ein Mensch an der Konsole beurteilt (Pad, Anzeige); sie laufen nie im Ablauf, sondern nur ueber ihren eigenen Bildschirm.
+enum class TestTier { Quick, Standard, Thorough, User };
 
 struct TestDef {
     std::string id;
@@ -77,6 +79,9 @@ struct TestContext {
     // Messparameter; die Voreinstellung ist der Produktwert, Tests setzen kleinere.
     int thermal_burn_s = 45, thermal_cool_s = 30, step_ms = 1000;
     std::uint64_t write_bytes = kWriteTestBytes;
+    std::uint64_t mem_bytes = kMemTestBytes;  // Speicher-Muster-Test: so viel wird belegt (bei Allokationsfehler halbiert)
+    // Nur fuer Tests: einen Rechen- bzw. Speicherfehler vortaeuschen, um die Erkennung zu pruefen.
+    bool inject_compute_fault = false, inject_mem_fault = false;
 };
 
 // Alle Tests in fester Reihenfolge: billig vor teuer, Schnell vor Standard vor Gruendlich.
@@ -98,6 +103,9 @@ std::unique_ptr<TestSession> begin_selftest_session(Platform& p, const Facts& fa
 
 // Fuehrt einen Test vollstaendig aus (Schleife ueber step(), mit Abbruchabfrage zwischen den Schritten).
 TestResult run_selftest(Platform& p, const Facts& facts, const TestDef& def, const TestContext& ctx = {});
+
+// Traegt das Ergebnis eines Nutzer-Tests in last.json ein (ersetzt den Eintrag gleicher ID, sonst haengt es an; der Marker bleibt unberuehrt).
+bool selftest_record(Platform& p, const std::string& ts, const TestResult& r);
 
 // Marker und Ergebnis (nur mit fs_rw; sonst false). `ids` sind die Tests dieses Laufs.
 bool selftest_begin(Platform& p, const std::string& ts, const std::vector<std::string>& ids);

@@ -296,6 +296,8 @@ SelftestStep LocalService::selftest_step() {
     return s;
 }
 
+void LocalService::selftest_record(const medic::TestResult& r) { medic::selftest_record(p_, clock_(), r); }
+
 void LocalService::selftest_abort() {
     if (selftest_session_) selftest_session_->abort("cancelled");
 }

@@ -57,7 +57,7 @@ int main() {
 
     out("Firmware: " + platform->sys().firmware() + "  Modell: " + platform->sys().model());
     out("Konsolenstart (Epoch): " + std::to_string(platform->sys().boot_epoch()));
-    for (const char* k : {"smp.version", "net.port_9021", "jb.seconds_after_boot", "jb.first_process", "ps5theme.version", "apps.oversized", "smp.api.bind", "smp.api.port", "smp.api.state", "sys.temp.cpu_c", "sys.temp.soc_c", "boot.unclean_total", "boot.unclean_14d", "boot.log_last", "errors.total", "db.count", "savedata.current_account", "games.case_mismatch"})
+    for (const char* k : {"smp.version", "net.port_9021", "jb.seconds_after_boot", "jb.first_process", "ps5theme.version", "apps.oversized", "smp.api.bind", "smp.api.port", "smp.api.state", "sys.temp.cpu_c", "sys.temp.soc_c", "boot.unclean_total", "boot.unclean_14d", "boot.log_last", "errors.total", "db.count", "savedata.current_account", "games.case_mismatch", "fan.controller.name", "fan.controller.mode", "fan.controller.target_c"})
         if (const auto* v = facts.get(k)) out(std::string("Fakt ") + k + ": " + v->dump());
     if (const auto* dbs = facts.get("db.files"); dbs && dbs->is_array())  // Datenbank-Pruefung je Datei: Pruefung 1 = ok, 0 = Fehler, -1 = nicht geprueft
         for (const auto& e : *dbs) out("  db " + e.value("path", std::string()) + "  Groesse " + e["size"].dump() + "  Pruefung " + e["integrity"].dump() + (e["integrity_skip"].get<std::string>().empty() ? std::string() : "  (nicht geprueft: " + e["integrity_skip"].get<std::string>() + ")"));
@@ -67,8 +67,8 @@ int main() {
     // Selbsttest (nur lesend, ohne Marker: die Plattform ist hier nicht beschreibbar): jeder Test genau einmal, Ergebnis als Zeile.
     out("Selbsttest:");
     for (const auto& def : medic::selftest_registry()) {
-        if (def.tier == medic::TestTier::Thorough) {  // Last und Schreiben nie ohne ausdrueckliche Bestaetigung (nur ueber die UI)
-            out("  " + def.id + ": nicht gelaufen (gruendlich: nur ueber die UI mit Bestaetigung)");
+        if (def.tier == medic::TestTier::Thorough || def.tier == medic::TestTier::User) {  // Last, Speicher, Schreiben und Nutzer-Tests nie ohne ausdrueckliche Bestaetigung bzw. Nutzer (nur ueber die UI)
+            out("  " + def.id + ": nicht gelaufen (nur ueber die UI)");
             continue;
         }
         const medic::TestResult r = medic::run_selftest(*platform, facts, def);

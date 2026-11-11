@@ -130,6 +130,8 @@ public:
         (void)results;
         (void)cancelled;
     }
+    // Ergebnis eines Nutzer-Tests (Pad, Anzeige) in das letzte Ergebnis eintragen.
+    virtual void selftest_record(const medic::TestResult& r) { (void)r; }
     std::string st_default_id_;
     // Zusaetzliche Angaben der Konsole zu einem Fehlercode, so wie sie dessen `context` verlangt. Liest nur; sammelt nichts neu,
     // sondern benutzt die Fakten des letzten Check-ups (Standard: nichts).
@@ -171,6 +173,7 @@ public:
     void selftest_start(const std::string& id) override;
     SelftestStep selftest_step() override;
     void selftest_abort() override;
+    void selftest_record(const medic::TestResult& r) override;
     void selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) override;
     medic::RuleUpdateOffer check_codes_update() override;
     medic::RuleUpdateResult install_codes_update() override;

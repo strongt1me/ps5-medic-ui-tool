@@ -1,25 +1,219 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.31",
+  "db_version": "2026.11.32",
   "metrics": [
-    {"id": "cpu_temp", "fact": "sys.temp.cpu_c", "unit": "°C", "text": {"de": "CPU-Temperatur", "en": "CPU temperature"}},
-    {"id": "soc_temp", "fact": "sys.temp.soc_c", "unit": "°C", "text": {"de": "SoC-Temperatur", "en": "SoC temperature"}},
-    {"id": "data_free_pct", "fact": "storage.data_free_pct", "unit": "%", "text": {"de": "Freier Platz auf /data", "en": "Free space on /data"}},
-    {"id": "unclean_boots_14d", "fact": "boot.unclean_14d", "unit": "", "text": {"de": "Neustarts ohne Herunterfahren (14 Tage)", "en": "Restarts without shutdown (14 days)"}},
-    {"id": "error_entries", "fact": "errors.total", "unit": "", "text": {"de": "Einträge im Fehlerverlauf", "en": "Entries in the error history"}}
+    {
+      "id": "cpu_temp",
+      "fact": "sys.temp.cpu_c",
+      "unit": "°C",
+      "text": {
+        "de": "CPU-Temperatur",
+        "en": "CPU temperature"
+      }
+    },
+    {
+      "id": "soc_temp",
+      "fact": "sys.temp.soc_c",
+      "unit": "°C",
+      "text": {
+        "de": "SoC-Temperatur",
+        "en": "SoC temperature"
+      }
+    },
+    {
+      "id": "data_free_pct",
+      "fact": "storage.data_free_pct",
+      "unit": "%",
+      "text": {
+        "de": "Freier Platz auf /data",
+        "en": "Free space on /data"
+      }
+    },
+    {
+      "id": "unclean_boots_14d",
+      "fact": "boot.unclean_14d",
+      "unit": "",
+      "text": {
+        "de": "Neustarts ohne Herunterfahren (14 Tage)",
+        "en": "Restarts without shutdown (14 days)"
+      }
+    },
+    {
+      "id": "error_entries",
+      "fact": "errors.total",
+      "unit": "",
+      "text": {
+        "de": "Einträge im Fehlerverlauf",
+        "en": "Entries in the error history"
+      }
+    }
   ],
   "coverage": [
-    { "id": "processes", "text": { "de": "Laufende Prozesse", "en": "Running processes" }, "tested_when": { "all": [ { "fact": "proc.running", "exists": true } ] } },
-    { "id": "storage", "text": { "de": "Speicherplatz der Laufwerke", "en": "Drive free space" }, "tested_when": { "all": [ { "fact": "storage.mounts", "exists": true } ] } },
-    { "id": "jailbreak_timing", "text": { "de": "Startzeit der Jailbreak-Kette", "en": "Start time of the jailbreak chain" }, "tested_when": { "all": [ { "fact": "jb.seconds_after_boot", "exists": true } ] } },
-    { "id": "temperatures", "text": { "de": "Temperaturen", "en": "Temperatures" }, "tested_when": { "all": [ { "fact": "sys.temp.cpu_c", "exists": true } ] } },
-    { "id": "shadowmount", "text": { "de": "ShadowMount+ (Einstellungen und Log)", "en": "ShadowMount+ (settings and log)" }, "tested_when": { "all": [ { "fact": "smp.version", "exists": true } ] } },
-    { "id": "game_firmware", "text": { "de": "Firmware-Anforderung der Spiele", "en": "Firmware requirement of games" }, "tested_when": { "all": [ { "fact": "games.fw", "exists": true } ] } },
-    { "id": "boot_log", "text": { "de": "Startverlauf", "en": "Boot history" }, "tested_when": { "all": [ { "fact": "boot.log_last", "exists": true } ] } },
-    { "id": "error_history", "text": { "de": "Fehlerverlauf", "en": "Error history" }, "tested_when": { "all": [ { "fact": "errors.total", "gt": "0" } ] } },
-    { "id": "savedata_account", "text": { "de": "Konto der Spielstände", "en": "Account of save data" }, "tested_when": { "all": [ { "fact": "savedata.current_account", "exists": true } ] } },
-    { "id": "databases_header", "text": { "de": "Datenbanken (Kopf und Größe)", "en": "Databases (header and size)" }, "tested_when": { "all": [ { "fact": "db.count", "gt": "0" } ] } },
-    { "id": "databases_content", "text": { "de": "Datenbanken (Inhalt)", "en": "Databases (content)" }, "tested_when": { "all": [ { "fact": "db.integrity_tested", "gt": "0" } ] } }
+    {
+      "id": "processes",
+      "text": {
+        "de": "Laufende Prozesse",
+        "en": "Running processes"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "proc.running",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "storage",
+      "text": {
+        "de": "Speicherplatz der Laufwerke",
+        "en": "Drive free space"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "storage.mounts",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "jailbreak_timing",
+      "text": {
+        "de": "Startzeit der Jailbreak-Kette",
+        "en": "Start time of the jailbreak chain"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "jb.seconds_after_boot",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "temperatures",
+      "text": {
+        "de": "Temperaturen",
+        "en": "Temperatures"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "sys.temp.cpu_c",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "shadowmount",
+      "text": {
+        "de": "ShadowMount+ (Einstellungen und Log)",
+        "en": "ShadowMount+ (settings and log)"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "smp.version",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "game_firmware",
+      "text": {
+        "de": "Firmware-Anforderung der Spiele",
+        "en": "Firmware requirement of games"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "games.fw",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "boot_log",
+      "text": {
+        "de": "Startverlauf",
+        "en": "Boot history"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "boot.log_last",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "error_history",
+      "text": {
+        "de": "Fehlerverlauf",
+        "en": "Error history"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "errors.total",
+            "gt": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "savedata_account",
+      "text": {
+        "de": "Konto der Spielstände",
+        "en": "Account of save data"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "savedata.current_account",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "databases_header",
+      "text": {
+        "de": "Datenbanken (Kopf und Größe)",
+        "en": "Databases (header and size)"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "db.count",
+            "gt": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "databases_content",
+      "text": {
+        "de": "Datenbanken (Inhalt)",
+        "en": "Databases (content)"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "db.integrity_tested",
+            "gt": "0"
+          }
+        ]
+      }
+    }
   ],
   "rules": [
     {
@@ -28,8 +222,14 @@
       "applies_fw": ">=13.60",
       "when": {
         "all": [
-          { "fact": "proc.running", "contains": "etahen" },
-          { "fact": "proc.running", "contains": "kstuff" }
+          {
+            "fact": "proc.running",
+            "contains": "etahen"
+          },
+          {
+            "fact": "proc.running",
+            "contains": "kstuff"
+          }
         ]
       },
       "text": {
@@ -46,7 +246,13 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "proc.running", "count_matches": { "regex": "^etahen$", "gte": 2 } }
+          {
+            "fact": "proc.running",
+            "count_matches": {
+              "regex": "^etahen$",
+              "gte": 2
+            }
+          }
         ]
       },
       "text": {
@@ -64,8 +270,14 @@
       "severity": "critical",
       "when": {
         "all": [
-          { "fact": "proc.running", "contains": "shadowmountplus" },
-          { "fact": "kstuff.version", "lt": "1.07" }
+          {
+            "fact": "proc.running",
+            "contains": "shadowmountplus"
+          },
+          {
+            "fact": "kstuff.version",
+            "lt": "1.07"
+          }
         ]
       },
       "text": {
@@ -82,8 +294,17 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "smp.images[].name", "matches": "[()]" },
-          { "fact": "smp.images[].ext", "in": [".ffpfs", ".ffpfsc"] }
+          {
+            "fact": "smp.images[].name",
+            "matches": "[()]"
+          },
+          {
+            "fact": "smp.images[].ext",
+            "in": [
+              ".ffpfs",
+              ".ffpfsc"
+            ]
+          }
         ]
       },
       "text": {
@@ -101,9 +322,19 @@
       "applies_fw": "=13.60",
       "when": {
         "all": [
-          { "fact": "smp.version", "eq": "1.7beta3" },
-          { "fact": "kstuff.version", "eq": "1.11" },
-          { "fact": "smp.config.kstuff_game_auto_toggle", "eq": "1", "default": "1" }
+          {
+            "fact": "smp.version",
+            "eq": "1.7beta3"
+          },
+          {
+            "fact": "kstuff.version",
+            "eq": "1.11"
+          },
+          {
+            "fact": "smp.config.kstuff_game_auto_toggle",
+            "eq": "1",
+            "default": "1"
+          }
         ]
       },
       "text": {
@@ -112,7 +343,11 @@
       },
       "evidence": "smp.config.kstuff_game_auto_toggle",
       "fix": "smp_set_key",
-      "fix_params": {"section": "", "key": "kstuff_game_auto_toggle", "value": "0"},
+      "fix_params": {
+        "section": "",
+        "key": "kstuff_game_auto_toggle",
+        "value": "0"
+      },
       "source": "https://github.com/drakmor/ShadowMountPlus/issues/130",
       "verified": "community"
     },
@@ -122,8 +357,14 @@
       "applies_fw": "=9.00",
       "when": {
         "all": [
-          { "fact": "proc.running", "contains": "shadowmountplus" },
-          { "fact": "kstuff.origin", "eq": "echostretch" }
+          {
+            "fact": "proc.running",
+            "contains": "shadowmountplus"
+          },
+          {
+            "fact": "kstuff.origin",
+            "eq": "echostretch"
+          }
         ]
       },
       "text": {
@@ -140,8 +381,14 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "proc.running", "contains": "backpork" },
-          { "fact": "smp.fakelib_enabled", "eq": "1" }
+          {
+            "fact": "proc.running",
+            "contains": "backpork"
+          },
+          {
+            "fact": "smp.fakelib_enabled",
+            "eq": "1"
+          }
         ]
       },
       "text": {
@@ -151,7 +398,13 @@
       "evidence": "proc.running",
       "evidence_filter": "^backpork$",
       "fix": "smp_disable_conflicting_backpork",
-      "fix_params": {"files": ["/data/ps5_autoloader/autoload.txt", "/data/pldmgr/autoload.txt"], "match": "backpork"},
+      "fix_params": {
+        "files": [
+          "/data/ps5_autoloader/autoload.txt",
+          "/data/pldmgr/autoload.txt"
+        ],
+        "match": "backpork"
+      },
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
     },
@@ -160,8 +413,14 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.mounts[].kind", "eq": "image" },
-          { "fact": "smp.mounts[].extra_folder", "eq": true }
+          {
+            "fact": "smp.mounts[].kind",
+            "eq": "image"
+          },
+          {
+            "fact": "smp.mounts[].extra_folder",
+            "eq": true
+          }
         ]
       },
       "text": {
@@ -178,9 +437,18 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.mounts[].kind", "eq": "pfsc" },
-          { "fact": "smp.mounts[].direct_files", "eq": true },
-          { "fact": "smp.mounts[].nested_image", "eq": false }
+          {
+            "fact": "smp.mounts[].kind",
+            "eq": "pfsc"
+          },
+          {
+            "fact": "smp.mounts[].direct_files",
+            "eq": true
+          },
+          {
+            "fact": "smp.mounts[].nested_image",
+            "eq": false
+          }
         ]
       },
       "text": {
@@ -197,7 +465,10 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.titles[].dup_count", "gt": "1" }
+          {
+            "fact": "smp.titles[].dup_count",
+            "gt": "1"
+          }
         ]
       },
       "text": {
@@ -214,7 +485,10 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.hidden_sources[].path", "exists": true }
+          {
+            "fact": "smp.hidden_sources[].path",
+            "exists": true
+          }
         ]
       },
       "text": {
@@ -223,7 +497,17 @@
       },
       "evidence": "smp.hidden_sources[].path",
       "fix": "smp_set_key",
-      "fix_params": {"mode": "add", "section": "scan", "key": "path", "legacy_key": "scanpath", "from": {"array": "smp.hidden_sources", "field": "root", "agg": "distinct"}},
+      "fix_params": {
+        "mode": "add",
+        "section": "scan",
+        "key": "path",
+        "legacy_key": "scanpath",
+        "from": {
+          "array": "smp.hidden_sources",
+          "field": "root",
+          "agg": "distinct"
+        }
+      },
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
     },
@@ -232,7 +516,10 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "smp.deep_sources[].path", "exists": true }
+          {
+            "fact": "smp.deep_sources[].path",
+            "exists": true
+          }
         ]
       },
       "text": {
@@ -241,7 +528,16 @@
       },
       "evidence": "smp.deep_sources[].path",
       "fix": "smp_set_key",
-      "fix_params": {"section": "scan", "key": "depth", "legacy_key": "scan_depth", "from": {"array": "smp.deep_sources", "field": "level", "agg": "max"}},
+      "fix_params": {
+        "section": "scan",
+        "key": "depth",
+        "legacy_key": "scan_depth",
+        "from": {
+          "array": "smp.deep_sources",
+          "field": "level",
+          "agg": "max"
+        }
+      },
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
     },
@@ -250,7 +546,10 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "smp.unstable_sources[].count", "gt": "2" }
+          {
+            "fact": "smp.unstable_sources[].count",
+            "gt": "2"
+          }
         ]
       },
       "text": {
@@ -267,8 +566,14 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "smp.images[].ext", "eq": ".exfat" },
-          { "fact": "smp.images[].cluster_size", "lt": "65536" }
+          {
+            "fact": "smp.images[].ext",
+            "eq": ".exfat"
+          },
+          {
+            "fact": "smp.images[].cluster_size",
+            "lt": "65536"
+          }
         ]
       },
       "text": {
@@ -285,7 +590,10 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "savedata.foreign[].titleid", "exists": true }
+          {
+            "fact": "savedata.foreign[].titleid",
+            "exists": true
+          }
         ]
       },
       "text": {
@@ -310,9 +618,18 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "errors.pairs[].code", "matches": "^CE-" },
-          { "fact": "errors.pairs[].titleid", "matches": "^(PPSA|CUSA)[0-9]{5}$" },
-          { "fact": "errors.pairs[].count", "gt": "2" }
+          {
+            "fact": "errors.pairs[].code",
+            "matches": "^CE-"
+          },
+          {
+            "fact": "errors.pairs[].titleid",
+            "matches": "^(PPSA|CUSA)[0-9]{5}$"
+          },
+          {
+            "fact": "errors.pairs[].count",
+            "gt": "2"
+          }
         ]
       },
       "text": {
@@ -337,9 +654,18 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "errors.pairs[].code", "matches": "^CE-" },
-          { "fact": "errors.pairs[].titleid", "matches": "^NPXS[0-9]{5}$" },
-          { "fact": "errors.pairs[].count", "gt": "2" }
+          {
+            "fact": "errors.pairs[].code",
+            "matches": "^CE-"
+          },
+          {
+            "fact": "errors.pairs[].titleid",
+            "matches": "^NPXS[0-9]{5}$"
+          },
+          {
+            "fact": "errors.pairs[].count",
+            "gt": "2"
+          }
         ]
       },
       "text": {
@@ -364,8 +690,14 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "boot.unclean_14d", "gt": "2" },
-          { "fact": "boot.unclean[].ts", "exists": true }
+          {
+            "fact": "boot.unclean_14d",
+            "gt": "2"
+          },
+          {
+            "fact": "boot.unclean[].ts",
+            "exists": true
+          }
         ]
       },
       "text": {
@@ -390,9 +722,18 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "boot.unclean_total", "gt": "0" },
-          { "fact": "boot.unclean_14d", "lt": "3" },
-          { "fact": "boot.unclean[].ts", "exists": true }
+          {
+            "fact": "boot.unclean_total",
+            "gt": "0"
+          },
+          {
+            "fact": "boot.unclean_14d",
+            "lt": "3"
+          },
+          {
+            "fact": "boot.unclean[].ts",
+            "exists": true
+          }
         ]
       },
       "text": {
@@ -417,8 +758,14 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "db.files[].header_bad", "eq": "1" },
-          { "fact": "db.files[].readable", "eq": "1" }
+          {
+            "fact": "db.files[].header_bad",
+            "eq": "1"
+          },
+          {
+            "fact": "db.files[].readable",
+            "eq": "1"
+          }
         ]
       },
       "text": {
@@ -443,8 +790,14 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "db.files[].readable", "eq": "1" },
-          { "fact": "db.files[].truncated", "eq": "1" }
+          {
+            "fact": "db.files[].readable",
+            "eq": "1"
+          },
+          {
+            "fact": "db.files[].truncated",
+            "eq": "1"
+          }
         ]
       },
       "text": {
@@ -469,7 +822,10 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "db.files[].journal_hot", "eq": "1" }
+          {
+            "fact": "db.files[].journal_hot",
+            "eq": "1"
+          }
         ]
       },
       "text": {
@@ -494,7 +850,10 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "db.files[].integrity", "eq": "0" }
+          {
+            "fact": "db.files[].integrity",
+            "eq": "0"
+          }
         ]
       },
       "text": {
@@ -519,7 +878,10 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "games.case_mismatch[].case_sensitive", "eq": "1" }
+          {
+            "fact": "games.case_mismatch[].case_sensitive",
+            "eq": "1"
+          }
         ]
       },
       "text": {
@@ -544,7 +906,10 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "games.case_mismatch[].case_sensitive", "eq": "0" }
+          {
+            "fact": "games.case_mismatch[].case_sensitive",
+            "eq": "0"
+          }
         ]
       },
       "text": {
@@ -569,7 +934,10 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "smp.debug", "eq": "0" }
+          {
+            "fact": "smp.debug",
+            "eq": "0"
+          }
         ]
       },
       "text": {
@@ -578,7 +946,12 @@
       },
       "evidence": "smp.debug",
       "fix": "smp_set_key",
-      "fix_params": {"section": "general", "key": "debug", "legacy_key": "debug", "value": "1"},
+      "fix_params": {
+        "section": "general",
+        "key": "debug",
+        "legacy_key": "debug",
+        "value": "1"
+      },
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
     },
@@ -587,7 +960,13 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": { "regex": "Register failed|\\[REG\\] FAIL", "gte": 1 } }
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "Register failed|\\[REG\\] FAIL",
+              "gte": 1
+            }
+          }
         ]
       },
       "text": {
@@ -605,8 +984,20 @@
       "severity": "info",
       "when": {
         "any": [
-          { "fact": "smp.autotune.lines", "count_matches": { "regex": "image_sector", "gte": 1 } },
-          { "fact": "smp.log.lines", "count_matches": { "regex": "\\[CFG\\] image sector autotuned", "gte": 1 } }
+          {
+            "fact": "smp.autotune.lines",
+            "count_matches": {
+              "regex": "image_sector",
+              "gte": 1
+            }
+          },
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "\\[CFG\\] image sector autotuned",
+              "gte": 1
+            }
+          }
         ]
       },
       "text": {
@@ -624,7 +1015,10 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "jb.seconds_after_boot", "lt": "60" }
+          {
+            "fact": "jb.seconds_after_boot",
+            "lt": "60"
+          }
         ]
       },
       "text": {
@@ -641,9 +1035,22 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "net.port_9021", "eq": "closed" },
-          { "not": { "fact": "proc.running", "contains": "elfldr" } },
-          { "not": { "fact": "proc.running", "contains": "etahen" } }
+          {
+            "fact": "net.port_9021",
+            "eq": "closed"
+          },
+          {
+            "not": {
+              "fact": "proc.running",
+              "contains": "elfldr"
+            }
+          },
+          {
+            "not": {
+              "fact": "proc.running",
+              "contains": "etahen"
+            }
+          }
         ]
       },
       "text": {
@@ -668,8 +1075,14 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "ps5theme.version", "gt": "1.30" },
-          { "fact": "ps5theme.version", "lt": "1.53" }
+          {
+            "fact": "ps5theme.version",
+            "gt": "1.30"
+          },
+          {
+            "fact": "ps5theme.version",
+            "lt": "1.53"
+          }
         ]
       },
       "text": {
@@ -694,7 +1107,10 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "apps.oversized[].titleid", "exists": true }
+          {
+            "fact": "apps.oversized[].titleid",
+            "exists": true
+          }
         ]
       },
       "text": {
@@ -719,7 +1135,10 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "games.need_backport[].titleid", "exists": true }
+          {
+            "fact": "games.need_backport[].titleid",
+            "exists": true
+          }
         ]
       },
       "text": {
@@ -744,7 +1163,13 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": { "regex": "AppInstallAll hook is no longer installed|AppInstallTitleDir bridge unavailable", "gte": 1 } }
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "AppInstallAll hook is no longer installed|AppInstallTitleDir bridge unavailable",
+              "gte": 1
+            }
+          }
         ]
       },
       "text": {
@@ -762,7 +1187,13 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": { "regex": "[Ff]ailed to [Ii]nstall [Ss]hell[Cc]ore [Hh]ooks|\\[SHELLCORE\\] lifecycle hooks unavailable", "gte": 1 } }
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "[Ff]ailed to [Ii]nstall [Ss]hell[Cc]ore [Hh]ooks|\\[SHELLCORE\\] lifecycle hooks unavailable",
+              "gte": 1
+            }
+          }
         ]
       },
       "text": {
@@ -780,7 +1211,13 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": { "regex": "image cache full", "gte": 1 } }
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "image cache full",
+              "gte": 1
+            }
+          }
         ]
       },
       "text": {
@@ -798,8 +1235,14 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "proc.running", "contains": "shadowmountplus" },
-          { "fact": "smp.api.state", "eq": "closed" }
+          {
+            "fact": "proc.running",
+            "contains": "shadowmountplus"
+          },
+          {
+            "fact": "smp.api.state",
+            "eq": "closed"
+          }
         ]
       },
       "text": {
@@ -816,9 +1259,18 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "storage.mounts[].mount", "eq": "/data" },
-          { "fact": "storage.mounts[].total", "gt": "0" },
-          { "fact": "storage.mounts[].free_pct", "lt": "5" }
+          {
+            "fact": "storage.mounts[].mount",
+            "eq": "/data"
+          },
+          {
+            "fact": "storage.mounts[].total",
+            "gt": "0"
+          },
+          {
+            "fact": "storage.mounts[].free_pct",
+            "lt": "5"
+          }
         ]
       },
       "text": {
@@ -843,7 +1295,10 @@
       "severity": "critical",
       "when": {
         "all": [
-          { "fact": "smp.config_problems[].text", "matches": "." }
+          {
+            "fact": "smp.config_problems[].text",
+            "matches": "."
+          }
         ]
       },
       "text": {
@@ -860,7 +1315,10 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.v1_keys[].key", "matches": "." }
+          {
+            "fact": "smp.v1_keys[].key",
+            "matches": "."
+          }
         ]
       },
       "text": {
@@ -877,9 +1335,18 @@
       "severity": "critical",
       "when": {
         "all": [
-          { "fact": "smp.config_present", "eq": "true" },
-          { "fact": "smp.config_v2", "eq": "false" },
-          { "fact": "smp.v1_backup_ready", "eq": "true" }
+          {
+            "fact": "smp.config_present",
+            "eq": "true"
+          },
+          {
+            "fact": "smp.config_v2",
+            "eq": "false"
+          },
+          {
+            "fact": "smp.v1_backup_ready",
+            "eq": "true"
+          }
         ]
       },
       "text": {
@@ -896,7 +1363,13 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": {"regex": "(\\[RETRY\\] limit reached|retry limit reached \\()", "gte": 1} }
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "(\\[RETRY\\] limit reached|retry limit reached \\()",
+              "gte": 1
+            }
+          }
         ]
       },
       "text": {
@@ -914,8 +1387,22 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": {"regex": "\\[KSTUFF\\] not found; waiting before starting services", "gte": 1} },
-          { "not": { "fact": "smp.log.lines", "count_matches": {"regex": "ready; continuing startup", "gte": 1} } }
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "\\[KSTUFF\\] not found; waiting before starting services",
+              "gte": 1
+            }
+          },
+          {
+            "not": {
+              "fact": "smp.log.lines",
+              "count_matches": {
+                "regex": "ready; continuing startup",
+                "gte": 1
+              }
+            }
+          }
         ]
       },
       "text": {
@@ -933,8 +1420,20 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": {"regex": "\\[SCAN\\] watcher open failed for ", "gte": 1} },
-          { "fact": "smp.log.lines", "count_matches": {"regex": "scanner watcher initialization failed", "gte": 1} }
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "\\[SCAN\\] watcher open failed for ",
+              "gte": 1
+            }
+          },
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "scanner watcher initialization failed",
+              "gte": 1
+            }
+          }
         ]
       },
       "text": {
@@ -952,7 +1451,13 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": {"regex": "launch mount unavailable: .* status=16", "gte": 2} }
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "launch mount unavailable: .* status=16",
+              "gte": 2
+            }
+          }
         ]
       },
       "text": {
@@ -970,8 +1475,20 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": {"regex": "handoff cleanup failed for pid=", "gte": 1} },
-          { "fact": "smp.log.lines", "count_matches": {"regex": "sandbox fakelib unavailable", "gte": 1} }
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "handoff cleanup failed for pid=",
+              "gte": 1
+            }
+          },
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "sandbox fakelib unavailable",
+              "gte": 1
+            }
+          }
         ]
       },
       "text": {
@@ -989,7 +1506,13 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": {"regex": "backport overlay failed: .*Operation not permitted", "gte": 1} }
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "backport overlay failed: .*Operation not permitted",
+              "gte": 1
+            }
+          }
         ]
       },
       "text": {
@@ -1007,8 +1530,14 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "smp.version", "gt": "1.7beta8" },
-          { "fact": "smp.version", "lt": "1.7beta11" }
+          {
+            "fact": "smp.version",
+            "gt": "1.7beta8"
+          },
+          {
+            "fact": "smp.version",
+            "lt": "1.7beta11"
+          }
         ]
       },
       "text": {
@@ -1025,7 +1554,13 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "smp.log.lines", "count_matches": {"regex": "\\[SLEEP\\] killing USB-backed game before suspend", "gte": 1} }
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "\\[SLEEP\\] killing USB-backed game before suspend",
+              "gte": 1
+            }
+          }
         ]
       },
       "text": {
@@ -1043,7 +1578,10 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "autoload.problems[].kind", "eq": "elfldr_no_delay" }
+          {
+            "fact": "autoload.problems[].kind",
+            "eq": "elfldr_no_delay"
+          }
         ]
       },
       "text": {
@@ -1060,7 +1598,14 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "autoload.problems[].kind", "in": ["missing_slot", "missing_file", "entry_case"] }
+          {
+            "fact": "autoload.problems[].kind",
+            "in": [
+              "missing_slot",
+              "missing_file",
+              "entry_case"
+            ]
+          }
         ]
       },
       "text": {
@@ -1077,7 +1622,10 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "autoload.problems[].kind", "eq": "duplicate" }
+          {
+            "fact": "autoload.problems[].kind",
+            "eq": "duplicate"
+          }
         ]
       },
       "text": {
@@ -1094,7 +1642,10 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "autoload.problems[].kind", "eq": "syntax" }
+          {
+            "fact": "autoload.problems[].kind",
+            "eq": "syntax"
+          }
         ]
       },
       "text": {
@@ -1111,8 +1662,14 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "pldmgr.autoload_enabled", "eq": "0" },
-          { "fact": "pldmgr.autoload_entries", "gt": "0" }
+          {
+            "fact": "pldmgr.autoload_enabled",
+            "eq": "0"
+          },
+          {
+            "fact": "pldmgr.autoload_entries",
+            "gt": "0"
+          }
         ]
       },
       "text": {
@@ -1129,7 +1686,10 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "payload.broken_elfs[].reason", "matches": "." }
+          {
+            "fact": "payload.broken_elfs[].reason",
+            "matches": "."
+          }
         ]
       },
       "text": {
@@ -1146,9 +1706,18 @@
       "severity": "info",
       "when": {
         "any": [
-          { "fact": "nanodns.log.upstream_failed", "gt": "2" },
-          { "fact": "nanodns.log.bind_failed", "gt": "0" },
-          { "fact": "nanodns.log.config_warnings", "gt": "0" }
+          {
+            "fact": "nanodns.log.upstream_failed",
+            "gt": "2"
+          },
+          {
+            "fact": "nanodns.log.bind_failed",
+            "gt": "0"
+          },
+          {
+            "fact": "nanodns.log.config_warnings",
+            "gt": "0"
+          }
         ]
       },
       "text": {
@@ -1164,7 +1733,10 @@
       "severity": "warning",
       "when": {
         "all": [
-          { "fact": "etahen.crashed", "eq": "true" }
+          {
+            "fact": "etahen.crashed",
+            "eq": "true"
+          }
         ]
       },
       "text": {
@@ -1181,8 +1753,14 @@
       "severity": "info",
       "when": {
         "any": [
-          { "fact": "etahen.game_rest_kill", "eq": "1" },
-          { "fact": "etahen.util_rest_kill", "eq": "1" }
+          {
+            "fact": "etahen.game_rest_kill",
+            "eq": "1"
+          },
+          {
+            "fact": "etahen.util_rest_kill",
+            "eq": "1"
+          }
         ]
       },
       "text": {
@@ -1198,10 +1776,24 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "storage.mounts[].mount", "matches": "^/mnt/(usb|ext)[0-9]+$" },
-          { "not": { "fact": "storage.mounts[].fstype", "eq": "tmpfs" } },
-          { "fact": "storage.mounts[].fstype", "matches": "." },
-          { "fact": "storage.mounts[].readonly", "eq": "true" }
+          {
+            "fact": "storage.mounts[].mount",
+            "matches": "^/mnt/(usb|ext)[0-9]+$"
+          },
+          {
+            "not": {
+              "fact": "storage.mounts[].fstype",
+              "eq": "tmpfs"
+            }
+          },
+          {
+            "fact": "storage.mounts[].fstype",
+            "matches": "."
+          },
+          {
+            "fact": "storage.mounts[].readonly",
+            "eq": "true"
+          }
         ]
       },
       "text": {
@@ -1453,8 +2045,8 @@
         ]
       },
       "text": {
-        "de": "Ein Selbsttest ist beim letzten Lauf fehlgeschlagen (Evidenz: Test und Grund). Bei einem Lesetest („read_error“, „short_read“) trat beim Lesen einer vorhandenen Datei ein Fehler auf: Laufwerk, Kabel, Anschluss oder die Datei selbst können die Ursache sein. Den Test einmal wiederholen; bleibt es dabei, das Laufwerk an einem anderen Anschluss oder am PC prüfen und die Datei neu kopieren. Bei einem Datenbanktest siehe die Befunde zu den Datenbanken. Ein bestandener Selbsttest heißt nur „nicht aufgefallen“, nie „gesund“.",
-        "en": "A self-test failed in the last run (evidence: test and reason). For a read test (“read_error”, “short_read”) an error occurred while reading an existing file: the drive, cable, port or the file itself can be the cause. Repeat the test once; if it stays that way, check the drive on another port or on a PC and copy the file again. For a database test see the findings about the databases. A passed self-test only means “nothing stood out”, never “healthy”."
+        "de": "Ein Selbsttest ist beim letzten Lauf fehlgeschlagen (Evidenz: Test und Grund). Bei einem Lesetest („read_error“, „short_read“) trat beim Lesen einer vorhandenen Datei ein Fehler auf: Laufwerk, Kabel, Anschluss oder die Datei selbst können die Ursache sein. Den Test einmal wiederholen; bleibt es dabei, das Laufwerk an einem anderen Anschluss oder am PC prüfen und die Datei neu kopieren. Bei einem Datenbanktest siehe die Befunde zu den Datenbanken. Bei einem Rechen- oder Speicherfehler („compute_mismatch“, „mem_mismatch“) lieferte die Hardware unter Last oder im Arbeitsspeicher ein anderes Ergebnis als erwartet: ein ernstes Zeichen für ein Hardwareproblem (CPU, Speicher, Stromversorgung oder Kühlung). Dann zuerst die Spielstände sichern und den Test an einem anderen Tag wiederholen. Ein bestandener Selbsttest heißt nur „nicht aufgefallen“, nie „gesund“.",
+        "en": "A self-test failed in the last run (evidence: test and reason). For a read test (“read_error”, “short_read”) an error occurred while reading an existing file: the drive, cable, port or the file itself can be the cause. Repeat the test once; if it stays that way, check the drive on another port or on a PC and copy the file again. For a database test see the findings about the databases. For a calculation or memory error (“compute_mismatch”, “mem_mismatch”) the hardware returned a different result than expected under load or in working memory: a serious sign of a hardware problem (CPU, memory, power supply or cooling). Back up the saves first and repeat the test on another day. A passed self-test only means “nothing stood out”, never “healthy”."
       },
       "evidence": "selftest.failed[].id",
       "fix": null,
@@ -1567,8 +2159,14 @@
       "confirm_runs": 2,
       "when": {
         "any": [
-          { "fact": "sys.temp.cpu_c", "gt": "85" },
-          { "fact": "sys.temp.soc_c", "gt": "85" }
+          {
+            "fact": "sys.temp.cpu_c",
+            "gt": "85"
+          },
+          {
+            "fact": "sys.temp.soc_c",
+            "gt": "85"
+          }
         ]
       },
       "text": {
@@ -1593,7 +2191,10 @@
       "severity": "info",
       "when": {
         "all": [
-          { "fact": "smp.missing_drive_paths[].path", "matches": "." }
+          {
+            "fact": "smp.missing_drive_paths[].path",
+            "matches": "."
+          }
         ]
       },
       "text": {
