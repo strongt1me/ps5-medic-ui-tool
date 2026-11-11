@@ -32,7 +32,7 @@ Sicherheitsleiter: Dateien lesen, bekannte SDK-Sensoren lesen, Unbekanntes im Ki
 
 | Batch | Inhalt | Stand |
 |---|---|---|
-| 1 Fundament | Collector-Abdeckung („nicht geprüft“, **gebaut**, siehe `docs/RULES.md`); offen: Befund-Datensatz mit `status`, `urgency`, `confidence` mit Grund und getrennter Evidenz, Fix-Pipeline mit Dry-Run, Regelpaket-Governance | teilweise gebaut |
+| 1 Fundament | **gebaut:** Collector-Abdeckung („nicht geprüft“, siehe `docs/RULES.md`); Fix-Pipeline mit Vorschau (Reparatur-Vorschau mit Diff, Bestätigung, Journal, Rückgängig) und **erneuter Prüfung nach der Reparatur** (die UI sagt, ob die Regel noch gemeldet wird); offen: Befund-Datensatz mit `status`, `urgency`, `confidence` mit Grund und getrennter Evidenz, Regelpaket-Governance | teilweise gebaut |
 | 2 Beobachtete Quellen | Startverlauf, Fehlerverlauf, Datenbanken, Fehlercodes ergänzen; offen: Inventar (Downloads, doppelte Pakete, Waisen), Verknüpfungen, Log-Größen | teilweise gebaut |
 | 3 Jailbreak-Stack | Regeln mit Maintainer-Deckung, reversible Fixes: **gebaut** `game.il2cpp_case` (+ `_latent`); „Autoload nach kstuff“ im Original nicht belegt (siehe `docs/RULES.md`); offen: Laufwerk abziehen (nur Hinweis), verwaiste Kachel, Payload-Manager-Layout | teilweise gebaut |
 | 4 Verlauf | `history.jsonl`, Baselines, Vorher/Nachher-Diff, `pending` → `confirmed` | offen |

@@ -112,6 +112,13 @@ private:
     bool done_ok_ = false;
     std::string done_text_;  // Transaktions-ID bzw. Fehlermeldung
 
+    // Erneute Pruefung nach einer erfolgreichen Reparatur ("Re-Detect"): laeuft erst, wenn "Pruefe erneut ..." einmal gezeichnet war, und sagt,
+    // ob die Regel des reparierten Befunds noch gemeldet wird. Nur im Speicher; die Reparatur selbst ist im Journal.
+    enum class Verify { None, Pending, Fixed, Persists };
+    Verify verify_ = Verify::None;
+    std::string verify_rule_;
+    mutable bool verify_rendered_ = false;
+
     std::vector<medic::TxnInfo> hist_;
     int hist_sel_ = 0, hist_top_ = 0;
     medic::TxnInfo undo_target_;

@@ -2434,6 +2434,43 @@ void coverage_ui_tests() {
     CHECK(differs, "Abdeckung: die Befundliste zeigt den Unterschied");
 }
 
+// Nach einer erfolgreichen Reparatur prueft die App erneut und sagt, ob der Befund noch gemeldet wird (Orange = weiterhin gemeldet).
+void redetect_ui_tests() {
+    const Color warn = rgb(255, 179, 71);  // kWarn in app.cpp
+    auto has_color = [](const Canvas& c, Color col) {
+        for (int y = 0; y < c.height(); y += 2)
+            for (int x = 0; x < c.width(); x += 2)
+                if (c.at(x, y) == col) return true;
+        return false;
+    };
+    for (const bool fixed : {true, false}) {
+        FakeService svc;
+        svc.result.fw = "12.00";
+        svc.result.model = "CFI-7021";
+        svc.result.rules_version = "t";
+        svc.result.findings = {mk_finding("a.crit", Severity::Critical, true)};
+        svc.plan = mk_plan();
+        svc.plan.rule_id = "a.crit";
+        Canvas cv(App::kWidth, App::kHeight);
+        App app(svc);
+        run_check_via_ui(app, cv);
+        press(app, {Button::Triangle, Button::Cross});
+        const std::string tag = fixed ? "Re-Detect (behoben): " : "Re-Detect (besteht weiter): ";
+        CHECK(app.screen() == App::Screen::FixDone && svc.applies == 1 && svc.checks == 1, tag + "Reparatur angewendet, noch keine zweite Pruefung");
+        app.render(cv);
+        CHECK(svc.checks == 1 && !has_color(cv, warn), tag + "'Pruefe erneut' ist gezeichnet, die Pruefung laeuft erst danach");
+        if (fixed) svc.result.findings.clear();  // die Konsole meldet den Befund nach der Reparatur nicht mehr
+        app.update();
+        CHECK(svc.checks == 2 && app.screen() == App::Screen::FixDone, tag + "erneute Pruefung genau einmal");
+        app.render(cv);
+        CHECK(has_color(cv, warn) == !fixed, tag + (fixed ? "kein Orange: nichts mehr gemeldet" : "Orange: wird weiterhin gemeldet"));
+        app.update();
+        CHECK(svc.checks == 2, tag + "keine weitere Pruefung");
+        press(app, {Button::Cross});
+        CHECK(app.screen() == App::Screen::Findings && svc.checks == 2 && app.finding_count() == (fixed ? 0 : 1), tag + "Kreuz zeigt die frische Befundliste ohne neue Pruefung");
+    }
+}
+
 }  // namespace
 
 void ui_tests() {
@@ -2443,6 +2480,7 @@ void ui_tests() {
     png_tests();
     screen_flow_tests();
     coverage_ui_tests();
+    redetect_ui_tests();
     edge_tests();
     end_to_end_tests();
     undo_in_new_session_tests();

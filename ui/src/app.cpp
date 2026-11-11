@@ -433,12 +433,19 @@ void App::handle(Button b) {
                 done_kind_ = DoneKind::Fix;
                 done_ok_ = r.ok;
                 done_text_ = r.ok ? r.txn : r.error;
+                verify_ = r.ok ? Verify::Pending : Verify::None;  // nach einer Reparatur erneut pruefen
+                verify_rule_ = plan_.rule_id;
+                verify_rendered_ = false;
                 screen_ = Screen::FixDone;
             } else if (b == Button::Circle) screen_ = fix_origin_;
             break;
         case Screen::FixDone:
             if (done_kind_ == DoneKind::Fix) {
-                if (b == Button::Cross) start_check();  // Befunde sind nach einer Reparatur veraltet
+                if (b == Button::Cross) {
+                    // Ist die erneute Pruefung schon gelaufen, sind die Befunde frisch; sonst (noch nicht gezeichnet) wie bisher neu pruefen.
+                    if (verify_ == Verify::Fixed || verify_ == Verify::Persists) screen_ = Screen::Findings;
+                    else start_check();
+                }
                 else if (b == Button::Circle) screen_ = Screen::Start;
             } else if (b == Button::Cross || b == Button::Circle) {
                 open_history();
@@ -463,6 +470,7 @@ void App::handle(Button b) {
                 done_kind_ = DoneKind::Undo;
                 done_ok_ = r.ok;
                 done_text_ = r.ok ? undo_target_.txn : r.error;
+                verify_ = Verify::None;
                 screen_ = Screen::FixDone;
             } else if (b == Button::Circle) screen_ = Screen::History;
             break;
@@ -576,6 +584,13 @@ void App::update() {
         sel_ = top_ = 0;
         screen_ = Screen::Findings;
     }
+    if (verify_ == Verify::Pending && verify_rendered_ && screen_ == Screen::FixDone) {  // Re-Detect nach der Reparatur
+        result_ = svc_.run_check();
+        has_result_ = true;
+        sel_ = top_ = 0;
+        const bool still = std::any_of(result_.findings.begin(), result_.findings.end(), [&](const medic::Finding& f) { return f.rule_id == verify_rule_; });
+        verify_ = still ? Verify::Persists : Verify::Fixed;
+    }
     if (pending_download_ && download_rendered_) {  // erst ausfuehren, wenn "Lade herunter ..." sichtbar war
         pending_download_ = false;
         download_result_ = svc_.download_rule_update();
@@ -601,7 +616,10 @@ void App::render(Canvas& c) const {
         case Screen::Findings: draw_findings(c); break;
         case Screen::Detail: draw_detail(c); break;
         case Screen::FixPreview: draw_fix_preview(c); break;
-        case Screen::FixDone: draw_fix_done(c); break;
+        case Screen::FixDone:
+            if (verify_ == Verify::Pending) verify_rendered_ = true;
+            draw_fix_done(c);
+            break;
         case Screen::History: draw_history(c); break;
         case Screen::UndoConfirm: draw_undo_confirm(c); break;
         case Screen::Settings: draw_settings(c); break;
@@ -966,9 +984,18 @@ void App::draw_fix_done(Canvas& c) const {
         body().draw(c, M + 60, y, l, kText);
         y += body().line_height() + 6;
     }
+    if (fix && done_ok_ && verify_ != Verify::None) {  // Ergebnis der erneuten Pruefung
+        y += 14;
+        const bool pending = verify_ == Verify::Pending, fixed = verify_ == Verify::Fixed;
+        const std::string text = pending ? S("fixdone.verifying") : S.fmt(fixed ? "fixdone.verified_fixed" : "fixdone.verified_persists", {{"rule", verify_rule_}});
+        for (auto& l : wrap_text(body(), text, W - 2 * M - 120, 4)) {
+            body().draw(c, M + 60, y, l, pending ? kDim : (fixed ? kOk : kWarn));
+            y += body().line_height() + 6;
+        }
+    }
     std::vector<std::pair<PadGlyph, std::string>> hints;
     if (fix) {
-        hints.emplace_back(PadGlyph::Cross, S("common.retest"));
+        hints.emplace_back(PadGlyph::Cross, S(verify_ == Verify::Fixed || verify_ == Verify::Persists ? "common.to_list" : "common.retest"));
         hints.emplace_back(PadGlyph::Circle, S("common.home"));
     } else {
         hints.emplace_back(PadGlyph::Cross, S("common.back"));
