@@ -1,0 +1,20 @@
+{
+  "finished": "20261111T120000Z",
+  "cancelled": false,
+  "results": [
+    {
+      "id": "hw.storage.write_verify",
+      "status": "failed",
+      "reason": "verify_mismatch",
+      "started": "",
+      "duration_s": 1.0,
+      "measurements": [
+        {
+          "name": "bad_blocks",
+          "value": 1,
+          "unit": ""
+        }
+      ]
+    }
+  ]
+}

@@ -14,6 +14,7 @@
 #include "medic/rules.hpp"
 #include "medic/selftest.hpp"
 
+#include <chrono>
 #include <functional>
 #include <map>
 #include <optional>
@@ -28,6 +29,13 @@ struct CheckResult {
     std::vector<medic::CoverageResult> coverage;  // Pruefbereiche; nicht gepruefte sind "nicht geprueft", nie "in Ordnung"
     std::vector<std::string> resolved;            // Regeln, die die letzte Pruefung noch meldete und die jetzt fehlen
     std::vector<medic::MetricChange> metrics;     // Messwerte mit Veraenderung seit der letzten Pruefung
+};
+
+// Ein Schritt eines laufenden Selbsttests (siehe selftest.hpp, TestSession).
+struct SelftestStep {
+    bool done = false;
+    double progress = 0;  // 0 bis 1
+    medic::TestResult result;  // gueltig, wenn done
 };
 
 struct ReportResult {
@@ -107,10 +115,22 @@ public:
         r.reason = "no_service";
         return r;
     }
+    // Schrittweise Ausfuehrung: start waehlt den Test, step macht einen Schritt (hoechstens ein paar Sekunden), abort beendet ihn nach dem
+    // laufenden Schritt als cancelled. Standard: ein einziger Schritt ueber selftest_run (Fakes, einfache Dienste).
+    virtual void selftest_start(const std::string& id) { st_default_id_ = id; }
+    virtual SelftestStep selftest_step() {
+        SelftestStep s;
+        s.done = true;
+        s.progress = 1;
+        s.result = selftest_run(st_default_id_);
+        return s;
+    }
+    virtual void selftest_abort() {}
     virtual void selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) {
         (void)results;
         (void)cancelled;
     }
+    std::string st_default_id_;
     // Zusaetzliche Angaben der Konsole zu einem Fehlercode, so wie sie dessen `context` verlangt. Liest nur; sammelt nichts neu,
     // sondern benutzt die Fakten des letzten Check-ups (Standard: nichts).
     virtual CodeContext code_context(const medic::ErrorCode& code) {
@@ -148,6 +168,9 @@ public:
     std::vector<medic::TestResult> selftest_last() override;
     bool selftest_begin(const std::vector<std::string>& ids) override;
     medic::TestResult selftest_run(const std::string& id) override;
+    void selftest_start(const std::string& id) override;
+    SelftestStep selftest_step() override;
+    void selftest_abort() override;
     void selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) override;
     medic::RuleUpdateOffer check_codes_update() override;
     medic::RuleUpdateResult install_codes_update() override;
@@ -168,6 +191,9 @@ private:
     std::vector<medic::Finding> last_findings_;
     std::vector<std::string> last_resolved_;
     medic::Facts selftest_facts_;  // frische Fakten des laufenden Selbsttests
+    std::unique_ptr<medic::TestSession> selftest_session_;
+    std::string selftest_id_;
+    std::chrono::steady_clock::time_point selftest_t0_{};
     std::vector<medic::MetricChange> last_metrics_;
     std::optional<medic::ErrorCodeSet> codes_before_install_;  // dito fuer die Fehlercodes
     bool reload_error_codes();

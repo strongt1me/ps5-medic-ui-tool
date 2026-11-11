@@ -48,6 +48,15 @@ public:
         (void)content;
         return false;
     }
+    // Ueberschreibt `content.size()` Bytes ab `offset` IN DER BESTEHENDEN Datei (legt sie an, falls sie fehlt; kuerzt oder loescht nie). Nur fuer
+    // den Schreibtest des Selbsttests (selftest.hpp) im eigenen Ordner. sync = fsync danach. Standard: nicht unterstuetzt (false).
+    virtual bool write_range(const std::string& path, std::uint64_t offset, const std::string& content, bool sync) {
+        (void)path;
+        (void)offset;
+        (void)content;
+        (void)sync;
+        return false;
+    }
 };
 
 struct ProcInfo {

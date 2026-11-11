@@ -249,7 +249,55 @@ medic::TestResult LocalService::selftest_run(const std::string& id) {
         r.reason = "unknown_test";
         return r;
     }
-    return medic::run_selftest(p_, selftest_facts_, *d);
+    medic::TestContext ctx;
+    ctx.today = clock_().substr(0, 8);
+    return medic::run_selftest(p_, selftest_facts_, *d, ctx);
+}
+
+void LocalService::selftest_start(const std::string& id) {
+    selftest_id_ = id;
+    selftest_session_.reset();
+    if (const medic::TestDef* d = medic::find_test(id)) {
+        medic::TestContext ctx;
+        ctx.today = clock_().substr(0, 8);
+        selftest_session_ = medic::begin_selftest_session(p_, selftest_facts_, *d, ctx);
+    }
+}
+
+SelftestStep LocalService::selftest_step() {
+    SelftestStep s;
+    s.done = true;
+    s.progress = 1;
+    if (!selftest_session_) {
+        s.result.id = selftest_id_;
+        s.result.status = medic::TestStatus::Error;
+        s.result.reason = "unknown_test";
+        return s;
+    }
+    const auto t0 = std::chrono::steady_clock::now();
+    if (selftest_t0_.time_since_epoch().count() == 0) selftest_t0_ = t0;
+    try {
+        s.done = selftest_session_->step();
+    } catch (const std::exception&) {
+        s.result.id = selftest_id_;
+        s.result.status = medic::TestStatus::Error;  // ein Fehler im Test ist nie "passed"
+        s.result.reason = "exception";
+        selftest_session_.reset();
+        return s;
+    }
+    s.progress = selftest_session_->progress();
+    if (s.done) {
+        s.result = selftest_session_->result();
+        s.result.id = selftest_id_;
+        s.result.duration_s = std::chrono::duration<double>(std::chrono::steady_clock::now() - selftest_t0_).count();
+        selftest_session_.reset();
+        selftest_t0_ = {};
+    }
+    return s;
+}
+
+void LocalService::selftest_abort() {
+    if (selftest_session_) selftest_session_->abort("cancelled");
 }
 
 void LocalService::selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) { medic::selftest_finish(p_, clock_(), results, cancelled); }

@@ -397,3 +397,22 @@ Ein Test ist ein aktiver Collector: Er liefert ein Ergebnis mit Status und Messw
 - **UI:** Vierter Startknopf „Selbsttest“ (Liste mit letztem Status je Test, Hinweis mit Dauer vor dem Lauf, Kreuz = alle Tests, Quadrat = nur Schnelltests, ein Test je `update()` mit Fortschritt, Kreis bricht nach dem laufenden Test ab; Rest steht als `cancelled`). Der Bericht hat den Abschnitt „Selbsttest“, der Diagnose-Payload führt alle Tests einmal aus (ohne Marker).
 - **Test-Konsole (11. Nov. 2026):** alle fünf bestanden; Speicher 64 % frei, Temperaturen 37/35 °C, 15 Datenbanken ohne Auffälligkeit, 30 ELF und 13 Images ohne Problem; Lesetest 128 MiB in 0,69 s (196 MB/s) als erster Rohwert einer späteren Baseline.
 - **Nicht in v1:** Last-, Speicher- und Thermiktests, Schreibtest, Nutzer-Tests (Pad, Anzeige, Audio), Netz-Tests (Batch 8, D1/D8/D9/D14); `needs_tests`/`confirmed_by_test` in den Regeln.
+
+## Nachtrag: aktive Tests, Batch 8 (11. Nov. 2026)
+
+Das Selbsttest-Framework (siehe Nachtrag zu Batch 7) hat jetzt eine dritte Stufe **Gründlich** (Last und Schreiben), die es nur nach ausdrücklicher Bestätigung gibt. Standard und Schnell bleiben nur lesend.
+
+**Schrittweise Ausführung.** Jeder Test ist eine `TestSession` (`step()`, `progress()`, `abort()`, `result()`); ein Schritt dauert höchstens ein Messintervall (Lesen: 16 MiB, Last: 1 Sekunde, Schreiben: 4 MiB). Die UI ruft einen Schritt je `update()` auf, zeichnet dazwischen Fortschritt und nimmt Eingaben an: **Kreis bricht jederzeit ab** (Abbruch wirkt nach dem Schritt; der Rest steht als `cancelled`). Jeder Test hat ein hartes Zeitlimit.
+
+**Lehre vom Zwischenfall (siehe Nachtrag zu Batch 5) ist umgesetzt:** Lasttests starten **kein `fork`**; die Rechenthreads beenden sich selbst nach der Uhr (Last plus 3 Sekunden Spielraum), unabhängig vom Hauptthread; der Destruktor setzt das Stoppsignal und wartet auf die Threads.
+
+| Test | Stufe, Risiko | Ablauf und Schutz |
+|---|---|---|
+| `hw.thermal.short_soak` | Gründlich, `load` (ca. 80 s) | Ruhewert; Start nur unter 70 °C (sonst `skipped`, `too_warm`, keine Last); 45 s Last auf allen Kernen (höchstens 8), dann 30 s Abkühlen, Messung jede Sekunde. Abbruch bei 85 °C (`cancelled`, `ceiling`) oder mehr als 15 °C Anstieg in fünf Intervallen (`rise_rate`). Warnung bei Durchsatzabfall von 10 % oder mehr (erste gegen letzte 10 Intervalle, `throughput_drop`) und bei Abkühlen nicht bis Ruhewert + 10 °C (`slow_cooldown`). Messwerte `rest_c`, `peak_c`, `rise_c`, `end_c`, `cores`, `rate_drop_pct`. |
+| `hw.storage.write_verify` | Gründlich, `write` (ca. 30 s) | Überschreibt die **eine** Datei `/data/ps5medic/selftest/write_test.bin` (256 MiB, nie gelöscht, nie auf USB) mit einem deterministischen Prüfmuster (xorshift, je 4-MiB-Block) und liest sie zurück. Abweichender Block = `failed` (`verify_mismatch`, mit Offset), Schreib- oder Lesefehler = `failed`. Schutz (jeweils `skipped`): kein Schreibzugriff, keine gültige Uhr, weniger als 10 % oder weniger als Dateigröße + 1 GiB frei, **höchstens ein Lauf je UTC-Tag**, kumulatives Budget 50 GiB (`write_budget.json`). Das Budget zählt auch Abbrüche und Fehler, sobald geschrieben wurde. Neue Schnittstelle `IFileSystemRW::write_range` (ohne `O_TRUNC`, `O_NOFOLLOW`, fsync beim letzten Block). |
+
+**Regeln** (`db_version` 2026.11.31): `selftest.write_failed` (kritisch, todo, mittel: Sicherung der Spielstände zuerst; der Rücklesevergleich kann aus dem Zwischenspeicher kommen) und `selftest.thermal` (Warnung, todo, niedrig; die Schwellen sind eigene Annahmen ohne Baseline). `selftest.failed` nimmt den Schreibtest aus (`matches` mit negativem Lookahead), damit er nicht doppelt gemeldet wird. Fixtures `s2_*`.
+
+**UI.** Dreieck startet „Gründlich“ (Hinweis in Orange mit Last, Schreibdatei, Tageslimit und Abbruchmöglichkeit, Dauer als Summe); Kreuz = Standard, Quadrat = nur Schnell. Der Diagnose-Payload führt Gründlich-Tests **nie** automatisch aus.
+
+**Nicht gebaut:** Nutzer-Tests (Pad, Anzeige, Audio, D14: erst wenn die UI Ton und 1:1-Bild nachweislich ausgibt), Speicher-Muster-Test, Netz-Tests (D1), `hw.cpu.compute_check`. **An der Test-Konsole nicht ausgeführt:** der Wärme- und der Schreibtest laufen bisher nur am PC (mit Temperaturfolge und Fehlerinjektion); wegen des Zwischenfalls vom 11. Nov. nur nach ausdrücklicher Freigabe an der Konsole.

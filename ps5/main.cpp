@@ -67,6 +67,10 @@ int main() {
     // Selbsttest (nur lesend, ohne Marker: die Plattform ist hier nicht beschreibbar): jeder Test genau einmal, Ergebnis als Zeile.
     out("Selbsttest:");
     for (const auto& def : medic::selftest_registry()) {
+        if (def.tier == medic::TestTier::Thorough) {  // Last und Schreiben nie ohne ausdrueckliche Bestaetigung (nur ueber die UI)
+            out("  " + def.id + ": nicht gelaufen (gruendlich: nur ueber die UI mit Bestaetigung)");
+            continue;
+        }
         const medic::TestResult r = medic::run_selftest(*platform, facts, def);
         std::string line = std::string("  ") + def.id + ": " + medic::to_string(r.status) + (r.reason.empty() ? std::string() : " (" + r.reason + ")");
         for (const auto& m : r.measurements) line += ", " + m.name + "=" + std::to_string(m.value) + (m.unit.empty() ? std::string() : " " + m.unit);

@@ -1,0 +1,30 @@
+{
+  "finished": "20261111T120000Z",
+  "cancelled": false,
+  "results": [
+    {
+      "id": "hw.thermal.short_soak",
+      "status": "passed",
+      "reason": "",
+      "started": "",
+      "duration_s": 1.0,
+      "measurements": []
+    },
+    {
+      "id": "hw.storage.write_verify",
+      "status": "passed",
+      "reason": "",
+      "started": "",
+      "duration_s": 1.0,
+      "measurements": []
+    },
+    {
+      "id": "hw.thermal.short_soak",
+      "status": "skipped",
+      "reason": "too_warm",
+      "started": "",
+      "duration_s": 1.0,
+      "measurements": []
+    }
+  ]
+}

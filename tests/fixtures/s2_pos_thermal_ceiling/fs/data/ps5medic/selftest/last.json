@@ -1,0 +1,20 @@
+{
+  "finished": "20261111T120000Z",
+  "cancelled": false,
+  "results": [
+    {
+      "id": "hw.thermal.short_soak",
+      "status": "cancelled",
+      "reason": "ceiling",
+      "started": "",
+      "duration_s": 1.0,
+      "measurements": [
+        {
+          "name": "peak_c",
+          "value": 87,
+          "unit": "C"
+        }
+      ]
+    }
+  ]
+}

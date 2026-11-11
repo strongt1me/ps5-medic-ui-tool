@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.30",
+  "db_version": "2026.11.31",
   "metrics": [
     {"id": "cpu_temp", "fact": "sys.temp.cpu_c", "unit": "°C", "text": {"de": "CPU-Temperatur", "en": "CPU temperature"}},
     {"id": "soc_temp", "fact": "sys.temp.soc_c", "unit": "°C", "text": {"de": "SoC-Temperatur", "en": "SoC temperature"}},
@@ -1448,7 +1448,7 @@
         "all": [
           {
             "fact": "selftest.failed[].id",
-            "exists": true
+            "matches": "^(?!hw\\.storage\\.write_verify$)"
           }
         ]
       },
@@ -1495,6 +1495,69 @@
         "reason": {
           "de": "Die Markierung ist gelesen. Ihre Deutung als Absturz ist eine Schlussfolgerung: Auch ein bewusstes Ausschalten oder ein beendetes Programm ohne ordentliches Ende hinterlässt sie.",
           "en": "The marker is read. Reading it as a crash is an inference: a deliberate power-off or a program that ended without a proper finish leaves it too."
+        }
+      }
+    },
+    {
+      "id": "selftest.write_failed",
+      "severity": "critical",
+      "when": {
+        "all": [
+          {
+            "fact": "test.hw.storage.write_verify.status",
+            "eq": "failed"
+          }
+        ]
+      },
+      "text": {
+        "de": "Beim Schreibtest des Selbsttests ist etwas schiefgegangen (Evidenz: Grund): Entweder ließ sich die Testdatei unter /data/ps5medic/selftest nicht schreiben („write_error“), nicht zurücklesen („read_error“) oder die zurückgelesenen Daten wichen von den geschriebenen ab („verify_mismatch“). Das ist ein ernstes Zeichen für ein Problem mit dem Speicher oder dem Dateisystem. Zuerst alle Spielstände und wichtigen Daten sichern (per FTP kopieren), dann den Test einmal an einem anderen Tag wiederholen. Bleibt es dabei, ist Hardware oder Dateisystem verdächtig; Medic ändert nichts am Speicher. Ein einzelner Fehler kann auch ein Zufall sein (z. B. voller Speicher während des Tests).",
+        "en": "Something went wrong in the self-test's write test (evidence: reason): either the test file under /data/ps5medic/selftest could not be written (“write_error”), could not be read back (“read_error”) or the data read back differed from what was written (“verify_mismatch”). That is a serious sign of a problem with the storage or the file system. First back up all saves and important data (copy via FTP), then repeat the test once on another day. If it stays that way, hardware or file system is suspect; Medic changes nothing on the storage. A single failure can also be a coincidence (e.g. full storage during the test)."
+      },
+      "evidence": "test.hw.storage.write_verify.reason",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Das Ergebnis ist an dieser Konsole gemessen (geschriebene und zurückgelesene Daten verglichen). Der Rücklesevergleich kann teilweise aus dem Zwischenspeicher stammen, ein Fehler im Test selbst ist nie ganz auszuschließen, und die Ursache lässt sich daraus nicht bestimmen.",
+          "en": "The result is measured on this console (written and read-back data compared). The read-back may partly come from a cache, a fault in the test itself can never be fully ruled out, and the cause cannot be determined from it."
+        }
+      }
+    },
+    {
+      "id": "selftest.thermal",
+      "severity": "warning",
+      "when": {
+        "any": [
+          {
+            "fact": "test.hw.thermal.short_soak.status",
+            "eq": "warn"
+          },
+          {
+            "fact": "test.hw.thermal.short_soak.reason",
+            "in": [
+              "ceiling",
+              "rise_rate"
+            ]
+          }
+        ]
+      },
+      "text": {
+        "de": "Beim Wärmetest des Selbsttests ist die Konsole unter kurzer CPU-Last auffällig geworden (Evidenz: Grund): Sie erreichte die Temperaturgrenze von 85 °C oder stieg zu schnell an („ceiling“, „rise_rate“; der Test wurde dann abgebrochen), kühlte nach der Last langsam ab („slow_cooldown“) oder die Rechenleistung fiel unter Last um mehr als 10 % („throughput_drop“, mögliche Drosselung). Mögliche Ursachen sind eingeschränkte Belüftung, Staub, eine warme Umgebung oder ein Problem mit Kühlung oder Wärmeleitmaterial. Lüftungsschlitze freihalten, die Konsole nicht einbauen und den Test in kühler Umgebung wiederholen; bleibt es dabei, die Konsole reinigen lassen. Die Schwellen sind eigene Annahmen, Sony nennt keine.",
+        "en": "In the self-test's heat test the console stood out under short CPU load (evidence: reason): it reached the 85 °C limit or rose too fast (“ceiling”, “rise_rate”; the test was then stopped), cooled down slowly after the load (“slow_cooldown”) or the compute rate dropped by more than 10 % under load (“throughput_drop”, possible throttling). Possible causes are restricted ventilation, dust, a warm room or a problem with the cooling or thermal paste. Keep the vents clear, do not build the console in, and repeat the test in a cool room; if it stays that way, have the console cleaned. The thresholds are our own assumptions, Sony names none."
+      },
+      "evidence": "test.hw.thermal.short_soak.reason",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Temperaturen und Rechenleistung sind gemessen. Die Schwellen (85 °C, 15 °C in fünf Messintervallen, 10 % Leistungsabfall) sind eigene Annahmen, ohne Baseline der eigenen Konsole, und die Umgebung beeinflusst das Ergebnis stark.",
+          "en": "Temperatures and compute rate are measured. The thresholds (85 °C, 15 °C in five measurement intervals, 10 % rate drop) are our own assumptions, without a baseline of this console, and the environment influences the result strongly."
         }
       }
     },

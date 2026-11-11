@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Selbsttest-Framework (Batch 7, docs/DIAGNOSE.md). Ein Test ist ein aktiver Collector: Er liefert ein Ergebnis mit Status und Messwerten,
-// das als Fakten `test.<id>.*` in dieselbe Regel-Engine fliesst. Alles hier ist NUR LESEND (Risiko "none" oder "read"); geschrieben wird
-// ausschliesslich unter /data/ps5medic/selftest/ (Marker und letztes Ergebnis, immer ueberschrieben, nie geloescht).
+// Selbsttest-Framework (Batch 7 und 8, docs/DIAGNOSE.md). Ein Test ist ein aktiver Collector: Er liefert ein Ergebnis mit Status und Messwerten,
+// das als Fakten `test.<id>.*` in dieselbe Regel-Engine fliesst. Risiko je Test: none (nur Fakten), read (liest Dateien), load (CPU-Last),
+// write (schreibt EINE Testdatei im eigenen Ordner). Geschrieben wird ausserhalb des Schreibtests nur unter /data/ps5medic/selftest/ (Marker,
+// letztes Ergebnis, Budget; immer ueberschrieben, nie geloescht).
+//
+// Stufen: Schnell (nur Fakten), Standard (liest), Gruendlich (Last und Schreiben; nur nach ausdruecklicher Bestaetigung).
 //
 // Statusmodell: passed (nicht aufgefallen, nie "gesund"), warn, failed, error (Test selbst gescheitert), cancelled (Abbruch, mit Grund),
 // skipped (Vorbedingung fehlt, nie passed), not_run (noch nicht gelaufen). Faellt eine Vorbedingung aus, ist der Test skipped, nie failed.
 // Ohne Baseline urteilen Messwert-Tests nicht ueber Zahlen: sie speichern Rohwerte (Leitlinie "relative Masse", Selbsttest-Entwurf).
+//
+// Ausfuehrung in Schritten: Jeder Test ist eine TestSession; ein Aufruf von step() dauert hoechstens ein paar Sekunden (Lesen: 16 MiB, Last: ein
+// Messintervall, Schreiben: 4 MiB). So bleibt die UI bedienbar, Abbruch wirkt nach dem Schritt, und jeder Test hat ein hartes Zeitlimit.
+// Lasttests starten KEINEN Kindprozess (fork) und beenden ihre Threads selbst nach der Uhr (Lehre vom 11. Nov. 2026, docs/RULES.md).
 //
 // Absturz-Marker: Vor dem ersten Test steht running.json mit state "running"; beim ordentlichen Ende "done" (ueberschrieben). Findet der
 // naechste Start "running", wurde der Lauf durch Absturz, Neustart oder Stromverlust beendet (Befund selftest.interrupted).
@@ -13,7 +20,9 @@
 #include "medic/facts.hpp"
 #include "medic/platform.hpp"
 
+#include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -22,20 +31,26 @@ namespace medic {
 constexpr const char* kSelftestDir = "/data/ps5medic/selftest";
 constexpr const char* kSelftestMarkerPath = "/data/ps5medic/selftest/running.json";
 constexpr const char* kSelftestLastPath = "/data/ps5medic/selftest/last.json";
+constexpr const char* kSelftestWritePath = "/data/ps5medic/selftest/write_test.bin";   // die EINE wiederverwendete Testdatei (nie geloescht)
+constexpr const char* kSelftestBudgetPath = "/data/ps5medic/selftest/write_budget.json";
 
-constexpr std::uint64_t kReadTestMaxBytes = 128ull << 20;  // hoechstens 128 MiB je Lauf
+constexpr std::uint64_t kReadTestMaxBytes = 128ull << 20;  // Lesetest: hoechstens 128 MiB je Lauf
 constexpr int kReadTestMaxSeconds = 15;                    // und hoechstens 15 Sekunden
+constexpr std::uint64_t kWriteTestBytes = 256ull << 20;    // Schreibtest: 256 MiB, einmal geschrieben und einmal zurueckgelesen
+constexpr std::uint64_t kWriteBudgetBytes = 50ull << 30;   // kumulatives Schreibbudget des Tests (50 GiB)
+constexpr int kThermalCeilingC = 85;                       // Abbruch ab dieser Temperatur (vorlaeufig, nicht geeicht)
+constexpr int kThermalStartMaxC = 70;                      // darueber startet der Waermetest nicht
 
 enum class TestStatus { NotRun, Passed, Warn, Failed, Error, Cancelled, Skipped };
 const char* to_string(TestStatus s);
 TestStatus test_status_from_string(const std::string& s);  // unbekannt: NotRun
 
-enum class TestTier { Quick, Standard };
+enum class TestTier { Quick, Standard, Thorough };
 
 struct TestDef {
     std::string id;
     TestTier tier = TestTier::Quick;
-    std::string risk;  // none | read
+    std::string risk;  // none | read | load | write
     int est_seconds = 1;
     std::string name_de, name_en;
     std::string proves_not_de, proves_not_en;  // "beweist nicht": gehoert in die Ergebnisanzeige
@@ -50,22 +65,39 @@ struct Measurement {
 struct TestResult {
     std::string id;
     TestStatus status = TestStatus::NotRun;
-    std::string reason;  // Kennung bei skipped/cancelled/failed/error (z. B. no_file, read_error, cancelled)
+    std::string reason;  // Kennung bei skipped/cancelled/failed/warn/error (z. B. no_file, read_error, ceiling)
     std::string started; // Zeitstempel "YYYYMMDDTHHMMSSZ"
     double duration_s = 0;
     std::vector<Measurement> measurements;
 };
 
 struct TestContext {
-    std::function<bool()> cancelled;  // optional: wird zwischen Lesebloecken abgefragt
+    std::function<bool()> cancelled;  // optional: wird zwischen den Schritten abgefragt (run_selftest)
+    std::string today;                // "YYYYMMDD" (UTC): Tagesbegrenzung des Schreibtests; leer = Schreibtest wird uebersprungen (no_clock)
+    // Messparameter; die Voreinstellung ist der Produktwert, Tests setzen kleinere.
+    int thermal_burn_s = 45, thermal_cool_s = 30, step_ms = 1000;
+    std::uint64_t write_bytes = kWriteTestBytes;
 };
 
-// Alle Tests in fester Reihenfolge: billig vor teuer, Schnell vor Standard.
+// Alle Tests in fester Reihenfolge: billig vor teuer, Schnell vor Standard vor Gruendlich.
 const std::vector<TestDef>& selftest_registry();
 const TestDef* find_test(const std::string& id);
 
-// Fuehrt EINEN Test aus. `facts` sind die Fakten eines frischen collect_all (passive Daten); der Test liest nur.
-TestResult run_selftest(const Platform& p, const Facts& facts, const TestDef& def, const TestContext& ctx = {});
+// Ein laufender Test. step() macht einen Schritt und liefert true, wenn der Test fertig ist; danach result(). abort() beendet ihn nach dem
+// laufenden Schritt als cancelled (mit Grund). Der Destruktor beendet Threads und Ressourcen immer.
+class TestSession {
+public:
+    virtual ~TestSession() = default;
+    virtual bool step() = 0;
+    virtual double progress() const = 0;  // 0 bis 1
+    virtual void abort(const std::string& reason) = 0;
+    virtual TestResult result() = 0;
+};
+
+std::unique_ptr<TestSession> begin_selftest_session(Platform& p, const Facts& facts, const TestDef& def, const TestContext& ctx = {});
+
+// Fuehrt einen Test vollstaendig aus (Schleife ueber step(), mit Abbruchabfrage zwischen den Schritten).
+TestResult run_selftest(Platform& p, const Facts& facts, const TestDef& def, const TestContext& ctx = {});
 
 // Marker und Ergebnis (nur mit fs_rw; sonst false). `ids` sind die Tests dieses Laufs.
 bool selftest_begin(Platform& p, const std::string& ts, const std::vector<std::string>& ids);

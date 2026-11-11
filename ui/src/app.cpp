@@ -567,11 +567,16 @@ void App::handle(Button b) {
             break;
         case Screen::SelfTest:
             if (st_state_ == StState::List || st_state_ == StState::Done) {
-                if (b == Button::Cross) st_state_ = StState::Confirm;
-                else if (b == Button::Square) start_selftest(true);
+                if (b == Button::Cross) {
+                    st_tier_ = 1;
+                    st_state_ = StState::Confirm;
+                } else if (b == Button::Triangle) {
+                    st_tier_ = 2;
+                    st_state_ = StState::Confirm;
+                } else if (b == Button::Square) start_selftest(0);
                 else if (b == Button::Circle) screen_ = Screen::Start;
             } else if (st_state_ == StState::Confirm) {
-                if (b == Button::Cross) start_selftest(false);
+                if (b == Button::Cross) start_selftest(st_tier_);
                 else if (b == Button::Circle) st_state_ = StState::List;
             } else if (b == Button::Circle) {
                 st_cancel_ = true;  // wirkt nach dem laufenden Test
@@ -658,20 +663,22 @@ void App::open_selftest() {
     screen_ = Screen::SelfTest;
 }
 
-void App::start_selftest(bool quick_only) {
-    st_quick_only_ = quick_only;
+void App::start_selftest(int tier_limit) {
+    st_tier_ = tier_limit;
     st_ids_.clear();
     for (std::size_t i = 0; i < st_defs_.size(); ++i)
-        if (!quick_only || st_defs_[i].tier == medic::TestTier::Quick) st_ids_.push_back(i);
+        if (static_cast<int>(st_defs_[i].tier) <= tier_limit) st_ids_.push_back(i);
     st_run_.assign(st_ids_.size(), medic::TestResult{});
     for (std::size_t i = 0; i < st_ids_.size(); ++i) st_run_[i].id = st_defs_[st_ids_[i]].id;
     st_next_ = 0;
-    st_cancel_ = st_begun_ = false;
+    st_cancel_ = st_begun_ = st_item_started_ = st_abort_sent_ = false;
+    st_progress_ = 0;
     st_rendered_ = false;
     st_state_ = StState::Running;
 }
 
-// Ein Schritt je update(): erst der Marker, dann ein Test nach dem anderen; nach jedem Schritt wird neu gezeichnet. Abbruch gilt nach dem laufenden Test.
+// Ein Schritt je update(): erst der Marker, dann ein Test nach dem anderen, jeder in kleinen Schritten (Fortschritt, Abbruch jederzeit); nach jedem
+// Schritt wird neu gezeichnet. Kreis meldet den Abbruch an den laufenden Test; der Rest steht danach als abgebrochen im Ergebnis.
 void App::step_selftest() {
     if (!st_begun_) {
         std::vector<std::string> ids;
@@ -681,7 +688,11 @@ void App::step_selftest() {
         st_rendered_ = false;
         return;
     }
-    if (st_cancel_ || st_next_ >= st_run_.size()) {
+    if (st_cancel_ && !st_abort_sent_ && st_item_started_) {
+        svc_.selftest_abort();
+        st_abort_sent_ = true;
+    }
+    if (st_next_ >= st_run_.size() || (st_cancel_ && !st_item_started_)) {
         for (std::size_t i = st_next_; i < st_run_.size(); ++i) {  // Rest: abgebrochen, mit Grund, nie "bestanden"
             st_run_[i].status = medic::TestStatus::Cancelled;
             st_run_[i].reason = "cancelled";
@@ -691,8 +702,21 @@ void App::step_selftest() {
         st_state_ = StState::Done;
         return;
     }
-    st_run_[st_next_] = svc_.selftest_run(st_run_[st_next_].id);
-    ++st_next_;
+    if (!st_item_started_) {
+        svc_.selftest_start(st_run_[st_next_].id);
+        st_item_started_ = true;
+        st_progress_ = 0;
+    }
+    const SelftestStep info = svc_.selftest_step();
+    st_progress_ = info.progress;
+    if (info.done) {
+        st_run_[st_next_] = info.result;
+        st_run_[st_next_].id = st_defs_[st_ids_[st_next_]].id;
+        ++st_next_;
+        st_item_started_ = false;
+        st_abort_sent_ = false;
+        st_progress_ = 0;
+    }
     st_rendered_ = false;
 }
 
@@ -714,13 +738,14 @@ void App::draw_selftest(Canvas& c) const {
         int total = 0;
         bool reads = false;
         for (const auto& d : st_defs_) {
+            if (static_cast<int>(d.tier) > st_tier_) continue;
             total += d.est_seconds;
             reads = reads || d.risk == "read";
         }
-        c.fill_round_rect(M, 230, W - 2 * M, 400, 24, kPanel);
-        body().draw(c, M + 48, 262, S("selftest.confirm_title"), kText);
+        c.fill_round_rect(M, 230, W - 2 * M, 460, 24, kPanel);
+        body().draw(c, M + 48, 262, S(st_tier_ >= 2 ? "selftest.confirm_title_thorough" : "selftest.confirm_title"), st_tier_ >= 2 ? kWarn : kText);
         int y = 330;
-        for (auto& l : wrap_text(body(), S.fmt(reads ? "selftest.confirm_read" : "selftest.confirm_none", {{"s", std::to_string(total)}}), W - 2 * M - 96, 7)) {
+        for (auto& l : wrap_text(body(), S.fmt(st_tier_ >= 2 ? "selftest.confirm_thorough" : (reads ? "selftest.confirm_read" : "selftest.confirm_none"), {{"s", std::to_string(total)}}), W - 2 * M - 96, 9)) {
             body().draw(c, M + 48, y, l, kDim);
             y += body().line_height() + 6;
         }
@@ -737,7 +762,7 @@ void App::draw_selftest(Canvas& c) const {
         small().draw(c, M + 48, 322, name, kDim);
         const int bw = W - 2 * M - 96;
         c.fill_round_rect(M + 48, 400, bw, 20, 10, kLine);
-        if (n) c.fill_round_rect(M + 48, 400, std::max(20, static_cast<int>(bw * static_cast<double>(st_next_) / static_cast<double>(n))), 20, 10, kAccent);
+        if (n) c.fill_round_rect(M + 48, 400, std::max(20, static_cast<int>(bw * (static_cast<double>(st_next_) + st_progress_) / static_cast<double>(n))), 20, 10, kAccent);
         if (st_cancel_) small().draw(c, M + 48, 450, S("selftest.cancelling"), kWarn);
         draw_hints(c, {{PadGlyph::Circle, S("selftest.abort")}});
         return;
@@ -756,19 +781,19 @@ void App::draw_selftest(Canvas& c) const {
         else if (st == medic::TestStatus::Warn) ++warn;
         else if (st == medic::TestStatus::Failed || st == medic::TestStatus::Error) ++failed;
         else if (st == medic::TestStatus::Skipped) ++skipped;
-        c.fill_round_rect(M, y, W - 2 * M, 96, 16, kPanel);
-        body().draw(c, M + 32, y + 12, de ? d.name_de : d.name_en, kText, W - 2 * M - 420);
-        std::string sub = S(d.tier == medic::TestTier::Quick ? "selftest.tier_quick" : "selftest.tier_standard") + " · " + S.fmt("selftest.est", {{"s", std::to_string(d.est_seconds)}});
+        c.fill_round_rect(M, y, W - 2 * M, 84, 16, kPanel);
+        body().draw(c, M + 32, y + 6, de ? d.name_de : d.name_en, kText, W - 2 * M - 420);
+        std::string sub = S(d.tier == medic::TestTier::Quick ? "selftest.tier_quick" : (d.tier == medic::TestTier::Standard ? "selftest.tier_standard" : "selftest.tier_thorough")) + " · " + S.fmt("selftest.est", {{"s", std::to_string(d.est_seconds)}});
         if (r && !r->reason.empty()) sub += " · " + (S.has("selftest.reason." + r->reason) ? S("selftest.reason." + r->reason) : r->reason);
-        small().draw(c, M + 32, y + 56, elide(small(), sub, W - 2 * M - 420), kDim);
+        small().draw(c, M + 32, y + 46, elide(small(), sub, W - 2 * M - 420), kDim);
         const std::string label = S(std::string("selftest.status.") + medic::to_string(st));
-        draw_badge(c, W - M - 32 - (small().width(label) + 24), y + 28, label, status_color(st));
-        y += 108;
+        draw_badge(c, W - M - 32 - (small().width(label) + 24), y + 25, label, status_color(st));
+        y += 94;
     }
     if (!st_last_.empty())
         small().draw(c, M + 4, y + 6, S.fmt("selftest.summary", {{"p", std::to_string(passed)}, {"w", std::to_string(warn)}, {"f", std::to_string(failed)}, {"s", std::to_string(skipped)}}), kDim);
     else small().draw(c, M + 4, y + 6, S("selftest.none_yet"), kDim);
-    draw_hints(c, {{PadGlyph::Cross, S("selftest.all")}, {PadGlyph::Square, S("selftest.quick")}, {PadGlyph::Circle, S("common.back")}});
+    draw_hints(c, {{PadGlyph::Cross, S("selftest.all")}, {PadGlyph::Square, S("selftest.quick")}, {PadGlyph::Triangle, S("selftest.thorough")}, {PadGlyph::Circle, S("common.back")}});
 }
 
 void App::draw_chrome(Canvas& c) const {

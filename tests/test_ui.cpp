@@ -2647,6 +2647,30 @@ void selftest_ui_tests() {
     int cancelled = 0;
     for (const auto& r : svc2.last_results) cancelled += r.status == TestStatus::Cancelled ? 1 : 0;
     CHECK(cancelled == static_cast<int>(svc2.last_results.size()) - 1 && !svc2.last_results.empty(), "Selbsttest-UI: der Rest steht als abgebrochen im Ergebnis, nie als bestanden");
+
+    // Gruendlich: nur ueber Dreieck und Bestaetigung; Standard laesst Last und Schreiben aus
+    FakeService svc3;
+    App c(svc3);
+    press(c, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross, Button::Cross, Button::Cross});  // Standard: Hinweis, starten
+    for (int i = 0; i < 40; ++i) {
+        c.render(cv);
+        c.update();
+    }
+    int standard = 0, thorough = 0;
+    for (const auto& d : selftest_registry()) (d.tier == TestTier::Thorough ? thorough : standard) += 1;
+    CHECK(svc3.selftest_runs == standard && thorough > 0, "Selbsttest-UI: Standard startet keine Last- und Schreibtests");
+    FakeService svc4;
+    App d4(svc4);
+    press(d4, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross, Button::Triangle});  // Gruendlich: Hinweis, noch nichts gestartet
+    d4.render(cv);
+    CHECK(svc4.selftest_begins == 0 && svc4.selftest_runs == 0, "Selbsttest-UI: Gruendlich zeigt zuerst den Hinweis, es laeuft nichts");
+    press(d4, {Button::Circle});
+    press(d4, {Button::Triangle, Button::Cross});
+    for (int i = 0; i < 60; ++i) {
+        d4.render(cv);
+        d4.update();
+    }
+    CHECK(svc4.selftest_runs == static_cast<int>(selftest_registry().size()), "Selbsttest-UI: Gruendlich nach Bestaetigung laeuft alle Tests");
 }
 
 }  // namespace

@@ -1,0 +1,20 @@
+{
+  "finished": "20261111T120000Z",
+  "cancelled": false,
+  "results": [
+    {
+      "id": "hw.thermal.short_soak",
+      "status": "warn",
+      "reason": "throughput_drop",
+      "started": "",
+      "duration_s": 1.0,
+      "measurements": [
+        {
+          "name": "peak_c",
+          "value": 78,
+          "unit": "C"
+        }
+      ]
+    }
+  ]
+}

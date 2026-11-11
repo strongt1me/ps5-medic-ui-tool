@@ -1,0 +1,1 @@
+{"expect": ["selftest.write_failed"], "neg_for": ["selftest.failed"]}

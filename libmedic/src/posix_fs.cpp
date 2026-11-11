@@ -144,6 +144,26 @@ bool PosixRw::write_file(const std::string& path, const std::string& content) {
     return true;
 }
 
+bool PosixRw::write_range(const std::string& path, std::uint64_t offset, const std::string& content, bool sync) {
+    fs::path p;
+    std::error_code ec;
+    if (!map_virtual_path(base_, path, p)) return false;
+    fs::create_directories(p.parent_path(), ec);
+    const int fd = ::open(p.c_str(), O_WRONLY | O_CREAT | O_NOFOLLOW, 0666);  // ohne O_TRUNC: die Datei wird nur ueberschrieben, nie gekuerzt
+    if (fd < 0) return false;
+    bool ok = true;
+    std::size_t done = 0;
+    while (ok && done < content.size()) {
+        const ssize_t w = ::pwrite(fd, content.data() + done, content.size() - done, static_cast<off_t>(offset + done));
+        if (w < 0 && errno == EINTR) continue;
+        if (w <= 0) ok = false;
+        else done += static_cast<std::size_t>(w);
+    }
+    if (ok && sync) ok = sync_fd(fd);
+    if (::close(fd) != 0) ok = false;
+    return ok;
+}
+
 bool PosixRw::append_file(const std::string& path, const std::string& content) {
     fs::path p;
     std::error_code ec;

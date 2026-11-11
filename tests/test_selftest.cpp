@@ -10,6 +10,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <set>
 
 namespace fs = std::filesystem;
@@ -20,7 +21,7 @@ namespace {
 
 using namespace testutil;
 
-TestResult run(const char* id, const Facts& f, const Platform& p, const TestContext& ctx = {}) {
+TestResult run(const char* id, const Facts& f, Platform& p, const TestContext& ctx = {}) {
     const TestDef* d = find_test(id);
     if (!d) {
         TestResult r;
@@ -50,22 +51,83 @@ struct Copy {
     }
 };
 
+// Plattform mit einstellbarer Temperaturfolge und Fehlerinjektion beim Schreiben, ueber einer echten (Sandbox-)Plattform.
+struct ScriptedSys final : ISystemInfo {
+    const ISystemInfo& inner;
+    mutable std::vector<int> temps;  // Folge; der letzte Wert wiederholt sich; leer = nicht lesbar
+    mutable std::size_t i = 0;
+    explicit ScriptedSys(const ISystemInfo& in) : inner(in) {}
+    std::string firmware() const override { return inner.firmware(); }
+    std::string model() const override { return inner.model(); }
+    std::vector<StorageInfo> storage() const override { return inner.storage(); }
+    std::map<std::string, std::map<std::string, std::string>> components() const override { return inner.components(); }
+    Thermal thermal() const override {
+        Thermal t;
+        if (temps.empty()) return t;
+        t.cpu_c = temps[std::min(i, temps.size() - 1)];
+        ++i;
+        return t;
+    }
+};
+
+struct ScriptedRw final : IFileSystemRW {
+    IFileSystemRW* inner = nullptr;
+    bool fail_write = false;
+    std::uint64_t corrupt_offset = ~0ull;  // Block, in dem ein Byte verfaelscht wird
+    int write_calls = 0;
+    bool write_file(const std::string& p, const std::string& c) override { return inner->write_file(p, c); }
+    bool rename(const std::string& a, const std::string& b) override { return inner->rename(a, b); }
+    bool make_dirs(const std::string& p) override { return inner->make_dirs(p); }
+    bool remove_empty_dir(const std::string& p) override { return inner->remove_empty_dir(p); }
+    bool append_file(const std::string& p, const std::string& c) override { return inner->append_file(p, c); }
+    bool write_range(const std::string& p, std::uint64_t off, const std::string& c, bool sync) override {
+        ++write_calls;
+        if (fail_write) return false;
+        if (off == corrupt_offset) {
+            std::string bad = c;
+            bad[100] = static_cast<char>(bad[100] ^ 0x5a);
+            return inner->write_range(p, off, bad, sync);
+        }
+        return inner->write_range(p, off, c, sync);
+    }
+};
+
+struct ScriptedPlatform final : Platform {
+    std::unique_ptr<Platform> base;
+    ScriptedSys sys_;
+    ScriptedRw rw_;
+    bool writable;
+    ScriptedPlatform(std::unique_ptr<Platform> b, bool w) : base(std::move(b)), sys_(base->sys()), writable(w) { rw_.inner = base->fs_rw(); }
+    const IFileSystem& fs() const override { return base->fs(); }
+    const IProcessList& procs() const override { return base->procs(); }
+    const ISystemInfo& sys() const override { return sys_; }
+    IFileSystemRW* fs_rw() override { return writable ? &rw_ : nullptr; }
+};
+
+Facts data_mount(double free_bytes, double pct) {
+    Facts f;
+    f.set("storage.mounts", json::array({{{"mount", "/data"}, {"total", 9e11}, {"free", free_bytes}, {"free_pct", pct}}}));
+    return f;
+}
+
 }  // namespace
 
 void selftest_tests() {
     {  // Registry
         const auto& reg = selftest_registry();
         std::set<std::string> ids;
-        bool order_ok = true, text_ok = true, risk_ok = true, saw_standard = false;
+        bool order_ok = true, text_ok = true, risk_ok = true;
+        int last_tier = 0;
         for (const auto& d : reg) {
             ids.insert(d.id);
-            if (d.tier == TestTier::Standard) saw_standard = true;
-            else if (saw_standard) order_ok = false;  // Schnell vor Standard
+            if (static_cast<int>(d.tier) < last_tier) order_ok = false;  // Schnell vor Standard vor Gruendlich
+            last_tier = static_cast<int>(d.tier);
             text_ok = text_ok && !d.name_de.empty() && !d.name_en.empty() && !d.proves_not_de.empty() && !d.proves_not_en.empty() &&
                       find_system_update_advice(d.name_de + d.proves_not_de + d.name_en + d.proves_not_en).empty();
-            risk_ok = risk_ok && (d.risk == "none" || d.risk == "read");  // nur lesend
+            risk_ok = risk_ok && (d.risk == "none" || d.risk == "read" || d.risk == "load" || d.risk == "write");
+            if (d.tier != TestTier::Thorough && d.risk != "none" && d.risk != "read") risk_ok = false;  // Last und Schreiben nur in der Gruendlich-Stufe
         }
-        CHECK(reg.size() >= 5 && ids.size() == reg.size() && order_ok && text_ok && risk_ok, "Selbsttest: Registry (eindeutige IDs, Schnell vor Standard, nur lesend, Texte)");
+        CHECK(reg.size() >= 7 && ids.size() == reg.size() && order_ok && text_ok && risk_ok, "Selbsttest: Registry (eindeutige IDs, Stufen-Reihenfolge, Last/Schreiben nur Gruendlich, Texte)");
         CHECK(find_test("sw.db.headers") && !find_test("gibt.es.nicht"), "Selbsttest: Test per ID finden");
         CHECK(test_status_from_string("failed") == TestStatus::Failed && test_status_from_string("quatsch") == TestStatus::NotRun, "Selbsttest: Statusnamen");
     }
@@ -190,5 +252,103 @@ void selftest_tests() {
         CHECK(has(en, "## Self-test") && has(en, "Read test of an image file: failed (read_error)") && has(en, "skipped (sensors_unreadable)"), "Selbsttest: Bericht EN");
         in.selftests.clear();
         CHECK(!has(build_report(in, ReportLang::De), "## Selbsttest"), "Selbsttest: ohne Lauf kein Abschnitt");
+    }
+
+    {  // Waermetest (Gruendlich, Last): Abbruchbedingungen und Schutz
+        TestContext ctx;
+        ctx.thermal_burn_s = 1;
+        ctx.thermal_cool_s = 1;
+        ctx.step_ms = 40;
+        auto thermal = [&](std::vector<int> temps, const TestContext& c = TestContext()) {
+            Sandbox b;
+            ScriptedPlatform sp(make_snapshot_platform(b.dir.string(), false), false);
+            sp.sys_.temps = std::move(temps);
+            const Facts none;
+            TestContext cc = c;
+            cc.thermal_burn_s = ctx.thermal_burn_s;
+            cc.thermal_cool_s = ctx.thermal_cool_s;
+            cc.step_ms = ctx.step_ms;
+            return run("hw.thermal.short_soak", none, sp, cc);
+        };
+        auto ok = thermal({40});
+        CHECK(ok.status == TestStatus::Passed && measure(ok, "rest_c") == 40 && measure(ok, "peak_c") == 40 && measure(ok, "rise_c") == 0 && measure(ok, "cores") >= 1,
+              "Waermetest: gleichbleibende Temperatur = passed mit Messwerten");
+        CHECK(thermal({}).reason == "sensors_unreadable" && thermal({}).status == TestStatus::Skipped, "Waermetest: ohne Sensor = skipped");
+        auto warm = thermal({75});
+        CHECK(warm.status == TestStatus::Skipped && warm.reason == "too_warm" && warm.measurements.empty(), "Waermetest: ueber 70 Grad in Ruhe startet nicht (skipped, keine Last)");
+        auto hot = thermal({40, 41, 60, 90});
+        CHECK(hot.status == TestStatus::Cancelled && hot.reason == "ceiling" && measure(hot, "peak_c") == 90, "Waermetest: 85 Grad = Abbruch (cancelled, ceiling), nie passed");
+        auto rise = thermal({40, 41, 45, 50, 55, 62, 62, 62});
+        CHECK(rise.status == TestStatus::Cancelled && rise.reason == "rise_rate", "Waermetest: zu schneller Anstieg = Abbruch (rise_rate)");
+        std::vector<int> ramp;
+        for (int i = 0; i < 40; ++i) ramp.push_back(std::min(60, 40 + 2 * i));
+        auto slow = thermal(ramp);
+        CHECK(slow.status == TestStatus::Warn && slow.reason == "slow_cooldown", "Waermetest: bleibt nach der Last deutlich ueber dem Ruhewert = warn (slow_cooldown)");
+        // Abbruch durch den Nutzer: nach wenigen Schritten
+        Sandbox b2;
+        ScriptedPlatform sp2(make_snapshot_platform(b2.dir.string(), false), false);
+        sp2.sys_.temps = {40};
+        int calls = 0;
+        TestContext stop = ctx;
+        stop.cancelled = [&] { return ++calls > 3; };
+        const Facts none;
+        auto ab = run("hw.thermal.short_soak", none, sp2, stop);
+        CHECK(ab.status == TestStatus::Cancelled && ab.reason == "cancelled", "Waermetest: Nutzerabbruch = cancelled");
+    }
+    {  // Schreibtest (Gruendlich): Schutzregeln, Pruefmuster, nie loeschen
+        TestContext ctx;
+        ctx.write_bytes = 8u << 20;  // zwei Bloecke
+        ctx.today = "20261111";
+        const Facts mount = data_mount(5e11, 50.0);
+        Sandbox w;
+        ScriptedPlatform sp(make_snapshot_platform(w.dir.string(), true), true);
+        auto r1 = run("hw.storage.write_verify", mount, sp, ctx);
+        CHECK(r1.status == TestStatus::Passed && measure(r1, "bytes_written") == 8u << 20 && measure(r1, "bad_blocks") == 0, "Schreibtest: schreiben, zuruecklesen, vergleichen = passed");
+        CHECK(fs::file_size(w.real(kSelftestWritePath)) == (8u << 20), "Schreibtest: die EINE Testdatei hat die vorgesehene Groesse");
+        const json budget = json::parse(slurp(w.real(kSelftestBudgetPath)));
+        CHECK(budget["last_date"] == "20261111" && budget["runs"] == 1 && budget["total_bytes"] == (8u << 20), "Schreibtest: Budget fortgeschrieben");
+        auto again = run("hw.storage.write_verify", mount, sp, ctx);
+        CHECK(again.status == TestStatus::Skipped && again.reason == "done_today", "Schreibtest: hoechstens ein Lauf je Tag (skipped, done_today)");
+        ctx.today = "20261112";
+        auto next = run("hw.storage.write_verify", mount, sp, ctx);
+        CHECK(next.status == TestStatus::Passed && fs::exists(w.real(kSelftestWritePath)), "Schreibtest: am naechsten Tag wieder, dieselbe Datei wird ueberschrieben, nie geloescht");
+        CHECK(json::parse(slurp(w.real(kSelftestBudgetPath)))["runs"] == 2, "Schreibtest: zweiter Lauf im Budget");
+
+        // Schutzregeln: jede fehlende Vorbedingung = skipped
+        Sandbox ro;
+        ScriptedPlatform spro(make_snapshot_platform(ro.dir.string(), false), false);
+        CHECK(run("hw.storage.write_verify", mount, spro, ctx).reason == "no_write", "Schreibtest: ohne Schreibzugriff = skipped");
+        TestContext noclock = ctx;
+        noclock.today.clear();
+        Sandbox c1;
+        ScriptedPlatform spc(make_snapshot_platform(c1.dir.string(), true), true);
+        CHECK(run("hw.storage.write_verify", mount, spc, noclock).reason == "no_clock", "Schreibtest: ohne gueltige Uhr = skipped");
+        CHECK(run("hw.storage.write_verify", data_mount(5e11, 5.0), spc, ctx).reason == "low_space", "Schreibtest: unter 10 % frei = skipped (low_space)");
+        CHECK(run("hw.storage.write_verify", data_mount(1e8, 50.0), spc, ctx).reason == "low_space", "Schreibtest: weniger als Dateigroesse plus 1 GiB frei = skipped");
+        CHECK(run("hw.storage.write_verify", Facts(), spc, ctx).reason == "no_data_mount", "Schreibtest: ohne /data = skipped");
+        CHECK(!fs::exists(c1.real(kSelftestWritePath)), "Schreibtest: bei fehlender Vorbedingung wird nichts geschrieben");
+        Sandbox bb;
+        spit(bb.real(kSelftestBudgetPath), "{\"last_date\":\"20260101\",\"runs\":9,\"total_bytes\":53687091200}\n");
+        ScriptedPlatform spb(make_snapshot_platform(bb.dir.string(), true), true);
+        CHECK(run("hw.storage.write_verify", mount, spb, ctx).reason == "budget_used", "Schreibtest: Gesamtbudget (50 GiB) aufgebraucht = skipped");
+
+        // Fehler: verfaelschter Block, Schreibfehler, Abbruch
+        Sandbox m;
+        ScriptedPlatform spm(make_snapshot_platform(m.dir.string(), true), true);
+        spm.rw_.corrupt_offset = 4u << 20;
+        auto bad = run("hw.storage.write_verify", mount, spm, ctx);
+        CHECK(bad.status == TestStatus::Failed && bad.reason == "verify_mismatch" && measure(bad, "bad_blocks") == 1 && measure(bad, "first_bad_offset") == (4u << 20), "Schreibtest: abweichender Block = failed (verify_mismatch) mit Offset");
+        Sandbox e;
+        ScriptedPlatform spe(make_snapshot_platform(e.dir.string(), true), true);
+        spe.rw_.fail_write = true;
+        auto werr = run("hw.storage.write_verify", mount, spe, ctx);
+        CHECK(werr.status == TestStatus::Failed && werr.reason == "write_error" && !fs::exists(e.real(kSelftestBudgetPath)), "Schreibtest: Schreibfehler = failed, ohne Budgeteintrag (nichts geschrieben)");
+        Sandbox a;
+        ScriptedPlatform spa(make_snapshot_platform(a.dir.string(), true), true);
+        int n = 0;
+        TestContext stop = ctx;
+        stop.cancelled = [&] { return ++n > 1; };
+        auto cancelled = run("hw.storage.write_verify", mount, spa, stop);
+        CHECK(cancelled.status == TestStatus::Cancelled && fs::exists(a.real(kSelftestBudgetPath)), "Schreibtest: Abbruch = cancelled, das Budget zaehlt das Geschriebene");
     }
 }

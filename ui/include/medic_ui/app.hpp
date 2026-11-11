@@ -65,7 +65,7 @@ private:
     void refresh_error_context();
     void open_error_source();
     void open_selftest();
-    void start_selftest(bool quick_only);
+    void start_selftest(int tier_limit);  // 0 Schnell, 1 Standard, 2 Gruendlich
     void step_selftest();
     void scroll_error_detail(int dir);
     void install_updates();
@@ -137,7 +137,9 @@ private:
     std::vector<medic::TestResult> st_run_;                   // Ergebnisse des laufenden Laufs
     std::vector<std::size_t> st_ids_;                         // Indizes (in st_defs_) der Tests dieses Laufs
     std::size_t st_next_ = 0;
-    bool st_cancel_ = false, st_begun_ = false, st_quick_only_ = false;
+    bool st_cancel_ = false, st_begun_ = false, st_item_started_ = false, st_abort_sent_ = false;
+    int st_tier_ = 1;           // gewaehlte Stufe: 0 Schnell, 1 Standard, 2 Gruendlich
+    double st_progress_ = 0;    // Fortschritt des laufenden Tests (0 bis 1)
     mutable bool st_rendered_ = false;  // die Fortschrittsanzeige muss vor jedem Test gezeichnet worden sein
 
     enum class UpdateStage { Offer, ConfirmRollback, ConfirmDownload, Downloading, DownloadFail, DoneOk, DoneFail };

@@ -130,6 +130,9 @@ int main(int argc, char** argv) {
             st.handle(Button::Cross);
             png("18_selftest_confirm.png");
             st.handle(Button::Circle);
+            st.handle(Button::Triangle);  // Gruendlich: Hinweis (Last und Schreiben)
+            png("18b_selftest_confirm_thorough.png");
+            st.handle(Button::Circle);
             st.handle(Button::Square);  // nur Schnelltests
             for (int i = 0; i < 12; ++i) {
                 st.render(canvas);
