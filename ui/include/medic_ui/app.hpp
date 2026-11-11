@@ -6,6 +6,7 @@
 // (Kreuz) auf dem Vorschau- bzw. Rueckgaengig-Bildschirm. Einzige Ausnahme: die Quadrat-Taste in der Befundliste
 // legt einen Bericht nach /data/ps5medic/reports/ ab (IMedicService::make_report); sonst loest keine Taste Schreiben aus.
 // Das Regel-Update (Einstellungen) schreibt ebenfalls nur nach Kreuz auf dem Angebot bzw. auf der Rueckfrage.
+// "Verlauf zuruecksetzen" (Dreieck im Verlauf) legt Journal und Check-up-Verlauf nur nach Kreuz auf der Rueckfrage beiseite (verschieben, nie loeschen).
 // Die Fehlercodes (Start) sind ein reines Nachschlagewerk: sie zeigen Text, kein Knopf dort loest etwas aus.
 #pragma once
 #include "medic/diff.hpp"
@@ -23,7 +24,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, HistoryReset };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
 
@@ -49,7 +50,7 @@ private:
         std::vector<medic::DiffLine> changed;  // nur + und - Zeilen (WriteFile)
         bool diff_ok = true;
     };
-    enum class DoneKind { Fix, Undo };
+    enum class DoneKind { Fix, Undo, Reset };
 
     void start_check();
     void begin_fix(int index, Screen origin);
@@ -83,6 +84,7 @@ private:
     void draw_fix_done(Canvas& c) const;
     void draw_history(Canvas& c) const;
     void draw_undo_confirm(Canvas& c) const;
+    void draw_history_reset(Canvas& c) const;
     void draw_settings(Canvas& c) const;
     void draw_report(Canvas& c) const;
     void draw_rules_update(Canvas& c) const;

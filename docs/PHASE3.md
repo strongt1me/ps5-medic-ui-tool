@@ -101,3 +101,9 @@ Die Oberfläche hat einen eigenen Symbolsatz (`ui/src/icons.cpp`, `ui/include/me
 - **Befunde und Detail:** Symbol je Schweregrad (Kritisch, Warnung, Info), Schraubenschlüssel bzw. Glühbirne bei Reparatur bzw. Anleitung. **Verlauf, Einstellungen, Fehlercodes, Ergebnis-Bildschirme:** Titel mit Symbolfeld, Statussymbole je Zeile.
 - **Selbsttest:** je Test ein Symbol (Laufwerk, Thermometer, Datenbank, Datei, Tacho, WLAN, Flamme, Chip, Stift, Controller, Anzeige) und je Ergebnis ein Statussymbol (Haken, Warnung, Kreuz, Strich, offener Kreis). Zeilen sind enger, damit alle elf Tests über der Hinweisleiste Platz haben.
 - Tests: `icon_tests` in `tests/test_ui.cpp` (jedes Symbol sichtbar, im Feld, Akzent, Verlauf).
+
+## Nachtrag: Verlauf zurücksetzen (11. Nov. 2026)
+
+Im Verlauf (Start → Verlauf) legt **Dreieck „Zurücksetzen“** nach einer Rückfrage (Kreuz bestätigt, Kreis bricht ab) das Reparatur-Journal (`journal.jsonl`) und den Check-up-Verlauf (`history.jsonl`) beiseite: Sie werden nach `journal_<Zeit>.jsonl` und `history_<Zeit>.jsonl` in `/data/ps5medic` **verschoben, nie gelöscht** (Leitlinie 4). Danach ist der Verlauf leer, und der nächste Check-up beginnt ohne Vergleich (alle Befunde „neu“, keine Vergleichswerte aus früheren Messungen). Die Sicherungen unter `backups/` bleiben; Reparaturen aus dem beiseite gelegten Journal lassen sich über die App nicht mehr rückgängig machen (die Rückfrage sagt das).
+
+Schutz (`reset_history` in `libmedic/src/engine.cpp`): verweigert bei einer **unvollständigen Reparatur** (`incomplete`, die Engine braucht das Journal für den Rollback), ohne Schreibzugriff, bei ungültigem Zeitstempel und wenn eine Zieldatei schon existiert (nichts wird überschrieben). Ohne Verlauf ist es ein Nichts ohne Fehler. Tests: `history_reset_tests` in `tests/test_ui.cpp`.

@@ -11,6 +11,7 @@
 //    oder in einem fremden Zustand ist (abbrechen, nichts anfassen). Dadurch laesst sich ein halb gescheitertes Undo
 //    und eine abgebrochene Transaktion beliebig oft wiederholen.
 #include "medic/fixes.hpp"
+#include "medic/history.hpp"
 #include "medic/sha256.hpp"
 
 #include <algorithm>
@@ -608,6 +609,41 @@ std::vector<TxnInfo> history(const Platform& p) {
         out.clear();
     }
     return out;
+}
+
+ResetResult reset_history(Platform& p, const std::string& timestamp) {
+    ResetResult r;
+    IFileSystemRW* rw = p.fs_rw();
+    if (!rw) {
+        r.error = "no_write";
+        return r;
+    }
+    if (timestamp.empty() || timestamp.size() > 40 || !std::all_of(timestamp.begin(), timestamp.end(), [](unsigned char c) { return std::isalnum(c) || c == '-' || c == '_'; })) {
+        r.error = "bad_timestamp";
+        return r;
+    }
+    for (const auto& t : history(p))
+        if (t.state == "incomplete") {
+            r.error = "incomplete";
+            return r;
+        }
+    const std::string dir = "/data/ps5medic/";
+    const std::pair<std::string, std::string> moves[] = {{kJournalPath, dir + "journal_" + timestamp + ".jsonl"}, {kHistoryPath, dir + "history_" + timestamp + ".jsonl"}};
+    for (const auto& [from, to] : moves)
+        if (p.fs().exists(from) && p.fs().exists(to)) {
+            r.error = "exists";
+            return r;
+        }
+    for (const auto& [from, to] : moves) {
+        if (!p.fs().exists(from)) continue;
+        if (!rw->rename(from, to)) {
+            r.error = "move_failed";
+            return r;
+        }
+        r.moved.push_back(to.substr(dir.size()));
+    }
+    r.ok = true;
+    return r;
 }
 
 }  // namespace medic

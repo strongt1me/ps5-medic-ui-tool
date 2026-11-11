@@ -326,7 +326,19 @@ const char* const kDeJson = R"JSON({
   "selftest.reason.no_response": "Router antwortet nicht auf die Probe (keine Aussage)",
   "selftest.reason.probe_error": "Verbindungsversuch nicht möglich",
   "selftest.reason.packet_loss": "viele Verbindungsversuche zum Router blieben ohne Antwort",
-  "selftest.reason.slow_gateway": "Router antwortet langsam"
+  "selftest.reason.slow_gateway": "Router antwortet langsam",
+  "history.reset": "Zurücksetzen",
+  "reset.title": "Verlauf zurücksetzen?",
+  "reset.body": "Das Reparatur-Journal und der Verlauf der Check-ups werden beiseite gelegt, nicht gelöscht (journal_… und history_… in /data/ps5medic). Danach ist der Verlauf leer, und alle Befunde zählen wieder als neu. Bereits gemachte Reparaturen lassen sich danach nicht mehr über die App rückgängig machen; die gesicherten Dateien bleiben unter /data/ps5medic/backups.",
+  "reset.ok": "Verlauf zurückgesetzt",
+  "reset.ok_sub": "Beiseite gelegt: {files}. Der Verlauf beginnt neu.",
+  "reset.ok_none": "Es gab keinen Verlauf. Nichts wurde verändert.",
+  "reset.fail": "Zurücksetzen fehlgeschlagen",
+  "reset.err.incomplete": "Eine Reparatur ist unvollständig. Bitte erst rückgängig machen, dann zurücksetzen.",
+  "reset.err.no_write": "Kein Schreibzugriff auf /data/ps5medic.",
+  "reset.err.exists": "Die Zieldatei existiert schon. Nichts wurde überschrieben.",
+  "reset.err.move_failed": "Die Datei ließ sich nicht verschieben.",
+  "reset.err.bad_timestamp": "Keine gültige Uhrzeit."
 }
 )JSON";
 
@@ -652,7 +664,19 @@ const char* const kEnJson = R"JSON({
   "selftest.reason.no_response": "router does not answer the probe (no statement)",
   "selftest.reason.probe_error": "connection attempt not possible",
   "selftest.reason.packet_loss": "many connection attempts to the router went unanswered",
-  "selftest.reason.slow_gateway": "router answers slowly"
+  "selftest.reason.slow_gateway": "router answers slowly",
+  "history.reset": "Reset",
+  "reset.title": "Reset the history?",
+  "reset.body": "The repair journal and the history of check-ups are set aside, not deleted (journal_… and history_… in /data/ps5medic). Afterwards the history is empty and all findings count as new again. Repairs already made can then no longer be undone through the app; the backed-up files stay under /data/ps5medic/backups.",
+  "reset.ok": "History reset",
+  "reset.ok_sub": "Set aside: {files}. The history starts over.",
+  "reset.ok_none": "There was no history. Nothing was changed.",
+  "reset.fail": "Reset failed",
+  "reset.err.incomplete": "A repair is incomplete. Please undo it first, then reset.",
+  "reset.err.no_write": "No write access to /data/ps5medic.",
+  "reset.err.exists": "The target file already exists. Nothing was overwritten.",
+  "reset.err.move_failed": "The file could not be moved.",
+  "reset.err.bad_timestamp": "No valid clock time."
 }
 )JSON";
 

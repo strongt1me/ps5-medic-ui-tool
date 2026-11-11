@@ -72,6 +72,12 @@ public:
     virtual std::string read_text(const std::string& path) = 0;  // fuer die Diff-Vorschau; leer, wenn nicht lesbar
     virtual std::vector<medic::TxnInfo> history() = 0;
     virtual medic::UndoResult undo(const std::string& txn) = 0;
+    // Legt Journal und Check-up-Verlauf beiseite (nie loeschen, siehe medic::reset_history); die UI ruft das nur nach Bestaetigung auf.
+    virtual medic::ResetResult reset_history() {
+        medic::ResetResult r;
+        r.error = "no_write";
+        return r;
+    }
     // Bericht zum letzten Check-up: schreibt ihn (nur) nach /data/ps5medic/reports/ und liefert die QR-Kurzfassung.
     // Die UI ruft das nur auf Quadrat-Taste auf.
     virtual ReportResult make_report(medic::ReportLang lang) = 0;
@@ -158,6 +164,7 @@ public:
     std::string read_text(const std::string& path) override;
     std::vector<medic::TxnInfo> history() override;
     medic::UndoResult undo(const std::string& txn) override;
+    medic::ResetResult reset_history() override;
     ReportResult make_report(medic::ReportLang lang) override;
     medic::RuleUpdateOffer check_rule_update() override;
     medic::RuleUpdateResult install_rule_update() override;

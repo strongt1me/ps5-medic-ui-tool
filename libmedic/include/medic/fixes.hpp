@@ -121,4 +121,15 @@ std::vector<TxnInfo> history(const Platform& p);
 constexpr const char* kJournalPath = "/data/ps5medic/journal.jsonl";
 constexpr const char* kBackupRoot = "/data/ps5medic/backups";
 
+// Verlauf zuruecksetzen: Das Reparatur-Journal (journal.jsonl) und der Verlauf der Check-ups (history.jsonl) werden nach
+// journal_<ts>.jsonl bzw. history_<ts>.jsonl BEISEITE GELEGT (verschoben, nie geloescht); danach beginnt der Verlauf leer. Die Sicherungen unter
+// backups/ bleiben. Verweigert wird bei einer unvollstaendigen Reparatur ("incomplete": die Engine braucht das Journal fuer den Rollback), ohne
+// Schreibzugriff, bei ungueltigem Zeitstempel und wenn eine Zieldatei schon existiert. Es wird nichts ueberschrieben.
+struct ResetResult {
+    bool ok = false;
+    std::string error;  // incomplete | no_write | bad_timestamp | exists | move_failed
+    std::vector<std::string> moved;  // Dateinamen der beiseite gelegten Dateien
+};
+ResetResult reset_history(Platform& p, const std::string& timestamp);
+
 }  // namespace medic

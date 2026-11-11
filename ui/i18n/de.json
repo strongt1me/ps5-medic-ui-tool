@@ -320,5 +320,17 @@
   "selftest.reason.no_response": "Router antwortet nicht auf die Probe (keine Aussage)",
   "selftest.reason.probe_error": "Verbindungsversuch nicht möglich",
   "selftest.reason.packet_loss": "viele Verbindungsversuche zum Router blieben ohne Antwort",
-  "selftest.reason.slow_gateway": "Router antwortet langsam"
+  "selftest.reason.slow_gateway": "Router antwortet langsam",
+  "history.reset": "Zurücksetzen",
+  "reset.title": "Verlauf zurücksetzen?",
+  "reset.body": "Das Reparatur-Journal und der Verlauf der Check-ups werden beiseite gelegt, nicht gelöscht (journal_… und history_… in /data/ps5medic). Danach ist der Verlauf leer, und alle Befunde zählen wieder als neu. Bereits gemachte Reparaturen lassen sich danach nicht mehr über die App rückgängig machen; die gesicherten Dateien bleiben unter /data/ps5medic/backups.",
+  "reset.ok": "Verlauf zurückgesetzt",
+  "reset.ok_sub": "Beiseite gelegt: {files}. Der Verlauf beginnt neu.",
+  "reset.ok_none": "Es gab keinen Verlauf. Nichts wurde verändert.",
+  "reset.fail": "Zurücksetzen fehlgeschlagen",
+  "reset.err.incomplete": "Eine Reparatur ist unvollständig. Bitte erst rückgängig machen, dann zurücksetzen.",
+  "reset.err.no_write": "Kein Schreibzugriff auf /data/ps5medic.",
+  "reset.err.exists": "Die Zieldatei existiert schon. Nichts wurde überschrieben.",
+  "reset.err.move_failed": "Die Datei ließ sich nicht verschieben.",
+  "reset.err.bad_timestamp": "Keine gültige Uhrzeit."
 }
