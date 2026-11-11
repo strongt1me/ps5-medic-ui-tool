@@ -90,7 +90,8 @@ int main() {
             out(std::string("[") + label(f.severity) + "] " + f.rule_id);
             out("  " + f.text_de);
             for (const auto& e : f.evidence) out("  Evidenz: " + e);
-            out("  Quelle: " + f.source + " (" + f.verified + ")");
+            const medic::Confidence conf = medic::effective_confidence(f);
+            out("  Quelle: " + f.source + " (" + f.verified + "), Verlaesslichkeit: " + conf.level + "/" + conf.basis);
         }
     }
 

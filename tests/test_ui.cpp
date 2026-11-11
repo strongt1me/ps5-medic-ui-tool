@@ -2471,6 +2471,47 @@ void redetect_ui_tests() {
     }
 }
 
+// Die Detailansicht nennt die Verlaesslichkeit des Befunds: Gruen = hoch, Orange = niedrig, dazu der Grund der Regel.
+void confidence_ui_tests() {
+    const Color ok = rgb(76, 208, 138), warn = rgb(255, 179, 71);  // kOk, kWarn in app.cpp
+    auto has_color = [](const Canvas& c, Color col) {
+        for (int y = 0; y < c.height(); y += 1)
+            for (int x = 0; x < c.width(); x += 2)
+                if (c.at(x, y) == col) return true;
+        return false;
+    };
+    auto detail = [&](const Confidence& conf, Canvas& cv) {
+        FakeService svc;
+        svc.result.fw = "12.00";
+        svc.result.model = "CFI-7021";
+        svc.result.rules_version = "t";
+        Finding f = mk_finding("a.info", Severity::Info, false);  // Hinweis ohne Reparatur: keine anderen gruenen/orangen Stellen
+        f.confidence = conf;
+        svc.result.findings = {f};
+        App app(svc);
+        run_check_via_ui(app, cv);
+        press(app, {Button::Cross});
+        CHECK(app.screen() == App::Screen::Detail, "Verlaesslichkeit: Details offen");
+        app.render(cv);
+    };
+    Canvas high(App::kWidth, App::kHeight), low(App::kWidth, App::kHeight), mid(App::kWidth, App::kHeight), mid_reason(App::kWidth, App::kHeight);
+    detail({"high", "doc", "", ""}, high);
+    detail({"low", "derived", "", ""}, low);
+    detail({"medium", "community", "", ""}, mid);
+    detail({"medium", "community", "Das ist der Grund dieser Regel fuer die Verlaesslichkeit.", "This is the rule's reason for the confidence."}, mid_reason);
+    CHECK(has_color(high, ok) && !has_color(high, warn), "Verlaesslichkeit: hoch in Gruen");
+    CHECK(has_color(low, warn) && !has_color(low, ok), "Verlaesslichkeit: niedrig in Orange");
+    CHECK(!has_color(mid, ok) && !has_color(mid, warn), "Verlaesslichkeit: mittel in neutraler Farbe");
+    auto differs = [](const Canvas& a, const Canvas& b) {
+        for (int y = 0; y < a.height(); y += 2)
+            for (int x = 0; x < a.width(); x += 2)
+                if (a.at(x, y) != b.at(x, y)) return true;
+        return false;
+    };
+    CHECK(differs(mid, mid_reason), "Verlaesslichkeit: der Grund der Regel erscheint in den Details");
+    CHECK(differs(high, low), "Verlaesslichkeit: Stufen sind unterscheidbar");
+}
+
 }  // namespace
 
 void ui_tests() {
@@ -2481,6 +2522,7 @@ void ui_tests() {
     screen_flow_tests();
     coverage_ui_tests();
     redetect_ui_tests();
+    confidence_ui_tests();
     edge_tests();
     end_to_end_tests();
     undo_in_new_session_tests();

@@ -832,8 +832,13 @@ void App::draw_detail(Canvas& c) const {
     int y = 140;
     const int bw = draw_badge(c, M, y, S(sev_key(f->severity)), sev_color(f->severity));
     body().draw(c, M + bw + 20, y, f->rule_id, kDim);
-    const std::string vkey = "verified." + (f->verified.empty() ? std::string("todo") : f->verified);
-    text_right(c, small(), W - M, y + 4, Strings::get(lang_).has(vkey) ? S(vkey) : f->verified, kDim);
+    const medic::Confidence conf = medic::effective_confidence(*f);
+    {
+        // Verlaesslichkeit (hoch/mittel/niedrig) mit der Grundlage; Farbe: Gruen = hoch, Orange = niedrig (nie "in Ordnung" suggerieren)
+        const std::string lvl_key = "confidence." + conf.level, basis_key = "basis." + conf.basis;
+        const std::string line = S.fmt("confidence.line", {{"level", S.has(lvl_key) ? S(lvl_key) : conf.level}, {"basis", S.has(basis_key) ? S(basis_key) : conf.basis}});
+        text_right(c, small(), W - M, y + 4, line, conf.level == "high" ? kOk : (conf.level == "low" ? kWarn : kText));
+    }
     y += 58;
 
     // Erklaerung
@@ -851,9 +856,12 @@ void App::draw_detail(Canvas& c) const {
         y += ph + 16;
     }
 
-    // Evidenz
+    const std::string& conf_reason = lang_ == Lang::De ? conf.reason_de : conf.reason_en;
+    const int link = linked_error_index();
+
+    // Evidenz (mit Begruendung der Verlaesslichkeit bleibt weniger Platz: dann nur drei Zeilen)
     {
-        constexpr std::size_t kMaxEvidence = 5;
+        const std::size_t kMaxEvidence = conf_reason.empty() ? 5 : 3;
         const int lh = small().line_height() + 6;
         const int rows = f->evidence.empty() ? 1 : static_cast<int>(std::min(f->evidence.size(), kMaxEvidence)) + (f->evidence.size() > kMaxEvidence ? 1 : 0);
         const int ph = 22 + small().line_height() + 10 + rows * lh + 18;
@@ -871,6 +879,21 @@ void App::draw_detail(Canvas& c) const {
         y += ph + 16;
     }
 
+    // Grund der Verlaesslichkeit (nur wenn die Regel einen nennt)
+    if (!conf_reason.empty()) {
+        // So viele Zeilen (hoechstens drei), wie bis zur Hinweisleiste uebrig bleiben, wenn Quelle, Reparatur und Fehlercode noch folgen.
+        const int rest = (f->source.empty() ? 0 : small().line_height() + 14) + body().line_height() + (link >= 0 ? body().line_height() + 12 : 0);
+        const int line_h = small().line_height() + 4;
+        const int lines_fit = std::clamp((H - 92 - 20 - rest - y - 10) / line_h, 0, 3);
+        if (lines_fit > 0) {
+            for (const auto& l : wrap_text(small(), conf_reason, cw - 16, lines_fit)) {
+                small().draw(c, M + 8, y, l, kDim);
+                y += line_h;
+            }
+            y += 10;
+        }
+    }
+
     // Quelle und Reparatur
     if (!f->source.empty()) {
         small().draw(c, M + 8, y, elide(small(), S("detail.source") + ": " + f->source, cw - 16), kDim);
@@ -878,7 +901,6 @@ void App::draw_detail(Canvas& c) const {
     }
     if (!f->fix.empty()) body().draw(c, M + 8, y, S.fmt(is_hint_fix(f->fix) ? "detail.hint_available" : "detail.fix_available", {{"name", fix_name(f->fix)}}), kOk, cw - 16);
     else body().draw(c, M + 8, y, S("detail.fix_none"), kDim, cw - 16);
-    const int link = linked_error_index();
     if (link >= 0) {
         y += body().line_height() + 12;
         body().draw(c, M + 8, y, S.fmt("detail.error_code", {{"code", errors_.codes[static_cast<std::size_t>(link)].id}}), kAccent, cw - 16);

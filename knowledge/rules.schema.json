@@ -38,6 +38,21 @@
           "fix_params": { "type": "object", "description": "Parameter fuer den Fix, siehe libmedic/include/medic/fixes.hpp" },
           "source": { "type": "string", "format": "uri" },
           "verified": { "enum": ["doc", "community", "todo"] },
+          "confidence": {
+            "type": "object",
+            "description": "Wie sicher der Befund ist und warum. Ohne Angabe gilt der Standard aus verified (doc: high/doc, community: medium/community, todo: low/unknown). Eine Angabe braucht reason. Ohne Beleg (todo) nie high; high nur mit basis doc oder observed; basis nicht staerker als verified.",
+            "required": ["reason"],
+            "additionalProperties": false,
+            "properties": {
+              "level": { "enum": ["high", "medium", "low"] },
+              "basis": { "enum": ["observed", "doc", "community", "derived", "unknown"], "description": "observed: an der Konsole gelesen oder gemessen; doc: dokumentiert; community: Bericht; derived: abgeleitet; unknown: nicht bestaetigt" },
+              "reason": {
+                "type": "object",
+                "required": ["de", "en"],
+                "properties": { "de": { "type": "string", "minLength": 1 }, "en": { "type": "string", "minLength": 1 } }
+              }
+            }
+          },
           "applies_fw": { "type": "string", "description": "Versionsbereich, z. B. \">=7.00 <=13.60\"" }
         }
       }

@@ -76,6 +76,40 @@ std::string need_string(const json& obj, const char* key, const std::string& whe
     return obj[key].get<std::string>();
 }
 
+const std::set<std::string> kConfLevels = {"high", "medium", "low"};
+const std::set<std::string> kConfBases = {"observed", "doc", "community", "derived", "unknown"};
+
+// Optionales Feld "confidence": {"level"?, "basis"?, "reason": {"de","en"}}. Fehlende level/basis kommen aus `verified`;
+// eine Angabe braucht immer einen Grund. Widerspruechliche Angaben werden abgelehnt: ohne Beleg nie "hoch", und die
+// Grundlage darf nicht staerker sein als `verified` (todo: kein doc/community; community: kein doc).
+void parse_confidence(const json& j, Rule& r, const std::string& where) {
+    r.confidence = default_confidence(r.verified);
+    if (!j.contains("confidence")) return;
+    const json& c = j["confidence"];
+    const std::string w = where + ".confidence";
+    if (!c.is_object()) fail(w, "muss ein Objekt sein");
+    for (auto it = c.begin(); it != c.end(); ++it)
+        if (it.key() != "level" && it.key() != "basis" && it.key() != "reason") fail(w, "unbekannter Schluessel '" + it.key() + "'");
+    if (c.contains("level")) {
+        r.confidence.level = need_string(c, "level", w);
+        if (!kConfLevels.count(r.confidence.level)) fail(w, "level muss high|medium|low sein");
+    }
+    if (c.contains("basis")) {
+        r.confidence.basis = need_string(c, "basis", w);
+        if (!kConfBases.count(r.confidence.basis)) fail(w, "basis muss observed|doc|community|derived|unknown sein");
+    }
+    if (!c.contains("reason") || !c["reason"].is_object()) fail(w, "'reason' fehlt (eine Angabe braucht einen Grund, de und en)");
+    r.confidence.reason_de = need_string(c["reason"], "de", w + ".reason");
+    r.confidence.reason_en = need_string(c["reason"], "en", w + ".reason");
+    if (r.confidence.reason_de.empty() || r.confidence.reason_en.empty()) fail(w, "der Grund darf nicht leer sein");
+
+    const std::string& basis = r.confidence.basis;
+    if (r.verified == "todo" && (basis == "doc" || basis == "community")) fail(w, "bei verified=todo ist doc/community als Grundlage ein Widerspruch");
+    if (r.verified == "community" && basis == "doc") fail(w, "bei verified=community ist doc als Grundlage ein Widerspruch");
+    if (r.verified == "todo" && r.confidence.level == "high") fail(w, "ohne Beleg (verified=todo) nie level=high");
+    if (r.confidence.level == "high" && basis != "doc" && basis != "observed") fail(w, "level=high braucht basis doc oder observed");
+}
+
 Rule parse_rule(const json& j, std::size_t index) {
     std::string where = "rules[" + std::to_string(index) + "]";
     if (!j.is_object()) fail(where, "Regel muss ein Objekt sein");
@@ -102,6 +136,7 @@ Rule parse_rule(const json& j, std::size_t index) {
     r.verified = need_string(j, "verified", where);
     if (r.verified != "doc" && r.verified != "community" && r.verified != "todo")
         fail(where, "verified muss doc|community|todo sein");
+    parse_confidence(j, r, where);
 
     if (j.contains("evidence")) r.evidence_path = need_string(j, "evidence", where);
     if (j.contains("evidence_filter")) {
@@ -267,6 +302,29 @@ const char* to_string(Severity s) {
     return "info";
 }
 
+Confidence default_confidence(const std::string& verified) {
+    Confidence c;
+    if (verified == "doc") {
+        c.level = "high";
+        c.basis = "doc";
+    } else if (verified == "community") {
+        c.level = "medium";
+        c.basis = "community";
+    } else {
+        c.level = "low";
+        c.basis = "unknown";
+    }
+    return c;
+}
+
+Confidence effective_confidence(const Finding& f) {
+    Confidence c = f.confidence;
+    const Confidence d = default_confidence(f.verified);
+    if (c.level.empty()) c.level = d.level;
+    if (c.basis.empty()) c.basis = d.basis;
+    return c;
+}
+
 namespace {
 
 // Zahlenteile plus Vorabversion: "1.7beta10" = {1, 7} mit Tag beta/10. Eine Vorabversion ist kleiner als die fertige
@@ -429,6 +487,7 @@ std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts) {
         f.fix_params = r.fix_params;
         f.source = r.source;
         f.verified = r.verified;
+        f.confidence = r.confidence;
         out.push_back(std::move(f));
     }
 

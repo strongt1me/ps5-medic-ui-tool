@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.24",
+  "db_version": "2026.11.25",
   "coverage": [
     { "id": "processes", "text": { "de": "Laufende Prozesse", "en": "Running processes" }, "tested_when": { "all": [ { "fact": "proc.running", "exists": true } ] } },
     { "id": "storage", "text": { "de": "Speicherplatz der Laufwerke", "en": "Drive free space" }, "tested_when": { "all": [ { "fact": "storage.mounts", "exists": true } ] } },
@@ -288,7 +288,15 @@
       "evidence": "savedata.foreign[].label",
       "fix": null,
       "source": "https://github.com/strongt1me/ps5-medic",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Dass die Konto-IDs abweichen, ist an den Dateien gelesen (ACCOUNT_ID in den Metadaten). Dass genau das die Meldung „beschädigte Daten“ auslöst, ist an der Test-Konsole bei drei Spielen beobachtet, aber noch nicht durch Zurückspielen der alten Konto-ID bestätigt; Sony dokumentiert es nicht.",
+          "en": "That the account IDs differ is read from the files (ACCOUNT_ID in the metadata). That exactly this triggers the “corrupted data” message was observed on the test console with three games, but is not yet confirmed by restoring the old account ID; Sony does not document it."
+        }
+      }
     },
     {
       "id": "errors.recurring_title",
@@ -307,7 +315,15 @@
       "evidence": "errors.pairs[].label",
       "fix": null,
       "source": "https://github.com/strongt1me/ps5-medic",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Der Fehlerverlauf ist gelesen. Dass wiederholte Codes auf einen unsauber laufenden Titel hinweisen, ist eine Schlussfolgerung; die Schwelle (mehr als zwei Einträge) ist vorläufig und nicht geeicht, die Ursache nennt der Verlauf nicht.",
+          "en": "The error history is read. That repeated codes point to a title that does not run cleanly is an inference; the threshold (more than two entries) is provisional and not calibrated, and the history does not name the cause."
+        }
+      }
     },
     {
       "id": "errors.recurring_system_app",
@@ -326,7 +342,15 @@
       "evidence": "errors.pairs[].label",
       "fix": null,
       "source": "https://github.com/strongt1me/ps5-medic",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Der Fehlerverlauf ist gelesen. Ob Netz, DNS-Filter oder etwas anderes dahintersteckt, lässt sich aus dem Verlauf nicht entscheiden; die Schwelle (mehr als zwei Einträge) ist vorläufig.",
+          "en": "The error history is read. Whether network, DNS filter or something else is behind it cannot be decided from the history; the threshold (more than two entries) is provisional."
+        }
+      }
     },
     {
       "id": "sys.unclean_boot",
@@ -344,7 +368,15 @@
       "evidence": "boot.unclean[].ts",
       "fix": null,
       "source": "https://github.com/strongt1me/ps5-medic",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Dass vor einem Start kein Herunterfahren protokolliert ist, steht so im Startverlauf (an der Test-Konsole beobachtet: ein normaler Neustart schreibt „Shutdown for reboot“). Die Schwelle von drei Fällen in 14 Tagen ist vorläufig, die Ursache nennt der Verlauf nicht.",
+          "en": "That no shutdown is logged before a start is shown in the start history (observed on the test console: a normal restart writes “Shutdown for reboot”). The threshold of three cases in 14 days is provisional, and the history does not name the cause."
+        }
+      }
     },
     {
       "id": "sys.unclean_boot_history",
@@ -363,7 +395,15 @@
       "evidence": "boot.unclean[].ts",
       "fix": null,
       "source": "https://github.com/strongt1me/ps5-medic",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "observed",
+        "reason": {
+          "de": "Der Startverlauf ist gelesen. Einzelne Neustarts ohne Herunterfahren sind unauffällig (Stromausfall, erzwungenes Ausschalten); der Hinweis zeigt nur die Zahl.",
+          "en": "The start history is read. Single restarts without a shutdown are unremarkable (power loss, forced power-off); the notice only shows the count."
+        }
+      }
     },
     {
       "id": "db.header_invalid",
@@ -381,7 +421,15 @@
       "evidence": "db.files[].path",
       "fix": null,
       "source": "https://www.sqlite.org/fileformat2.html",
-      "verified": "doc"
+      "verified": "doc",
+      "confidence": {
+        "level": "high",
+        "basis": "doc",
+        "reason": {
+          "de": "Der Kopf ist gelesen und gegen das SQLite-Dateiformat geprüft. Die Folgen für die Konsole (fehlende Kacheln, Fehlermeldungen) sind Erfahrung, kein dokumentierter Zusammenhang.",
+          "en": "The header is read and checked against the SQLite file format. The consequences for the console (missing tiles, error messages) are experience, not a documented relationship."
+        }
+      }
     },
     {
       "id": "db.truncated",
@@ -399,7 +447,15 @@
       "evidence": "db.files[].path",
       "fix": null,
       "source": "https://www.sqlite.org/fileformat2.html",
-      "verified": "doc"
+      "verified": "doc",
+      "confidence": {
+        "level": "high",
+        "basis": "doc",
+        "reason": {
+          "de": "Dateigröße und Kopf sind gelesen und gegen das SQLite-Dateiformat geprüft. Ein Befund während die Konsole gerade schreibt ist nicht ausgeschlossen, darum erneut prüfen.",
+          "en": "File size and header are read and checked against the SQLite file format. A finding while the console is writing at that moment cannot be ruled out, so check again."
+        }
+      }
     },
     {
       "id": "db.journal_pending",
@@ -416,7 +472,15 @@
       "evidence": "db.files[].path",
       "fix": null,
       "source": "https://www.sqlite.org/fileformat2.html",
-      "verified": "doc"
+      "verified": "doc",
+      "confidence": {
+        "level": "medium",
+        "basis": "doc",
+        "reason": {
+          "de": "Das Journal ist gelesen. Ein offenes Journal ist bei normalen Schreibvorgängen der Konsole üblich; erst wenn es nach einem Neustart bleibt, ist es ein Hinweis.",
+          "en": "The journal is read. An open journal is usual during normal writes by the console; only if it remains after a restart is it a hint."
+        }
+      }
     },
     {
       "id": "db.integrity_failed",
@@ -433,7 +497,15 @@
       "evidence": "db.files[].path",
       "fix": null,
       "source": "https://www.sqlite.org/pragma.html#pragma_integrity_check",
-      "verified": "doc"
+      "verified": "doc",
+      "confidence": {
+        "level": "high",
+        "basis": "doc",
+        "reason": {
+          "de": "SQLite integrity_check ist das dokumentierte Prüfverfahren. Medic prüft nur Dateien, die sich beim zweimaligen Lesen nicht ändern (sonst steht der Bereich unter „nicht geprüft“). Die Folgen für Titel und Kacheln sind Erfahrung, nicht dokumentiert.",
+          "en": "SQLite integrity_check is the documented check. Medic only checks files that do not change between two reads (otherwise the area is listed as “not checked”). The consequences for titles and tiles are experience, not documented."
+        }
+      }
     },
     {
       "id": "game.il2cpp_case",
@@ -450,7 +522,15 @@
       "evidence": "games.case_mismatch[].path",
       "fix": "rename_case_prx",
       "source": "https://github.com/drakmor/ShadowMountPlus/issues/159",
-      "verified": "community"
+      "verified": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "community",
+        "reason": {
+          "de": "Die abweichende Schreibweise ist gelesen und die Dateisystemart gemessen. Dass das Spiel deshalb abstürzt, beruht auf dem Bericht des ShadowMount+-Entwicklers (Issue 159, Original gelesen) und ist an der Test-Konsole nicht nachgestellt.",
+          "en": "The differing spelling is read and the file system type measured. That the game therefore crashes rests on the ShadowMount+ developer's report (issue 159, original read) and was not reproduced on the test console."
+        }
+      }
     },
     {
       "id": "game.il2cpp_case_latent",
@@ -467,7 +547,15 @@
       "evidence": "games.case_mismatch[].path",
       "fix": null,
       "source": "https://github.com/drakmor/ShadowMountPlus/issues/159",
-      "verified": "community"
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Schreibweise ist gelesen. Die Wirkung tritt erst nach dem Umzug auf ein Dateisystem mit Groß-/Kleinschreibung ein und ist aus dem Bericht abgeleitet, nicht beobachtet.",
+          "en": "The spelling is read. The effect only occurs after moving to a case-sensitive file system and is derived from the report, not observed."
+        }
+      }
     },
     {
       "id": "smp.debug_off",
@@ -558,7 +646,15 @@
       "evidence": "net.port_9021",
       "fix": null,
       "source": "https://github.com/ps5-payload-dev/elfldr",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Dass der Port nicht antwortet, ist gemessen. Ob das ein Fehler ist, hängt vom Jailbreak-Weg ab: Nach dem Unified JB lauscht Port 9021 laut Projektnotizen absichtlich nicht mehr, und Payloads kommen dann über einen anderen Weg.",
+          "en": "That the port does not answer is measured. Whether that is a fault depends on the jailbreak route: after the Unified JB, port 9021 deliberately no longer listens according to the project notes, and payloads arrive another way."
+        }
+      }
     },
     {
       "id": "plugin.ps5theme_old_overlay",
@@ -576,7 +672,15 @@
       "evidence": "ps5theme.version",
       "fix": null,
       "source": "https://github.com/Blaze414/ps5-theme/releases/tag/v1.53",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Die installierte Version ist gelesen. Die Wirkung beruht auf den Release-Notes des Autors von Version 1.53 und ist an dieser Konsole nicht nachgestellt; die Grenze „zwischen 1.30 und 1.53“ ist eine Annahme.",
+          "en": "The installed version is read. The effect rests on the author's release notes of version 1.53 and was not reproduced on this console; the boundary “between 1.30 and 1.53” is an assumption."
+        }
+      }
     },
     {
       "id": "storage.oversized_reservation",
@@ -593,7 +697,15 @@
       "evidence": "apps.oversized[].name",
       "fix": null,
       "source": "https://prosperostore.net/app/PPSA98427/",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Reservierung und Dateigrößen sind gelesen. Der bekannte Fall (CD Player vor 1.1.2) stammt von der Seite des Autors; dass jede Reservierung dieser Art Speicher verschwendet, ist nicht belegt.",
+          "en": "The reservation and file sizes are read. The known case (CD Player before 1.1.2) comes from the author's page; that every reservation of this kind wastes space is not proven."
+        }
+      }
     },
     {
       "id": "game.needs_backport",
@@ -610,7 +722,15 @@
       "evidence": "games.need_backport[].desc",
       "fix": null,
       "source": "https://github.com/cherryduck/ps5-backport-toolkit",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Die verlangte Version steht in der param.json (gelesen) und ist mit der Version der Konsole verglichen. Dass solche Spiele deshalb nicht starten, nennt das Backport-Toolkit, ist an dieser Konsole aber nicht bestätigt.",
+          "en": "The required version is in the param.json (read) and compared with the console's version. That such games therefore do not start is stated by the backport toolkit but not confirmed on this console."
+        }
+      }
     },
     {
       "id": "smp.shellcore_hook_lost",
@@ -701,7 +821,15 @@
       "evidence": "storage.mounts[].free_pct",
       "fix": null,
       "source": "https://github.com/strongt1me/ps5-medic",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Der freie Platz ist gemessen. Die Schwelle von 5 % ist eine eigene Annahme; ab wann Mounts oder Installationen scheitern, ist nicht geeicht.",
+          "en": "The free space is measured. The 5 % threshold is our own assumption; at which point mounts or installations fail is not calibrated."
+        }
+      }
     },
     {
       "id": "smp.config_rejected",
@@ -1076,7 +1204,15 @@
       "evidence": "storage.mounts[].mount",
       "fix": null,
       "source": "https://github.com/ps5-payload-dev/sdk",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Dass das Laufwerk schreibgeschützt eingehängt ist, ist am Mount-Eintrag gemessen. Warum, kann Medic nicht sagen; die genannten Ursachen sind übliche Möglichkeiten, nicht belegt.",
+          "en": "That the drive is mounted read-only is measured at the mount entry. Medic cannot tell why; the causes listed are common possibilities, not proven."
+        }
+      }
     },
     {
       "id": "sys.temp_high",
@@ -1094,7 +1230,15 @@
       "evidence": "sys.temp.cpu_c",
       "fix": null,
       "source": "https://github.com/ps5-payload-dev/sdk",
-      "verified": "todo"
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "observed",
+        "reason": {
+          "de": "Die Temperatur ist von der Konsole gelesen, aber nur eine Momentaufnahme. Die Schwelle von 85 °C ist eine eigene Annahme; Sony nennt keine Grenze.",
+          "en": "The temperature is read from the console but only a snapshot. The 85 °C threshold is our own assumption; Sony names no limit."
+        }
+      }
     },
     {
       "id": "storage.scanpath_drive_missing",

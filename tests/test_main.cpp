@@ -385,6 +385,66 @@ static void new_fact_tests() {
               "Abdeckung: fehlendes tested_when, ungueltige ID, fehlender Text, ungueltige Bedingung -> Fehler");
         CHECK(medic::load_rules_from_string("{\"schema_version\":1,\"db_version\":\"t\",\"rules\":[]}").coverage.empty(), "Abdeckung: Liste ist optional");
     }
+    {  // Konfidenz mit Grund: Standard aus "verified", Abweichung nur mit Grund, Widersprueche werden abgelehnt
+        auto rule_text = [](const std::string& verified, const std::string& conf) {
+            return std::string(R"({"schema_version":1,"db_version":"t","rules":[{"id":"x.y","severity":"info","when":{"all":[{"fact":"a","exists":true}]},"text":{"de":"d","en":"e"},"source":"https://example.org","verified":")") +
+                   verified + "\"" + (conf.empty() ? "" : ",\"confidence\":" + conf) + "}]}";
+        };
+        auto load = [&](const std::string& verified, const std::string& conf) { return medic::load_rules_from_string(rule_text(verified, conf)).rules.at(0).confidence; };
+        auto throws = [&](const std::string& verified, const std::string& conf) {
+            try {
+                medic::load_rules_from_string(rule_text(verified, conf));
+                return false;
+            } catch (const std::exception&) {
+                return true;
+            }
+        };
+        const std::string reason = R"("reason":{"de":"Grund","en":"Reason"})";
+        const auto doc = load("doc", ""), com = load("community", ""), todo = load("todo", "");
+        CHECK(doc.level == "high" && doc.basis == "doc" && com.level == "medium" && com.basis == "community" && todo.level == "low" && todo.basis == "unknown" && doc.reason_de.empty(),
+              "Konfidenz: Standard aus verified (doc hoch, community mittel, todo niedrig), ohne Grund");
+        const auto obs = load("todo", R"({"level":"medium","basis":"observed",)" + reason + "}");
+        CHECK(obs.level == "medium" && obs.basis == "observed" && obs.reason_de == "Grund" && obs.reason_en == "Reason", "Konfidenz: Angabe mit Grund wird uebernommen");
+        const auto part = load("doc", R"({"level":"medium",)" + reason + "}");
+        CHECK(part.level == "medium" && part.basis == "doc", "Konfidenz: fehlende Felder kommen aus verified");
+        CHECK(throws("doc", "1") && throws("doc", R"({"level":"medium","reason":{"de":"G","en":"R"},"x":1})") && throws("doc", R"({"level":"sehr","reason":{"de":"G","en":"R"}})") &&
+                  throws("doc", R"({"basis":"magic","reason":{"de":"G","en":"R"}})"),
+              "Konfidenz: kein Objekt, unbekannter Schluessel, ungueltige Stufe/Grundlage -> Fehler");
+        CHECK(throws("doc", R"({"level":"medium"})") && throws("doc", R"({"level":"medium","reason":{"de":"G"}})") && throws("doc", R"({"level":"medium","reason":{"de":"","en":"R"}})") &&
+                  throws("doc", R"({"level":"medium","reason":"G"})"),
+              "Konfidenz: fehlender oder leerer Grund -> Fehler");
+        CHECK(throws("todo", R"({"basis":"doc",)" + reason + "}") && throws("todo", R"({"basis":"community",)" + reason + "}") && throws("community", R"({"basis":"doc",)" + reason + "}"),
+              "Konfidenz: Grundlage staerker als verified -> Fehler");
+        CHECK(throws("todo", R"({"level":"high","basis":"observed",)" + reason + "}") && throws("community", R"({"level":"high",)" + reason + "}") && throws("doc", R"({"basis":"derived",)" + reason + "}"),
+              "Konfidenz: ohne Beleg nie hoch, hoch nur mit doc/observed -> Fehler");
+        CHECK(!throws("doc", R"({"level":"high","basis":"observed",)" + reason + "}") && !throws("doc", R"({"basis":"derived","level":"low",)" + reason + "}"), "Konfidenz: erlaubte Kombinationen werden geladen");
+        CHECK(throws("doc", R"({"level":"low","reason":{"de":"Systemsoftware aktualisieren","en":"R"}})"), "Konfidenz: der Grund unterliegt der Textregel (kein Systemupdate)");
+
+        const auto rules = medic::load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+        std::string todo_without_reason, high_without_proof;
+        for (const auto& r : rules.rules) {
+            if (r.verified == "todo" && (r.confidence.reason_de.empty() || r.confidence.reason_en.empty())) todo_without_reason += r.id + " ";
+            if (r.verified == "todo" && r.confidence.level == "high") high_without_proof += r.id + " ";
+        }
+        CHECK(todo_without_reason.empty(), "Konfidenz: jede Regel ohne Beleg (verified=todo) erklaert ihre Verlaesslichkeit: " + todo_without_reason);
+        CHECK(high_without_proof.empty(), "Konfidenz: keine Regel ohne Beleg ist 'hoch': " + high_without_proof);
+        auto finding = [&](const char* fixture, const std::string& id) -> const medic::Finding* {
+            static std::vector<medic::Finding> keep;
+            keep = medic::evaluate(rules, facts_of(fixture));
+            for (const auto& f : keep)
+                if (f.rule_id == id) return &f;
+            return nullptr;
+        };
+        const auto* acc = finding("d2_pos", "savedata.foreign_account");
+        CHECK(acc && acc->confidence.level == "medium" && acc->confidence.basis == "observed" && !acc->confidence.reason_de.empty() && !acc->confidence.reason_en.empty(),
+              "Konfidenz: der Befund 'Konto der Spielstaende' traegt Stufe, Grundlage und Grund");
+        const auto* db = finding("db2_pos_corrupt", "db.integrity_failed");
+        CHECK(db && db->confidence.level == "high" && db->confidence.basis == "doc" && !db->confidence.reason_de.empty(), "Konfidenz: Datenbank-Pruefung hoch/dokumentiert mit Grund");
+        medic::Finding bare;
+        bare.verified = "community";
+        const auto eff = medic::effective_confidence(bare);
+        CHECK(eff.level == "medium" && eff.basis == "community", "Konfidenz: Befund ohne Angabe nimmt den Standard aus verified");
+    }
     {  // C3: freier Platz in Prozent
         auto c3 = facts_of("c3_pos");
         const json* m = c3.get("storage.mounts");

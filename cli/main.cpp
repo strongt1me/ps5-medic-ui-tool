@@ -109,14 +109,17 @@ int cmd_check(const Args& a) {
         out["not_tested"] = nlohmann::json::array();
         for (auto& c : coverage)
             if (!c.tested) out["not_tested"].push_back(c.id);
-        for (auto& f : findings)
+        for (auto& f : findings) {
+            const medic::Confidence conf = medic::effective_confidence(f);
             out["findings"].push_back({{"id", f.rule_id},
                                        {"severity", medic::to_string(f.severity)},
                                        {"text", a.lang == "de" ? f.text_de : f.text_en},
                                        {"evidence", f.evidence},
                                        {"fix", f.fix.empty() ? nlohmann::json(nullptr) : nlohmann::json(f.fix)},
                                        {"source", f.source},
-                                       {"verified", f.verified}});
+                                       {"verified", f.verified},
+                                       {"confidence", {{"level", conf.level}, {"basis", conf.basis}, {"reason", a.lang == "de" ? conf.reason_de : conf.reason_en}}}});
+        }
         std::cout << out.dump(2) << "\n";
         return 0;
     }
@@ -137,7 +140,10 @@ int cmd_check(const Args& a) {
         std::cout << "[" << label(f.severity) << "] " << f.rule_id << "\n  " << (a.lang == "de" ? f.text_de : f.text_en) << "\n";
         for (auto& e : f.evidence) std::cout << "  Evidenz: " << e << "\n";
         if (!f.fix.empty()) std::cout << "  Fix:     " << f.fix << "\n";
-        std::cout << "  Quelle:  " << f.source << " (" << f.verified << ")\n\n";
+        std::cout << "  Quelle:  " << f.source << " (" << f.verified << ")\n";
+        const medic::Confidence conf = medic::effective_confidence(f);
+        const std::string& reason = a.lang == "de" ? conf.reason_de : conf.reason_en;
+        std::cout << "  Verlaesslichkeit: " << conf.level << " (" << conf.basis << ")" << (reason.empty() ? "" : " - " + reason) << "\n\n";
     }
     std::cout << findings.size() << " Befund(e).\n";
     if (!untested.empty()) std::cout << "Nicht geprueft: " << untested << "\n";

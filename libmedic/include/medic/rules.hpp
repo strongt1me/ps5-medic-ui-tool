@@ -11,6 +11,17 @@ namespace medic {
 enum class Severity { Critical, Warning, Info };
 const char* to_string(Severity s);
 
+// Wie sicher ein Befund ist und worauf die Aussage ruht (docs/DIAGNOSE.md, Leitregel 3: Evidenz trennen).
+// `level`: high | medium | low. `basis`: observed (an der Konsole gelesen oder gemessen, ohne Annahme ueber die Ursache),
+// doc (dokumentiert), community (Bericht aus der Gemeinschaft), derived (aus Beobachtung oder Bericht abgeleitet),
+// unknown (nicht bestaetigt). Ohne Angabe in der Regel gilt der Standard aus `verified`; eine Abweichung braucht einen Grund.
+struct Confidence {
+    std::string level;
+    std::string basis;
+    std::string reason_de, reason_en;  // optional, nur bei ausdruecklicher Angabe in der Regel
+};
+Confidence default_confidence(const std::string& verified);  // doc: high/doc, community: medium/community, sonst: low/unknown
+
 struct Rule {
     std::string id;
     Severity severity = Severity::Info;
@@ -22,6 +33,7 @@ struct Rule {
     nlohmann::json fix_params = nlohmann::json::object();  // Parameter fuer den Fix (siehe fixes.hpp)
     std::string source;
     std::string verified;       // doc | community | todo
+    Confidence confidence;      // Standard aus `verified`, siehe default_confidence
     std::string applies_fw;     // optional, z. B. ">=7.00 <=13.60"
 };
 
@@ -35,7 +47,11 @@ struct Finding {
     nlohmann::json fix_params = nlohmann::json::object();
     std::string source;
     std::string verified;
+    Confidence confidence;  // leer: Standard aus `verified` (effective_confidence)
 };
+
+// Verlaesslichkeit des Befunds; fehlende Felder (Befunde aus Tests oder alten Regeldateien) kommen aus `verified`.
+Confidence effective_confidence(const Finding& f);
 
 // Ein Pruefbereich der App. `tested_when` ist eine Bedingung wie bei den Regeln (gegen die Fakten): trifft sie zu, lagen fuer den Bereich
 // lesbare Daten vor und er wurde geprueft; sonst gilt er als nicht geprueft. "Keine Befunde" heisst fuer einen nicht gepruefte Bereich

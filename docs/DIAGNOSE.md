@@ -22,6 +22,7 @@ Ziel: PS5 Medic wird zum vollständigen System- und Spiele-Doktor, der Hardware-
 | Datenbanken, Stufe 2 | `sqlite_check.cpp` (`integrity_check` auf einer Kopie im Speicher, WAL eingerechnet) | `db.integrity_failed` | Idee nach PS5 Cleanup (GPL-3.0-or-later), eigener Code |
 | Fehlercodes | Katalog `error_codes.json` (40 Codes) | – | Sony-Seiten, update-freier Wortlaut |
 | Abdeckung | `evaluate_coverage` (Liste `coverage` in `rules.json`, 11 Bereiche) | – (Bericht, UI, CLI) | Leitregel „nicht geprüft ≠ gesund“ |
+| Verlässlichkeit | `confidence` je Regel (Stufe, Grundlage, Grund; Standard aus `verified`) | – (UI, Bericht, CLI) | Leitregel „Evidenz trennen“ |
 | Spielordner | `collect_game_files` (Dateiname nur in der Groß-/Kleinschreibung falsch) | `game.il2cpp_case` (mit Fix `rename_case_prx`), `game.il2cpp_case_latent` | ShadowMount+ #159, #173 (Originale gelesen) |
 
 Details und Befunde: `docs/RULES.md` (Nachträge vom 10. und 11. Nov.). Auf der Test-Konsole sind alle neuen Quellen aus dem Payload ohne Rechteanhebung lesbar (geprüft).
@@ -32,7 +33,7 @@ Sicherheitsleiter: Dateien lesen, bekannte SDK-Sensoren lesen, Unbekanntes im Ki
 
 | Batch | Inhalt | Stand |
 |---|---|---|
-| 1 Fundament | **gebaut:** Collector-Abdeckung („nicht geprüft“, siehe `docs/RULES.md`); Fix-Pipeline mit Vorschau (Reparatur-Vorschau mit Diff, Bestätigung, Journal, Rückgängig) und **erneuter Prüfung nach der Reparatur** (die UI sagt, ob die Regel noch gemeldet wird); offen: Befund-Datensatz mit `status`, `urgency`, `confidence` mit Grund und getrennter Evidenz, Regelpaket-Governance | teilweise gebaut |
+| 1 Fundament | **gebaut:** Collector-Abdeckung („nicht geprüft“, siehe `docs/RULES.md`); Fix-Pipeline mit Vorschau (Reparatur-Vorschau mit Diff, Bestätigung, Journal, Rückgängig) und **erneuter Prüfung nach der Reparatur** (die UI sagt, ob die Regel noch gemeldet wird); **Konfidenz mit Grund** (`confidence`: Stufe, Grundlage, Grund je Regel; siehe `docs/RULES.md`); offen: Befund-Datensatz mit `status` und `urgency`, Regelpaket-Governance | teilweise gebaut |
 | 2 Beobachtete Quellen | Startverlauf, Fehlerverlauf, Datenbanken, Fehlercodes ergänzen; offen: Inventar (Downloads, doppelte Pakete, Waisen), Verknüpfungen, Log-Größen | teilweise gebaut |
 | 3 Jailbreak-Stack | Regeln mit Maintainer-Deckung, reversible Fixes: **gebaut** `game.il2cpp_case` (+ `_latent`); „Autoload nach kstuff“ im Original nicht belegt (siehe `docs/RULES.md`); offen: Laufwerk abziehen (nur Hinweis), verwaiste Kachel, Payload-Manager-Layout | teilweise gebaut |
 | 4 Verlauf | `history.jsonl`, Baselines, Vorher/Nachher-Diff, `pending` → `confirmed` | offen |

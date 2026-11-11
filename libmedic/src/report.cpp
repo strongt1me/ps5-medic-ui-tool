@@ -218,6 +218,20 @@ std::string verified_text(const std::string& v, bool de) {
     return de ? "noch nicht bestätigt" : "not verified yet";
 }
 
+std::string level_text(const std::string& l, bool de) {
+    if (l == "high") return de ? "hoch" : "high";
+    if (l == "low") return de ? "niedrig" : "low";
+    return de ? "mittel" : "medium";
+}
+
+std::string basis_text(const std::string& b, bool de) {
+    if (b == "observed") return de ? "an der Konsole beobachtet" : "observed on the console";
+    if (b == "doc") return de ? "Dokumentation" : "documentation";
+    if (b == "community") return de ? "Community-Meldung" : "community report";
+    if (b == "derived") return de ? "abgeleitet" : "derived";
+    return de ? "nicht bestätigt" : "not confirmed";
+}
+
 std::string state_text(const std::string& s, bool de) {
     if (s == "applied") return de ? "angewendet" : "applied";
     if (s == "undone") return de ? "rückgängig gemacht" : "undone";
@@ -440,7 +454,15 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
         for (const auto& e : x.evidence)
             o << "- " << (de ? "Evidenz" : "Evidence") << (label_text.empty() ? "" : " (" + label_text + ")") << ": " << md_code(e) << "\n";
         if (!x.fix.empty()) o << "- " << (de ? "Reparatur: " : "Repair: ") << md_code(x.fix) << "\n";
-        o << "- " << (de ? "Quelle: " : "Source: ") << x.source << " (" << verified_text(x.verified, de) << ")\n\n";
+        o << "- " << (de ? "Quelle: " : "Source: ") << x.source << " (" << verified_text(x.verified, de) << ")\n";
+        {
+            const Confidence conf = effective_confidence(x);
+            const std::string& reason = de ? conf.reason_de : conf.reason_en;
+            o << "- " << (de ? "Verlässlichkeit: " : "Confidence: ") << level_text(conf.level, de) << " (" << basis_text(conf.basis, de) << ")";
+            if (!reason.empty()) o << (de ? ". Grund: " : ". Reason: ") << reason;
+            o << "\n";
+        }
+        o << "\n";
     }
 
     {

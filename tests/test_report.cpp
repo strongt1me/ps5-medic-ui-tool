@@ -284,6 +284,19 @@ void coverage_report_tests() {
     CHECK(has(build_report_compact(in, ReportLang::De, 640), "2 Bereich(e) nicht geprüft") && has(build_report_compact(in, ReportLang::En, 640), "2 area(s) not checked"), "Kurzfassung nennt die Zahl");
 }
 
+void confidence_report_tests() {
+    ReportInput in = sample_input();
+    const std::string de0 = build_report(in, ReportLang::De);
+    CHECK(has(de0, "- Verlässlichkeit: mittel (Community-Meldung)\n"), "Bericht DE: ohne Angabe gilt der Standard aus verified, ohne Grund");
+    in.findings[0].confidence = {"low", "derived", "Nur abgeleitet.", "Only derived."};
+    const std::string de = build_report(in, ReportLang::De), en = build_report(in, ReportLang::En);
+    CHECK(has(de, "- Verlässlichkeit: niedrig (abgeleitet). Grund: Nur abgeleitet.\n"), "Bericht DE: Stufe, Grundlage und Grund");
+    CHECK(has(en, "- Confidence: low (derived). Reason: Only derived.\n"), "Bericht EN: Stufe, Grundlage und Grund");
+    in.findings[0].confidence = {"high", "observed", "", ""};
+    CHECK(has(build_report(in, ReportLang::De), "- Verlässlichkeit: hoch (an der Konsole beobachtet)\n") && has(build_report(in, ReportLang::En), "- Confidence: high (observed on the console)\n"),
+          "Bericht: beobachtet, hoch, ohne Grund");
+}
+
 }  // namespace
 
 void report_tests() {
@@ -294,4 +307,5 @@ void report_tests() {
     from_fixture_test();
     qr_tests();
     coverage_report_tests();
+    confidence_report_tests();
 }
