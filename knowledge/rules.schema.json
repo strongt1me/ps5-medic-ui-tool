@@ -6,6 +6,7 @@
   "properties": {
     "schema_version": { "const": 1 },
     "db_version": { "type": "string" },
+    "requires_level": { "type": "integer", "minimum": 1, "description": "Formatstufe, die die App mindestens kennen muss (kRuleFormatLevel in rules.hpp); fehlt die Angabe, gilt 1. Hoehere Stufen lehnt eine aeltere App als zu neu ab." },
     "coverage": {
       "type": "array",
       "items": {

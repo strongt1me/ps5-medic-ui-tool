@@ -113,6 +113,7 @@
   "update.rejected.no_checksum": "Die Datei rules.json.sha256 fehlt oder enthält keinen gültigen SHA-256 (64 Hex-Zeichen).",
   "update.rejected.checksum_mismatch": "Die Prüfsumme passt nicht zur Datei: Sie ist beschädigt, unvollständig oder die falsche Version. Nichts wurde geändert.",
   "update.rejected.invalid_rules": "Die Regeldatei ist ungültig oder braucht eine neuere PS5-Medic-Version.",
+  "update.rejected.needs_newer_app": "Die Datei nutzt Neuerungen, die diese PS5-Medic-Version nicht kennt, und braucht eine neuere PS5-Medic-Version. Nichts wurde geändert.",
   "update.rejected.not_newer": "Die Regeldatei ist nicht neuer als die aktuelle. Es gibt nichts zu tun.",
   "update.rejected.too_large": "Die Regeldatei ist zu groß (mehr als 2 MiB).",
   "update.rejected.unreadable": "Die Update-Datei lässt sich nicht lesen.",

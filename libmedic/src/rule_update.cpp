@@ -164,6 +164,11 @@ RuleUpdateOffer check_rule_update(const IFileSystem& fs, const std::string& curr
         o.auth = "checksum";
     }
 
+    // Formatstufe vor dem Schema: eine Datei, die Neuerungen nutzt, die diese App nicht kennt, ist nicht "ungueltig", sondern zu neu.
+    if (const json head = json::parse(text, nullptr, false); head.is_object() && head.contains("requires_level") && head["requires_level"].is_number_integer() &&
+                                                           head["requires_level"].get<long>() > kRuleFormatLevel)
+        return reject("needs_newer_app");
+
     // Schema und Version: je nach Art die Regel- oder die Fehlercode-Pruefung (eine Datei der anderen Art faellt hier durch).
     try {
         if (kind == KnowledgeKind::ErrorCodes) {

@@ -395,6 +395,11 @@ RuleSet load_rules_from_string(const std::string& text) {
     require_no_system_update_advice(j, "rules");  // nie ein Systemupdate nennen (docs/RULES.md, Textregel)
     RuleSet rs;
     rs.db_version = need_string(j, "db_version", "Datei");
+    if (j.contains("requires_level")) {
+        if (!j["requires_level"].is_number_integer() || j["requires_level"].get<long>() < 1) fail("Datei", "'requires_level' muss eine Ganzzahl >= 1 sein");
+        if (j["requires_level"].get<long>() > kRuleFormatLevel) fail("Datei", "braucht eine neuere PS5-Medic-Version (Formatstufe " + std::to_string(j["requires_level"].get<long>()) + ")");
+        rs.requires_level = static_cast<int>(j["requires_level"].get<long>());
+    }
     if (!j.contains("rules") || !j["rules"].is_array()) fail("Datei", "'rules' fehlt oder ist kein Array");
     std::set<std::string> seen;
     for (std::size_t i = 0; i < j["rules"].size(); ++i) {

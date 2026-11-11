@@ -38,7 +38,7 @@ struct RuleUpdateOffer {
     enum class State { None, Ready, Rejected };
     State state = State::None;       // None: keine Update-Datei; Ready: geprueft, installierbar; Rejected: siehe reason
     std::string reason;              // Kennung: no_rules_file | no_checksum | checksum_mismatch | sig_malformed | sig_unknown_key | sig_invalid
-                                     //          | invalid_rules | not_newer | too_large | unreadable
+                                     //          | invalid_rules | needs_newer_app (requires_level hoeher als kRuleFormatLevel) | not_newer | too_large | unreadable
     std::string detail;              // bei invalid_rules: Meldung des Regel-Pruefers
     std::string old_version;         // db_version der laufenden Regeln
     std::size_t old_rule_count = 0;  // vom Aufrufer gefuellt (der Kern kennt die laufenden Regeln nicht)

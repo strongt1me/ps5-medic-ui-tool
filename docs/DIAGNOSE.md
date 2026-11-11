@@ -33,7 +33,7 @@ Sicherheitsleiter: Dateien lesen, bekannte SDK-Sensoren lesen, Unbekanntes im Ki
 
 | Batch | Inhalt | Stand |
 |---|---|---|
-| 1 Fundament | **gebaut:** Collector-Abdeckung („nicht geprüft“, siehe `docs/RULES.md`); Fix-Pipeline mit Vorschau (Reparatur-Vorschau mit Diff, Bestätigung, Journal, Rückgängig) und **erneuter Prüfung nach der Reparatur** (die UI sagt, ob die Regel noch gemeldet wird); **Konfidenz mit Grund** (`confidence`: Stufe, Grundlage, Grund je Regel; siehe `docs/RULES.md`); offen: Befund-Datensatz mit `status` und `urgency`, Regelpaket-Governance | teilweise gebaut |
+| 1 Fundament | **gebaut:** Collector-Abdeckung („nicht geprüft“, siehe `docs/RULES.md`); Fix-Pipeline mit Vorschau (Reparatur-Vorschau mit Diff, Bestätigung, Journal, Rückgängig) und **erneuter Prüfung nach der Reparatur** (die UI sagt, ob die Regel noch gemeldet wird); **Konfidenz mit Grund** (`confidence`: Stufe, Grundlage, Grund je Regel; siehe `docs/RULES.md`); **Regelpaket-Governance** (Formatstufe `requires_level`, Rollback-Schutz bestand; Ablaufdatum bewusst nicht); offen: Befund-Datensatz mit `status` und `urgency` (hängt am Verlauf, Batch 4) | teilweise gebaut |
 | 2 Beobachtete Quellen | Startverlauf, Fehlerverlauf, Datenbanken, Fehlercodes ergänzen; offen: Inventar (Downloads, doppelte Pakete, Waisen), Verknüpfungen, Log-Größen | teilweise gebaut |
 | 3 Jailbreak-Stack | Regeln mit Maintainer-Deckung, reversible Fixes: **gebaut** `game.il2cpp_case` (+ `_latent`); „Autoload nach kstuff“ im Original nicht belegt (siehe `docs/RULES.md`); offen: Laufwerk abziehen (nur Hinweis), verwaiste Kachel, Payload-Manager-Layout | teilweise gebaut |
 | 4 Verlauf | `history.jsonl`, Baselines, Vorher/Nachher-Diff, `pending` → `confirmed` | offen |
@@ -66,7 +66,7 @@ Gesetzt sind die konservativen Empfehlungen aus dem Bericht; sie ändern am heut
 | D17 | Inhalte sensibler Dateien | nie lesen (Nachrichten, Konten, Spielstandinhalte, Trophäen); Datenbanken nur Kopf und Integrität auf einer Kopie |
 | D18 | Router-Hinweise | Router-Neustart ja, Router-Firmware nie |
 | D19 | Fehlercodes aus dem Verlauf | **4 von 6 aufgenommen** (`WV-109145-0`, `NW-102261-2`, `WV-109168-5`, `CE-100008-9`); `CE-105773-3` und `CE-118002-2` haben keine Sony-Seite (HTTP 404) und bleiben ohne Beleg offen |
-| D20 | Regelpaket-Governance (zwei Schlüssel, Rollback-Schutz) | optional nach Batch 1 |
+| D20 | Regelpaket-Governance (zwei Schlüssel, Rollback-Schutz) | Rollback-Schutz und Formatstufe **gebaut**; zweiter Schlüssel erst bei einem Schlüsselwechsel; Ablaufdatum nein |
 | D21 | Aufräumen der eigenen Altlasten (`probe.txt`, `padprobe.*`, `ui.stdout`) | nur nach `_to_delete/` verschieben, nie löschen |
 
 ## Lizenzen und Danksagungen

@@ -385,6 +385,20 @@ static void new_fact_tests() {
               "Abdeckung: fehlendes tested_when, ungueltige ID, fehlender Text, ungueltige Bedingung -> Fehler");
         CHECK(medic::load_rules_from_string("{\"schema_version\":1,\"db_version\":\"t\",\"rules\":[]}").coverage.empty(), "Abdeckung: Liste ist optional");
     }
+    {  // Formatstufe: ohne Angabe Stufe 1, hoehere Stufen lehnt der Lader ab
+        auto with = [](const std::string& level) { return "{\"schema_version\":1,\"db_version\":\"t\",\"rules\":[]" + (level.empty() ? std::string() : ",\"requires_level\":" + level) + "}"; };
+        auto throws = [&](const std::string& level) {
+            try {
+                medic::load_rules_from_string(with(level));
+                return false;
+            } catch (const std::exception&) {
+                return true;
+            }
+        };
+        CHECK(medic::load_rules_from_string(with("")).requires_level == 1 && medic::load_rules_from_string(with("1")).requires_level == 1, "Formatstufe: ohne Angabe und Stufe 1 laden");
+        CHECK(throws(std::to_string(medic::kRuleFormatLevel + 1)) && throws("0") && throws("\"x\"") && throws("1.5"), "Formatstufe: zu hoch, 0, Text und Kommazahl -> Fehler");
+        CHECK(medic::load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json").requires_level <= medic::kRuleFormatLevel, "Formatstufe: die mitgelieferte Regeldatei passt zur App");
+    }
     {  // Konfidenz mit Grund: Standard aus "verified", Abweichung nur mit Grund, Widersprueche werden abgelehnt
         auto rule_text = [](const std::string& verified, const std::string& conf) {
             return std::string(R"({"schema_version":1,"db_version":"t","rules":[{"id":"x.y","severity":"info","when":{"all":[{"fact":"a","exists":true}]},"text":{"de":"d","en":"e"},"source":"https://example.org","verified":")") +

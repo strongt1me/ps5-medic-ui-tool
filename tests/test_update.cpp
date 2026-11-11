@@ -31,6 +31,13 @@ void put_update(const Sandbox& sb, const std::string& text, const std::string& s
 
 std::string good_sum(const std::string& text) { return sha256_hex(text) + "  rules.json\n"; }
 
+std::string rules_text_with_level(long level) {
+    json j = json::parse(slurp(kShipped));
+    j["db_version"] = "2026.12.01";
+    j["requires_level"] = level;
+    return j.dump(2) + "\n";
+}
+
 }  // namespace
 
 void update_tests() {
@@ -79,6 +86,7 @@ void update_tests() {
         {"zu kurzer Hash", new_text, sha256_hex(new_text).substr(0, 63) + "\n", "no_checksum"},
         {"kein gueltiges JSON", "kein json", good_sum("kein json"), "invalid_rules"},
         {"Schema verletzt", R"({"schema_version":2,"db_version":"2027.01.01","rules":[]})", good_sum(R"({"schema_version":2,"db_version":"2027.01.01","rules":[]})"), "invalid_rules"},
+        {"Formatstufe zu hoch", rules_text_with_level(2), good_sum(rules_text_with_level(2)), "needs_newer_app"},
         {"gleiche Version", old_text, good_sum(old_text), "not_newer"},
         {"aeltere Version", rules_text_with_version("2025.01.01"), good_sum(rules_text_with_version("2025.01.01")), "not_newer"},
     };
@@ -88,6 +96,17 @@ void update_tests() {
         auto p = make_snapshot_platform(sb.dir.string());
         const auto o = check_rule_update(p->fs(), old_ver);
         CHECK(o.state == State::Rejected && o.reason == rj.reason, std::string("Update abgelehnt: ") + rj.name + " (" + o.reason + ")");
+    }
+    {  // Formatstufe: die eigene Stufe wird angenommen, eine hoehere nicht, Unsinn ist ungueltig
+        auto offer_for = [&](const std::string& text) {
+            Sandbox sb;
+            put_update(sb, text, good_sum(text));
+            auto p = make_snapshot_platform(sb.dir.string());
+            return check_rule_update(p->fs(), old_ver);
+        };
+        CHECK(offer_for(rules_text_with_level(kRuleFormatLevel)).state == State::Ready, "Update: Formatstufe der App wird angenommen");
+        CHECK(offer_for(rules_text_with_level(kRuleFormatLevel + 1)).reason == "needs_newer_app", "Update: hoehere Formatstufe -> zu neu, nicht 'ungueltig'");
+        CHECK(offer_for(rules_text_with_level(0)).reason == "invalid_rules", "Update: Formatstufe 0 ist ungueltig");
     }
     {  // Schema-Fehler nennt den Grund
         Sandbox sb;

@@ -62,8 +62,14 @@ struct CoverageItem {
     nlohmann::json tested_when;
 };
 
+// Formatstufe dieser App-Version fuer Regel- und Fehlercode-Dateien. Eine Datei mit `requires_level` hoeher als diese Zahl nutzt
+// Neuerungen (Operatoren, Felder), die diese App nicht kennt, und wird abgelehnt statt falsch ausgewertet. Neue Faehigkeiten der
+// Regelsprache erhoehen die Stufe; Dateien ohne Angabe gelten als Stufe 1.
+constexpr int kRuleFormatLevel = 1;
+
 struct RuleSet {
     std::string db_version;
+    int requires_level = 1;
     std::vector<Rule> rules;
     std::vector<CoverageItem> coverage;  // optional
 };
