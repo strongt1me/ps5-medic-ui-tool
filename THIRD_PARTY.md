@@ -28,3 +28,7 @@ uebersetzt und nur genutzt, um die Datenbanken der Systemsoftware im Arbeitsspei
 Der Aufbau dieser Pruefung (SQLite ohne Dateisystem-Teil, Datenbank per `sqlite3_deserialize` aus einer Kopie oeffnen, WAL-Modus der Kopie auf
 Rollback-Journal umstellen) folgt der Idee von **PS5 Cleanup 1.0.7** (da_Chris86, https://github.com/xXBneutzerNameXx/PS5-Cleanup,
 GPL-3.0-or-later, `db/db_sqlite.c` und `db/db_pruefen.c`). Der Code in `libmedic/src/sqlite_check.cpp` ist eigen geschrieben.
+
+## PS5 DevLoop (nur Vertrag, kein Code)
+
+Der Screenshot-Hook der UI (`ui/src/shot_hook.cpp`) folgt dem Vertrag aus der `AGENTS.md` von [PS5 DevLoop](https://github.com/griches/PS5_DevLoop) (Gary Riches, GPL-3.0-or-later): Anforderungsdatei entfernen, neues Bild in einen eigenen Ordner schreiben. Es wurde kein Code von DevLoop übernommen; Beschreibung und Vorbehalte in `docs/DEVLOOP.md`.

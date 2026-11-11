@@ -50,6 +50,7 @@ add_library(medic_ui STATIC
   ui/src/i18n.cpp
   ui/src/i18n_embedded.cpp
   ui/src/png.cpp
+  ui/src/shot_hook.cpp
   ui/src/app.cpp
   ui/src/local_service.cpp)
 target_include_directories(medic_ui PUBLIC ui/include PRIVATE ui/src)

@@ -11,6 +11,7 @@
 #include "medic/signature.hpp"
 #include "medic_ui/pad_nav.hpp"
 #include "medic_ui/png.hpp"
+#include "medic_ui/shot_hook.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -2604,6 +2605,30 @@ void history_ui_tests() {
 }
 
 // Selbsttest in der UI: Liste, Hinweis vor dem Lauf, ein Test je update(), Abbruch nach dem laufenden Test, nur Schnelltests.
+// Screenshot-Hook: ohne Anforderung passiert nichts; mit Anforderung genau ein neues PNG im eigenen Ordner, die Anforderung ist danach weg.
+void shot_hook_tests() {
+    const fs::path dir = fs::temp_directory_path() / ("medic-shot-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    fs::create_directories(dir);
+    const std::string request = (dir / "devloop-shot").string(), folder = (dir / "screenshots").string();
+    Canvas cv(64, 48);
+    cv.clear(rgb(10, 20, 30));
+    std::string path;
+    CHECK(!serve_shot_request(cv, request, folder, &path) && !fs::exists(folder), "Hook: ohne Anforderung passiert nichts (kein Ordner, kein Bild)");
+    std::ofstream(request) << "x";
+    CHECK(serve_shot_request(cv, request, folder, &path), "Hook: mit Anforderung wird ein Bild geschrieben");
+    CHECK(!fs::exists(request), "Hook: die Anforderung ist danach entfernt");
+    std::ifstream in(path, std::ios::binary);
+    char sig[8] = {};
+    in.read(sig, 8);
+    CHECK(path.find(folder) == 0 && std::string(sig + 1, 3) == "PNG" && fs::file_size(path) > 64 * 48 * 3, "Hook: gueltige PNG-Datei im eigenen Ordner");
+    CHECK(!serve_shot_request(cv, request, folder, &path), "Hook: eine Anforderung bedient genau ein Bild");
+    for (int i = 0; i < kShotMaxFiles; ++i) std::ofstream((fs::path(folder) / ("alt" + std::to_string(i) + ".png")).string()) << "x";
+    std::ofstream(request) << "x";
+    CHECK(!serve_shot_request(cv, request, folder, &path) && !fs::exists(request), "Hook: liegen schon zu viele Bilder im Ordner, wird nichts mehr geschrieben");
+    std::error_code ec;
+    fs::remove_all(dir, ec);
+}
+
 void selftest_ui_tests() {
     FakeService svc;
     Canvas cv(App::kWidth, App::kHeight);
@@ -2685,6 +2710,7 @@ void ui_tests() {
     redetect_ui_tests();
     confidence_ui_tests();
     selftest_ui_tests();
+    shot_hook_tests();
     history_ui_tests();
     edge_tests();
     end_to_end_tests();

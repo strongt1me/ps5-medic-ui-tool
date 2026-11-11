@@ -11,6 +11,7 @@
 #include "medic_ui/app.hpp"
 #include "medic_ui/pad_nav.hpp"
 #include "medic_ui/service.hpp"
+#include "medic_ui/shot_hook.hpp"
 
 #include <SDL2/SDL.h>
 
@@ -245,7 +246,7 @@ int main() {
 
     Canvas canvas(App::kWidth, App::kHeight);
     bool running = true;
-    unsigned frame = 0;
+    unsigned frame = 0, shot_calls = 0;
     int logged_buttons = 0;  // nur die ersten Tasten loggen, damit die Datei nicht waechst
     int logged_axes = 0;     // ebenso die ersten Stick-Ausschlaege (zeigt, ob der Treiber die Achsen meldet)
     int logged_screens = 0;
@@ -337,6 +338,10 @@ int main() {
             trace(std::string("Bildschirm: ") + screen_name(last_screen) + ", Befunde: " + std::to_string(app.finding_count()));
         }
         app.render(canvas);
+        if (++shot_calls % 4 == 0) {  // Entwicklung: Bild des eigenen Canvas auf Anforderung (shot_hook.hpp); sonst nur ein fehlschlagendes unlink
+            std::string shot_path;
+            if (medic::ui::serve_shot_request(canvas, medic::ui::kShotRequestPath, medic::ui::kShotFolder, &shot_path)) trace("Screenshot-Anforderung bedient: " + shot_path);
+        }
 
         SDL_Surface* frame = SDL_CreateRGBSurfaceWithFormatFrom(const_cast<void*>(static_cast<const void*>(canvas.data())),
                                                                  canvas.width(), canvas.height(), 32, canvas.width() * 4,
