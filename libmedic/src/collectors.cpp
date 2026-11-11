@@ -1335,6 +1335,37 @@ void collect_fan_controller(const Platform& p, Facts& f) {
     if (j.contains("target_temp_c") && j["target_temp_c"].is_number()) f.set("fan.controller.target_c", j["target_temp_c"].get<double>());
 }
 
+// Kernel-Log (klogsrv, Port 3232; Freigabe von Marc, D10). Das Lesen VERBRAUCHT, was sich seit dem letzten Leser angesammelt hat; ein Check-up
+// sieht also den Rueckstau seit dem letzten Lesen (nach dem Start: alles seit dem Start, soweit der Puffer reicht), spaeter nur Neues. "Nichts im
+// Kernel-Log" heisst deshalb nie "in Ordnung". Gelesen wird hoechstens 256 KiB in 1,5 s, nichts wird gesendet. Es bleiben nur Zeilen mit
+// Fehlerwoertern oder von kstuff bzw. dem Kernel (Warnung/Fehler), ohne Prioritaetsvorsatz, auf 220 Zeichen gekuerzt, ohne Doppelte, hoechstens 120;
+// Ausgaben von Payloads ("[payload.elf]", darunter Medic selbst) werden uebersprungen, sonst laese Medic seine eigene Ausgabe.
+// klog.readable (1 = Verbindung kam zustande), klog.total_lines, klog.lines[]
+void collect_klog(const Platform& p, Facts& f) {
+    std::string raw;
+    if (!p.sys().read_local_stream(3232, 256u << 10, 1500, raw)) return;
+    f.set("klog.readable", 1);
+    static const std::regex interesting(R"(error|fail|panic|fatal|crash|assert|\[kstuff\.elf\]|\[KERNEL\] (WARNING|ERROR))", std::regex::icase | std::regex::ECMAScript);
+    json lines = json::array();
+    std::set<std::string> seen;
+    long total = 0;
+    for (std::string line : split_lines(raw)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty()) continue;
+        ++total;
+        if (line.size() > 4 && line[0] == '<') {  // Prioritaetsvorsatz "<118>"
+            const auto gt = line.find('>');
+            if (gt != std::string::npos && gt <= 5) line.erase(0, gt + 1);
+        }
+        if (line.find("[payload.elf]") != std::string::npos) continue;
+        if (!std::regex_search(line, interesting)) continue;
+        if (line.size() > 220) line.resize(220);
+        if (lines.size() < 120 && seen.insert(line).second) lines.push_back(line);
+    }
+    f.set("klog.total_lines", total);
+    f.set("klog.lines", std::move(lines));
+}
+
 Facts collect_all(const Platform& p) {
     Facts f;
     collect_firmware(p, f);
@@ -1356,6 +1387,7 @@ Facts collect_all(const Platform& p) {
     collect_baseline(p, f);
     collect_selftest(p, f);
     collect_fan_controller(p, f);
+    collect_klog(p, f);
     return f;
 }
 

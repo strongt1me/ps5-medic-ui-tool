@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.32",
+  "db_version": "2026.11.33",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -210,6 +210,21 @@
           {
             "fact": "db.integrity_tested",
             "gt": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "klog",
+      "text": {
+        "de": "Kernel-Log (Rückstau seit dem letzten Lesen)",
+        "en": "Kernel log (backlog since the last read)"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "klog.readable",
+            "exists": true
           }
         ]
       }
@@ -2205,6 +2220,38 @@
       "fix": null,
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
+    },
+    {
+      "id": "kstuff.shellui_patch_failed",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "klog.lines",
+            "count_matches": {
+              "regex": "\\[kstuff\\.elf\\].*(patch_shellui.*failed|Failed to get libSceNpTrophy)",
+              "gte": 1
+            }
+          }
+        ]
+      },
+      "text": {
+        "de": "kstuff meldet im Kernel-Log, dass es den Trophäen-Hook in der Oberfläche (SceShellUI) nicht setzen konnte („patch_shellui failed“, Evidenz). Nutzer berichten in diesem Fall, dass Trophäen nicht aufpoppen und nicht in der Liste erscheinen; beim Start gelingt der Hook zunächst, und nach dem Wechsel zwischen Apps versucht kstuff ihn erneut und scheitert teils mehrfach. Ein Maintainer hat dazu nichts geantwortet, die Ursache ist offen. Ohne Trophäen funktionieren Spiele weiter. Hilft ein Neustart der Konsole mit neu gesetztem Jailbreak, kann der Hook beim nächsten Start gelingen.",
+        "en": "kstuff reports in the kernel log that it could not set the trophy hook in the shell UI (SceShellUI) (“patch_shellui failed”, evidence). In that case users report that trophies do not pop up and do not show in the list; at boot the hook first succeeds, and after switching between apps kstuff retries and sometimes fails several times. No maintainer has answered, the cause is open. Without trophies games keep working. A console restart with the jailbreak set again may let the hook succeed at the next start."
+      },
+      "evidence": "klog.lines",
+      "evidence_filter": "\\[kstuff\\.elf\\]",
+      "fix": null,
+      "source": "https://github.com/EchoStretch/kstuff-lite/issues/95",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Die Zeile steht im Kernel-Log (gelesen). Dass dadurch Trophäen fehlen, stammt aus Berichten zu Version 1.11 auf FW 13.x (Issues 95 und 106, der Autor von 95 ist bei der Ursache unsicher); an dieser Konsole (FW 12.00, kstuff-lite 1.10) ist es nicht nachgeprüft.",
+          "en": "The line is in the kernel log (read). That trophies go missing because of it comes from reports about version 1.11 on FW 13.x (issues 95 and 106, the author of 95 is unsure about the cause); not verified on this console (FW 12.00, kstuff-lite 1.10)."
+        }
+      }
     }
   ]
 }

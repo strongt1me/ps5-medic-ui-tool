@@ -48,6 +48,15 @@ private:
 class SnapshotSys final : public ISystemInfo {
 public:
     explicit SnapshotSys(const fs::path& root) {
+        {  // klog.txt: der simulierte Kernel-Log (Port 3232); fehlt die Datei, ist der Port nicht erreichbar
+            std::ifstream in(root / "klog.txt", std::ios::binary);
+            if (in) {
+                std::ostringstream ss;
+                ss << in.rdbuf();
+                klog_ = ss.str();
+                have_klog_ = true;
+            }
+        }
         auto j = load_json_or_null(root / "system.json");
         if (!j.is_object()) return;
         fw_ = j.value("fw", std::string());
@@ -91,6 +100,13 @@ public:
     std::map<std::string, std::map<std::string, std::string>> components() const override { return components_; }
     std::int64_t boot_epoch() const override { return boot_; }
     Thermal thermal() const override { return thermal_; }
+    bool read_local_stream(int port, std::size_t max_bytes, int timeout_ms, std::string& out) const override {
+        (void)timeout_ms;
+        out.clear();
+        if (port != 3232 || !have_klog_) return false;
+        out = klog_.substr(0, max_bytes);
+        return true;
+    }
     PortState local_port_state(int port) const override {
         auto it = ports_.find(port);
         return it == ports_.end() ? PortState::Unknown : it->second;
@@ -98,6 +114,8 @@ public:
 
 private:
     std::int64_t boot_ = 0;
+    std::string klog_;
+    bool have_klog_ = false;
     Thermal thermal_;
     std::map<int, PortState> ports_;
     std::string fw_, model_;

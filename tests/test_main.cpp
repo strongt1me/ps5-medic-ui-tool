@@ -354,7 +354,7 @@ static void new_fact_tests() {
     }
     {  // Abdeckung: "nicht geprueft" statt "in Ordnung" (Bereiche stehen in knowledge/rules.json)
         const auto rules = medic::load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
-        CHECK(rules.coverage.size() == 11 && rules.coverage[0].id == "processes", "Abdeckung: 11 Bereiche aus der Regeldatei");
+        CHECK(rules.coverage.size() == 12 && rules.coverage[0].id == "processes" && rules.coverage.back().id == "klog", "Abdeckung: 12 Bereiche aus der Regeldatei (zuletzt der Kernel-Log)");
         auto cov = [&](const char* fixture) {
             std::map<std::string, bool> m;
             for (const auto& c : medic::evaluate_coverage(rules, facts_of(fixture))) m[c.id] = c.tested;
@@ -413,6 +413,29 @@ static void new_fact_tests() {
         const auto fnd = medic::evaluate(rules, facts_of("sys_pos_temp"));
         const auto it = std::find_if(fnd.begin(), fnd.end(), [](const medic::Finding& f) { return f.rule_id == "sys.temp_high"; });
         CHECK(it != fnd.end() && it->confirm_runs == 2 && medic::is_pending(*it), "confirm_runs: sys.temp_high ist eine Momentaufnahme und zunaechst vorlaeufig");
+    }
+    {  // Kernel-Log (klog): gefilterte Zeilen, ohne eigene Ausgabe und Doppelte; ohne Port keine Fakten und "nicht geprueft"
+        const auto rules = medic::load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+        const auto f = facts_of("k1_pos_kstuff");
+        const json* lines = f.get("klog.lines");
+        CHECK(f.get("klog.readable") && lines && lines->is_array() && f.get("klog.total_lines")->get<long>() == 6, "klog: lesbar, sechs Zeilen gezaehlt");
+        bool own = false, prefix = false, noise = false, kept = false;
+        for (const auto& l : *lines) {
+            const std::string t = l.get<std::string>();
+            own = own || t.find("[payload.elf]") != std::string::npos;
+            prefix = prefix || t.rfind("<118>", 0) == 0;
+            noise = noise || t.find("GetExecutable") != std::string::npos;
+            kept = kept || t.find("patch_shellui failed") != std::string::npos;
+        }
+        CHECK(!own && !prefix && !noise && kept, "klog: Prioritaetsvorsatz entfernt, eigene Ausgabe und Unauffaelliges nicht uebernommen, Fehlerzeile behalten");
+        const auto none = facts_of("a3_neg");
+        CHECK(!none.get("klog.readable") && !none.get("klog.lines"), "klog: ohne erreichbaren Port keine Fakten");
+        auto cov = [&](const medic::Facts& x) {
+            for (const auto& c : medic::evaluate_coverage(rules, x))
+                if (c.id == "klog") return c.tested;
+            return false;
+        };
+        CHECK(cov(f) && !cov(none), "klog: Abdeckung 'Kernel-Log' nur bei lesbarem Port (sonst nicht geprueft)");
     }
     {  // Formatstufe: ohne Angabe Stufe 1, hoehere Stufen lehnt der Lader ab
         auto with = [](const std::string& level) { return "{\"schema_version\":1,\"db_version\":\"t\",\"rules\":[]" + (level.empty() ? std::string() : ",\"requires_level\":" + level) + "}"; };

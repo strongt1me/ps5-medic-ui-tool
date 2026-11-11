@@ -20,6 +20,7 @@
 #include <unistd.h>
 
 #include <cerrno>
+#include <chrono>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -156,6 +157,45 @@ public:
         }
         close(s);
         return state;
+    }
+
+    bool read_local_stream(int port, std::size_t max_bytes, int timeout_ms, std::string& out) const override {
+        out.clear();
+        const int s = socket(AF_INET, SOCK_STREAM, 0);
+        if (s < 0) return false;
+        fcntl(s, F_SETFL, fcntl(s, F_GETFL, 0) | O_NONBLOCK);
+        struct sockaddr_in sa;
+        std::memset(&sa, 0, sizeof sa);
+        sa.sin_len = sizeof sa;
+        sa.sin_family = AF_INET;
+        sa.sin_port = htons(static_cast<uint16_t>(port));
+        sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        bool connected = connect(s, reinterpret_cast<const struct sockaddr*>(&sa), sizeof sa) == 0;
+        if (!connected && errno == EINPROGRESS) {
+            struct pollfd pfd = {s, POLLOUT, 0};
+            int err = 1;
+            socklen_t elen = sizeof err;
+            if (poll(&pfd, 1, 500) == 1 && getsockopt(s, SOL_SOCKET, SO_ERROR, &err, &elen) == 0 && err == 0) connected = true;
+        }
+        if (!connected) {
+            close(s);
+            return false;
+        }
+        // Lesen, solange Daten kommen: nach einer Pause von 300 ms ohne Daten ist der Rueckstau abgearbeitet; insgesamt hoechstens timeout_ms.
+        const auto start = std::chrono::steady_clock::now();
+        char buf[8192];
+        while (out.size() < max_bytes) {
+            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+            if (elapsed >= timeout_ms) break;
+            struct pollfd pfd = {s, POLLIN, 0};
+            const int pr = poll(&pfd, 1, static_cast<int>(std::min<long long>(300, timeout_ms - elapsed)));
+            if (pr <= 0) break;
+            const ssize_t n = recv(s, buf, std::min(sizeof buf, max_bytes - out.size()), 0);
+            if (n <= 0) break;
+            out.append(buf, static_cast<std::size_t>(n));
+        }
+        close(s);
+        return true;
     }
 };
 

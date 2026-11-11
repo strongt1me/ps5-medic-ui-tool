@@ -1,0 +1,5 @@
+<118>[SceShellCore] LNC_ISOK::0x80940004 getAppStatus
+<118>[ResArbitrator][App      ]GetExecutable [187e8](151)  : Target id[1] Confirm[forced OK]
+<118>[payload.elf] Fakt errors.total: 100
+<118>[SceLncUtil] getAppStatus: Failed to query
+<118>[kstuff.elf] patch_shellui: Successfully patched SceShellUI trophy IsServerAvailable

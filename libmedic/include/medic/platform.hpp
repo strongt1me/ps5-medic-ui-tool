@@ -111,6 +111,16 @@ public:
         (void)port;
         return PortState::Unknown;
     }
+    // Liest hoechstens `max_bytes` Rohdaten von einem lokalen TCP-Port (127.0.0.1), solange Daten kommen, hoechstens `timeout_ms`. Nur lesend:
+    // es wird nichts gesendet. true, wenn die Verbindung zustande kam (auch ohne Daten). Gedacht fuer den Kernel-Log-Server (klogsrv, Port 3232):
+    // Das Lesen VERBRAUCHT, was sich seit dem letzten Leser angesammelt hat (der Kernel-Log gibt jede Zeile nur einmal heraus).
+    virtual bool read_local_stream(int port, std::size_t max_bytes, int timeout_ms, std::string& out) const {
+        (void)port;
+        (void)max_bytes;
+        (void)timeout_ms;
+        out.clear();
+        return false;
+    }
 };
 
 // Buendelt die drei Interfaces.

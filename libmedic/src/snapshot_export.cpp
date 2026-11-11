@@ -314,6 +314,11 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
         if (i.start_epoch > 0) procs.push_back({{"name", i.name}, {"start", i.start_epoch}});
         else procs.push_back(i.name);
     }
+    if (const auto* l = facts.get("klog.lines"); l && l->is_array()) {  // der gefilterte Kernel-Log (nur die Zeilen der Fakten), damit der Kern am PC gegen Fixtures prueft
+        std::ofstream k(dest / "klog.txt", std::ios::binary);
+        for (const auto& line : *l)
+            if (line.is_string()) k << line.get<std::string>() << "\n";
+    }
     {
         std::ofstream a(dest / "system.json", std::ios::binary), b(dest / "procs.json", std::ios::binary);
         a << sys.dump(2) << "\n";

@@ -1,0 +1,1 @@
+<118>[payload.elf] [kstuff.elf] Failed to get libSceNpTrophy handle, patch_shellui failed
