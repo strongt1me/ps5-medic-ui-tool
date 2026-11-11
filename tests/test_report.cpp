@@ -267,6 +267,23 @@ void qr_tests() {
     CHECK(!text.empty() && std::count(text.begin(), text.end(), '\n') == (qr.size + 4 + 1) / 2, "QR: Textdarstellung hat die erwartete Zeilenzahl");
 }
 
+void coverage_report_tests() {
+    ReportInput in = sample_input();
+    CHECK(!has(build_report(in, ReportLang::De), "Nicht geprüft"), "Bericht: ohne Abdeckungsliste kein Abschnitt");
+    in.coverage = {{"boot_log", "Startverlauf", "Boot history", true},
+                   {"error_history", "Fehlerverlauf", "Error history", false},
+                   {"databases_content", "Datenbanken (Inhalt)", "Databases (content)", false}};
+    const std::string de = build_report(in, ReportLang::De), en = build_report(in, ReportLang::En);
+    CHECK(has(de, "## Nicht geprüft (2)") && has(de, "- Fehlerverlauf\n") && has(de, "- Datenbanken (Inhalt)\n") && !has(de, "- Startverlauf"),
+          "Bericht DE: nicht gepruefte Bereiche aufgelistet, gepruefte nicht");
+    CHECK(has(de, "„Keine Befunde“ heißt dort nicht „in Ordnung“, sondern „nicht geprüft“"), "Bericht DE: Keine Befunde heisst dort nicht in Ordnung");
+    CHECK(has(en, "## Not checked (2)") && has(en, "- Error history\n") && has(en, "“No findings” there does not mean “fine”"), "Bericht EN");
+    ReportInput all = in;
+    for (auto& c : all.coverage) c.tested = true;
+    CHECK(!has(build_report(all, ReportLang::De), "Nicht geprüft") && !has(build_report_compact(all, ReportLang::De, 640), "nicht geprüft"), "Bericht: alles gedeckt -> kein Abschnitt");
+    CHECK(has(build_report_compact(in, ReportLang::De, 640), "2 Bereich(e) nicht geprüft") && has(build_report_compact(in, ReportLang::En, 640), "2 area(s) not checked"), "Kurzfassung nennt die Zahl");
+}
+
 }  // namespace
 
 void report_tests() {
@@ -276,4 +293,5 @@ void report_tests() {
     unknown_lines_tests();
     from_fixture_test();
     qr_tests();
+    coverage_report_tests();
 }

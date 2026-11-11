@@ -23,6 +23,7 @@ namespace medic::ui {
 struct CheckResult {
     std::string fw, model, rules_version;
     std::vector<medic::Finding> findings;
+    std::vector<medic::CoverageResult> coverage;  // Pruefbereiche; nicht gepruefte sind "nicht geprueft", nie "in Ordnung"
 };
 
 struct ReportResult {

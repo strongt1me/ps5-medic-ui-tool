@@ -351,6 +351,40 @@ static void new_fact_tests() {
         CHECK(good.get("games.case_mismatch") && good.get("games.case_mismatch")->empty(), "Spielordner: richtiger Name -> nichts");
         CHECK(facts_of("a3_neg").get("games.case_mismatch") && facts_of("a3_neg").get("games.case_mismatch")->empty(), "Spielordner: ohne Spiele eine leere Liste");
     }
+    {  // Abdeckung: "nicht geprueft" statt "in Ordnung" (Bereiche stehen in knowledge/rules.json)
+        const auto rules = medic::load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+        CHECK(rules.coverage.size() == 11 && rules.coverage[0].id == "processes", "Abdeckung: 11 Bereiche aus der Regeldatei");
+        auto cov = [&](const char* fixture) {
+            std::map<std::string, bool> m;
+            for (const auto& c : medic::evaluate_coverage(rules, facts_of(fixture))) m[c.id] = c.tested;
+            return m;
+        };
+        const auto boot = cov("e2_pos");
+        CHECK(boot.at("boot_log") && !boot.at("error_history") && !boot.at("databases_header") && !boot.at("databases_content"), "Abdeckung: nur der Startverlauf gelesen");
+        const auto errs = cov("e1_pos");
+        CHECK(errs.at("error_history") && !errs.at("boot_log"), "Abdeckung: Fehlerverlauf gelesen, Startverlauf nicht");
+        const auto db = cov("db2_neg_ok");
+        CHECK(db.at("databases_header") && db.at("databases_content"), "Abdeckung: Datenbanken gelesen und im Inhalt geprueft");
+        const auto trunc = cov("db1_pos_truncated");
+        CHECK(trunc.at("databases_header") && !trunc.at("databases_content"), "Abdeckung: abgeschnittene Datenbank -> Inhalt nicht geprueft");
+        const auto acc = cov("d2_pos");
+        CHECK(acc.at("savedata_account") && !cov("a3_neg").at("savedata_account"), "Abdeckung: Konto der Spielstaende nur mit Spielstand-Speicher bekannt");
+        auto throws = [](const std::string& coverage) {
+            try {
+                medic::load_rules_from_string("{\"schema_version\":1,\"db_version\":\"t\",\"rules\":[],\"coverage\":" + coverage + "}");
+                return false;
+            } catch (const std::exception&) {
+                return true;
+            }
+        };
+        const std::string ok_item = R"({"id":"a","text":{"de":"A","en":"A"},"tested_when":{"all":[{"fact":"x","exists":true}]}})";
+        CHECK(!throws("[]") && !throws("[" + ok_item + "]"), "Abdeckung: gueltige Listen werden geladen");
+        CHECK(throws("{}") && throws("[1]") && throws("[" + ok_item + "," + ok_item + "]"), "Abdeckung: kein Array, kein Objekt, doppelte ID -> Fehler");
+        CHECK(throws(R"([{"id":"a","text":{"de":"A","en":"A"}}])") && throws(R"([{"id":"A B","text":{"de":"A","en":"A"},"tested_when":{"all":[{"fact":"x","exists":true}]}}])") &&
+                  throws(R"([{"id":"a","text":{"de":"A"},"tested_when":{"all":[{"fact":"x","exists":true}]}}])") && throws(R"([{"id":"a","text":{"de":"A","en":"A"},"tested_when":{"bogus":1}}])"),
+              "Abdeckung: fehlendes tested_when, ungueltige ID, fehlender Text, ungueltige Bedingung -> Fehler");
+        CHECK(medic::load_rules_from_string("{\"schema_version\":1,\"db_version\":\"t\",\"rules\":[]}").coverage.empty(), "Abdeckung: Liste ist optional");
+    }
     {  // C3: freier Platz in Prozent
         auto c3 = facts_of("c3_pos");
         const json* m = c3.get("storage.mounts");

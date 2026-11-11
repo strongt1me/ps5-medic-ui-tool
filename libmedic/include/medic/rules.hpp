@@ -37,9 +37,24 @@ struct Finding {
     std::string verified;
 };
 
+// Ein Pruefbereich der App. `tested_when` ist eine Bedingung wie bei den Regeln (gegen die Fakten): trifft sie zu, lagen fuer den Bereich
+// lesbare Daten vor und er wurde geprueft; sonst gilt er als nicht geprueft. "Keine Befunde" heisst fuer einen nicht gepruefte Bereich
+// nie "in Ordnung" (docs/DIAGNOSE.md, Leitregel 2).
+struct CoverageItem {
+    std::string id;
+    std::string text_de, text_en;  // Name des Bereichs
+    nlohmann::json tested_when;
+};
+
 struct RuleSet {
     std::string db_version;
     std::vector<Rule> rules;
+    std::vector<CoverageItem> coverage;  // optional
+};
+
+struct CoverageResult {
+    std::string id, text_de, text_en;
+    bool tested = false;
 };
 
 // Wirft std::runtime_error mit verstaendlicher Meldung, wenn JSON oder Schema ungueltig sind.
@@ -48,6 +63,9 @@ RuleSet load_rules_from_file(const std::string& path);
 
 // Ergebnis nach Schweregrad (kritisch zuerst), dann nach Regel-ID sortiert.
 std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts);
+
+// Welche Pruefbereiche waren gedeckt, in der Reihenfolge der Regeldatei. Ohne Abdeckungsliste in der Regeldatei: leer.
+std::vector<CoverageResult> evaluate_coverage(const RuleSet& rs, const Facts& facts);
 
 // Hilfen (auch fuer Tests)
 int compare_versions(const std::string& a, const std::string& b);  // <0, 0, >0

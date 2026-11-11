@@ -37,6 +37,7 @@ CheckResult LocalService::run_check() {
     r.model = p_.sys().model();
     r.rules_version = rules_.db_version;
     r.findings = medic::evaluate(rules_, facts_);
+    r.coverage = medic::evaluate_coverage(rules_, facts_);
     last_findings_ = r.findings;
     return r;
 }

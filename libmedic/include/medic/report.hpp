@@ -30,6 +30,7 @@ struct ReportInput {
     std::string rules_version;
     std::size_t rule_count = 0;
     std::vector<Finding> findings;
+    std::vector<CoverageResult> coverage;  // Pruefbereiche (nicht gepruefte stehen im Bericht)
     Facts facts;                 // Umgebung: Firmware, Modell, Versionen, Prozesse, Speicher
     std::vector<TxnInfo> history;
     std::vector<UnknownLine> unknown_lines;  // fehlerartige Logzeilen ohne passenden Befund

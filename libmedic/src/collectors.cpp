@@ -1201,6 +1201,10 @@ void collect_databases(const Platform& p, Facts& f) {
             files.push_back(std::move(d));
         }
     }
+    int integrity_tested = 0;
+    for (const auto& d : files)
+        if (d["integrity"] != -1) ++integrity_tested;
+    f.set("db.integrity_tested", integrity_tested);
     f.set("db.count", static_cast<int>(files.size()));
     f.set("db.files", std::move(files));
 }

@@ -1,6 +1,19 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.23",
+  "db_version": "2026.11.24",
+  "coverage": [
+    { "id": "processes", "text": { "de": "Laufende Prozesse", "en": "Running processes" }, "tested_when": { "all": [ { "fact": "proc.running", "exists": true } ] } },
+    { "id": "storage", "text": { "de": "Speicherplatz der Laufwerke", "en": "Drive free space" }, "tested_when": { "all": [ { "fact": "storage.mounts", "exists": true } ] } },
+    { "id": "jailbreak_timing", "text": { "de": "Startzeit der Jailbreak-Kette", "en": "Start time of the jailbreak chain" }, "tested_when": { "all": [ { "fact": "jb.seconds_after_boot", "exists": true } ] } },
+    { "id": "temperatures", "text": { "de": "Temperaturen", "en": "Temperatures" }, "tested_when": { "all": [ { "fact": "sys.temp.cpu_c", "exists": true } ] } },
+    { "id": "shadowmount", "text": { "de": "ShadowMount+ (Einstellungen und Log)", "en": "ShadowMount+ (settings and log)" }, "tested_when": { "all": [ { "fact": "smp.version", "exists": true } ] } },
+    { "id": "game_firmware", "text": { "de": "Firmware-Anforderung der Spiele", "en": "Firmware requirement of games" }, "tested_when": { "all": [ { "fact": "games.fw", "exists": true } ] } },
+    { "id": "boot_log", "text": { "de": "Startverlauf", "en": "Boot history" }, "tested_when": { "all": [ { "fact": "boot.log_last", "exists": true } ] } },
+    { "id": "error_history", "text": { "de": "Fehlerverlauf", "en": "Error history" }, "tested_when": { "all": [ { "fact": "errors.total", "gt": "0" } ] } },
+    { "id": "savedata_account", "text": { "de": "Konto der Spielstände", "en": "Account of save data" }, "tested_when": { "all": [ { "fact": "savedata.current_account", "exists": true } ] } },
+    { "id": "databases_header", "text": { "de": "Datenbanken (Kopf und Größe)", "en": "Databases (header and size)" }, "tested_when": { "all": [ { "fact": "db.count", "gt": "0" } ] } },
+    { "id": "databases_content", "text": { "de": "Datenbanken (Inhalt)", "en": "Databases (content)" }, "tested_when": { "all": [ { "fact": "db.integrity_tested", "gt": "0" } ] } }
+  ],
   "rules": [
     {
       "id": "hen.etahen_with_kstufflite_latest_fw",

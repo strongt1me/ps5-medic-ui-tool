@@ -21,6 +21,7 @@ Ziel: PS5 Medic wird zum vollständigen System- und Spiele-Doktor, der Hardware-
 | Datenbanken, Stufe 1 | `collect_databases` (Kopf, Größe, Journal) | `db.header_invalid`, `db.truncated`, `db.journal_pending` | sqlite.org/fileformat2.html |
 | Datenbanken, Stufe 2 | `sqlite_check.cpp` (`integrity_check` auf einer Kopie im Speicher, WAL eingerechnet) | `db.integrity_failed` | Idee nach PS5 Cleanup (GPL-3.0-or-later), eigener Code |
 | Fehlercodes | Katalog `error_codes.json` (40 Codes) | – | Sony-Seiten, update-freier Wortlaut |
+| Abdeckung | `evaluate_coverage` (Liste `coverage` in `rules.json`, 11 Bereiche) | – (Bericht, UI, CLI) | Leitregel „nicht geprüft ≠ gesund“ |
 | Spielordner | `collect_game_files` (Dateiname nur in der Groß-/Kleinschreibung falsch) | `game.il2cpp_case` (mit Fix `rename_case_prx`), `game.il2cpp_case_latent` | ShadowMount+ #159, #173 (Originale gelesen) |
 
 Details und Befunde: `docs/RULES.md` (Nachträge vom 10. und 11. Nov.). Auf der Test-Konsole sind alle neuen Quellen aus dem Payload ohne Rechteanhebung lesbar (geprüft).
@@ -31,7 +32,7 @@ Sicherheitsleiter: Dateien lesen, bekannte SDK-Sensoren lesen, Unbekanntes im Ki
 
 | Batch | Inhalt | Stand |
 |---|---|---|
-| 1 Fundament | Befund-Datensatz mit `status`, `urgency`, `confidence` mit Grund und getrennter Evidenz; Collector-Abdeckung (`not_tested`); Fix-Pipeline mit Dry-Run; Regelpaket-Governance | offen |
+| 1 Fundament | Collector-Abdeckung („nicht geprüft“, **gebaut**, siehe `docs/RULES.md`); offen: Befund-Datensatz mit `status`, `urgency`, `confidence` mit Grund und getrennter Evidenz, Fix-Pipeline mit Dry-Run, Regelpaket-Governance | teilweise gebaut |
 | 2 Beobachtete Quellen | Startverlauf, Fehlerverlauf, Datenbanken, Fehlercodes ergänzen; offen: Inventar (Downloads, doppelte Pakete, Waisen), Verknüpfungen, Log-Größen | teilweise gebaut |
 | 3 Jailbreak-Stack | Regeln mit Maintainer-Deckung, reversible Fixes: **gebaut** `game.il2cpp_case` (+ `_latent`); „Autoload nach kstuff“ im Original nicht belegt (siehe `docs/RULES.md`); offen: Laufwerk abziehen (nur Hinweis), verwaiste Kachel, Payload-Manager-Layout | teilweise gebaut |
 | 4 Verlauf | `history.jsonl`, Baselines, Vorher/Nachher-Diff, `pending` → `confirmed` | offen |

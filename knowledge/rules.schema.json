@@ -6,6 +6,18 @@
   "properties": {
     "schema_version": { "const": 1 },
     "db_version": { "type": "string" },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "tested_when"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_.]+$" },
+          "text": { "type": "object", "required": ["de", "en"], "properties": { "de": { "type": "string" }, "en": { "type": "string" } } },
+          "tested_when": { "$ref": "#/$defs/condition" }
+        }
+      }
+    },
     "rules": {
       "type": "array",
       "items": {

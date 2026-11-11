@@ -81,6 +81,10 @@ int main() {
 
     if (have_rules) {
         auto findings = medic::evaluate(rules, facts);
+        std::string untested;
+        for (const auto& c : medic::evaluate_coverage(rules, facts))
+            if (!c.tested) untested += (untested.empty() ? "" : ", ") + c.text_de;
+        if (!untested.empty()) out("Nicht geprueft: " + untested);
         if (findings.empty()) out("Keine Befunde.");
         for (const auto& f : findings) {
             out(std::string("[") + label(f.severity) + "] " + f.rule_id);

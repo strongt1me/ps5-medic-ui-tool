@@ -382,6 +382,7 @@ ReportInput make_report_input(const Platform& p, const Facts& facts, const RuleS
     in.rules_version = rules.db_version;
     in.rule_count = rules.rules.size();
     in.findings = std::move(findings);
+    in.coverage = evaluate_coverage(rules, facts);
     in.facts = facts;
     in.history = history(p);
     in.unknown_lines = unknown_error_lines(facts, in.findings);
@@ -442,6 +443,19 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
         o << "- " << (de ? "Quelle: " : "Source: ") << x.source << " (" << verified_text(x.verified, de) << ")\n\n";
     }
 
+    {
+        std::vector<const CoverageResult*> untested;
+        for (const auto& c : in.coverage)
+            if (!c.tested) untested.push_back(&c);
+        if (!untested.empty()) {
+            o << (de ? "## Nicht geprüft (" : "## Not checked (") << untested.size() << ")\n\n";
+            o << (de ? "Für diese Bereiche lagen keine lesbaren Daten vor. „Keine Befunde“ heißt dort nicht „in Ordnung“, sondern „nicht geprüft“.\n\n"
+                     : "No readable data was available for these areas. “No findings” there does not mean “fine”, it means “not checked”.\n\n");
+            for (const auto* c : untested) o << "- " << (de ? c->text_de : c->text_en) << "\n";
+            o << "\n";
+        }
+    }
+
     if (!in.unknown_lines.empty()) {
         o << (de ? "## Unbekannte Fehlerzeilen (" : "## Unknown error lines (") << in.unknown_lines.size() << ")\n\n";
         o << (de ? "Diese Zeilen im ShadowMount+-Log sehen nach Fehlern aus, passen aber zu keiner Regel. Wenn etwas nicht funktioniert, "
@@ -484,6 +498,11 @@ std::string build_report_compact(const ReportInput& in, ReportLang lang, std::si
     head += line(in.findings.empty() ? (de ? "Keine Befunde" : "No findings")
                                      : std::to_string(in.findings.size()) + (de ? " Befund(e):" : " finding(s):"));
 
+    {
+        std::size_t untested = 0;
+        for (const auto& c : in.coverage) untested += c.tested ? 0 : 1;
+        if (untested) head += line(std::to_string(untested) + (de ? " Bereich(e) nicht geprüft" : " area(s) not checked"));
+    }
     if (!in.unknown_lines.empty())
         head += line(std::to_string(in.unknown_lines.size()) + (de ? " unbekannte Fehlerzeile(n) im Bericht" : " unknown error line(s) in the report"));
 

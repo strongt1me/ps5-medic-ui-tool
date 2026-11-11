@@ -344,6 +344,27 @@ RuleSet load_rules_from_string(const std::string& text) {
         if (!seen.insert(r.id).second) fail("rule '" + r.id + "'", "doppelte ID");
         rs.rules.push_back(std::move(r));
     }
+    if (j.contains("coverage")) {
+        if (!j["coverage"].is_array()) fail("Datei", "'coverage' muss ein Array sein");
+        std::set<std::string> cov_seen;
+        for (std::size_t i = 0; i < j["coverage"].size(); ++i) {
+            const json& c = j["coverage"][i];
+            std::string where = "coverage[" + std::to_string(i) + "]";
+            if (!c.is_object()) fail(where, "Eintrag muss ein Objekt sein");
+            CoverageItem item;
+            item.id = need_string(c, "id", where);
+            where = "coverage '" + item.id + "'";
+            if (!std::regex_match(item.id, std::regex("^[a-z0-9_.]+$"))) fail(where, "ungueltige ID (erlaubt: a-z 0-9 _ .)");
+            if (!cov_seen.insert(item.id).second) fail(where, "doppelte ID");
+            if (!c.contains("text") || !c["text"].is_object()) fail(where, "'text' fehlt oder ist kein Objekt");
+            item.text_de = need_string(c["text"], "de", where + ".text");
+            item.text_en = need_string(c["text"], "en", where + ".text");
+            if (!c.contains("tested_when")) fail(where, "'tested_when' fehlt");
+            validate_condition(c["tested_when"], where + ".tested_when");
+            item.tested_when = c["tested_when"];
+            rs.coverage.push_back(std::move(item));
+        }
+    }
     return rs;
 }
 
@@ -415,6 +436,12 @@ std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts) {
         if (a.severity != b.severity) return a.severity < b.severity;  // Critical < Warning < Info
         return a.rule_id < b.rule_id;
     });
+    return out;
+}
+
+std::vector<CoverageResult> evaluate_coverage(const RuleSet& rs, const Facts& facts) {
+    std::vector<CoverageResult> out;
+    for (const CoverageItem& c : rs.coverage) out.push_back({c.id, c.text_de, c.text_en, eval(c.tested_when, facts, Binding{})});
     return out;
 }
 

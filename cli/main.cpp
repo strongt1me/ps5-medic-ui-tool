@@ -99,12 +99,16 @@ int cmd_check(const Args& a) {
     auto platform = medic::make_snapshot_platform(a.dir);
     medic::Facts facts = medic::collect_all(*platform);
     auto findings = medic::evaluate(rules, facts);
+    const auto coverage = medic::evaluate_coverage(rules, facts);
 
     if (a.json) {
         nlohmann::json out = nlohmann::json::object();
         out["snapshot"] = a.dir;
         out["rules_version"] = rules.db_version;
         out["findings"] = nlohmann::json::array();
+        out["not_tested"] = nlohmann::json::array();
+        for (auto& c : coverage)
+            if (!c.tested) out["not_tested"].push_back(c.id);
         for (auto& f : findings)
             out["findings"].push_back({{"id", f.rule_id},
                                        {"severity", medic::to_string(f.severity)},
@@ -121,8 +125,12 @@ int cmd_check(const Args& a) {
     const auto* fw = facts.get("fw.version");
     std::cout << "Firmware: " << (fw && fw->is_string() && !fw->get<std::string>().empty() ? fw->get<std::string>() : "unbekannt")
               << " | Regeln: " << rules.db_version << " (" << rules.rules.size() << ")\n\n";
+    std::string untested;
+    for (auto& c : coverage)
+        if (!c.tested) untested += (untested.empty() ? "" : ", ") + (a.lang == "de" ? c.text_de : c.text_en);
     if (findings.empty()) {
         std::cout << "Keine Befunde.\n";
+        if (!untested.empty()) std::cout << "Nicht geprueft (heisst nicht \"in Ordnung\"): " << untested << "\n";
         return 0;
     }
     for (auto& f : findings) {
@@ -132,6 +140,7 @@ int cmd_check(const Args& a) {
         std::cout << "  Quelle:  " << f.source << " (" << f.verified << ")\n\n";
     }
     std::cout << findings.size() << " Befund(e).\n";
+    if (!untested.empty()) std::cout << "Nicht geprueft: " << untested << "\n";
     return 0;
 }
 

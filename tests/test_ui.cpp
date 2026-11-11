@@ -2397,6 +2397,43 @@ void i18n_glyph_tests() {
     CHECK(missing.empty(), "i18n: alle Zeichen der Texte gibt es in der Schrift (fehlen: " + missing + ")");
 }
 
+// Ohne Befunde heisst "keine Befunde" nur dann "in Ordnung", wenn alle Pruefbereiche gelesen wurden (gruener Titel); sonst neutral und mit der Liste.
+void coverage_ui_tests() {
+    const Color ok_green = rgb(76, 208, 138);  // kOk in app.cpp
+    auto has_color = [](const Canvas& c, Color col) {
+        for (int y = 0; y < c.height(); y += 2)
+            for (int x = 0; x < c.width(); x += 2)
+                if (c.at(x, y) == col) return true;
+        return false;
+    };
+    auto screen_after_check = [&](bool all_tested, Canvas& cv, Canvas& start_cv) {
+        FakeService svc;
+        svc.result.fw = "12.00";
+        svc.result.model = "CFI-7021";
+        svc.result.rules_version = "t";
+        svc.result.coverage = {{"boot_log", "Startverlauf", "Boot history", true}, {"error_history", "Fehlerverlauf", "Error history", all_tested}};
+        App app(svc);
+        run_check_via_ui(app, cv);
+        CHECK(app.screen() == App::Screen::Findings && app.finding_count() == 0, "Abdeckung: Check ohne Befunde");
+        app.render(cv);
+        press(app, {Button::Circle});
+        app.render(start_cv);
+    };
+    Canvas clean(App::kWidth, App::kHeight), clean_start(App::kWidth, App::kHeight), partial(App::kWidth, App::kHeight), partial_start(App::kWidth, App::kHeight);
+    screen_after_check(true, clean, clean_start);
+    screen_after_check(false, partial, partial_start);
+    CHECK(has_color(clean, ok_green) && has_color(clean_start, ok_green), "Abdeckung: voll gedeckt -> gruener Titel und gruene Startzeile");
+    CHECK(!has_color(partial, ok_green) && !has_color(partial_start, ok_green), "Abdeckung: nicht alles gelesen -> nichts in Gruen (kein 'in Ordnung')");
+    bool differs = false;
+    for (int y = 0; y < partial.height() && !differs; y += 2)
+        for (int x = 0; x < partial.width(); x += 2)
+            if (partial.at(x, y) != clean.at(x, y)) {
+                differs = true;
+                break;
+            }
+    CHECK(differs, "Abdeckung: die Befundliste zeigt den Unterschied");
+}
+
 }  // namespace
 
 void ui_tests() {
@@ -2405,6 +2442,7 @@ void ui_tests() {
     i18n_tests();
     png_tests();
     screen_flow_tests();
+    coverage_ui_tests();
     edge_tests();
     end_to_end_tests();
     undo_in_new_session_tests();

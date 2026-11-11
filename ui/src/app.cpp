@@ -670,7 +670,9 @@ void App::draw_start(Canvas& c) const {
     if (!has_result_) {
         body().draw(c, M + 36, 636, S("start.last_none"), kText);
     } else if (result_.findings.empty()) {
-        body().draw(c, M + 36, 636, S("start.last_clean"), kOk);
+        const int untested = static_cast<int>(std::count_if(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; }));
+        body().draw(c, M + 36, 636, S(untested ? "start.last_clean_partial" : "start.last_clean"), untested ? kText : kOk);
+        if (untested) small().draw(c, M + 36, 690, S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), kDim);
     } else {
         int crit = 0, warn = 0, info = 0;
         for (auto& f : result_.findings) {
@@ -681,6 +683,8 @@ void App::draw_start(Canvas& c) const {
         body().draw(c, M + 36, 636,
                     S.fmt("start.last_summary", {{"n", std::to_string(result_.findings.size())}, {"crit", std::to_string(crit)}, {"warn", std::to_string(warn)}, {"info", std::to_string(info)}}),
                     kText, W - 2 * M - 72);
+        if (const int untested = static_cast<int>(std::count_if(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; })))
+            small().draw(c, M + 36, 700, S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), kDim);
     }
     if (has_result_ && !result_.rules_version.empty()) small().draw(c, M + 36, 744, S.fmt("start.rules", {{"v", result_.rules_version}}), kDim);
 
@@ -705,8 +709,16 @@ void App::draw_findings(Canvas& c) const {
     const int n = static_cast<int>(fs.size());
     if (n == 0) {
         c.fill_round_rect(M, 300, W - 2 * M, 320, 24, kPanel);
-        title().draw(c, M + 60, 372, S("findings.empty"), kOk);
-        body().draw(c, M + 60, 460, S("findings.empty_sub"), kDim, W - 2 * M - 120);
+        std::string untested_names;
+        for (const auto& r : result_.coverage)
+            if (!r.tested) untested_names += (untested_names.empty() ? "" : ", ") + (lang_ == Lang::De ? r.text_de : r.text_en);
+        if (untested_names.empty()) {
+            title().draw(c, M + 60, 372, S("findings.empty"), kOk);
+            body().draw(c, M + 60, 460, S("findings.empty_sub"), kDim, W - 2 * M - 120);
+        } else {
+            title().draw(c, M + 60, 372, S("findings.empty_partial"), kText);
+            body().draw(c, M + 60, 460, S.fmt("findings.empty_partial_sub", {{"list", untested_names}}), kDim, W - 2 * M - 120);
+        }
         draw_hints(c, {{PadGlyph::Cross, S("common.retest")}, {PadGlyph::Square, S("common.report")}, {PadGlyph::Circle, S("common.back")}});
         return;
     }
