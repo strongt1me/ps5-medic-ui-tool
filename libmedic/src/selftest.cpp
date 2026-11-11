@@ -15,6 +15,11 @@
 #include <cstring>
 #include <ctime>
 
+#if defined(__x86_64__)
+#include <cpuid.h>
+#include <immintrin.h>
+#endif
+
 namespace medic {
 namespace {
 
@@ -277,19 +282,69 @@ struct BurnArg {
     int index;
 };
 
+#if defined(__x86_64__)
+// Kraeftige Last: Fused-Multiply-Add auf 8 unabhaengigen 256-Bit-Registern (heizt deutlich mehr als eine Ganzzahlschleife). Nur wenn die CPU
+// AVX2 und FMA meldet; sonst die Ganzzahlschleife.
+__attribute__((target("avx2,fma"))) float fma_kernel(int rounds) {
+    __m256 a0 = _mm256_set1_ps(1.0f), a1 = _mm256_set1_ps(1.1f), a2 = _mm256_set1_ps(1.2f), a3 = _mm256_set1_ps(1.3f);
+    __m256 a4 = _mm256_set1_ps(1.4f), a5 = _mm256_set1_ps(1.5f), a6 = _mm256_set1_ps(1.6f), a7 = _mm256_set1_ps(1.7f);
+    const __m256 m = _mm256_set1_ps(0.999999f), c = _mm256_set1_ps(0.000001f);
+    for (int i = 0; i < rounds; ++i) {
+        a0 = _mm256_fmadd_ps(a0, m, c);
+        a1 = _mm256_fmadd_ps(a1, m, c);
+        a2 = _mm256_fmadd_ps(a2, m, c);
+        a3 = _mm256_fmadd_ps(a3, m, c);
+        a4 = _mm256_fmadd_ps(a4, m, c);
+        a5 = _mm256_fmadd_ps(a5, m, c);
+        a6 = _mm256_fmadd_ps(a6, m, c);
+        a7 = _mm256_fmadd_ps(a7, m, c);
+    }
+    __m256 sum = _mm256_add_ps(_mm256_add_ps(_mm256_add_ps(a0, a1), _mm256_add_ps(a2, a3)), _mm256_add_ps(_mm256_add_ps(a4, a5), _mm256_add_ps(a6, a7)));
+    float out[8];
+    _mm256_storeu_ps(out, sum);
+    return out[0] + out[7];
+}
+// AVX2 und FMA per cpuid melden und das Betriebssystem muss die 256-Bit-Register sichern (xgetbv); ohne __builtin_cpu_supports, das auf der PS5-Toolchain
+// __cpu_model aus compiler-rt braucht.
+bool have_fma() {
+    unsigned eax = 0, ebx = 0, ecx = 0, edx = 0;
+    if (!__get_cpuid(1, &eax, &ebx, &ecx, &edx)) return false;
+    const bool osxsave = ecx & (1u << 27), avx = ecx & (1u << 28), fma = ecx & (1u << 12);
+    if (!osxsave || !avx || !fma) return false;
+    unsigned xlo = 0, xhi = 0;
+    __asm__ volatile("xgetbv" : "=a"(xlo), "=d"(xhi) : "c"(0));
+    if ((xlo & 6u) != 6u) return false;
+    if (__get_cpuid_max(0, nullptr) < 7) return false;
+    __cpuid_count(7, 0, eax, ebx, ecx, edx);
+    return ebx & (1u << 5);  // AVX2
+}
+#else
+float fma_kernel(int) { return 0; }
+bool have_fma() { return false; }
+#endif
+
 void* burn_main(void* p) {
     auto* a = static_cast<BurnArg*>(p);
+    const bool fma = have_fma();
     volatile std::uint64_t x = 1;
+    volatile float sink = 0;
     for (;;) {
-        for (int i = 0; i < 100000; ++i) x = x * 6364136223846793005ULL + 1442695040888963407ULL;
-        a->b->iters[a->index].fetch_add(100000, std::memory_order_relaxed);
+        if (fma) {
+            sink = fma_kernel(20000);
+        } else {
+            for (int i = 0; i < 100000; ++i) x = x * 6364136223846793005ULL + 1442695040888963407ULL;
+        }
+        a->b->iters[a->index].fetch_add(1, std::memory_order_relaxed);  // eine Runde = ein Zaehler (Einheit egal: nur das Verhaeltnis zaehlt)
         if (a->b->stop.load(std::memory_order_relaxed) || std::time(nullptr) >= a->b->deadline) break;
     }
+    (void)sink;
     return nullptr;
 }
 
-// 5 Schritte Ruhe-Messung, dann Last auf allen Kernen (hoechstens 8), danach Abkuehlen. Abbruch bei 85 Grad oder mehr als 15 Grad Anstieg in 5
-// Schritten; der Test startet nicht, wenn die Konsole in Ruhe schon ueber 70 Grad hat. Kein fork, Threads mit Frist, Join im Destruktor.
+// Ruhe-Messung, dann Last auf allen Kernen (hoechstens 8), danach Abkuehlen. Die Phasen richten sich nach der ECHTEN Zeit (steady_clock), nicht
+// nach der Schrittzahl: ein Schritt kann auf der Konsole laenger dauern als angefordert (am 11. Nov. 2026 bis zu 1,4 s statt 1 s). Abbruch bei 85
+// Grad oder mehr als 15 Grad Anstieg in 5 Messungen; der Test startet nicht, wenn die Konsole in Ruhe schon ueber 70 Grad hat. Kein fork, Threads mit
+// Frist, Join im Destruktor.
 class ThermalSession final : public BaseSession {
 public:
     ThermalSession(Platform& p, const TestDef& d, const TestContext& c) : BaseSession(d), p_(p), ctx_(c) {
@@ -303,8 +358,6 @@ public:
             return;
         }
         rest_ = t;
-        burn_steps_ = std::max(1, ctx_.thermal_burn_s * 1000 / std::max(1, ctx_.step_ms));
-        cool_steps_ = std::max(1, ctx_.thermal_cool_s * 1000 / std::max(1, ctx_.step_ms));
         peak_ = t;
         temps_.push_back(t);
         long cores = sysconf(_SC_NPROCESSORS_ONLN);
@@ -320,18 +373,21 @@ public:
             return true;
         }
         if (!burning_ && !cooling_) start_burners();
+        if (done_) return true;
         sleep_ms(ctx_.step_ms);  // ein Messintervall
+        const double now = seconds_since(phase_start_);
         const int t = temp();
         if (t >= 0) {
             temps_.push_back(t);
             peak_ = std::max(peak_, t);
         }
         if (burning_) {
-            ++step_in_phase_;
             std::uint64_t total = 0;
             for (int i = 0; i < burners_.started; ++i) total += burners_.iters[i].load(std::memory_order_relaxed);
-            rates_.push_back(total - last_total_);
+            const double dt = std::max(now - last_sample_, 1e-3);
+            rates_.push_back(static_cast<double>(total - last_total_) / dt);  // Runden je Sekunde
             last_total_ = total;
+            last_sample_ = now;
             const std::size_t n = temps_.size();
             if (t >= kThermalCeilingC) {
                 stop_burners();
@@ -343,21 +399,20 @@ public:
                 conclude(TestStatus::Cancelled, "rise_rate");
                 return true;
             }
-            if (step_in_phase_ >= burn_steps_) {
+            progress_ = std::min(0.99, 0.6 * now / std::max(1, ctx_.thermal_burn_s));
+            if (now >= ctx_.thermal_burn_s) {
                 stop_burners();
                 burning_ = false;
                 cooling_ = true;
-                step_in_phase_ = 0;
+                phase_start_ = Clock::now();
             }
         } else if (cooling_) {
-            ++step_in_phase_;
-            if (step_in_phase_ >= cool_steps_) {
+            progress_ = std::min(0.99, 0.6 + 0.4 * now / std::max(1, ctx_.thermal_cool_s));
+            if (now >= ctx_.thermal_cool_s) {
                 conclude(TestStatus::Passed, "");
                 return true;
             }
         }
-        const int total_steps = burn_steps_ + cool_steps_;
-        progress_ = std::min(0.99, static_cast<double>((burning_ ? 0 : burn_steps_) + step_in_phase_) / static_cast<double>(total_steps));
         return false;
     }
 
@@ -368,6 +423,8 @@ private:
     }
     void start_burners() {
         burning_ = true;
+        phase_start_ = Clock::now();
+        last_sample_ = 0;
         burners_.deadline = std::time(nullptr) + ctx_.thermal_burn_s + 3;  // harte Frist: Last plus 3 Sekunden Spielraum
         for (int i = 0; i < cores_; ++i) {
             args_[i] = {&burners_, i};
@@ -393,13 +450,15 @@ private:
         result_.measurements.push_back({"cores", static_cast<double>(cores_), ""});
         std::string why = reason;
         // Durchsatzabfall der Last: Mittel der ersten und der letzten 10 Messintervalle (erst ab 20 Intervallen aussagekraeftig).
-        if (rates_.size() >= 20) {
+        if (rates_.size() >= 20 && ctx_.thermal_burn_s >= 20) {  // kurze Laeufe (Tests) urteilen nicht ueber die Rate
             auto mean = [&](std::size_t a, std::size_t b) {
                 double s = 0;
-                for (std::size_t i = a; i < b; ++i) s += static_cast<double>(rates_[i]);
+                for (std::size_t i = a; i < b; ++i) s += rates_[i];
                 return s / static_cast<double>(b - a);
             };
             const double first = mean(0, 10), lastv = mean(rates_.size() - 10, rates_.size());
+            result_.measurements.push_back({"rounds_per_s_first", first, ""});
+            result_.measurements.push_back({"rounds_per_s_last", lastv, ""});
             if (first > 0) {
                 const double drop = 100.0 * (first - lastv) / first;
                 result_.measurements.push_back({"rate_drop_pct", drop, "%"});
@@ -421,9 +480,11 @@ private:
     Burners burners_;
     BurnArg args_[Burners::kMax];
     std::vector<int> temps_;
-    std::vector<std::uint64_t> rates_;
+    std::vector<double> rates_;
     std::uint64_t last_total_ = 0;
-    int rest_ = 0, peak_ = 0, cores_ = 1, burn_steps_ = 1, cool_steps_ = 1, step_in_phase_ = 0;
+    double last_sample_ = 0;
+    Clock::time_point phase_start_ = Clock::now();
+    int rest_ = 0, peak_ = 0, cores_ = 1;
     bool burning_ = false, cooling_ = false;
 };
 

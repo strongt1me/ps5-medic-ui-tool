@@ -44,6 +44,9 @@ PS5_UI_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) $(PS5_UI_SRCS)
 PS5_ELF := $(PS5_BUILD)/ps5medic.elf
 # Einmalige Sensor-Erkundung (docs/DIAGNOSE.md, Batch 5): eigenes ELF, kein Teil des Produkts. Senden: nc <ip> 9021 < build-ps5/ps5medic-probe.elf
 PS5_PROBE_ELF := $(PS5_BUILD)/ps5medic-probe.elf
+# Einmaliger Lauf der Gruendlich-Tests ohne UI (Waerme- und Schreibtest), nur mit ausdruecklicher Freigabe des Nutzers
+PS5_SELFTEST_ELF := $(PS5_BUILD)/ps5medic-selftest.elf
+PS5_SELFTEST_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) ps5/selftest_run.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
 PS5_UI_ELF := $(PS5_BUILD)/ps5medicui.elf
 # Launcher: eigener Dienst ohne websrv. Der Lader (hbldr/elfldr/pt) stammt aus websrv, siehe third_party/websrv-hbldr/ und THIRD_PARTY.md.
 PS5_LAUNCHER_ELF := $(PS5_BUILD)/ps5medic-launcher.elf
@@ -52,7 +55,7 @@ PS5_LAUNCHER_OBJS := $(PS5_BUILD)/ps5/launcher_main.o $(patsubst %.c,$(PS5_BUILD
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
 
-.PHONY: host test clean ps5 ps5-probe ps5-ui ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
+.PHONY: host test clean ps5 ps5-probe ps5-selftest ps5-ui ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
 
 # UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
 SNAP ?=
@@ -76,6 +79,7 @@ ps5: $(PS5_ELF)
 ps5-ui: $(PS5_UI_ELF)
 ps5-launcher: $(PS5_LAUNCHER_ELF)
 ps5-probe: $(PS5_PROBE_ELF)
+ps5-selftest: $(PS5_SELFTEST_ELF)
 
 $(PS5_BUILD)/%.o: %.cpp
 	@test -x $(PS5_CXX) || { echo "ps5-payload-sdk nicht gefunden: $(PS5_PAYLOAD_SDK) (PS5_PAYLOAD_SDK=... setzen)"; exit 1; }
@@ -92,6 +96,9 @@ $(PS5_BUILD)/%.o: %.c
 $(PS5_BUILD)/third_party/sqlite3/sqlite3.o: PS5_C_EXTRA := -DSQLITE_OS_OTHER=1 -DSQLITE_THREADSAFE=0 -DSQLITE_TEMP_STORE=3 -DSQLITE_OMIT_LOAD_EXTENSION=1 -DSQLITE_OMIT_SHARED_CACHE=1 -DSQLITE_OMIT_DEPRECATED=1 -DSQLITE_OMIT_LOCALTIME=1 -DSQLITE_OMIT_PROGRESS_CALLBACK=1 -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_MAX_MMAP_SIZE=0
 
 $(PS5_ELF): $(PS5_OBJS)
+	$(PS5_CXX) $^ -lkernel_sys -o $@
+
+$(PS5_SELFTEST_ELF): $(PS5_SELFTEST_OBJS)
 	$(PS5_CXX) $^ -lkernel_sys -o $@
 
 $(PS5_PROBE_ELF): $(PS5_BUILD)/ps5/probe_sensors.o
