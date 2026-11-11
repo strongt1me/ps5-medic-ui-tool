@@ -47,6 +47,18 @@ CheckResult LocalService::run_check() {
     r.resolved = medic::annotate_with_history(r.findings, hist, now);
     r.metrics = medic::metric_changes(rules_, metrics, hist);
     medic::append_history(p_, medic::make_history_run(now, rules_.db_version, r.fw, r.findings, metrics));
+    {  // jeder Check-up als eigene Datei, damit man ihn spaeter einzeln ansehen und vergleichen kann
+        medic::StoredCheck sc;
+        sc.ts = now;
+        sc.fw = r.fw;
+        sc.model = r.model;
+        sc.rules_version = r.rules_version;
+        sc.findings = r.findings;
+        sc.coverage = r.coverage;
+        sc.resolved = r.resolved;
+        sc.metrics = r.metrics;
+        medic::save_check(p_, sc);
+    }
     last_findings_ = r.findings;
     last_resolved_ = r.resolved;
     last_metrics_ = r.metrics;
@@ -69,6 +81,10 @@ std::string LocalService::read_text(const std::string& path) {
 }
 
 std::vector<medic::TxnInfo> LocalService::history() { return medic::history(p_); }
+
+std::vector<medic::CheckSummary> LocalService::checks() { return medic::list_checks(p_.fs()); }
+
+bool LocalService::load_check(const std::string& id, medic::StoredCheck& out) { return medic::load_check(p_.fs(), id, out); }
 
 medic::UndoResult LocalService::undo(const std::string& txn) {
     ensure_facts();

@@ -3,6 +3,7 @@
 // selben Prozess (LocalService: PC-Vorschau, Tests, Payload) oder spaeter eine Verbindung zu einem privilegierten
 // Dienst auf der Konsole (die Titel-App darf /data und /mnt nicht selbst lesen, siehe docs/PHASE3.md).
 #pragma once
+#include "medic/checks.hpp"
 #include "medic/error_codes.hpp"
 #include "medic/fixes.hpp"
 #include "medic/platform.hpp"
@@ -71,6 +72,13 @@ public:
     virtual medic::ApplyResult apply_fix(const medic::FixPlan& plan) = 0;
     virtual std::string read_text(const std::string& path) = 0;  // fuer die Diff-Vorschau; leer, wenn nicht lesbar
     virtual std::vector<medic::TxnInfo> history() = 0;
+    // Archiv der Check-ups (libmedic/include/medic/checks.hpp): jeder Check-up einzeln, nur lesend; neueste zuerst.
+    virtual std::vector<medic::CheckSummary> checks() { return {}; }
+    virtual bool load_check(const std::string& id, medic::StoredCheck& out) {
+        (void)id;
+        (void)out;
+        return false;
+    }
     virtual medic::UndoResult undo(const std::string& txn) = 0;
     // Bericht zum letzten Check-up: schreibt ihn (nur) nach /data/ps5medic/reports/ und liefert die QR-Kurzfassung.
     // Die UI ruft das nur auf Quadrat-Taste auf.
@@ -157,6 +165,8 @@ public:
     medic::ApplyResult apply_fix(const medic::FixPlan& plan) override;
     std::string read_text(const std::string& path) override;
     std::vector<medic::TxnInfo> history() override;
+    std::vector<medic::CheckSummary> checks() override;
+    bool load_check(const std::string& id, medic::StoredCheck& out) override;
     medic::UndoResult undo(const std::string& txn) override;
     ReportResult make_report(medic::ReportLang lang) override;
     medic::RuleUpdateOffer check_rule_update() override;

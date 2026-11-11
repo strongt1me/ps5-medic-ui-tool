@@ -95,8 +95,18 @@ int main(int argc, char** argv) {
         }
         app.handle(Button::Circle);  // Start
         app.handle(Button::Down);
-        app.handle(Button::Cross);  // Verlauf
+        app.handle(Button::Cross);  // Check-up-Verlauf
+        shot("06a_checklist");
+        app.handle(Button::Down);
+        app.handle(Button::Cross);  // einen alten Check-up ansehen
+        shot("06c_stored_check");
+        app.handle(Button::Circle);
+        app.handle(Button::Triangle);  // mit dem davor vergleichen
+        shot("06d_compare");
+        app.handle(Button::Circle);
+        app.handle(Button::Square);  // Reparaturen
         shot("06_history");
+        app.handle(Button::Circle);  // zurueck zur Liste
         app.handle(Button::Circle);
         app.handle(Button::Down);
         app.handle(Button::Cross);  // Einstellungen

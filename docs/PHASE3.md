@@ -101,3 +101,13 @@ Die Oberfläche hat einen eigenen Symbolsatz (`ui/src/icons.cpp`, `ui/include/me
 - **Befunde und Detail:** Symbol je Schweregrad (Kritisch, Warnung, Info), Schraubenschlüssel bzw. Glühbirne bei Reparatur bzw. Anleitung. **Verlauf, Einstellungen, Fehlercodes, Ergebnis-Bildschirme:** Titel mit Symbolfeld, Statussymbole je Zeile.
 - **Selbsttest:** je Test ein Symbol (Laufwerk, Thermometer, Datenbank, Datei, Tacho, WLAN, Flamme, Chip, Stift, Controller, Anzeige) und je Ergebnis ein Statussymbol (Haken, Warnung, Kreuz, Strich, offener Kreis). Zeilen sind enger, damit alle elf Tests über der Hinweisleiste Platz haben.
 - Tests: `icon_tests` in `tests/test_ui.cpp` (jedes Symbol sichtbar, im Feld, Akzent, Verlauf).
+
+## Nachtrag: Verlauf der Check-ups, jeder einzeln gespeichert (11. Nov. 2026, Wunsch von Marc)
+
+Statt den Verlauf zurückzusetzen, wird **jeder Check-up als eigene Datei** `/data/ps5medic/checks/<Zeit>.json` gespeichert (`libmedic/include/medic/checks.hpp`): Befunde mit Text (de/en), Belegen, Reparaturangebot und dem damaligen Verlaufsstatus (neu/wiederkehrend), dazu Firmware, Modell, Regelversion, Abdeckung, behobene Regeln und Messwerte. Eine bestehende Datei wird nie überschrieben (gleiche Zeit: Suffix `_2`), nichts wird gelöscht; die Liste zeigt die 100 jüngsten, ältere bleiben als Dateien. Die Dateien liegen nur im eigenen Ordner und können Pfade und Titelnamen aus den Belegen enthalten (wie die Berichte). Der Payload für die Diagnose (nur lesend) speichert keine.
+
+- **Start → Verlauf** öffnet die Liste (neueste zuerst, mit Zahl der Befunde je Schweregrad; „keine Befunde“ nur grün, wenn alles geprüft war). **Kreuz** zeigt einen Check-up so, wie er damals war (Befundliste und Details; oben der Hinweis „Stand vom …“). **Dreieck** vergleicht ihn mit dem davor (neu hinzugekommen, behoben, unverändert, nach Regel). **Quadrat** zeigt wie bisher die Reparaturen (Journal, Rückgängig). Kreis geht jeweils eine Ebene zurück; ein alter Stand verdrängt den aktuellen Check-up der Sitzung nicht (er kommt mit Kreis zurück).
+- **Ansehen und vergleichen, nicht reparieren (Entscheidung von Marc):** Im alten Stand sind Reparatur, Anleitung und Bericht gesperrt; das Detail sagt, dass Reparieren nur im aktuellen Check-up geht, damit nie auf veraltetem Stand repariert wird.
+- Das Zurücksetzen des Verlaufs (kurz zuvor gebaut, Commit `5cda74a`) ist wieder entfernt; `history.jsonl` (Vergleich, Dringlichkeit, Messwert-Niveau) und `journal.jsonl` (Reparaturen) bleiben unverändert.
+- Tests: `checks_archive_tests` in `tests/test_ui.cpp` (Speichern, Laden, Reihenfolge, gleiche Zeit, beschädigte Datei, Vergleich, Bedienung).
+

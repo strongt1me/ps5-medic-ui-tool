@@ -491,7 +491,7 @@ void screen_flow_tests() {
     svc.plan = mk_plan();
 
     // Verlauf und Rueckgaengig
-    press(app, {Button::Down, Button::Cross});
+    press(app, {Button::Down, Button::Cross, Button::Square});
     CHECK(app.screen() == App::Screen::History, "Flow: Verlauf oeffnen");
     app.render(cv);
     press(app, {Button::Down, Button::Cross});  // 'undone' ist nicht rueckgaengig machbar
@@ -510,7 +510,7 @@ void screen_flow_tests() {
 
     // Einstellungen und Sprache
     Canvas de(App::kWidth, App::kHeight), en(App::kWidth, App::kHeight);
-    press(app, {Button::Down, Button::Cross});
+    press(app, {Button::Circle, Button::Down, Button::Cross});  // aus dem Verlauf zurueck (Kreis: Verlauf, Check-ups, Start)
     CHECK(app.screen() == App::Screen::Settings && app.lang() == Lang::De, "Flow: Einstellungen, Deutsch");
     app.render(de);
     press(app, {Button::Right});
@@ -577,7 +577,7 @@ void edge_tests() {
     CHECK(a.screen() == App::Screen::Running, "Edge: Kreuz prueft erneut");
     a.render(cv);
     a.update();
-    press(a, {Button::Circle, Button::Down, Button::Cross});
+    press(a, {Button::Circle, Button::Down, Button::Cross, Button::Square});
     CHECK(a.screen() == App::Screen::History, "Edge: Verlauf ohne Eintraege");
     a.render(cv);
     press(a, {Button::Cross, Button::Down, Button::Up});
@@ -611,7 +611,7 @@ void edge_tests() {
     press(b, {Button::Triangle});
     CHECK(b.screen() == App::Screen::FixPreview, "Edge: Vorschau mit vielen langen Aenderungen");
     b.render(cv);
-    press(b, {Button::Circle, Button::Circle, Button::Circle, Button::Down, Button::Cross});
+    press(b, {Button::Circle, Button::Circle, Button::Circle, Button::Down, Button::Cross, Button::Square});
     for (int i = 0; i < 40; ++i) b.handle(Button::Down);
     b.render(cv);
     CHECK(b.screen() == App::Screen::History, "Edge: langer Verlauf");
@@ -635,7 +635,7 @@ void undo_in_new_session_tests() {
     // zweite Sitzung: neuer Dienst, kein Check-up
     LocalService s2(*platform, rules, [] { return std::string("20261108T130000Z"); });
     App app2(s2);
-    press(app2, {Button::Down, Button::Cross});
+    press(app2, {Button::Down, Button::Cross, Button::Square});
     CHECK(app2.screen() == App::Screen::History, "Neue Sitzung: Verlauf ohne Check-up");
     app2.render(cv);
     press(app2, {Button::Cross});
@@ -666,7 +666,7 @@ void end_to_end_tests() {
     app.render(cv);
     CHECK(tree(t.dir) != before, "E2E: die Reparatur hat Dateien verschoben");
 
-    press(app, {Button::Circle, Button::Down, Button::Cross});
+    press(app, {Button::Circle, Button::Down, Button::Cross, Button::Square});
     CHECK(app.screen() == App::Screen::History, "E2E: Verlauf");
     app.render(cv);
     press(app, {Button::Cross});
@@ -681,7 +681,7 @@ std::set<std::string> full_tree(const fs::path& root) {  // anders als tree(): a
     std::set<std::string> t;
     for (auto& e : fs::recursive_directory_iterator(root)) {
         std::string rel = fs::relative(e.path(), root).generic_string();
-        if (rel == "fs/data/ps5medic/history.jsonl" || rel == "fs/data/ps5medic") continue;  // der Ordner entsteht mit dem Verlauf; seine Dateien zaehlen weiter
+        if (rel == "fs/data/ps5medic/history.jsonl" || rel == "fs/data/ps5medic" || rel.rfind("fs/data/ps5medic/checks", 0) == 0) continue;  // der Ordner entsteht mit dem Verlauf; seine Dateien zaehlen weiter
         t.insert(std::move(rel));
     }
     return t;
@@ -1243,13 +1243,13 @@ void shoulder_and_stick_flow_tests() {
 
     {  // Start: L1/R1 wie Hoch/Runter, Links/Rechts zwischen den beiden kleinen Knoepfen
         App a(svc);
-        press(a, {Button::R1, Button::Cross});
+        press(a, {Button::R1, Button::Cross, Button::Square});
         CHECK(a.screen() == App::Screen::History, "Start: R1 waehlt den naechsten Eintrag (Verlauf)");
-        press(a, {Button::Circle, Button::R1, Button::Cross});
+        press(a, {Button::Circle, Button::Circle, Button::R1, Button::Cross});
         CHECK(a.screen() == App::Screen::Settings, "Start: R1 noch einmal waehlt die Einstellungen");
-        press(a, {Button::Circle, Button::Left, Button::Cross});
+        press(a, {Button::Circle, Button::Left, Button::Cross, Button::Square});
         CHECK(a.screen() == App::Screen::History, "Start: Links springt von Einstellungen zu Verlauf");
-        press(a, {Button::Circle, Button::Right, Button::Cross});
+        press(a, {Button::Circle, Button::Circle, Button::Right, Button::Cross});
         CHECK(a.screen() == App::Screen::Settings, "Start: Rechts springt von Verlauf zu Einstellungen");
         press(a, {Button::Circle, Button::L1, Button::L1, Button::Left, Button::Right, Button::Cross});
         CHECK(a.screen() == App::Screen::Running, "Start: L1 geht hoch; oben bleiben Links/Rechts wirkungslos, Kreuz startet den Check");
@@ -1326,7 +1326,7 @@ void shoulder_and_stick_flow_tests() {
             h.hist.push_back(t);
         }
         App a(h);
-        press(a, {Button::Down, Button::Cross});
+        press(a, {Button::Down, Button::Cross, Button::Square});
         CHECK(a.screen() == App::Screen::History, "Verlauf offen");
         press(a, {Button::R1, Button::Cross});
         CHECK(a.screen() == App::Screen::UndoConfirm, "Verlauf: R1 blaettert eine Seite (6 Zeilen) auf die 'applied'-Zeile");
@@ -2767,6 +2767,115 @@ void selftest_ui_tests() {
     CHECK(svc4.selftest_runs == run_all, "Selbsttest-UI: Gruendlich nach Bestaetigung laeuft alle Tests (ohne Nutzer-Tests)");
 }
 
+void checks_archive_tests() {
+    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+    auto count_files = [](const fs::path& dir) {
+        int n = 0;
+        if (fs::exists(dir))
+            for (auto& e : fs::directory_iterator(dir)) n += e.is_regular_file() ? 1 : 0;
+        return n;
+    };
+    TempCopy t("b8_pos");
+    auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+    int tick = 0;
+    LocalService svc(*platform, rules, [&] { return std::string("20261111T1") + std::to_string(10 + tick++) + "00Z"; });
+    CHECK(svc.checks().empty(), "Check-ups: anfangs keine gespeichert");
+    const auto r1 = svc.run_check();
+    const auto r2 = svc.run_check();
+    const auto r3 = svc.run_check();
+    CHECK(count_files(t.dir / "fs/data/ps5medic/checks") == 3, "Check-ups: jeder Check-up ist eine eigene Datei");
+    const auto list = svc.checks();
+    CHECK(list.size() == 3, "Check-ups: drei in der Liste");
+    CHECK(list.size() == 3 && list[0].ts > list[1].ts && list[1].ts > list[2].ts, "Check-ups: neueste zuerst");
+    CHECK(list.size() == 3 && list[0].total == static_cast<int>(r3.findings.size()) && list[0].fw == r3.fw && list[0].rules_version == r3.rules_version, "Check-ups: Zusammenfassung stimmt");
+    StoredCheck sc;
+    CHECK(list.size() == 3 && svc.load_check(list[0].id, sc) && sc.findings.size() == r3.findings.size() && sc.findings[0].rule_id == r3.findings[0].rule_id &&
+              sc.findings[0].text_de == r3.findings[0].text_de && sc.findings[0].text_en == r3.findings[0].text_en && sc.findings[0].evidence == r3.findings[0].evidence &&
+              sc.findings[0].fix == r3.findings[0].fix && sc.findings[0].severity == r3.findings[0].severity && sc.findings[0].status == r3.findings[0].status &&
+              sc.findings[0].seen_runs == r3.findings[0].seen_runs && sc.coverage.size() == r3.coverage.size(),
+          "Check-ups: ein geladener Check-up gleicht dem gemeldeten (Text, Beleg, Reparatur, Verlauf)");
+    CHECK(list.size() == 3 && svc.load_check(list[2].id, sc) && sc.findings[0].status.empty(), "Check-ups: der erste Check-up hat keinen Vergleich (damals)");
+    CHECK(!svc.load_check("../etc", sc) && !svc.load_check("gibt-es-nicht", sc) && !svc.load_check("", sc), "Check-ups: ungueltige oder fehlende id wird abgelehnt");
+    // gleiche Zeit: nie ueberschreiben
+    StoredCheck dup;
+    dup.ts = list[2].ts;
+    dup.fw = "dup";
+    std::string id;
+    CHECK(save_check(*platform, dup, &id) && id != list[2].ts && count_files(t.dir / "fs/data/ps5medic/checks") == 4, "Check-ups: gleiche Zeit ueberschreibt nichts");
+    StoredCheck orig;
+    CHECK(load_check(platform->fs(), list[2].id, orig) && orig.fw != "dup", "Check-ups: die alte Datei ist unveraendert");
+    // beschaedigte Datei wird uebersprungen
+    std::ofstream(t.dir / "fs/data/ps5medic/checks/20261111T125900Z.json", std::ios::binary) << "{kaputt";
+    auto p2 = make_snapshot_platform(t.dir.string(), true);
+    CHECK(list_checks(p2->fs()).size() == 4, "Check-ups: beschaedigte Datei wird uebersprungen");
+    auto ro = make_snapshot_platform(t.dir.string(), false);
+    CHECK(!save_check(*ro, dup), "Check-ups: ohne Schreibzugriff wird nichts gespeichert");
+
+    // Vergleich
+    StoredCheck a, b;
+    auto fnd = [](const char* id, Severity sev) {
+        Finding f;
+        f.rule_id = id;
+        f.severity = sev;
+        return f;
+    };
+    a.findings = {fnd("r.both", Severity::Warning), fnd("r.new", Severity::Critical)};
+    b.findings = {fnd("r.both", Severity::Warning), fnd("r.gone", Severity::Info)};
+    const CheckDiff d = compare_checks(a, b);
+    CHECK(d.added.size() == 1 && d.added[0].rule_id == "r.new" && d.resolved.size() == 1 && d.resolved[0].rule_id == "r.gone" && d.unchanged.size() == 1 && d.unchanged[0].rule_id == "r.both", "Vergleich: neu, behoben, unveraendert");
+    CHECK(compare_checks(a, a).added.empty() && compare_checks(a, a).resolved.empty(), "Vergleich: gleicher Check-up ohne Unterschiede");
+
+    // Oberflaeche: Liste, ansehen, nie reparieren, zurueck zum aktuellen, Vergleich
+    {
+        auto pl = make_snapshot_platform(t.dir.string(), true);
+        LocalService s2(*pl, rules, [&] { return std::string("20261111T1") + std::to_string(10 + tick++) + "00Z"; });
+        App app(s2);
+        Canvas cv(App::kWidth, App::kHeight), cv2(App::kWidth, App::kHeight);
+        run_check_via_ui(app, cv);  // frischer Check-up
+        CHECK(app.screen() == App::Screen::Findings, "Check-up-Verlauf: aktueller Check-up da");
+        const std::size_t live_n = app.finding_count();
+        press(app, {Button::Circle, Button::Down, Button::Cross});
+        CHECK(app.screen() == App::Screen::CheckList, "Check-up-Verlauf: Start -> Verlauf zeigt die Check-ups");
+        app.render(cv);
+        press(app, {Button::Down, Button::Down});
+        press(app, {Button::Cross});
+        CHECK(app.screen() == App::Screen::Findings, "Check-up-Verlauf: Kreuz zeigt den gewaehlten Check-up");
+        app.render(cv);
+        press(app, {Button::Triangle});
+        CHECK(app.screen() == App::Screen::Findings, "Check-up-Verlauf: im alten Stand wird nie repariert (Dreieck tut nichts)");
+        press(app, {Button::Square});
+        CHECK(app.screen() == App::Screen::Findings, "Check-up-Verlauf: im alten Stand kein Bericht");
+        press(app, {Button::Cross});
+        CHECK(app.screen() == App::Screen::Detail, "Check-up-Verlauf: Details des alten Stands");
+        app.render(cv2);
+        press(app, {Button::Triangle});
+        CHECK(app.screen() == App::Screen::Detail, "Check-up-Verlauf: auch im Detail keine Reparatur");
+        press(app, {Button::Circle, Button::Circle});
+        CHECK(app.screen() == App::Screen::CheckList && app.finding_count() == live_n, "Check-up-Verlauf: Kreis bringt den aktuellen Check-up zurueck");
+        press(app, {Button::Triangle});
+        CHECK(app.screen() == App::Screen::CheckCompare, "Check-up-Verlauf: Dreieck vergleicht mit dem davor");
+        app.render(cv);
+        press(app, {Button::Down, Button::Up, Button::R1, Button::L1, Button::Circle});
+        CHECK(app.screen() == App::Screen::CheckList, "Check-up-Verlauf: Kreis aus dem Vergleich");
+        press(app, {Button::Square});
+        CHECK(app.screen() == App::Screen::History, "Check-up-Verlauf: Quadrat zeigt die Reparaturen");
+        press(app, {Button::Circle});
+        CHECK(app.screen() == App::Screen::CheckList, "Check-up-Verlauf: Kreis aus den Reparaturen zurueck zur Liste");
+        press(app, {Button::Circle});
+        CHECK(app.screen() == App::Screen::Start, "Check-up-Verlauf: Kreis zurueck zum Start");
+    }
+    // leere Liste und unlesbarer Eintrag
+    {
+        FakeService fk;
+        App app(fk);
+        Canvas cv(App::kWidth, App::kHeight);
+        press(app, {Button::Down, Button::Cross});
+        app.render(cv);
+        press(app, {Button::Cross, Button::Triangle, Button::Down, Button::Up, Button::R1, Button::L1});
+        CHECK(app.screen() == App::Screen::CheckList, "Check-up-Verlauf: leere Liste, Tasten tun nichts");
+    }
+}
+
 void icon_tests() {
     // Jedes Symbol malt in jeder Groesse sichtbar und innerhalb seines Feldes; Akzentfarbe und Hauptfarbe kommen vor (wo das Symbol einen Akzent hat)
     const Color bg = rgb(0, 0, 0), main_c = rgb(255, 0, 0), acc_c = rgb(0, 0, 255);
@@ -2828,6 +2937,7 @@ void ui_tests() {
     redetect_ui_tests();
     confidence_ui_tests();
     selftest_ui_tests();
+    checks_archive_tests();
     icon_tests();
     shot_hook_tests();
     usertest_ui_tests();

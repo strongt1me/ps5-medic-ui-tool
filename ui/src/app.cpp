@@ -14,7 +14,7 @@ namespace medic::ui {
 namespace {
 
 constexpr int W = App::kWidth, H = App::kHeight, M = 96;
-constexpr int kListVisible = 4, kHistVisible = 6, kErrVisible = 8;
+constexpr int kListVisible = 4, kHistVisible = 6, kErrVisible = 8, kChkVisible = 8, kCmpVisible = 13;
 
 const Color kBg = rgb(14, 18, 24), kPanel = rgb(23, 29, 38), kPanelHi = rgb(33, 42, 56), kLine = rgb(42, 52, 66);
 const Color kText = rgb(232, 237, 242), kDim = rgb(141, 153, 168), kAccent = rgb(76, 154, 255);
@@ -362,6 +362,63 @@ void App::open_history() {
     screen_ = Screen::History;
 }
 
+void App::open_checks() {
+    chk_ = svc_.checks();
+    chk_sel_ = chk_top_ = 0;
+    chk_unreadable_ = false;
+    screen_ = Screen::CheckList;
+}
+
+// Zeigt einen gespeicherten Check-up im Befund-Bildschirm: Der aktuelle bleibt zur Seite (live_result_) und kommt mit Kreis zurueck.
+void App::open_stored(int index) {
+    if (index < 0 || index >= static_cast<int>(chk_.size())) return;
+    medic::StoredCheck sc;
+    chk_unreadable_ = !svc_.load_check(chk_[static_cast<std::size_t>(index)].id, sc);
+    if (chk_unreadable_) return;
+    if (!viewing_old_) {
+        live_result_ = result_;
+        live_has_ = has_result_;
+        live_sel_ = sel_;
+        live_top_ = top_;
+    }
+    result_ = CheckResult{};
+    result_.fw = sc.fw;
+    result_.model = sc.model;
+    result_.rules_version = sc.rules_version;
+    result_.findings = sc.findings;
+    result_.coverage = sc.coverage;
+    result_.resolved = sc.resolved;
+    result_.metrics = sc.metrics;
+    has_result_ = true;
+    viewing_old_ = true;
+    view_ts_ = sc.ts;
+    sel_ = top_ = 0;
+    screen_ = Screen::Findings;
+}
+
+void App::leave_stored() {
+    if (viewing_old_) {
+        result_ = live_result_;
+        has_result_ = live_has_;
+        sel_ = live_sel_;
+        top_ = live_top_;
+        live_result_ = CheckResult{};
+    }
+    viewing_old_ = false;
+    view_ts_.clear();
+    screen_ = Screen::CheckList;
+}
+
+// Vergleich des gewaehlten Check-ups mit dem naechstaelteren in der Liste
+void App::open_compare(int index) {
+    if (index < 0 || index + 1 >= static_cast<int>(chk_.size())) return;
+    chk_unreadable_ = !svc_.load_check(chk_[static_cast<std::size_t>(index)].id, cmp_new_) || !svc_.load_check(chk_[static_cast<std::size_t>(index) + 1].id, cmp_old_);
+    if (chk_unreadable_) return;
+    cmp_diff_ = medic::compare_checks(cmp_new_, cmp_old_);
+    cmp_top_ = 0;
+    screen_ = Screen::CheckCompare;
+}
+
 void App::open_report() {
     report_ = svc_.make_report(lang_ == Lang::De ? medic::ReportLang::De : medic::ReportLang::En);
     qr_ok_ = medic::qr_encode(report_.qr_text, qr_);
@@ -471,6 +528,7 @@ void App::finish_updates() {
 }
 
 void App::begin_fix(int index, Screen origin) {
+    if (viewing_old_) return;  // nie auf dem Stand eines alten Check-ups reparieren
     if (index < 0 || index >= static_cast<int>(result_.findings.size())) return;
     const medic::Finding& f = result_.findings[static_cast<std::size_t>(index)];
     if (f.fix.empty()) return;
@@ -497,7 +555,7 @@ void App::handle(Button b) {
             else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < 4) ++start_sel_;
             else if (b == Button::Cross) {
                 if (start_sel_ == 0) start_check();
-                else if (start_sel_ == 1) open_history();
+                else if (start_sel_ == 1) open_checks();
                 else if (start_sel_ == 2) screen_ = Screen::Settings;
                 else if (start_sel_ == 3) open_error_codes();
                 else open_selftest();
@@ -511,17 +569,24 @@ void App::handle(Button b) {
             else if (b == Button::L1) page_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, -1);
             else if (b == Button::R1) page_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, 1);
             else if (b == Button::Cross) {
-                if (result_.findings.empty()) start_check();
-                else screen_ = Screen::Detail;
+                if (result_.findings.empty()) {
+                    if (!viewing_old_) start_check();
+                } else screen_ = Screen::Detail;
             } else if (b == Button::Triangle) begin_fix(sel_, Screen::Findings);
-            else if (b == Button::Square) open_report();
-            else if (b == Button::Circle) screen_ = Screen::Start;
+            else if (b == Button::Square) {
+                if (!viewing_old_) open_report();
+            } else if (b == Button::Circle) {
+                if (viewing_old_) leave_stored();
+                else screen_ = Screen::Start;
+            }
             break;
         case Screen::Detail:
             // Zum vorherigen/naechsten Befund blaettern, ohne zur Liste zurueckzugehen (Steuerkreuz/Stick links-rechts oder L1/R1).
             if (b == Button::Left || b == Button::L1) move_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, -1);
             else if (b == Button::Right || b == Button::R1) move_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, 1);
-            else if (b == Button::Triangle) begin_fix(sel_, Screen::Detail);
+            else if (b == Button::Triangle) {
+                if (!viewing_old_) begin_fix(sel_, Screen::Detail);
+            }
             else if (b == Button::Square) open_error_for_finding();
             else if (b == Button::Circle) screen_ = Screen::Findings;
             break;
@@ -549,6 +614,26 @@ void App::handle(Button b) {
                 open_history();
             }
             break;
+        case Screen::CheckList:
+            if (b == Button::Up) move_selection(chk_sel_, chk_top_, static_cast<int>(chk_.size()), kChkVisible, -1);
+            else if (b == Button::Down) move_selection(chk_sel_, chk_top_, static_cast<int>(chk_.size()), kChkVisible, 1);
+            else if (b == Button::L1) page_selection(chk_sel_, chk_top_, static_cast<int>(chk_.size()), kChkVisible, -1);
+            else if (b == Button::R1) page_selection(chk_sel_, chk_top_, static_cast<int>(chk_.size()), kChkVisible, 1);
+            else if (b == Button::Cross) open_stored(chk_sel_);
+            else if (b == Button::Triangle) open_compare(chk_sel_);
+            else if (b == Button::Square) open_history();
+            else if (b == Button::Circle) screen_ = Screen::Start;
+            break;
+        case Screen::CheckCompare: {
+            const int rows = static_cast<int>(cmp_diff_.added.size() + cmp_diff_.resolved.size() + cmp_diff_.unchanged.size()) + 3;
+            const int max_top = std::max(rows - kCmpVisible, 0);
+            if (b == Button::Up) cmp_top_ = std::max(cmp_top_ - 1, 0);
+            else if (b == Button::Down) cmp_top_ = std::min(cmp_top_ + 1, max_top);
+            else if (b == Button::L1) cmp_top_ = std::max(cmp_top_ - kCmpVisible, 0);
+            else if (b == Button::R1) cmp_top_ = std::min(cmp_top_ + kCmpVisible, max_top);
+            else if (b == Button::Circle) screen_ = Screen::CheckList;
+            break;
+        }
         case Screen::History:
             if (b == Button::Up) move_selection(hist_sel_, hist_top_, static_cast<int>(hist_.size()), kHistVisible, -1);
             else if (b == Button::Down) move_selection(hist_sel_, hist_top_, static_cast<int>(hist_.size()), kHistVisible, 1);
@@ -560,7 +645,7 @@ void App::handle(Button b) {
                     undo_target_ = hist_[static_cast<std::size_t>(hist_sel_)];
                     screen_ = Screen::UndoConfirm;
                 }
-            } else if (b == Button::Circle) screen_ = Screen::Start;
+            } else if (b == Button::Circle) open_checks();
             break;
         case Screen::UndoConfirm:
             if (b == Button::Cross) {
@@ -745,6 +830,8 @@ void App::render(Canvas& c) const {
             break;
         case Screen::History: draw_history(c); break;
         case Screen::UndoConfirm: draw_undo_confirm(c); break;
+        case Screen::CheckList: draw_checklist(c); break;
+        case Screen::CheckCompare: draw_compare(c); break;
         case Screen::Settings: draw_settings(c); break;
         case Screen::Report: draw_report(c); break;
         case Screen::RulesUpdate: draw_rules_update(c); break;
@@ -1026,11 +1113,20 @@ void App::draw_chrome(Canvas& c) const {
     title().draw(c, M + 90, 28, S("app.title"), kText);
     const std::string sys = has_result_ && !result_.fw.empty() ? S.fmt("header.system", {{"fw", result_.fw}, {"model", result_.model}})
                                                                 : (has_result_ ? S("header.unknown") : std::string());
+    int right = W - M;
     if (!sys.empty()) {
         const int w = small().width(sys);
         c.fill_round_rect(W - M - w - 64, 36, w + 64, 44, 22, rgba(255, 255, 255, 14));
         draw_icon(c, Icon::Gamepad, W - M - w - 64 + 28, 58, 26, kDim, kDim);
         small().draw(c, W - M - w - 18, 44, sys, kDim);
+        right = W - M - w - 64 - 16;
+    }
+    if (viewing_old_) {  // ein gespeicherter Check-up: gut sichtbar, damit man ihn nie fuer den aktuellen haelt
+        const std::string t = S.fmt("checks.old_banner", {{"ts", pretty_ts(view_ts_)}});
+        const int w = small().width(t) + 64;
+        c.fill_round_rect(right - w, 36, w, 44, 22, rgba(255, 179, 71, 40));
+        draw_icon(c, Icon::History, right - w + 28, 58, 26, kWarn, kWarn);
+        small().draw(c, right - w + 50, 44, t, kWarn);
     }
     c.fill_rect(M, 112, W - 2 * M, 2, kLine);
     c.fill_rect(M, 112, 160, 2, kAccent);
@@ -1165,7 +1261,8 @@ void App::draw_findings(Canvas& c) const {
             title().draw(c, M + 60, 372, S("findings.empty_partial"), kText);
             body().draw(c, M + 60, 460, S.fmt("findings.empty_partial_sub", {{"list", untested_names}}), kDim, W - 2 * M - 120);
         }
-        draw_hints(c, {{PadGlyph::Cross, S("common.retest")}, {PadGlyph::Square, S("common.report")}, {PadGlyph::Circle, S("common.back")}});
+        if (viewing_old_) draw_hints(c, {{PadGlyph::Circle, S("common.back")}});
+        else draw_hints(c, {{PadGlyph::Cross, S("common.retest")}, {PadGlyph::Square, S("common.report")}, {PadGlyph::Circle, S("common.back")}});
         return;
     }
 
@@ -1199,7 +1296,7 @@ void App::draw_findings(Canvas& c) const {
         const int tx = M + 134;
         const int bw = draw_badge(c, tx, y + 16, S(sev_key(f.severity)), sc);
         small().draw(c, tx + bw + 16, y + 20, f.rule_id, kDim);
-        if (!f.fix.empty()) {
+        if (!f.fix.empty() && !viewing_old_) {
             const std::string label = S(is_hint_fix(f.fix) ? "findings.hintable" : "findings.fixable");
             const int lw = text_right(c, small(), M + cw - 32, y + 20, label, kOk);
             draw_icon(c, is_hint_fix(f.fix) ? Icon::Lightbulb : Icon::Wrench, M + cw - 32 - lw - 22, y + 33, 28, kOk, kOk);
@@ -1219,8 +1316,8 @@ void App::draw_findings(Canvas& c) const {
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
     if (n > kListVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
     hints.emplace_back(PadGlyph::Cross, S("common.open"));
-    if (const auto* f = current_finding(); f && !f->fix.empty()) hints.emplace_back(PadGlyph::Triangle, S(is_hint_fix(f->fix) ? "common.guide" : "common.repair"));
-    hints.emplace_back(PadGlyph::Square, S("common.report"));
+    if (const auto* f = current_finding(); f && !f->fix.empty() && !viewing_old_) hints.emplace_back(PadGlyph::Triangle, S(is_hint_fix(f->fix) ? "common.guide" : "common.repair"));
+    if (!viewing_old_) hints.emplace_back(PadGlyph::Square, S("common.report"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }
@@ -1347,7 +1444,8 @@ void App::draw_detail(Canvas& c) const {
         small().draw(c, M + 8, y, elide(small(), S("detail.source") + ": " + f->source, cw - 16), kDim);
         y += small().line_height() + 14;
     }
-    if (!f->fix.empty()) body().draw(c, M + 8, y, S.fmt(is_hint_fix(f->fix) ? "detail.hint_available" : "detail.fix_available", {{"name", fix_name(f->fix)}}), kOk, cw - 16);
+    if (!f->fix.empty() && viewing_old_) body().draw(c, M + 8, y, S("detail.fix_old"), kDim, cw - 16);
+    else if (!f->fix.empty()) body().draw(c, M + 8, y, S.fmt(is_hint_fix(f->fix) ? "detail.hint_available" : "detail.fix_available", {{"name", fix_name(f->fix)}}), kOk, cw - 16);
     else body().draw(c, M + 8, y, S("detail.fix_none"), kDim, cw - 16);
     if (link >= 0) {
         y += body().line_height() + 12;
@@ -1356,7 +1454,7 @@ void App::draw_detail(Canvas& c) const {
 
     std::vector<std::pair<PadGlyph, std::string>> hints;
     if (result_.findings.size() > 1) hints.emplace_back(PadGlyph::Shoulders, S("common.browse"));
-    if (!f->fix.empty()) hints.emplace_back(PadGlyph::Triangle, S(is_hint_fix(f->fix) ? "common.guide" : "common.repair"));
+    if (!f->fix.empty() && !viewing_old_) hints.emplace_back(PadGlyph::Triangle, S(is_hint_fix(f->fix) ? "common.guide" : "common.repair"));
     if (link >= 0) hints.emplace_back(PadGlyph::Square, S("common.lookup"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
@@ -1507,6 +1605,118 @@ void App::draw_history(Canvas& c) const {
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
     if (n > kHistVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
     if (can_undo) hints.emplace_back(PadGlyph::Cross, S("common.undo"));
+    hints.emplace_back(PadGlyph::Circle, S("common.back"));
+    draw_hints(c, hints);
+}
+
+void App::draw_checklist(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    title_icon(c, Icon::History, kTintViolet, S("checks.title"));
+    const int n = static_cast<int>(chk_.size());
+    if (n == 0) {
+        c.fill_round_rect(M, 260, W - 2 * M, 180, 20, kPanel);
+        body().draw(c, M + 40, 320, S("checks.empty"), kDim, W - 2 * M - 80);
+        draw_hints(c, {{PadGlyph::Square, S("checks.repairs")}, {PadGlyph::Circle, S("common.back")}});
+        return;
+    }
+    small().draw(c, M + 4, 196, S("checks.sub"), kDim);
+    const int last = std::min(n, chk_top_ + kChkVisible);
+    if (n > kChkVisible) text_right(c, small(), W - M, 148, S.fmt("findings.range", {{"from", std::to_string(chk_top_ + 1)}, {"to", std::to_string(last)}, {"n", std::to_string(n)}}), kDim);
+    const int cw = W - 2 * M, ch = 76, gap = 8, y0 = 232;
+    int y = y0;
+    for (int i = chk_top_; i < last; ++i, y += ch + gap) {
+        const auto& e = chk_[static_cast<std::size_t>(i)];
+        card(c, M, y, cw, ch, i == chk_sel_);
+        const bool partial = e.untested > 0;
+        Icon ic = Icon::Ok;
+        Color col = kOk;
+        if (e.critical > 0) { ic = Icon::Critical; col = kCrit; }
+        else if (e.warning > 0) { ic = Icon::Warning; col = kWarn; }
+        else if (e.info > 0) { ic = Icon::Info; col = kInfo; }
+        else if (partial) { ic = Icon::Info; col = kInfo; }  // nicht alles gelesen: nie "in Ordnung" in Gruen
+        c.fill_round_rect(M + 18, y + 10, 56, 56, 18, rgba((col >> 16) & 0xFF, (col >> 8) & 0xFF, col & 0xFF, 40));
+        draw_icon(c, ic, M + 46, y + 38, 38, col, col);
+        body().draw(c, M + 94, y + 6, pretty_ts(e.ts), kText);
+        if (i == 0) {
+            const int bx = M + 94 + body().width(pretty_ts(e.ts)) + 20;
+            draw_badge(c, bx, y + 8, S("checks.latest"), kAccent);
+        }
+        small().draw(c, M + 94, y + 42, S.fmt("checks.line", {{"fw", e.fw.empty() ? "?" : e.fw}, {"rules", e.rules_version.empty() ? "?" : e.rules_version}}), kDim, cw - 700);
+        // rechts: Zahl der Befunde je Schweregrad, sonst "keine Befunde"
+        int x = M + cw - 32;
+        if (e.total == 0) {
+            x -= text_right(c, body(), x, y + 20, S(partial ? "checks.untested" : "checks.none"), partial ? kDim : kOk);
+        } else {
+            const std::pair<int, Severity> parts[3] = {{e.info, Severity::Info}, {e.warning, Severity::Warning}, {e.critical, Severity::Critical}};
+            for (const auto& pr : parts) {
+                if (!pr.first) continue;
+                const std::string num = std::to_string(pr.first);
+                const int w = body().width(num);
+                body().draw(c, x - w, y + 20, num, kText);
+                draw_icon(c, sev_icon(pr.second), x - w - 26, y + 38, 34, sev_color(pr.second), sev_color(pr.second));
+                x -= w + 26 + 34;
+            }
+        }
+    }
+    if (n > kChkVisible) {  // Scrollleiste
+        const int track_h = kChkVisible * (ch + gap) - gap;
+        const int thumb_h = std::max(40, track_h * kChkVisible / n);
+        const int thumb_y = y0 + (track_h - thumb_h) * chk_top_ / std::max(n - kChkVisible, 1);
+        c.fill_round_rect(W - 64, y0, 8, track_h, 4, kPanel);
+        c.fill_round_rect(W - 64, thumb_y, 8, thumb_h, 4, kDim);
+    }
+    if (chk_unreadable_) small().draw(c, M + 8, H - 138, S("checks.unreadable"), kWarn);
+    std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
+    if (n > kChkVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
+    hints.emplace_back(PadGlyph::Cross, S("checks.view"));
+    if (chk_sel_ + 1 < n) hints.emplace_back(PadGlyph::Triangle, S("checks.compare"));
+    hints.emplace_back(PadGlyph::Square, S("checks.repairs"));
+    hints.emplace_back(PadGlyph::Circle, S("common.back"));
+    draw_hints(c, hints);
+}
+
+void App::draw_compare(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    title_icon(c, Icon::Report, kTintBlue, S("compare.title"));
+    small().draw(c, M + 4, 196, S.fmt("compare.sub", {{"newer", pretty_ts(cmp_new_.ts)}, {"older", pretty_ts(cmp_old_.ts)}}), kDim);
+    // Zeilen: Abschnittskopf und je Befund eine Zeile
+    struct Row {
+        bool head;
+        std::string text;
+        Color col;
+        const medic::Finding* f;
+    };
+    std::vector<Row> rows;
+    auto section = [&](const char* key, const std::vector<medic::Finding>& v, Color col) {
+        rows.push_back({true, S.fmt(key, {{"n", std::to_string(v.size())}}), col, nullptr});
+        for (const auto& f : v) rows.push_back({false, f.rule_id, col, &f});
+    };
+    section("compare.added", cmp_diff_.added, kWarn);
+    section("compare.resolved", cmp_diff_.resolved, kOk);
+    section("compare.unchanged", cmp_diff_.unchanged, kDim);
+    const int total = static_cast<int>(rows.size());
+    c.fill_round_rect(M, 232, W - 2 * M, 700, 20, kPanel);
+    int y = 244;
+    for (int i = cmp_top_; i < std::min(total, cmp_top_ + kCmpVisible); ++i) {
+        const Row& r = rows[static_cast<std::size_t>(i)];
+        if (r.head) {
+            body().draw(c, M + 36, y, r.text, r.col);
+        } else {
+            draw_icon(c, sev_icon(r.f->severity), M + 56, y + 20, 30, sev_color(r.f->severity), sev_color(r.f->severity));
+            small().draw(c, M + 92, y + 8, r.text, kText);
+            small().draw(c, M + 560, y + 8, elide(small(), lang_ == Lang::De ? r.f->text_de : r.f->text_en, W - 2 * M - 560 - 80), kDim);
+        }
+        y += 50;
+    }
+    if (cmp_diff_.added.empty() && cmp_diff_.resolved.empty()) small().draw(c, M + 36, 870, S("compare.same"), kDim);
+    small().draw(c, M + 8, H - 138, S("compare.note"), kDim);
+    if (total > kCmpVisible) {
+        const int track_h = 676, thumb_h = std::max(40, track_h * kCmpVisible / total);
+        const int thumb_y = 244 + (track_h - thumb_h) * cmp_top_ / std::max(total - kCmpVisible, 1);
+        c.fill_round_rect(W - 64, 244, 8, track_h, 4, kPanelHi);
+        c.fill_round_rect(W - 64, thumb_y, 8, thumb_h, 4, kDim);
+    }
+    std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("errors.scroll")}};
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }

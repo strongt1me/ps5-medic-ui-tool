@@ -23,7 +23,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, CheckList, CheckCompare };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
 
@@ -56,6 +56,10 @@ private:
     void move_selection(int& sel, int& top, int count, int visible, int delta);
     void page_selection(int& sel, int& top, int count, int visible, int dir);
     void open_history();
+    void open_checks();
+    void open_stored(int index);
+    void leave_stored();
+    void open_compare(int index);
     void open_report();
     void open_rules_update();
     void open_error_codes();
@@ -83,6 +87,8 @@ private:
     void draw_fix_done(Canvas& c) const;
     void draw_history(Canvas& c) const;
     void draw_undo_confirm(Canvas& c) const;
+    void draw_checklist(Canvas& c) const;
+    void draw_compare(Canvas& c) const;
     void draw_settings(Canvas& c) const;
     void draw_report(Canvas& c) const;
     void draw_rules_update(Canvas& c) const;
@@ -134,6 +140,19 @@ private:
     medic::TxnInfo undo_target_;
 
     int settings_sel_ = 0;  // 0 Sprache, 1 Regel-Update
+
+    // Archiv der Check-ups: Liste, ein gespeicherter Check-up im Befund-Bildschirm ("viewing_old_": nur ansehen, nie reparieren) und Vergleich
+    std::vector<medic::CheckSummary> chk_;
+    int chk_sel_ = 0, chk_top_ = 0;
+    bool chk_unreadable_ = false;
+    bool viewing_old_ = false;
+    std::string view_ts_;
+    CheckResult live_result_;  // der aktuelle Check-up dieser Sitzung, solange ein alter angezeigt wird
+    bool live_has_ = false;
+    int live_sel_ = 0, live_top_ = 0;
+    medic::StoredCheck cmp_new_, cmp_old_;
+    medic::CheckDiff cmp_diff_;
+    int cmp_top_ = 0;
 
     // Selbsttest: List (letzte Ergebnisse), Confirm (Hinweis vor dem Lauf), Running (ein Test je update()), Done
     enum class StState { List, Confirm, Running, Done };
