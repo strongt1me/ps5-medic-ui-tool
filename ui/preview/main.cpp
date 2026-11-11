@@ -117,6 +117,26 @@ int main(int argc, char** argv) {
         goto_code("CE-100028-1");  // Speicher: freier Platz aus dem Check-up
         app.handle(Button::Triangle);  // fuer den Bericht vermerken
         shot("16_error_code_storage_live");
+        {  // Selbsttest: Liste, Hinweis, Lauf der Schnelltests, Ergebnis (frische Anwendung, die Vorschau-Plattform ist nur lesend)
+            App st(svc, lang);
+            auto png = [&](const char* name) {
+                st.render(canvas);
+                if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
+                ++shots;
+            };
+            for (int i = 0; i < 4; ++i) st.handle(Button::Down);
+            st.handle(Button::Cross);
+            png("17_selftest_list.png");
+            st.handle(Button::Cross);
+            png("18_selftest_confirm.png");
+            st.handle(Button::Circle);
+            st.handle(Button::Square);  // nur Schnelltests
+            for (int i = 0; i < 12; ++i) {
+                st.render(canvas);
+                st.update();
+            }
+            png("19_selftest_done.png");
+        }
         std::cout << shots << " Bilder in " << out.string() << "\n";
     } catch (const std::exception& e) {
         std::cerr << "Fehler: " << e.what() << "\n";

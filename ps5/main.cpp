@@ -10,6 +10,7 @@
 
 #include "medic/collectors.hpp"
 #include "medic/rules.hpp"
+#include "medic/selftest.hpp"
 #include "medic/snapshot_export.hpp"
 
 #include <cstdio>
@@ -62,6 +63,15 @@ int main() {
         for (const auto& e : *dbs) out("  db " + e.value("path", std::string()) + "  Groesse " + e["size"].dump() + "  Pruefung " + e["integrity"].dump() + (e["integrity_skip"].get<std::string>().empty() ? std::string() : "  (nicht geprueft: " + e["integrity_skip"].get<std::string>() + ")"));
     out("Prozesse:");
     for (const auto& n : platform->procs().running()) out("  " + n);
+
+    // Selbsttest (nur lesend, ohne Marker: die Plattform ist hier nicht beschreibbar): jeder Test genau einmal, Ergebnis als Zeile.
+    out("Selbsttest:");
+    for (const auto& def : medic::selftest_registry()) {
+        const medic::TestResult r = medic::run_selftest(*platform, facts, def);
+        std::string line = std::string("  ") + def.id + ": " + medic::to_string(r.status) + (r.reason.empty() ? std::string() : " (" + r.reason + ")");
+        for (const auto& m : r.measurements) line += ", " + m.name + "=" + std::to_string(m.value) + (m.unit.empty() ? std::string() : " " + m.unit);
+        out(line);
+    }
 
     // Regeln laden
     medic::RuleSet rules;

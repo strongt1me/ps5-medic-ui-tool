@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.29",
+  "db_version": "2026.11.30",
   "metrics": [
     {"id": "cpu_temp", "fact": "sys.temp.cpu_c", "unit": "°C", "text": {"de": "CPU-Temperatur", "en": "CPU temperature"}},
     {"id": "soc_temp", "fact": "sys.temp.soc_c", "unit": "°C", "text": {"de": "SoC-Temperatur", "en": "SoC temperature"}},
@@ -1438,6 +1438,63 @@
         "reason": {
           "de": "Größe und erste Bytes sind gelesen. Dass das Spiel deshalb nicht startet, folgt aus dem Dateiformat, ist aber an der Test-Konsole nicht beobachtet; unbekannte, nicht textartige Formate werden bewusst nicht gemeldet.",
           "en": "Size and first bytes are read. That the game therefore does not start follows from the file format but was not observed on the test console; unknown, non-text formats are deliberately not reported."
+        }
+      }
+    },
+    {
+      "id": "selftest.failed",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "selftest.failed[].id",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Ein Selbsttest ist beim letzten Lauf fehlgeschlagen (Evidenz: Test und Grund). Bei einem Lesetest („read_error“, „short_read“) trat beim Lesen einer vorhandenen Datei ein Fehler auf: Laufwerk, Kabel, Anschluss oder die Datei selbst können die Ursache sein. Den Test einmal wiederholen; bleibt es dabei, das Laufwerk an einem anderen Anschluss oder am PC prüfen und die Datei neu kopieren. Bei einem Datenbanktest siehe die Befunde zu den Datenbanken. Ein bestandener Selbsttest heißt nur „nicht aufgefallen“, nie „gesund“.",
+        "en": "A self-test failed in the last run (evidence: test and reason). For a read test (“read_error”, “short_read”) an error occurred while reading an existing file: the drive, cable, port or the file itself can be the cause. Repeat the test once; if it stays that way, check the drive on another port or on a PC and copy the file again. For a database test see the findings about the databases. A passed self-test only means “nothing stood out”, never “healthy”."
+      },
+      "evidence": "selftest.failed[].id",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Das Ergebnis stammt aus einem Lauf dieser App auf dieser Konsole und ist gelesen. Die Ursache eines Lesefehlers lässt sich daraus nicht bestimmen; die genannten Möglichkeiten sind übliche, nicht belegt.",
+          "en": "The result comes from a run of this app on this console and is read. The cause of a read error cannot be determined from it; the possibilities listed are common ones, not proven."
+        }
+      }
+    },
+    {
+      "id": "selftest.interrupted",
+      "severity": "warning",
+      "confirm_runs": 1,
+      "when": {
+        "all": [
+          {
+            "fact": "selftest.interrupted.started",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Der letzte Selbsttest (gestartet, Evidenz) wurde nicht ordentlich beendet: Die Markierung „läuft“ steht noch in /data/ps5medic/selftest. Das passt zu einem Absturz, einem Neustart oder einem Stromverlust während des Tests, kann aber auch heißen, dass die Konsole mit dem Ausschalter oder der Powertaste ausgeschaltet wurde. Ein Hinweis auf Probleme bei Laufwerk, Speicher oder Stromversorgung, kein Beweis. Den Selbsttest erneut laufen lassen; die Markierung wird dabei neu gesetzt.",
+        "en": "The last self-test (started, evidence) did not end properly: the “running” marker is still in /data/ps5medic/selftest. That fits a crash, a restart or a power loss during the test, but can also mean the console was switched off with the power switch or button. A hint of problems with the drive, memory or power supply, not proof. Run the self-test again; the marker is reset in the process."
+      },
+      "evidence": "selftest.interrupted.started",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Markierung ist gelesen. Ihre Deutung als Absturz ist eine Schlussfolgerung: Auch ein bewusstes Ausschalten oder ein beendetes Programm ohne ordentliches Ende hinterlässt sie.",
+          "en": "The marker is read. Reading it as a crash is an inference: a deliberate power-off or a program that ended without a proper finish leaves it too."
         }
       }
     },

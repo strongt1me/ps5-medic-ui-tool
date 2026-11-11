@@ -23,3 +23,4 @@ void error_code_tests();  // tests/test_error_codes.cpp
 void codes_update_tests();  // tests/test_codes_update.cpp
 void text_policy_tests();   // tests/test_text_policy.cpp
 void history_tests();       // tests/test_history.cpp
+void selftest_tests();      // tests/test_selftest.cpp

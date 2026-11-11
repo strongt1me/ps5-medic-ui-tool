@@ -34,6 +34,25 @@ struct FakeService : IMedicService {
     std::vector<TxnInfo> hist;
     UndoResult undo_result{true, ""};
     int checks = 0, plans = 0, applies = 0, undos = 0, reports = 0;
+    int selftest_begins = 0, selftest_runs = 0, selftest_ends = 0;
+    bool last_cancelled = false;
+    std::vector<TestResult> last_results;
+    bool selftest_begin(const std::vector<std::string>&) override {
+        ++selftest_begins;
+        return true;
+    }
+    TestResult selftest_run(const std::string& id) override {
+        ++selftest_runs;
+        TestResult r;
+        r.id = id;
+        r.status = TestStatus::Passed;
+        return r;
+    }
+    void selftest_end(const std::vector<TestResult>& r, bool cancelled) override {
+        ++selftest_ends;
+        last_results = r;
+        last_cancelled = cancelled;
+    }
     std::string last_undo;
     ReportResult report_result{true, "/data/ps5medic/reports/report_T.md", "", "PS5 Medic 0.4.0 test\n3 Befund(e):\n[KRITISCH] a.crit\n [HINWEIS] c.info\n", false};
     ReportLang last_report_lang = ReportLang::De;
@@ -1414,12 +1433,12 @@ void error_codes_flow_tests() {
         CHECK(a.screen() == App::Screen::ErrorCodes && svc.error_loads >= 1, "Fehlercodes: Start, dreimal Runter, Kreuz oeffnet die Liste");
         press(a, {Button::Circle});
         CHECK(a.screen() == App::Screen::Start, "Fehlercodes: Kreis zurueck zum Start");
-        press(a, {Button::Down, Button::Down, Button::Right, Button::Cross});
+        press(a, {Button::Up, Button::Right, Button::Cross});  // von Fehlercodes (3) hoch zu den Einstellungen (2), Rechts zurueck
         CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes: Rechts von den Einstellungen waehlt Fehlercodes");
         press(a, {Button::Circle, Button::Left, Button::Cross});
         CHECK(a.screen() == App::Screen::Settings, "Fehlercodes: Links geht zurueck zu den Einstellungen");
         press(a, {Button::Circle, Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross});
-        CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes: weiter nach unten bleibt bei Fehlercodes");
+        CHECK(a.screen() == App::Screen::SelfTest, "Selbsttest: weiter nach unten bleibt beim letzten Knopf (Selbsttest)");
         press(a, {Button::Circle, Button::Up, Button::Up, Button::Up, Button::Up, Button::Up, Button::Cross});
         CHECK(a.screen() == App::Screen::Running, "Fehlercodes: Hoch bis oben, dort startet Kreuz den Check-up");
     }
@@ -2584,6 +2603,52 @@ void history_ui_tests() {
     }
 }
 
+// Selbsttest in der UI: Liste, Hinweis vor dem Lauf, ein Test je update(), Abbruch nach dem laufenden Test, nur Schnelltests.
+void selftest_ui_tests() {
+    FakeService svc;
+    Canvas cv(App::kWidth, App::kHeight);
+    App a(svc);
+    press(a, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross});
+    CHECK(a.screen() == App::Screen::SelfTest, "Selbsttest-UI: vierter Knopf oeffnet den Selbsttest");
+    a.render(cv);
+    press(a, {Button::Cross});  // Hinweis vor dem Lauf
+    a.render(cv);
+    CHECK(a.screen() == App::Screen::SelfTest, "Selbsttest-UI: Kreuz zeigt zuerst den Hinweis");
+    press(a, {Button::Circle});
+    press(a, {Button::Square});  // nur Schnelltests: laeuft sofort
+    a.render(cv);
+    int guard = 0;
+    while (guard++ < 40) {  // jedes update() macht einen Schritt, danach wird gezeichnet
+        a.update();
+        a.render(cv);
+    }
+    const std::size_t quick = std::count_if(selftest_registry().begin(), selftest_registry().end(), [](const TestDef& d) { return d.tier == TestTier::Quick; });
+    CHECK(svc.selftest_begins == 1 && svc.selftest_runs == static_cast<int>(quick) && svc.selftest_ends == 1 && !svc.last_cancelled, "Selbsttest-UI: Marker einmal, nur die Schnelltests laufen, Ende gemeldet");
+    for (const auto& r : svc.last_results) CHECK(r.status != TestStatus::Passed || r.id.rfind("hw.storage.read", 0) != 0, "Selbsttest-UI: der Lesetest lief bei 'nur Schnelltests' nicht");
+    press(a, {Button::Circle});
+    CHECK(a.screen() == App::Screen::Start, "Selbsttest-UI: Kreis zurueck zum Start");
+
+    // Alle Tests, Abbruch nach dem ersten
+    FakeService svc2;
+    App b(svc2);
+    press(b, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross, Button::Cross, Button::Cross});  // oeffnen, Hinweis, starten
+    b.render(cv);
+    b.update();  // Marker
+    b.render(cv);
+    b.update();  // erster Test
+    b.render(cv);
+    press(b, {Button::Circle});
+    b.render(cv);
+    for (int i = 0; i < 12; ++i) {
+        b.update();
+        b.render(cv);
+    }
+    CHECK(svc2.selftest_runs == 1 && svc2.selftest_ends == 1 && svc2.last_cancelled, "Selbsttest-UI: Kreis bricht nach dem laufenden Test ab");
+    int cancelled = 0;
+    for (const auto& r : svc2.last_results) cancelled += r.status == TestStatus::Cancelled ? 1 : 0;
+    CHECK(cancelled == static_cast<int>(svc2.last_results.size()) - 1 && !svc2.last_results.empty(), "Selbsttest-UI: der Rest steht als abgebrochen im Ergebnis, nie als bestanden");
+}
+
 }  // namespace
 
 void ui_tests() {
@@ -2595,6 +2660,7 @@ void ui_tests() {
     coverage_ui_tests();
     redetect_ui_tests();
     confidence_ui_tests();
+    selftest_ui_tests();
     history_ui_tests();
     edge_tests();
     end_to_end_tests();

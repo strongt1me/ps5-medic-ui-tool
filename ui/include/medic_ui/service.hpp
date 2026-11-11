@@ -12,6 +12,7 @@
 #include "medic/rule_update.hpp"
 #include "medic/history.hpp"
 #include "medic/rules.hpp"
+#include "medic/selftest.hpp"
 
 #include <functional>
 #include <map>
@@ -91,6 +92,25 @@ public:
         r.error = "no_write";
         return r;
     }
+    // Selbsttest (libmedic/include/medic/selftest.hpp): nur lesende Tests. begin sammelt frische Fakten und setzt den Absturz-Marker (false: kein
+    // Schreibzugriff, der Lauf geht trotzdem), run fuehrt einen Test aus, end schreibt Ergebnis und setzt den Marker auf "done".
+    virtual std::vector<medic::TestDef> selftest_defs() { return medic::selftest_registry(); }
+    virtual std::vector<medic::TestResult> selftest_last() { return {}; }
+    virtual bool selftest_begin(const std::vector<std::string>& ids) {
+        (void)ids;
+        return false;
+    }
+    virtual medic::TestResult selftest_run(const std::string& id) {
+        medic::TestResult r;
+        r.id = id;
+        r.status = medic::TestStatus::Skipped;
+        r.reason = "no_service";
+        return r;
+    }
+    virtual void selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) {
+        (void)results;
+        (void)cancelled;
+    }
     // Zusaetzliche Angaben der Konsole zu einem Fehlercode, so wie sie dessen `context` verlangt. Liest nur; sammelt nichts neu,
     // sondern benutzt die Fakten des letzten Check-ups (Standard: nichts).
     virtual CodeContext code_context(const medic::ErrorCode& code) {
@@ -125,6 +145,10 @@ public:
     const medic::ErrorCodeSet& error_codes() override { return error_codes_; }
     CodeContext code_context(const medic::ErrorCode& code) override;
     void set_reported_error(const std::string& id) override { reported_error_ = id; }
+    std::vector<medic::TestResult> selftest_last() override;
+    bool selftest_begin(const std::vector<std::string>& ids) override;
+    medic::TestResult selftest_run(const std::string& id) override;
+    void selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) override;
     medic::RuleUpdateOffer check_codes_update() override;
     medic::RuleUpdateResult install_codes_update() override;
     medic::RuleUpdateResult rollback_codes_update() override;
@@ -143,6 +167,7 @@ private:
     medic::Facts facts_;
     std::vector<medic::Finding> last_findings_;
     std::vector<std::string> last_resolved_;
+    medic::Facts selftest_facts_;  // frische Fakten des laufenden Selbsttests
     std::vector<medic::MetricChange> last_metrics_;
     std::optional<medic::ErrorCodeSet> codes_before_install_;  // dito fuer die Fehlercodes
     bool reload_error_codes();

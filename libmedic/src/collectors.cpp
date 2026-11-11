@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/collectors.hpp"
 #include "medic/history.hpp"
+#include "medic/selftest.hpp"
 
 #include "medic/rules.hpp"
 #include "medic/sqlite_check.hpp"
@@ -1340,6 +1341,7 @@ Facts collect_all(const Platform& p) {
     collect_databases(p, f);
     collect_game_files(p, f);
     collect_baseline(p, f);
+    collect_selftest(p, f);
     return f;
 }
 

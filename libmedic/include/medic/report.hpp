@@ -8,6 +8,7 @@
 #include "medic/history.hpp"
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
+#include "medic/selftest.hpp"
 
 #include <cstddef>
 #include <string>
@@ -34,6 +35,8 @@ struct ReportInput {
     std::vector<CoverageResult> coverage;  // Pruefbereiche (nicht gepruefte stehen im Bericht)
     std::vector<std::string> resolved;     // seit der letzten Pruefung behobene Regeln (Verlauf)
     std::vector<MetricChange> metrics;     // Messwerte mit Veraenderung (Verlauf)
+    std::vector<TestResult> selftests;     // Ergebnis des letzten Selbsttests (leer: keiner gelaufen)
+    std::string selftest_finished;
     Facts facts;                 // Umgebung: Firmware, Modell, Versionen, Prozesse, Speicher
     std::vector<TxnInfo> history;
     std::vector<UnknownLine> unknown_lines;  // fehlerartige Logzeilen ohne passenden Befund

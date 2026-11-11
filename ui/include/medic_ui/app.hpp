@@ -22,7 +22,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
 
@@ -64,6 +64,9 @@ private:
     const medic::ErrorCode* current_error() const;
     void refresh_error_context();
     void open_error_source();
+    void open_selftest();
+    void start_selftest(bool quick_only);
+    void step_selftest();
     void scroll_error_detail(int dir);
     void install_updates();
     void rollback_updates();
@@ -85,6 +88,7 @@ private:
     void draw_error_codes(Canvas& c) const;
     void draw_error_detail(Canvas& c) const;
     void draw_error_source(Canvas& c) const;
+    void draw_selftest(Canvas& c) const;
 
     std::string finding_text(const medic::Finding& f) const;
     std::string fix_name(const std::string& id) const;
@@ -124,6 +128,17 @@ private:
     medic::TxnInfo undo_target_;
 
     int settings_sel_ = 0;  // 0 Sprache, 1 Regel-Update
+
+    // Selbsttest: List (letzte Ergebnisse), Confirm (Hinweis vor dem Lauf), Running (ein Test je update()), Done
+    enum class StState { List, Confirm, Running, Done };
+    StState st_state_ = StState::List;
+    std::vector<medic::TestDef> st_defs_;
+    std::vector<medic::TestResult> st_last_;                  // zuletzt gespeichertes oder gerade beendetes Ergebnis
+    std::vector<medic::TestResult> st_run_;                   // Ergebnisse des laufenden Laufs
+    std::vector<std::size_t> st_ids_;                         // Indizes (in st_defs_) der Tests dieses Laufs
+    std::size_t st_next_ = 0;
+    bool st_cancel_ = false, st_begun_ = false, st_quick_only_ = false;
+    mutable bool st_rendered_ = false;  // die Fortschrittsanzeige muss vor jedem Test gezeichnet worden sein
 
     enum class UpdateStage { Offer, ConfirmRollback, ConfirmDownload, Downloading, DownloadFail, DoneOk, DoneFail };
     medic::RuleUpdateOffer offer_;

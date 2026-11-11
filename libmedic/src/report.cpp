@@ -401,6 +401,7 @@ ReportInput make_report_input(const Platform& p, const Facts& facts, const RuleS
     in.coverage = evaluate_coverage(rules, facts);
     in.facts = facts;
     in.history = history(p);
+    in.selftests = load_last_selftest(p.fs(), &in.selftest_finished);
     in.unknown_lines = unknown_error_lines(facts, in.findings);
     return in;
 }
@@ -494,6 +495,39 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
             if (m.has_typical && m.samples >= 3) extra += (extra.empty() ? "" : ", ") + std::string(de ? "üblich ≈ " : "usual ≈ ") + num(m.typical) + (de ? " (aus " : " (from ") + std::to_string(m.samples) + (de ? " Prüfungen)" : " checks)");
             if (!extra.empty()) o << " (" << extra << ")";
             o << "\n";
+        }
+        o << "\n";
+    }
+    if (!in.selftests.empty()) {
+        o << (de ? "## Selbsttest\n\n" : "## Self-test\n\n");
+        o << (de ? "Nur lesende Tests. „Bestanden“ heißt „nicht aufgefallen“, nie „gesund“; „übersprungen“ und „nicht gelaufen“ heißen nicht bestanden.\n\n"
+                 : "Read-only tests. “Passed” means “nothing stood out”, never “healthy”; “skipped” and “not run” do not mean passed.\n\n");
+        if (!in.selftest_finished.empty()) o << (de ? "Letzter Lauf: " : "Last run: ") << time_text(in.selftest_finished) << "\n\n";
+        auto status_name = [&](TestStatus st) -> std::string {
+            switch (st) {
+                case TestStatus::Passed: return de ? "bestanden" : "passed";
+                case TestStatus::Warn: return de ? "Warnung" : "warning";
+                case TestStatus::Failed: return de ? "fehlgeschlagen" : "failed";
+                case TestStatus::Error: return de ? "Testfehler" : "test error";
+                case TestStatus::Cancelled: return de ? "abgebrochen" : "cancelled";
+                case TestStatus::Skipped: return de ? "übersprungen" : "skipped";
+                case TestStatus::NotRun: break;
+            }
+            return de ? "nicht gelaufen" : "not run";
+        };
+        for (const auto& t : in.selftests) {
+            const TestDef* def = find_test(t.id);
+            o << "- " << (def ? (de ? def->name_de : def->name_en) : t.id) << ": " << status_name(t.status);
+            if (!t.reason.empty()) o << " (" << t.reason << ")";
+            for (const auto& m : t.measurements) {
+                char b[32];
+                std::snprintf(b, sizeof b, "%.1f", m.value);
+                std::string v = b;
+                if (v.size() > 2 && v.compare(v.size() - 2, 2, ".0") == 0) v.resize(v.size() - 2);
+                o << ", " << m.name << " " << v << (m.unit.empty() ? "" : " " + m.unit);
+            }
+            o << "\n";
+            if (def && (t.status == TestStatus::Passed || t.status == TestStatus::Warn)) o << "  " << (de ? "Beweist nicht: " : "Does not prove: ") << (de ? def->proves_not_de : def->proves_not_en) << "\n";
         }
         o << "\n";
     }

@@ -233,6 +233,27 @@ medic::RuleDownloadResult LocalService::download_rule_update() {
     return medic::download_rule_update(p_, *http_, rule_update_url(), clock_());
 }
 
+std::vector<medic::TestResult> LocalService::selftest_last() { return medic::load_last_selftest(p_.fs()); }
+
+bool LocalService::selftest_begin(const std::vector<std::string>& ids) {
+    selftest_facts_ = medic::collect_all(p_);  // erst sammeln, dann den Marker setzen (sonst saehe der Lauf seinen eigenen Marker als Absturz)
+    return medic::selftest_begin(p_, clock_(), ids);
+}
+
+medic::TestResult LocalService::selftest_run(const std::string& id) {
+    const medic::TestDef* d = medic::find_test(id);
+    if (!d) {
+        medic::TestResult r;
+        r.id = id;
+        r.status = medic::TestStatus::Error;
+        r.reason = "unknown_test";
+        return r;
+    }
+    return medic::run_selftest(p_, selftest_facts_, *d);
+}
+
+void LocalService::selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) { medic::selftest_finish(p_, clock_(), results, cancelled); }
+
 ReportResult LocalService::make_report(medic::ReportLang lang) {
     ReportResult r;
     const std::string ts = clock_();

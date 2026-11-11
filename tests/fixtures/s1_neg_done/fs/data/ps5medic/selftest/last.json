@@ -1,0 +1,20 @@
+{
+  "finished": "20261111T120000Z",
+  "cancelled": false,
+  "results": [
+    {
+      "id": "sw.storage.mounts",
+      "status": "passed",
+      "reason": "",
+      "started": "",
+      "duration_s": 0.01,
+      "measurements": [
+        {
+          "name": "free_pct",
+          "value": 44.4,
+          "unit": "%"
+        }
+      ]
+    }
+  ]
+}
