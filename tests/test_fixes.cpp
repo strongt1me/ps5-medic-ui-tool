@@ -420,7 +420,10 @@ json comparable_facts(const Facts& f) {
         if (!v) continue;
         out[k] = *v;
         if (std::string(k) == "smp.images")
-            for (auto& img : out[k]) img.erase("size");  // Export legt Images als leere Dateien an
+            for (auto& img : out[k]) {
+                img.erase("size");  // Export legt Images als leere Dateien (bzw. nur den Kopf) an
+                img.erase("volume_bytes");
+            }
     }
     return out;
 }
@@ -472,7 +475,7 @@ void export_tests() {
     // Spielinhalte werden nicht exportiert: nur sce_sys/param.json
     {
         TempCopy tmp("b8_pos");
-        std::ofstream(tmp.dir / "fs/data/homebrew/GameA/eboot.bin") << "GEHEIM";
+        std::ofstream(tmp.dir / "fs/data/homebrew/GameA/eboot.bin") << std::string("" "ELF") << "GEHEIM" << std::string(64, 'x');  // gueltiger Anfang: wird weder gemeldet noch exportiert
         auto p = make_snapshot_platform(tmp.dir.string());
         Facts f = collect_all(*p);
         fs::path out = tmp.dir.parent_path() / (tmp.dir.filename().string() + "-out");

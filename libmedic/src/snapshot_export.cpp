@@ -233,7 +233,18 @@ public:
             } else if (lower_ext(e.name) == ".exfat") {
                 std::string head;
                 fs_.read_range(path, 0, kHeaderBytes, head);
-                write(path, head);
+                // Die Datei selbst wird nicht kopiert (Groesse!): Vollstaendige Images bekommen VolumeLength = 1 Sektor, damit der Ersatzkopf
+                // (nur der Kopf) nicht als abgeschnitten gilt; abgeschnittene behalten die echte Laenge und bleiben es.
+                if (head.size() >= 110 && head.compare(3, 8, "EXFAT   ") == 0) {
+                    const unsigned bps = static_cast<unsigned char>(head[108]);
+                    std::uint64_t vol = 0;
+                    for (int i = 7; i >= 0; --i) vol = (vol << 8) | static_cast<unsigned char>(head[72 + static_cast<std::size_t>(i)]);
+                    if (bps >= 9 && bps <= 12 && vol >= 1 && e.size >= (vol << bps))
+                        for (int i = 0; i < 8; ++i) head[72 + static_cast<std::size_t>(i)] = i == 0 ? 1 : 0;
+                }
+                write(path, head.size() > e.size ? head.substr(0, static_cast<std::size_t>(e.size)) : head);
+            } else if (lower_ext(e.name) == ".ffpfs" || lower_ext(e.name) == ".ffpfsc") {
+                write(path, std::string(static_cast<std::size_t>(std::min<std::uint64_t>(e.size, 512)), '\0'));  // nur die Groessenklasse (leer oder nicht) bleibt erhalten
             } else {
                 write(path, std::string());
             }
@@ -461,6 +472,12 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
     if (const auto* l = facts.get("games.case_mismatch"); l && l->is_array())
         for (const auto& e : *l)
             if (e.is_object() && e.contains("path") && e["path"].is_string()) ex.write(e["path"].get<std::string>(), std::string());
+
+    // eboot.bin-Probleme (Befund game.eboot_invalid): Ersatzdatei mit demselben Befund
+    if (const auto* l = facts.get("games.eboot_problems"); l && l->is_array())
+        for (const auto& e : *l)
+            if (e.is_object() && e.contains("path") && e["path"].is_string() && e.contains("reason") && e["reason"].is_string())
+                ex.write(e["path"].get<std::string>(), e["reason"].get<std::string>() == "text" ? std::string(64, 'x') : std::string());
 
     // Scanpfade (wirksame und Standard, damit auch "versteckte" Spiele sichtbar bleiben) und gemountete Images
     std::vector<std::string> roots = strings_of(facts, "smp.scan_roots");

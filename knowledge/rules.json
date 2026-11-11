@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.28",
+  "db_version": "2026.11.29",
   "metrics": [
     {"id": "cpu_temp", "fact": "sys.temp.cpu_c", "unit": "°C", "text": {"de": "CPU-Temperatur", "en": "CPU temperature"}},
     {"id": "soc_temp", "fact": "sys.temp.soc_c", "unit": "°C", "text": {"de": "SoC-Temperatur", "en": "SoC temperature"}},
@@ -1347,6 +1347,97 @@
         "reason": {
           "de": "Die jetzige Temperatur und der Median der eigenen früheren Messungen sind gelesen. Die Schwelle von 12 °C ist eine eigene Annahme, und die früheren Messungen können unter anderer Last oder Umgebung entstanden sein.",
           "en": "The current temperature and the median of your own earlier measurements are read. The 12 °C threshold is our own assumption, and the earlier measurements may have been taken under a different load or environment."
+        }
+      }
+    },
+    {
+      "id": "smp.image_truncated",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "smp.images[].ext",
+            "eq": ".exfat"
+          },
+          {
+            "fact": "smp.images[].truncated",
+            "eq": "1"
+          }
+        ]
+      },
+      "text": {
+        "de": "Ein .exfat-Image ist kleiner als das Dateisystem, das sein Kopf beschreibt (VolumeLength im Boot-Sektor): Die Kopie ist unvollständig, die letzten Daten fehlen. Häufige Ursachen sind ein abgebrochenes Kopieren, ein volles Laufwerk oder ein Dateisystem mit Größenlimit (z. B. FAT32 mit höchstens 4 GiB je Datei). Spiele, die auf fehlende Bereiche zugreifen, starten nicht oder stürzen ab. Das Image erneut kopieren (am besten auf ein exFAT-Laufwerk) und die Größe mit der Quelle vergleichen. Medic ändert das Image nicht.",
+        "en": "An .exfat image is smaller than the file system its header describes (VolumeLength in the boot sector): the copy is incomplete, the last data is missing. Common causes are an interrupted copy, a full drive or a file system with a size limit (e.g. FAT32 with at most 4 GiB per file). Games that touch the missing areas do not start or crash. Copy the image again (preferably to an exFAT drive) and compare the size with the source. Medic does not change the image."
+      },
+      "evidence": "smp.images[].path",
+      "fix": null,
+      "source": "https://learn.microsoft.com/en-us/windows/win32/fileio/exfat-specification",
+      "verified": "doc",
+      "confidence": {
+        "level": "high",
+        "basis": "doc",
+        "reason": {
+          "de": "Dateigröße und VolumeLength sind gelesen; die Länge des Dateisystems ist in der exFAT-Spezifikation definiert. Dass dadurch ein Spiel abstürzt, ist abgeleitet und an der Test-Konsole nicht beobachtet.",
+          "en": "File size and VolumeLength are read; the length of the file system is defined in the exFAT specification. That a game crashes because of it is derived and not observed on the test console."
+        }
+      }
+    },
+    {
+      "id": "smp.image_empty",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "smp.images[].tiny",
+            "eq": "1"
+          }
+        ]
+      },
+      "text": {
+        "de": "Ein Image (.exfat, .ffpfs oder .ffpfsc) ist kleiner als 512 Byte, also leer oder nach einem Abbruch nur ein Rest: Es kann kein Dateisystem enthalten und sich nicht einhängen lassen. Das Image neu kopieren oder neu bauen; die leere Datei kann gefahrlos entfernt werden, wenn sie nur ein Überbleibsel ist (Medic löscht sie nicht).",
+        "en": "An image (.exfat, .ffpfs or .ffpfsc) is smaller than 512 bytes, so it is empty or only a remnant after an abort: it cannot contain a file system and cannot be mounted. Copy or build the image again; the empty file can safely be removed if it is only a leftover (Medic does not delete it)."
+      },
+      "evidence": "smp.images[].path",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Die Größe ist gelesen; ein Dateisystem passt sicher nicht in weniger als 512 Byte. Dass ShadowMount+ solche Dateien nur überspringt oder meldet, ist an der Test-Konsole nicht beobachtet.",
+          "en": "The size is read; a file system certainly does not fit into fewer than 512 bytes. How ShadowMount+ treats such files was not observed on the test console."
+        }
+      }
+    },
+    {
+      "id": "game.eboot_invalid",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.eboot_problems[].reason",
+            "in": [
+              "too_small",
+              "text"
+            ]
+          }
+        ]
+      },
+      "text": {
+        "de": "Die eboot.bin eines Spielordners ist unbrauchbar: Sie ist kleiner als 64 Byte oder eine reine Textdatei (z. B. eine gespeicherte Fehlerseite statt der Datei). Eine gültige eboot.bin beginnt als ELF oder SELF. Das Spiel kann so nicht starten; der Ordner stammt vermutlich aus einem fehlgeschlagenen Download oder Kopiervorgang. Die Datei aus der Quelle neu kopieren. Medic prüft nur den Anfang der Datei und entschlüsselt oder liest nichts darüber hinaus.",
+        "en": "The eboot.bin of a game folder is unusable: it is smaller than 64 bytes or a plain text file (e.g. a saved error page instead of the file). A valid eboot.bin starts as ELF or SELF. The game cannot start that way; the folder probably comes from a failed download or copy. Copy the file from the source again. Medic only checks the start of the file and decrypts or reads nothing beyond it."
+      },
+      "evidence": "games.eboot_problems[].path",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Größe und erste Bytes sind gelesen. Dass das Spiel deshalb nicht startet, folgt aus dem Dateiformat, ist aber an der Test-Konsole nicht beobachtet; unbekannte, nicht textartige Formate werden bewusst nicht gemeldet.",
+          "en": "Size and first bytes are read. That the game therefore does not start follows from the file format but was not observed on the test console; unknown, non-text formats are deliberately not reported."
         }
       }
     },

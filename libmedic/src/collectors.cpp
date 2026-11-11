@@ -292,13 +292,24 @@ std::string title_id_from_param(const IFileSystem& fs, const std::string& game_d
 
 // Cluster-Groesse aus dem exFAT-Boot-Sektor (Offset 3: "EXFAT   ", 108: BytesPerSectorShift, 109: SectorsPerClusterShift).
 // 0 = kein exFAT-Header erkennbar.
-std::uint64_t exfat_cluster_size(const IFileSystem& fs, const std::string& path) {
+// Zusaetzlich die Laenge des Dateisystems (VolumeLength, Offset 72, in Sektoren; Microsoft exFAT-Spezifikation, Abschnitt Main Boot Sector):
+// volume_bytes = VolumeLength << BytesPerSectorShift, 0 = Feld leer oder unplausibel (dann keine Laengenpruefung).
+struct ExfatInfo {
+    std::uint64_t cluster = 0, volume_bytes = 0;
+};
+
+ExfatInfo exfat_info(const IFileSystem& fs, const std::string& path) {
+    ExfatInfo r;
     std::string b;
-    if (!fs.read_range(path, 0, 512, b) || b.size() < 110) return 0;
-    if (b.compare(3, 8, "EXFAT   ") != 0) return 0;
+    if (!fs.read_range(path, 0, 512, b) || b.size() < 110) return r;
+    if (b.compare(3, 8, "EXFAT   ") != 0) return r;
     unsigned bps = static_cast<unsigned char>(b[108]), spc = static_cast<unsigned char>(b[109]);
-    if (bps < 9 || bps > 12 || spc > 25 || bps + spc > 25) return 0;  // ausserhalb der exFAT-Spezifikation
-    return std::uint64_t{1} << (bps + spc);
+    if (bps < 9 || bps > 12 || spc > 25 || bps + spc > 25) return r;  // ausserhalb der exFAT-Spezifikation
+    r.cluster = std::uint64_t{1} << (bps + spc);
+    std::uint64_t vol = 0;
+    for (int i = 7; i >= 0; --i) vol = (vol << 8) | static_cast<unsigned char>(b[72 + static_cast<std::size_t>(i)]);
+    if (vol >= 1 && vol <= (std::uint64_t{1} << 40)) r.volume_bytes = vol << bps;
+    return r;
 }
 
 struct Entry {
@@ -825,8 +836,15 @@ void collect_shadowmount(const Platform& p, Facts& f) {
     for (auto& [path, e] : entries) {
         if (e.is_image) {
             json img = {{"name", e.name}, {"ext", e.ext}, {"path", e.path}, {"size", e.size}, {"level", e.level}};
-            if (e.ext == ".exfat")
-                if (auto cs = exfat_cluster_size(fs, e.path)) img["cluster_size"] = cs;
+            if (e.ext == ".exfat") {
+                const ExfatInfo xi = exfat_info(fs, e.path);
+                if (xi.cluster) img["cluster_size"] = xi.cluster;
+                if (xi.volume_bytes) {
+                    img["volume_bytes"] = xi.volume_bytes;
+                    img["truncated"] = e.size < xi.volume_bytes ? 1 : 0;  // Datei kleiner als das beschriebene Dateisystem: unvollstaendige Kopie
+                }
+            }
+            if (e.ext != ".dat") img["tiny"] = e.size < 512 ? 1 : 0;  // kleiner als ein Kopf: leer oder abgebrochen
             images.push_back(std::move(img));
         }
         if (e.level > depth) {  // von SM+ bei dieser Tiefe nicht gescannt
@@ -1248,6 +1266,37 @@ void collect_game_files(const Platform& p, Facts& f) {
             }
         }
     f.set("games.case_mismatch", std::move(mismatches));
+
+    // eboot.bin: nur offensichtlich Unbrauchbares. Gueltig sind ELF (7F 45 4C 46) und SELF (4F 15 3D 1D, 54 14 F5 EE); verschluesselte Teile werden
+    // nie gelesen. Gemeldet wird nur eine Datei unter 64 Byte oder eine reine Textdatei (z. B. eine gespeicherte Fehlerseite statt der Datei);
+    // jedes andere unbekannte Format gilt als "nicht pruefbar" und ist kein Befund.
+    json bad = json::array();
+    done.clear();
+    if (titles && titles->is_array())
+        for (const auto& t : *titles) {
+            if (!t.is_object() || !t.contains("path") || !t["path"].is_string() || !t.contains("titleid") || !t["titleid"].is_string()) continue;
+            const std::string path = t["path"].get<std::string>();
+            if (!done.insert(path).second || !fs.is_dir(path)) continue;
+            std::uint64_t size = 0;
+            bool found = false;
+            for (const auto& e : fs.list_dir(path))
+                if (!e.is_dir && e.name == "eboot.bin") {
+                    size = e.size;
+                    found = true;
+                }
+            if (!found) continue;
+            std::string head;
+            fs.read_range(join_path(path, "eboot.bin"), 0, 64, head);
+            std::string reason;
+            if (size < 64) {
+                reason = "too_small";
+            } else if (head.size() >= 16 && head.compare(0, 4, "\x7f" "ELF") != 0 && head.compare(0, 4, "\x4f\x15\x3d\x1d") != 0 && head.compare(0, 4, "\x54\x14\xf5\xee") != 0) {
+                const bool text = std::all_of(head.begin(), head.begin() + 16, [](unsigned char c) { return (c >= 0x20 && c < 0x7f) || c == '\n' || c == '\r' || c == '\t'; });
+                if (text) reason = "text";
+            }
+            if (!reason.empty()) bad.push_back({{"titleid", t["titleid"]}, {"path", join_path(path, "eboot.bin")}, {"size", size}, {"reason", reason}});
+        }
+    f.set("games.eboot_problems", std::move(bad));
 }
 
 // Vergleich mit den eigenen frueheren Messungen (Verlauf der Check-ups, history.hpp): Abweichung der jetzigen Temperatur vom Median der
