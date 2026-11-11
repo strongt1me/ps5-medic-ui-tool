@@ -70,8 +70,6 @@ std::string LocalService::read_text(const std::string& path) {
 
 std::vector<medic::TxnInfo> LocalService::history() { return medic::history(p_); }
 
-medic::ResetResult LocalService::reset_history() { return medic::reset_history(p_, clock_()); }
-
 medic::UndoResult LocalService::undo(const std::string& txn) {
     ensure_facts();
     return medic::undo_txn(p_, medic::policy_from_facts(facts_), txn, clock_());

@@ -560,24 +560,7 @@ void App::handle(Button b) {
                     undo_target_ = hist_[static_cast<std::size_t>(hist_sel_)];
                     screen_ = Screen::UndoConfirm;
                 }
-            } else if (b == Button::Triangle) screen_ = Screen::HistoryReset;
-            else if (b == Button::Circle) screen_ = Screen::Start;
-            break;
-        case Screen::HistoryReset:
-            if (b == Button::Cross) {
-                const medic::ResetResult r = svc_.reset_history();
-                done_kind_ = DoneKind::Reset;
-                done_ok_ = r.ok;
-                if (r.ok) {
-                    done_text_.clear();
-                    for (const auto& f : r.moved) done_text_ += (done_text_.empty() ? "" : ", ") + f;
-                } else {
-                    const auto& S = Strings::get(lang_);
-                    done_text_ = S.has("reset.err." + r.error) ? S("reset.err." + r.error) : r.error;
-                }
-                verify_ = Verify::None;
-                screen_ = Screen::FixDone;
-            } else if (b == Button::Circle) screen_ = Screen::History;
+            } else if (b == Button::Circle) screen_ = Screen::Start;
             break;
         case Screen::UndoConfirm:
             if (b == Button::Cross) {
@@ -762,7 +745,6 @@ void App::render(Canvas& c) const {
             break;
         case Screen::History: draw_history(c); break;
         case Screen::UndoConfirm: draw_undo_confirm(c); break;
-        case Screen::HistoryReset: draw_history_reset(c); break;
         case Screen::Settings: draw_settings(c); break;
         case Screen::Report: draw_report(c); break;
         case Screen::RulesUpdate: draw_rules_update(c); break;
@@ -1460,11 +1442,9 @@ void App::draw_fix_preview(Canvas& c) const {
 void App::draw_fix_done(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     const bool fix = done_kind_ == DoneKind::Fix;
-    const bool reset = done_kind_ == DoneKind::Reset;
-    const char* head = reset ? (done_ok_ ? "reset.ok" : "reset.fail") : (done_ok_ ? (fix ? "fixdone.ok" : "undo.ok") : (fix ? "fixdone.fail" : "undo.fail"));
+    const char* head = done_ok_ ? (fix ? "fixdone.ok" : "undo.ok") : (fix ? "fixdone.fail" : "undo.fail");
     std::string sub;
-    if (reset && done_ok_) sub = done_text_.empty() ? S("reset.ok_none") : S.fmt("reset.ok_sub", {{"files", done_text_}});
-    else if (done_ok_) sub = fix ? S.fmt("fixdone.ok_sub", {{"txn", done_text_}}) : S.fmt("undo.ok_sub", {{"txn", done_text_}});
+    if (done_ok_) sub = fix ? S.fmt("fixdone.ok_sub", {{"txn", done_text_}}) : S.fmt("undo.ok_sub", {{"txn", done_text_}});
     else sub = S.fmt("fixdone.fail_sub", {{"error", done_text_}});
 
     c.fill_round_rect(M, 260, W - 2 * M, 400, 24, kPanel);
@@ -1505,7 +1485,7 @@ void App::draw_history(Canvas& c) const {
     if (n == 0) {
         c.fill_round_rect(M, 260, W - 2 * M, 160, 20, kPanel);
         body().draw(c, M + 40, 320, S("history.empty"), kDim);
-        draw_hints(c, {{PadGlyph::Triangle, S("history.reset")}, {PadGlyph::Circle, S("common.back")}});
+        draw_hints(c, {{PadGlyph::Circle, S("common.back")}});
         return;
     }
     const int cw = W - 2 * M, ch = 96, gap = 12;
@@ -1527,7 +1507,6 @@ void App::draw_history(Canvas& c) const {
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
     if (n > kHistVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
     if (can_undo) hints.emplace_back(PadGlyph::Cross, S("common.undo"));
-    hints.emplace_back(PadGlyph::Triangle, S("history.reset"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }
@@ -1540,20 +1519,6 @@ void App::draw_undo_confirm(Canvas& c) const {
     title().draw(c, M + 196, 312, S("undo.title"), kWarn);
     int y = 410;
     for (auto& l : wrap_text(body(), S.fmt("undo.body", {{"fix", fix_name(undo_target_.fix)}, {"ts", pretty_ts(undo_target_.ts.empty() ? undo_target_.txn : undo_target_.ts)}}), W - 2 * M - 120, 5)) {
-        body().draw(c, M + 60, y, l, kText);
-        y += body().line_height() + 6;
-    }
-    draw_hints(c, {{PadGlyph::Cross, S("common.confirm")}, {PadGlyph::Circle, S("common.cancel")}});
-}
-
-void App::draw_history_reset(Canvas& c) const {
-    const auto& S = Strings::get(lang_);
-    c.fill_round_rect(M, 260, W - 2 * M, 420, 24, kPanel);
-    c.fill_round_rect(M + 60, 286, 104, 104, 32, rgba(255, 179, 71, 40));
-    draw_icon(c, Icon::History, M + 112, 338, 72, kWarn, kWarn);
-    title().draw(c, M + 196, 312, S("reset.title"), kWarn);
-    int y = 420;
-    for (auto& l : wrap_text(body(), S("reset.body"), W - 2 * M - 120, 7)) {
         body().draw(c, M + 60, y, l, kText);
         y += body().line_height() + 6;
     }

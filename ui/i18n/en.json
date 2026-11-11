@@ -320,17 +320,5 @@
   "selftest.reason.no_response": "router does not answer the probe (no statement)",
   "selftest.reason.probe_error": "connection attempt not possible",
   "selftest.reason.packet_loss": "many connection attempts to the router went unanswered",
-  "selftest.reason.slow_gateway": "router answers slowly",
-  "history.reset": "Reset",
-  "reset.title": "Reset the history?",
-  "reset.body": "The repair journal and the history of check-ups are set aside, not deleted (journal_… and history_… in /data/ps5medic). Afterwards the history is empty and all findings count as new again. Repairs already made can then no longer be undone through the app; the backed-up files stay under /data/ps5medic/backups.",
-  "reset.ok": "History reset",
-  "reset.ok_sub": "Set aside: {files}. The history starts over.",
-  "reset.ok_none": "There was no history. Nothing was changed.",
-  "reset.fail": "Reset failed",
-  "reset.err.incomplete": "A repair is incomplete. Please undo it first, then reset.",
-  "reset.err.no_write": "No write access to /data/ps5medic.",
-  "reset.err.exists": "The target file already exists. Nothing was overwritten.",
-  "reset.err.move_failed": "The file could not be moved.",
-  "reset.err.bad_timestamp": "No valid clock time."
+  "selftest.reason.slow_gateway": "router answers slowly"
 }

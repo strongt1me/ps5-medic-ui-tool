@@ -97,9 +97,6 @@ int main(int argc, char** argv) {
         app.handle(Button::Down);
         app.handle(Button::Cross);  // Verlauf
         shot("06_history");
-        app.handle(Button::Triangle);  // Verlauf zuruecksetzen: Rueckfrage
-        shot("06b_history_reset");
-        app.handle(Button::Circle);
         app.handle(Button::Circle);
         app.handle(Button::Down);
         app.handle(Button::Cross);  // Einstellungen

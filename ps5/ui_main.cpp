@@ -201,7 +201,6 @@ const char* screen_name(App::Screen s) {
         case App::Screen::ErrorCodeSource: return "Fehlercode-Quelle";
         case App::Screen::SelfTest: return "Selbsttest";
         case App::Screen::UserTest: return "Nutzer-Test";
-        case App::Screen::HistoryReset: return "Verlauf zuruecksetzen";
     }
     return "?";
 }

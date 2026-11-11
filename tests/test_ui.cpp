@@ -3,7 +3,6 @@
 // ueber LocalService gegen eine Fixture-Kopie.
 #include "check.hpp"
 #include "medic/error_codes.hpp"
-#include "medic/fixes.hpp"
 #include "medic/history.hpp"
 #include "medic_ui/app.hpp"
 #include "medic_ui/font.hpp"
@@ -2768,70 +2767,6 @@ void selftest_ui_tests() {
     CHECK(svc4.selftest_runs == run_all, "Selbsttest-UI: Gruendlich nach Bestaetigung laeuft alle Tests (ohne Nutzer-Tests)");
 }
 
-void history_reset_tests() {
-    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
-    auto slurp_file = [](const fs::path& f) {
-        std::ifstream in(f, std::ios::binary);
-        std::ostringstream ss;
-        ss << in.rdbuf();
-        return ss.str();
-    };
-    const std::string committed = "{\"type\":\"op\",\"txn\":\"T1\",\"ts\":\"20261111T100000Z\",\"fix\":\"f\",\"rule\":\"r\"}\n{\"type\":\"commit\",\"txn\":\"T1\"}\n";
-    const std::string incomplete = "{\"type\":\"op\",\"txn\":\"T2\",\"ts\":\"20261111T100000Z\",\"fix\":\"f\",\"rule\":\"r\"}\n";
-    {  // Ende zu Ende ueber die UI: Verlauf, Dreieck, Bestaetigung, Ergebnis
-        TempCopy t("b8_pos");
-        fs::create_directories(t.dir / "fs/data/ps5medic");
-        std::ofstream(t.dir / "fs/data/ps5medic/journal.jsonl", std::ios::binary) << committed;
-        auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
-        LocalService svc(*platform, rules, [] { return std::string("20261111T120000Z"); });
-        svc.run_check();  // schreibt history.jsonl
-        CHECK(fs::exists(t.dir / "fs/data/ps5medic/history.jsonl"), "Verlauf leeren: Ausgangslage hat Check-up-Verlauf");
-        App app(svc);
-        Canvas cv(App::kWidth, App::kHeight);
-        press(app, {Button::Down, Button::Cross});
-        CHECK(app.screen() == App::Screen::History, "Verlauf leeren: Verlauf geoeffnet");
-        press(app, {Button::Triangle});
-        CHECK(app.screen() == App::Screen::HistoryReset, "Verlauf leeren: Dreieck fragt nach");
-        app.render(cv);
-        press(app, {Button::Circle});
-        CHECK(app.screen() == App::Screen::History && fs::exists(t.dir / "fs/data/ps5medic/journal.jsonl"), "Verlauf leeren: Kreis bricht ab, nichts bewegt");
-        press(app, {Button::Triangle, Button::Cross});
-        CHECK(app.screen() == App::Screen::FixDone, "Verlauf leeren: Ergebnis-Bildschirm");
-        app.render(cv);
-        CHECK(!fs::exists(t.dir / "fs/data/ps5medic/journal.jsonl") && !fs::exists(t.dir / "fs/data/ps5medic/history.jsonl"), "Verlauf leeren: beide Dateien sind weg vom alten Platz");
-        CHECK(slurp_file(t.dir / "fs/data/ps5medic/journal_20261111T120000Z.jsonl") == committed, "Verlauf leeren: Journal unveraendert beiseite gelegt (nicht geloescht)");
-        CHECK(fs::exists(t.dir / "fs/data/ps5medic/history_20261111T120000Z.jsonl"), "Verlauf leeren: Check-up-Verlauf beiseite gelegt");
-        press(app, {Button::Cross});
-        CHECK(app.screen() == App::Screen::History, "Verlauf leeren: danach wieder der (leere) Verlauf");
-        CHECK(svc.history().empty(), "Verlauf leeren: der Verlauf ist leer");
-        const auto r = svc.run_check();
-        CHECK(!r.findings.empty() && r.findings[0].status.empty(), "Verlauf leeren: der naechste Check-up beginnt ohne Vergleich");
-    }
-    {  // Schutz: unvollstaendige Reparatur, bestehende Zieldatei, ohne Schreibzugriff, ohne Verlauf
-        TempCopy t("b8_pos");
-        fs::create_directories(t.dir / "fs/data/ps5medic");
-        std::ofstream(t.dir / "fs/data/ps5medic/journal.jsonl", std::ios::binary) << incomplete;
-        auto p1 = make_snapshot_platform(t.dir.string(), true);
-        const auto r1 = reset_history(*p1, "20261111T130000Z");
-        CHECK(!r1.ok && r1.error == "incomplete" && fs::exists(t.dir / "fs/data/ps5medic/journal.jsonl"), "Verlauf leeren: unvollstaendige Reparatur verhindert das Zuruecksetzen");
-        std::ofstream(t.dir / "fs/data/ps5medic/journal.jsonl", std::ios::binary | std::ios::trunc) << committed;
-        std::ofstream(t.dir / "fs/data/ps5medic/journal_20261111T130000Z.jsonl", std::ios::binary) << "alt";
-        auto p2 = make_snapshot_platform(t.dir.string(), true);
-        const auto r2 = reset_history(*p2, "20261111T130000Z");
-        CHECK(!r2.ok && r2.error == "exists" && slurp_file(t.dir / "fs/data/ps5medic/journal_20261111T130000Z.jsonl") == "alt" && fs::exists(t.dir / "fs/data/ps5medic/journal.jsonl"),
-              "Verlauf leeren: nichts wird ueberschrieben");
-        auto p3 = make_snapshot_platform(t.dir.string(), false);
-        CHECK(!reset_history(*p3, "20261111T140000Z").ok && fs::exists(t.dir / "fs/data/ps5medic/journal.jsonl"), "Verlauf leeren: ohne Schreibzugriff nichts");
-        CHECK(reset_history(*p2, "../x").error == "bad_timestamp" && reset_history(*p2, "").error == "bad_timestamp", "Verlauf leeren: ungueltiger Zeitstempel");
-    }
-    {
-        TempCopy t("b8_pos");
-        auto p = make_snapshot_platform(t.dir.string(), true);
-        const auto r = reset_history(*p, "20261111T150000Z");
-        CHECK(r.ok && r.moved.empty(), "Verlauf leeren: ohne Verlauf ist es ein Nichts, kein Fehler");
-    }
-}
-
 void icon_tests() {
     // Jedes Symbol malt in jeder Groesse sichtbar und innerhalb seines Feldes; Akzentfarbe und Hauptfarbe kommen vor (wo das Symbol einen Akzent hat)
     const Color bg = rgb(0, 0, 0), main_c = rgb(255, 0, 0), acc_c = rgb(0, 0, 255);
@@ -2893,7 +2828,6 @@ void ui_tests() {
     redetect_ui_tests();
     confidence_ui_tests();
     selftest_ui_tests();
-    history_reset_tests();
     icon_tests();
     shot_hook_tests();
     usertest_ui_tests();
