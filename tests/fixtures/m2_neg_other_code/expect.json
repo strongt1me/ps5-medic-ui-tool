@@ -1,0 +1,1 @@
+{"expect": ["smp.register_failed"], "neg_for": ["smp.register_console_db"]}

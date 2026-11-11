@@ -1,0 +1,6 @@
+[10:00:00] ShadowMount+ v1.7beta12 exFAT/UFS/PFS/LVD/MD. FW: 12.00. Build: 2026-11-08T20:05:53Z.
+[10:00:01]   [IMG][LVD] attach returned unit=1
+[10:00:01]   [IMG][LVD] Attached as /dev/lvd1
+[10:00:02]   [IMG][LVD] nmount rdonly failed: error_code=0x00000060
+[10:00:02]   NOTIFY: Image mount failed: 0x00000060 (error_code=0x00000060)
+[10:00:30]   [IMG] retry limit reached (3/3), skipping image: /mnt/usb0/x.ffpfs

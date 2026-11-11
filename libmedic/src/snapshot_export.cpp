@@ -468,6 +468,7 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
     roots.push_back("/data/pldmgr/payloads");  // nur die Namen der Payload-Ordner (fuer die Autoload-Pruefung)
     for (const auto& root : roots)
         if (p.fs().is_dir(root)) ex.mirror(root, 1);
+    ex.copy_text("/data/pldmgr/payloads/.layout", /*tail=*/false);  // nach dem Spiegeln: dieses schreibt sonst eine leere Datei darueber
 
     // ELF-Dateien: Ersatzdateien mit demselben Pruefergebnis (siehe elf_stub), nicht die Payloads selbst.
     if (const auto* files = facts.get("payload.elf_files"); files && files->is_array()) {

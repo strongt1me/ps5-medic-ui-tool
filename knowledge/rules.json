@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.26",
+  "db_version": "2026.11.27",
   "metrics": [
     {"id": "cpu_temp", "fact": "sys.temp.cpu_c", "unit": "°C", "text": {"de": "CPU-Temperatur", "en": "CPU temperature"}},
     {"id": "soc_temp", "fact": "sys.temp.soc_c", "unit": "°C", "text": {"de": "SoC-Temperatur", "en": "SoC temperature"}},
@@ -1218,6 +1218,102 @@
         "reason": {
           "de": "Dass das Laufwerk schreibgeschützt eingehängt ist, ist am Mount-Eintrag gemessen. Warum, kann Medic nicht sagen; die genannten Ursachen sind übliche Möglichkeiten, nicht belegt.",
           "en": "That the drive is mounted read-only is measured at the mount entry. Medic cannot tell why; the causes listed are common possibilities, not proven."
+        }
+      }
+    },
+    {
+      "id": "smp.image_mount_0x60",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "nmount rdonly failed: error_code=0x00000060|Image mount failed: 0x00000060",
+              "gte": 1
+            }
+          }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ kann ein Image nicht einhängen: 'nmount rdonly failed: error_code=0x00000060' (Meldung 'Image mount failed: 0x00000060'). Das Image wurde zwar angehängt, das Dateisystem darin lässt sich aber nicht öffnen. Eine mögliche Ursache ist ein fehlerhaft gebautes Image: Ein Fehler in MkPFS 0.0.6 erzeugte beschädigte Images, die die eigene Prüfung des Werkzeugs bestanden; laut dessen Autor häufiger beim direkten Umwandeln eines Ordners, seltener über den Weg Ordner → .exfat → .ffpfsc. Image mit der aktuellen MkPFS-Version neu bauen (zuerst als .exfat). Bei einem zweiten Nutzer halfen auch so gebaute Images nicht, die Ursache ist nicht abschließend geklärt. Nach drei Fehlversuchen überspringt ShadowMount+ das Image bis zum nächsten Start (siehe Befund zum Aufgeben).",
+        "en": "ShadowMount+ cannot mount an image: 'nmount rdonly failed: error_code=0x00000060' (message 'Image mount failed: 0x00000060'). The image was attached, but the file system inside cannot be opened. One possible cause is a badly built image: a bug in MkPFS 0.0.6 produced corrupted images that passed the tool's own verification; according to its author more often when converting a folder directly, less often via folder → .exfat → .ffpfsc. Rebuild the image with the current MkPFS version (as .exfat first). For a second user images built that way did not help either, so the cause is not fully settled. After three failed attempts ShadowMount+ skips the image until the next start (see the finding about giving up)."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "nmount rdonly failed|Image mount failed: 0x00000060",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/72",
+      "verified": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "community",
+        "reason": {
+          "de": "Der Code steht in der Logzeile. Die Ursache (beschädigt gebautes Image) stammt aus dem zitierten Bericht des MkPFS-Autors zu Version 0.0.6; bei einem zweiten Nutzer halfen auch .exfat-Images nicht, und an der Test-Konsole ist es nicht nachgestellt.",
+          "en": "The code is in the log line. The cause (a badly built image) comes from the quoted report by the MkPFS author about version 0.0.6; for a second user .exfat images did not help either, and it was not reproduced on the test console."
+        }
+      }
+    },
+    {
+      "id": "smp.register_console_db",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "smp.log.lines",
+            "count_matches": {
+              "regex": "Register failed.*code=0x80[Aa]30008",
+              "gte": 1
+            }
+          }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ konnte ein Spiel oder eine App nicht registrieren: 'Register failed: … code=0x80A30008'. Der Entwickler von ShadowMount+ sieht die Ursache in der Datenbank der Konsole und rät, sie über den Sicherheitsmodus neu zu erstellen (Sony-Funktion 'Datenbank neu erstellen'). Ob das hilft, hat der Melder nicht zurückgemeldet. Ob dabei Einträge von per ShadowMount+ eingebundenen Titeln verändert werden, ist nicht geprüft: vorher notieren, welche Titel installiert sind, und Spielstände sichern. Zuerst den Befund zu den Datenbanken der Systemsoftware ansehen (falls vorhanden) und die Konsole einmal normal neu starten. Medic ändert Datenbanken nicht.",
+        "en": "ShadowMount+ could not register a game or app: 'Register failed: … code=0x80A30008'. The ShadowMount+ developer sees the cause in the console's database and advises re-creating it through safe mode (Sony's 'Rebuild database' function). The reporter did not say whether that helped. Whether it changes entries of titles mounted by ShadowMount+ is not checked: note which titles are installed first, and back up saves. First look at the finding about the system software's databases (if present) and restart the console normally once. Medic does not change databases."
+      },
+      "evidence": "smp.log.lines",
+      "evidence_filter": "Register failed.*code=0x80[Aa]30008",
+      "fix": null,
+      "source": "https://github.com/drakmor/ShadowMountPlus/issues/156",
+      "verified": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "community",
+        "reason": {
+          "de": "Der Code steht in der Logzeile. Dass es ein Datenbankproblem der Konsole ist, ist ein einzelner Satz des Entwicklers im Issue 156; ob das Neuerstellen half, ist nicht bestätigt, und es ist an der Test-Konsole nicht nachgestellt.",
+          "en": "The code is in the log line. That it is a console database problem is a single sentence by the developer in issue 156; whether re-creating it helped is not confirmed, and it was not reproduced on the test console."
+        }
+      }
+    },
+    {
+      "id": "pldmgr.loose_elfs",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "pldmgr.layout",
+            "eq": "2"
+          },
+          {
+            "fact": "pldmgr.loose_elfs[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Im Ordner /data/pldmgr/payloads liegen ELF-Dateien lose (Evidenz). Der Payload Manager ab Version 0.6 (Layout 2) kennt nur Payloads aus dem Repository, vom USB-Import und aus dem Hochladen in seiner Web-Oberfläche (Ordner local/<Name>/). Lose abgelegte Dateien funktionierten früher nur zufällig über einen losen rekursiven Scan und waren laut dem Entwickler nie unterstützt: Sie erscheinen nicht in der Oberfläche und werden nicht automatisch geladen. Abhilfe: die Payloads in der Web-Oberfläche des Payload Managers hochladen oder vom USB importieren. Medic ändert diesen Ordner nicht.",
+        "en": "ELF files lie loose in the folder /data/pldmgr/payloads (evidence). From version 0.6 (layout 2) the Payload Manager only knows payloads from the repository, from the USB import and from uploads in its web interface (folder local/<name>/). Files dropped in loosely used to work only by accident through a loose recursive scan and were never supported according to the developer: they do not appear in the interface and are not loaded automatically. Fix: upload the payloads in the Payload Manager's web interface or import them from USB. Medic does not change this folder."
+      },
+      "evidence": "pldmgr.loose_elfs[].path",
+      "fix": null,
+      "source": "https://github.com/itsPLK/ps5-payload-manager/issues/135",
+      "verified": "doc",
+      "confidence": {
+        "level": "medium",
+        "basis": "doc",
+        "reason": {
+          "de": "Die Dateien und das Layout (payloads/.layout = 2) sind gelesen. Die Aussage 'nie unterstützt' ist die des Entwicklers (Issue 135); dass genau diese Dateien nicht erkannt werden, ist aus Layout und Aussage abgeleitet, nicht an einer Datei der Test-Konsole beobachtet.",
+          "en": "The files and the layout (payloads/.layout = 2) are read. 'Never supported' is the developer's statement (issue 135); that exactly these files are not recognised is derived from the layout and that statement, not observed with a file on the test console."
         }
       }
     },

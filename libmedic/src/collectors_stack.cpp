@@ -260,10 +260,24 @@ void collect_etahen(const IFileSystem& fs, Facts& f) {
 
 }  // namespace
 
+// Layout des Payload Managers (ab 0.6: Datei payloads/.layout mit "2") und lose ELF-Dateien direkt in payloads/. Der Entwickler
+// (itsPLK/ps5-payload-manager #135): lose abgelegte Payloads liefen frueher nur zufaellig ueber einen losen rekursiven Scan.
+// pldmgr.layout, pldmgr.loose_elfs[].{name,path}
+void collect_pldmgr_layout(const IFileSystem& fs, Facts& f) {
+    const std::string dir = "/data/pldmgr/payloads";
+    std::string layout;
+    if (fs.read_file(dir + "/.layout", layout) && layout.size() <= 16) f.set("pldmgr.layout", trim(layout));
+    json loose = json::array();
+    for (const auto& e : fs.list_dir(dir))
+        if (!e.is_dir && is_elf_name(e.name) && loose.size() < 50) loose.push_back({{"name", e.name}, {"path", join_path(dir, e.name)}});
+    f.set("pldmgr.loose_elfs", std::move(loose));
+}
+
 // autoload.problems[].{kind,file,detail}, pldmgr.autoload_enabled, pldmgr.autoload_entries
 void collect_autoload(const Platform& p, Facts& f) {
     json problems = json::array();
     collect_pldmgr_autoload(p.fs(), f, problems);
+    collect_pldmgr_layout(p.fs(), f);
     collect_loader_autoload(p.fs(), problems);
     f.set("autoload.problems", std::move(problems));
 }
