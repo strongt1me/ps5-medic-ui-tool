@@ -118,6 +118,7 @@
   "selftest.reason.no_clock": "no valid time",
   "selftest.reason.done_today": "already ran today",
   "selftest.reason.budget_used": "write budget used up",
+  "selftest.reason.no_heating": "temperature hardly rose (weak evidence)",
   "detail.explanation": "Explanation",
   "detail.evidence": "Evidence",
   "detail.evidence_more": "… and {n} more",

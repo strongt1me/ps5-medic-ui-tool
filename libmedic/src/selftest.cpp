@@ -472,6 +472,8 @@ private:
             st = TestStatus::Warn;
             why = "slow_cooldown";
         }
+        // Bestanden, aber kaum erwaermt: die Aussage ist schwach (Last zu schwach oder sehr gute Kuehlung), das steht im Ergebnis.
+        if (st == TestStatus::Passed && peak_ - rest_ < 5) why = "no_heating";
         finish(st, why);
     }
 

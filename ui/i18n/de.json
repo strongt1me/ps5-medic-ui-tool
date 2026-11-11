@@ -118,6 +118,7 @@
   "selftest.reason.no_clock": "keine gültige Uhrzeit",
   "selftest.reason.done_today": "heute schon gelaufen",
   "selftest.reason.budget_used": "Schreibbudget aufgebraucht",
+  "selftest.reason.no_heating": "Temperatur stieg kaum (Aussage schwach)",
   "detail.explanation": "Erklärung",
   "detail.evidence": "Evidenz",
   "detail.evidence_more": "… und {n} weitere",
