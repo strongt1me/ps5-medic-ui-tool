@@ -62,6 +62,14 @@ public:
         fw_ = j.value("fw", std::string());
         model_ = j.value("model", std::string());
         boot_ = j.value("boot", std::int64_t{0});
+        gateway_ = j.value("gateway", std::string());
+        if (j.contains("net_probe") && j["net_probe"].is_object()) {  // Fixture: so antwortet das Gateway (reply, rtt_ms, loss_every = jeder n-te Versuch geht verloren)
+            const auto& n = j["net_probe"];
+            probe_scripted_ = true;
+            probe_reply_ = n.value("reply", true);
+            probe_rtt_ = n.value("rtt_ms", 2.0);
+            probe_loss_every_ = n.value("loss_every", 0);
+        }
         if (j.contains("ports") && j["ports"].is_object()) {
             for (auto& [port, open] : j["ports"].items()) {
                 if (!open.is_boolean()) continue;
@@ -100,6 +108,16 @@ public:
     std::map<std::string, std::map<std::string, std::string>> components() const override { return components_; }
     std::int64_t boot_epoch() const override { return boot_; }
     Thermal thermal() const override { return thermal_; }
+    std::string default_gateway() const override { return gateway_; }
+    ProbeOutcome tcp_probe(const std::string& ipv4, int port, int timeout_ms) const override {
+        (void)ipv4;
+        (void)port;
+        (void)timeout_ms;
+        if (!probe_scripted_) return {};
+        ++probe_count_;
+        if (!probe_reply_ || (probe_loss_every_ > 0 && probe_count_ % probe_loss_every_ == 0)) return {ProbeResult::Timeout, 1000.0};
+        return {ProbeResult::Refused, probe_rtt_};
+    }
     bool read_local_stream(int port, std::size_t max_bytes, int timeout_ms, std::string& out) const override {
         (void)timeout_ms;
         out.clear();
@@ -114,7 +132,11 @@ public:
 
 private:
     std::int64_t boot_ = 0;
-    std::string klog_;
+    std::string klog_, gateway_;
+    bool probe_scripted_ = false, probe_reply_ = true;
+    double probe_rtt_ = 2.0;
+    int probe_loss_every_ = 0;
+    mutable int probe_count_ = 0;
     bool have_klog_ = false;
     Thermal thermal_;
     std::map<int, PortState> ports_;

@@ -111,6 +111,21 @@ public:
         (void)port;
         return PortState::Unknown;
     }
+    // Standard-Gateway (IPv4, Punktschreibweise) aus der Routentabelle; leer = unbekannt.
+    virtual std::string default_gateway() const { return {}; }
+    // Ein einzelner TCP-Verbindungsversuch zu einer Adresse im LOKALEN Netz (nur der Verbindungsaufbau, es werden keine Daten gesendet): Connected und
+    // Refused zeigen, dass der Rechner antwortet (Refused = ein Port ohne Dienst antwortet mit RST); Timeout und Error nicht. rtt_ms = Dauer bis zur Antwort.
+    enum class ProbeResult { Connected, Refused, Timeout, Error };
+    struct ProbeOutcome {
+        ProbeResult result = ProbeResult::Error;
+        double rtt_ms = 0;
+    };
+    virtual ProbeOutcome tcp_probe(const std::string& ipv4, int port, int timeout_ms) const {
+        (void)ipv4;
+        (void)port;
+        (void)timeout_ms;
+        return {};
+    }
     // Liest hoechstens `max_bytes` Rohdaten von einem lokalen TCP-Port (127.0.0.1), solange Daten kommen, hoechstens `timeout_ms`. Nur lesend:
     // es wird nichts gesendet. true, wenn die Verbindung zustande kam (auch ohne Daten). Gedacht fuer den Kernel-Log-Server (klogsrv, Port 3232):
     // Das Lesen VERBRAUCHT, was sich seit dem letzten Leser angesammelt hat (der Kernel-Log gibt jede Zeile nur einmal heraus).

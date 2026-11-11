@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.34",
+  "db_version": "2026.11.35",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2180,6 +2180,34 @@
         "reason": {
           "de": "Temperaturen und Rechenleistung sind gemessen. Die Schwellen (85 °C, 15 °C in fünf Messintervallen, 10 % Leistungsabfall) sind eigene Annahmen, ohne Baseline der eigenen Konsole, und die Umgebung beeinflusst das Ergebnis stark.",
           "en": "Temperatures and compute rate are measured. The thresholds (85 °C, 15 °C in five measurement intervals, 10 % rate drop) are our own assumptions, without a baseline of this console, and the environment influences the result strongly."
+        }
+      }
+    },
+    {
+      "id": "selftest.net_local",
+      "severity": "info",
+      "when": {
+        "any": [
+          {
+            "fact": "test.sw.net.local.status",
+            "eq": "warn"
+          }
+        ]
+      },
+      "text": {
+        "de": "Beim Netztest des Selbsttests war die Verbindung zwischen Konsole und Router auffällig (Evidenz: Grund): Entweder blieben mindestens 20 % der Verbindungsversuche ohne Antwort („packet_loss“) oder der Router antwortete im Mittel erst nach mehr als 100 ms („slow_gateway“). Im eigenen Netz ist beides ungewöhnlich und deutet bei WLAN auf schwachen Empfang oder Störungen, bei Kabel auf ein schlechtes Kabel, einen schlechten Anschluss oder einen überlasteten Router. Näher an den Router rücken, ein LAN-Kabel verwenden, den Router neu starten und den Test wiederholen. Gemessen wurde nur der Weg zum Router, nicht das Internet. Die Schwellen sind eigene Annahmen.",
+        "en": "In the self-test's network test the link between console and router stood out (evidence: reason): either at least 20 % of the connection attempts went unanswered (“packet_loss”) or the router answered only after more than 100 ms on average (“slow_gateway”). In your own network both are unusual and point to weak reception or interference on Wi-Fi, or to a bad cable, a bad port or an overloaded router on a wired link. Move closer to the router, use a LAN cable, restart the router and repeat the test. Only the path to the router was measured, not the internet. The thresholds are our own assumptions."
+      },
+      "evidence": "test.sw.net.local.reason",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Antwortzeit und Verlust sind gemessen, aber mit wenigen Versuchen (20) und einem Port am Router. Die Schwellen sind eigene Annahmen, und der Router kann Verbindungsversuche absichtlich langsam oder gar nicht beantworten.",
+          "en": "Response time and loss are measured, but with few attempts (20) and one router port. The thresholds are our own assumptions, and the router may deliberately answer connection attempts slowly or not at all."
         }
       }
     },

@@ -92,7 +92,7 @@
   "selftest.reason.unknown_test": "unbekannter Test",
   "selftest.reason.no_service": "nicht verfügbar",
   "selftest.confirm_title": "Selbsttest starten?",
-  "selftest.confirm_read": "Der Selbsttest liest bis zu 128 MiB aus einer vorhandenen Image-Datei (höchstens 15 Sekunden) und prüft alles andere aus gelesenen Angaben. Geschrieben wird nur die Markierung unter /data/ps5medic/selftest. Kein Spiel starten, die Konsole nicht ausschalten. Dauer etwa {s} Sekunden. Mit Kreis lässt er sich nach dem laufenden Test abbrechen.",
+  "selftest.confirm_read": "Der Selbsttest liest bis zu 128 MiB aus einer vorhandenen Image-Datei (höchstens 15 Sekunden) und prüft alles andere aus gelesenen Angaben. Dazu schickt er einige Verbindungsversuche an den Router im eigenen Netz (nur lokal, ohne Daten, nie ins Internet). Geschrieben wird nur die Markierung unter /data/ps5medic/selftest. Kein Spiel starten, die Konsole nicht ausschalten. Dauer etwa {s} Sekunden. Mit Kreis lässt er sich nach dem laufenden Test abbrechen.",
   "selftest.confirm_none": "Der Selbsttest liest nur Angaben, die Medic schon gesammelt hat. Geschrieben wird nur die Markierung unter /data/ps5medic/selftest. Dauer etwa {s} Sekunden.",
   "selftest.start": "Starten",
   "selftest.abort": "Abbrechen",
@@ -314,5 +314,11 @@
   "update.codes_failed": "Die Fehlercodes konnten nicht installiert werden. Die aktive Datei wurde nicht verändert.",
   "update.codes_download_failed": "Die Fehlercodes konnten nicht geholt werden: {reason} Die Regeln schon.",
   "update.can_rollback_codes": "Fehlercodes zuletzt installiert: {v}.",
-  "update.error.http_file": "Der Server hat {file} nicht geliefert."
+  "update.error.http_file": "Der Server hat {file} nicht geliefert.",
+  "selftest.reason.no_gateway": "kein Router (Standard-Gateway) gefunden",
+  "selftest.reason.not_local": "Gateway nicht im eigenen Netz, nichts gesendet",
+  "selftest.reason.no_response": "Router antwortet nicht auf die Probe (keine Aussage)",
+  "selftest.reason.probe_error": "Verbindungsversuch nicht möglich",
+  "selftest.reason.packet_loss": "viele Verbindungsversuche zum Router blieben ohne Antwort",
+  "selftest.reason.slow_gateway": "Router antwortet langsam"
 }

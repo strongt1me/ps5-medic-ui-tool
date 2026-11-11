@@ -98,7 +98,7 @@ const char* const kDeJson = R"JSON({
   "selftest.reason.unknown_test": "unbekannter Test",
   "selftest.reason.no_service": "nicht verfügbar",
   "selftest.confirm_title": "Selbsttest starten?",
-  "selftest.confirm_read": "Der Selbsttest liest bis zu 128 MiB aus einer vorhandenen Image-Datei (höchstens 15 Sekunden) und prüft alles andere aus gelesenen Angaben. Geschrieben wird nur die Markierung unter /data/ps5medic/selftest. Kein Spiel starten, die Konsole nicht ausschalten. Dauer etwa {s} Sekunden. Mit Kreis lässt er sich nach dem laufenden Test abbrechen.",
+  "selftest.confirm_read": "Der Selbsttest liest bis zu 128 MiB aus einer vorhandenen Image-Datei (höchstens 15 Sekunden) und prüft alles andere aus gelesenen Angaben. Dazu schickt er einige Verbindungsversuche an den Router im eigenen Netz (nur lokal, ohne Daten, nie ins Internet). Geschrieben wird nur die Markierung unter /data/ps5medic/selftest. Kein Spiel starten, die Konsole nicht ausschalten. Dauer etwa {s} Sekunden. Mit Kreis lässt er sich nach dem laufenden Test abbrechen.",
   "selftest.confirm_none": "Der Selbsttest liest nur Angaben, die Medic schon gesammelt hat. Geschrieben wird nur die Markierung unter /data/ps5medic/selftest. Dauer etwa {s} Sekunden.",
   "selftest.start": "Starten",
   "selftest.abort": "Abbrechen",
@@ -320,7 +320,13 @@ const char* const kDeJson = R"JSON({
   "update.codes_failed": "Die Fehlercodes konnten nicht installiert werden. Die aktive Datei wurde nicht verändert.",
   "update.codes_download_failed": "Die Fehlercodes konnten nicht geholt werden: {reason} Die Regeln schon.",
   "update.can_rollback_codes": "Fehlercodes zuletzt installiert: {v}.",
-  "update.error.http_file": "Der Server hat {file} nicht geliefert."
+  "update.error.http_file": "Der Server hat {file} nicht geliefert.",
+  "selftest.reason.no_gateway": "kein Router (Standard-Gateway) gefunden",
+  "selftest.reason.not_local": "Gateway nicht im eigenen Netz, nichts gesendet",
+  "selftest.reason.no_response": "Router antwortet nicht auf die Probe (keine Aussage)",
+  "selftest.reason.probe_error": "Verbindungsversuch nicht möglich",
+  "selftest.reason.packet_loss": "viele Verbindungsversuche zum Router blieben ohne Antwort",
+  "selftest.reason.slow_gateway": "Router antwortet langsam"
 }
 )JSON";
 
@@ -418,7 +424,7 @@ const char* const kEnJson = R"JSON({
   "selftest.reason.unknown_test": "unknown test",
   "selftest.reason.no_service": "not available",
   "selftest.confirm_title": "Start the self-test?",
-  "selftest.confirm_read": "The self-test reads up to 128 MiB from an existing image file (at most 15 seconds) and checks everything else from information already read. Only the marker under /data/ps5medic/selftest is written. Do not start a game, do not switch the console off. Takes about {s} seconds. Circle cancels after the current test.",
+  "selftest.confirm_read": "The self-test reads up to 128 MiB from an existing image file (at most 15 seconds) and checks everything else from information already read. It also sends a few connection attempts to the router in the own network (local only, no data, never to the internet). Only the marker under /data/ps5medic/selftest is written. Do not start a game, do not switch the console off. Takes about {s} seconds. Circle cancels after the current test.",
   "selftest.confirm_none": "The self-test only reads information Medic has already collected. Only the marker under /data/ps5medic/selftest is written. Takes about {s} seconds.",
   "selftest.start": "Start",
   "selftest.abort": "Cancel",
@@ -640,7 +646,13 @@ const char* const kEnJson = R"JSON({
   "update.codes_failed": "The error codes could not be installed. The active file was not changed.",
   "update.codes_download_failed": "The error codes could not be downloaded: {reason} The rules were.",
   "update.can_rollback_codes": "Error codes last installed: {v}.",
-  "update.error.http_file": "The server did not deliver {file}."
+  "update.error.http_file": "The server did not deliver {file}.",
+  "selftest.reason.no_gateway": "no router (default gateway) found",
+  "selftest.reason.not_local": "gateway not in the own network, nothing sent",
+  "selftest.reason.no_response": "router does not answer the probe (no statement)",
+  "selftest.reason.probe_error": "connection attempt not possible",
+  "selftest.reason.packet_loss": "many connection attempts to the router went unanswered",
+  "selftest.reason.slow_gateway": "router answers slowly"
 }
 )JSON";
 

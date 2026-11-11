@@ -12,9 +12,11 @@
 #include <cctype>
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <ctime>
+#include <thread>
 
 #if defined(__x86_64__)
 #include <cpuid.h>
@@ -743,6 +745,103 @@ private:
     std::string today_;
 };
 
+// ---- Standardtest: lokales Netz (nur das Gateway) -------------------------------------------------------------------------------------
+
+// Nur Adressen im privaten Bereich (RFC 1918 und Link-Local): Der Test spricht ausschliesslich das Gateway im eigenen Netz an, nie das Internet.
+bool is_private_ipv4(const std::string& ip) {
+    unsigned a = 0, b = 0, c = 0, d = 0;
+    char tail = 0;
+    if (std::sscanf(ip.c_str(), "%u.%u.%u.%u%c", &a, &b, &c, &d, &tail) != 4 || a > 255 || b > 255 || c > 255 || d > 255) return false;
+    return a == 10 || (a == 172 && b >= 16 && b <= 31) || (a == 192 && b == 168) || (a == 169 && b == 254);
+}
+
+// Misst Antwortzeit und Verlust zum Standard-Gateway mit TCP-Verbindungsversuchen (nur der Verbindungsaufbau, keine Daten). Ein Port ohne Dienst
+// antwortet mit RST und zaehlt als Antwort. Antwortet das Gateway auf keinen der Ports (viele Router verwerfen still), bleibt der Test skipped:
+// Schweigen ist keine Aussage ueber das Netz. Nie failed. Warnung nur bei deutlichem Verlust oder deutlich langer Antwortzeit.
+class NetLocalSession final : public BaseSession {
+public:
+    NetLocalSession(Platform& p, const Facts& f, const TestDef& d, const TestContext& ctx) : BaseSession(d), p_(p), gap_ms_(ctx.net_gap_ms) {
+        const json* gw = f.get("net.gateway");
+        if (!gw || !gw->is_string() || gw->get<std::string>().empty()) {
+            finish(TestStatus::Skipped, "no_gateway");
+            return;
+        }
+        gateway_ = gw->get<std::string>();
+        if (!is_private_ipv4(gateway_)) finish(TestStatus::Skipped, "not_local");  // Sicherung: nie etwas ausserhalb des eigenen Netzes ansprechen
+    }
+    bool step() override {
+        if (done_) return true;
+        if (aborted_) {
+            finish(TestStatus::Cancelled, abort_reason_);
+            return true;
+        }
+        if (port_ == 0) {  // Port suchen, auf dem das Gateway antwortet
+            bool any_error = false;
+            for (int port : {80, 443, 53, 22}) {
+                const auto o = p_.sys().tcp_probe(gateway_, port, kProbeTimeoutMs);
+                if (o.result == ISystemInfo::ProbeResult::Connected || o.result == ISystemInfo::ProbeResult::Refused) {
+                    port_ = port;
+                    replies_++;
+                    rtts_.push_back(o.rtt_ms);
+                    ++sent_;
+                    break;
+                }
+                any_error = any_error || o.result == ISystemInfo::ProbeResult::Error;
+            }
+            if (port_ == 0) {
+                finish(TestStatus::Skipped, any_error ? "probe_error" : "no_response");
+                return true;
+            }
+            progress_ = 0.1;
+            return false;
+        }
+        for (int i = 0; i < 5 && sent_ < kProbes; ++i) {
+            if (gap_ms_ > 0) std::this_thread::sleep_for(std::chrono::milliseconds(gap_ms_));
+            const auto o = p_.sys().tcp_probe(gateway_, port_, kProbeTimeoutMs);
+            ++sent_;
+            if (o.result == ISystemInfo::ProbeResult::Connected || o.result == ISystemInfo::ProbeResult::Refused) {
+                replies_++;
+                rtts_.push_back(o.rtt_ms);
+            } else if (o.result == ISystemInfo::ProbeResult::Timeout) {
+                lost_++;
+            } else {
+                --sent_;  // Fehler beim Senden zaehlt weder als Antwort noch als Verlust
+                if (++errors_ >= 3) {
+                    finish(TestStatus::Skipped, "probe_error");
+                    return true;
+                }
+            }
+        }
+        progress_ = 0.1 + 0.9 * static_cast<double>(sent_) / kProbes;
+        if (sent_ < kProbes) return false;
+        const int counted = replies_ + lost_;
+        const double loss = counted > 0 ? 100.0 * lost_ / counted : 0.0;
+        double sum = 0, mx = 0;
+        for (double r : rtts_) {
+            sum += r;
+            mx = std::max(mx, r);
+        }
+        const double avg = rtts_.empty() ? 0.0 : sum / static_cast<double>(rtts_.size());
+        result_.measurements.push_back({"probes", static_cast<double>(counted), ""});
+        result_.measurements.push_back({"loss_pct", loss, "%"});
+        result_.measurements.push_back({"rtt_avg_ms", avg, "ms"});
+        result_.measurements.push_back({"rtt_max_ms", mx, "ms"});
+        if (loss >= kLossWarnPct) finish(TestStatus::Warn, "packet_loss");
+        else if (avg > kRttWarnMs) finish(TestStatus::Warn, "slow_gateway");
+        else finish(TestStatus::Passed, "");
+        return true;
+    }
+
+private:
+    static constexpr int kProbes = 20, kProbeTimeoutMs = 1000;
+    static constexpr double kLossWarnPct = 20.0, kRttWarnMs = 100.0;
+    Platform& p_;
+    int gap_ms_;
+    std::string gateway_;
+    int port_ = 0, sent_ = 0, replies_ = 0, lost_ = 0, errors_ = 0;
+    std::vector<double> rtts_;
+};
+
 struct Entry {
     TestDef def;
     OneShotFn fn;  // nur Schnelltests; sonst nullptr
@@ -755,6 +854,7 @@ const std::vector<Entry>& entries() {
         {{"sw.db.headers", TestTier::Quick, "none", 2, "Datenbanken der Systemsoftware (Kopf und Größe)", "System software databases (header and size)", "Inhalt der Datenbanken (siehe Datenbank-Prüfung)", "database content (see the database check)"}, test_db_headers},
         {{"sw.files.sanity", TestTier::Quick, "none", 2, "Payloads, Images und eboot.bin (Kopf)", "Payloads, images and eboot.bin (header)", "Inhalt der Dateien, Entschlüsseln, Start des Spiels", "file contents, decryption, whether a game starts"}, test_files_sanity},
         {{"hw.storage.read_throughput", TestTier::Standard, "read", 20, "Lesetest einer Image-Datei", "Read test of an image file", "Schreibleistung, Verschleiß, ungelesene Bereiche; wiederholte Läufe können aus dem Zwischenspeicher lesen", "write speed, wear, unread areas; repeated runs may read from the cache"}, nullptr},
+        {{"sw.net.local", TestTier::Standard, "net_local", 12, "Lokales Netz (Antwortzeit zum Router)", "Local network (response time to the router)", "Internet, Download-Geschwindigkeit, WLAN-Signalstärke, andere Geräte im Netz; nur die Verbindung zwischen Konsole und Router, ohne Daten zu senden", "internet, download speed, Wi-Fi signal strength, other devices; only the link between console and router, without sending data"}, nullptr},
         {{"hw.thermal.short_soak", TestTier::Thorough, "load", 80, "Wärmetest (kurze CPU-Last)", "Heat test (short CPU load)", "GPU-/Speicherwärme, die Standardkühlung bei laufendem Lüfterregler (er hält die Konsole kühl), Ursache (Staub, Wärmeleitmaterial); in kühler Umgebung bleiben Probleme verborgen", "GPU/memory heat, the standard cooling while a fan controller runs (it keeps the console cool), cause (dust, thermal paste); in a cool room problems stay hidden"}, nullptr},
         {{"hw.mem.userland_pattern", TestTier::Thorough, "load", 20, "Speicher-Muster-Test (128 MiB Arbeitsspeicher)", "Memory pattern test (128 MiB of working memory)", "Gesamter GDDR6, GPU-Zugriff, ECC; nur der Speicher, den ein Prozess bekommt", "all GDDR6, GPU access, ECC; only the memory a process gets"}, nullptr},
         {{"hw.storage.write_verify", TestTier::Thorough, "write", 30, "Schreibtest (eine Testdatei, 256 MiB)", "Write test (one test file, 256 MiB)", "Restlebensdauer, Verschleiß, Leistung außerhalb des Schreib-Caches; der Rücklesevergleich kann aus dem Zwischenspeicher kommen", "remaining lifetime, wear, speed beyond the write cache; the read-back may come from cache"}, nullptr},
@@ -817,6 +917,7 @@ std::unique_ptr<TestSession> begin_selftest_session(Platform& p, const Facts& fa
         if (e.def.id == "hw.storage.read_throughput") return std::make_unique<ReadSession>(p, facts, e.def);
         if (e.def.tier == TestTier::User)
             return std::make_unique<OneShotSession>(facts, e.def, [](const Facts&, const TestDef& d) { return make_result(d, TestStatus::Skipped, "needs_user"); });
+        if (e.def.id == "sw.net.local") return std::make_unique<NetLocalSession>(p, facts, e.def, ctx);
         if (e.def.id == "hw.mem.userland_pattern") return std::make_unique<MemorySession>(e.def, ctx);
         if (e.def.id == "hw.thermal.short_soak") return std::make_unique<ThermalSession>(p, facts, e.def, ctx);
         if (e.def.id == "hw.storage.write_verify") return std::make_unique<WriteSession>(p, facts, e.def, ctx);

@@ -124,8 +124,8 @@ void selftest_tests() {
             last_tier = static_cast<int>(d.tier);
             text_ok = text_ok && !d.name_de.empty() && !d.name_en.empty() && !d.proves_not_de.empty() && !d.proves_not_en.empty() &&
                       find_system_update_advice(d.name_de + d.proves_not_de + d.name_en + d.proves_not_en).empty();
-            risk_ok = risk_ok && (d.risk == "none" || d.risk == "read" || d.risk == "load" || d.risk == "write");
-            if (d.tier != TestTier::Thorough && d.risk != "none" && d.risk != "read") risk_ok = false;  // Last und Schreiben nur in der Gruendlich-Stufe
+            risk_ok = risk_ok && (d.risk == "none" || d.risk == "read" || d.risk == "net_local" || d.risk == "load" || d.risk == "write");
+            if (d.tier != TestTier::Thorough && d.risk != "none" && d.risk != "read" && d.risk != "net_local") risk_ok = false;  // Last und Schreiben nur in der Gruendlich-Stufe
         }
         CHECK(reg.size() >= 8 && ids.size() == reg.size() && order_ok && text_ok && risk_ok, "Selbsttest: Registry (eindeutige IDs, Stufen-Reihenfolge, Last/Schreiben nur Gruendlich, Texte)");
         CHECK(find_test("sw.db.headers") && !find_test("gibt.es.nicht"), "Selbsttest: Test per ID finden");
@@ -468,5 +468,64 @@ void selftest_tests() {
         spit(w.real(kKlogBootPath), "fremder Inhalt\n");
         klog("<118>[kstuff.elf] noch eine failed\n");
         CHECK(!persist_klog(*rw, collect_all(*rw)) && slurp(w.real(kKlogBootPath)) == "fremder Inhalt\n", "klog sammeln: fremde Datei gleichen Namens bleibt unangetastet");
+    }
+    {  // Lokaler Netztest (Standard): nur das Gateway im eigenen Netz, nie das Internet
+        auto net = [&](const std::string& gateway, const std::string& probe) {
+            Sandbox w;
+            std::string sys = R"({"fw":"12.00","model":"T","storage":[])";
+            if (!gateway.empty()) sys += R"(,"gateway":")" + gateway + R"(")";
+            if (!probe.empty()) sys += R"(,"net_probe":)" + probe;
+            spit(w.dir / "system.json", sys + "}");
+            auto p = make_snapshot_platform(w.dir.string(), false);
+            const Facts f = collect_all(*p);
+            TestContext ctx;
+            ctx.net_gap_ms = 0;
+            return std::make_pair(run("sw.net.local", f, *p, ctx), f);
+        };
+        {
+            const auto [r, f] = net("192.168.1.1", R"({"reply":true,"rtt_ms":3.0})");
+            CHECK(f.get("net.gateway") && f.get("net.gateway")->get<std::string>() == "192.168.1.1", "Netztest: Gateway wird als Fakt gesammelt");
+            CHECK(r.status == TestStatus::Passed && measure(r, "loss_pct") == 0 && measure(r, "probes") == 20 && std::abs(measure(r, "rtt_avg_ms") - 3.0) < 1e-9, "Netztest: antwortendes Gateway = passed, Messwerte");
+        }
+        {
+            const auto [r, f] = net("192.168.1.1", R"({"reply":true,"rtt_ms":3.0,"loss_every":3})");
+            CHECK(r.status == TestStatus::Warn && r.reason == "packet_loss" && measure(r, "loss_pct") > 20, "Netztest: jeder dritte Versuch verloren = warn packet_loss");
+        }
+        {
+            const auto [r, f] = net("10.0.0.1", R"({"reply":true,"rtt_ms":250.0})");
+            CHECK(r.status == TestStatus::Warn && r.reason == "slow_gateway", "Netztest: langsame Antwort = warn slow_gateway");
+        }
+        {
+            const auto [r, f] = net("192.168.1.1", R"({"reply":false})");
+            CHECK(r.status == TestStatus::Skipped && r.reason == "no_response", "Netztest: schweigender Router = skipped, nie failed");
+        }
+        {
+            const auto [r, f] = net("192.168.1.1", "");
+            CHECK(r.status == TestStatus::Skipped && r.reason == "probe_error", "Netztest: Sonde nicht moeglich = skipped probe_error");
+        }
+        {
+            const auto [r, f] = net("", R"({"reply":true})");
+            CHECK(r.status == TestStatus::Skipped && r.reason == "no_gateway", "Netztest: ohne Gateway = skipped");
+        }
+        for (const char* gw : {"8.8.8.4", "1.1.1.1", "172.32.0.1", "172.15.0.1", "192.169.0.1", "169.255.0.1", "192.168.1.1x", "kein.ip", "300.1.1.1"}) {
+            const auto [r, f] = net(gw, R"({"reply":true})");
+            CHECK(r.status == TestStatus::Skipped && r.reason == "not_local", std::string("Netztest: Gateway ausserhalb des eigenen Netzes wird nie angesprochen: ") + gw);
+        }
+        for (const char* gw : {"10.1.2.3", "172.16.0.1", "172.31.255.254", "192.168.0.254", "169.254.1.1"}) {
+            const auto [r, f] = net(gw, R"({"reply":true})");
+            CHECK(r.status == TestStatus::Passed, std::string("Netztest: privates Gateway wird angesprochen: ") + gw);
+        }
+        {  // Abbruch wirkt
+            Sandbox w;
+            spit(w.dir / "system.json", R"({"fw":"12.00","model":"T","storage":[],"gateway":"192.168.1.1","net_probe":{"reply":true}})");
+            auto p = make_snapshot_platform(w.dir.string(), false);
+            const Facts f = collect_all(*p);
+            TestContext ctx;
+            ctx.net_gap_ms = 0;
+            auto s = begin_selftest_session(*p, f, *find_test("sw.net.local"), ctx);
+            s->step();
+            s->abort("user");
+            CHECK(s->step() && s->result().status == TestStatus::Cancelled, "Netztest: Abbruch = cancelled");
+        }
     }
 }

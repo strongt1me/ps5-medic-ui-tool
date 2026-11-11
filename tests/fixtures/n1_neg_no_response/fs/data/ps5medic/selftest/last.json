@@ -1,0 +1,20 @@
+{
+  "finished": "20261111T120000Z",
+  "cancelled": false,
+  "results": [
+    {
+      "id": "sw.net.local",
+      "status": "skipped",
+      "reason": "no_response",
+      "started": "",
+      "duration_s": 3.0,
+      "measurements": [
+        {
+          "name": "loss_pct",
+          "value": 0,
+          "unit": "%"
+        }
+      ]
+    }
+  ]
+}

@@ -468,3 +468,16 @@ Weil das Lesen von `klogsrv` verbraucht, hängt die UI die neu gelesenen, gefilt
 - `appdb.orphan_entry` (Warnung, todo, mittel): Eintrag mit Pfad unter `/user/app/<ID>/` oder `/system_ex/app/<ID>/`, dessen Ordner fehlt: Kachel ohne Spiel (häufig ein abgezogenes Laufwerk bei per ShadowMount+ eingebundenen Titeln, abgebrochene Deinstallation). Kachel in der Bibliothek löschen; Medic ändert die Datenbank nicht.
 - `appdb.unregistered_folder` (Hinweis, todo, niedrig): Titelordner (nur `PPSA`/`CUSA` mit fünf Ziffern) unter `/user/app` ohne Eintrag; System-Ordner (`NPXS…`) zählen nicht.
 - Schema (Test-Konsole, FW 12.00): `tbl_contentinfo` hat 64 Zeilen mit `titleId`, `metaDataPath` (41 unter `/user/app/<ID>/sce_sys`, 4 unter `/system_ex/app/…`, übrige woanders). An der Konsole: 64 Einträge, **0 Waisen, 0 Ordner ohne Eintrag** (am PC mit einer Kopie gegengerechnet, gleiches Ergebnis). Der Snapshot-Export schreibt eine echte kleine Datenbank mit denselben Zeilen und die vorhandenen Ordner (Fixtures `ap1_*`, synthetisch). `db_version` 2026.11.34.
+
+## Nachtrag: Lokaler Netztest `sw.net.local` (11. Nov. 2026, Freigabe von Marc: nur lokal)
+
+Ausnahme von D1 und von Leitlinie 5: Der Selbsttest (Standard-Stufe, läuft auch im Diagnose-Payload) misst die Verbindung zwischen Konsole und Router.
+
+- **Gateway:** `ISystemInfo::default_gateway()` liest die Standardroute aus der Routentabelle (PS5: `sysctl NET_RT_DUMP`; Snapshot: `gateway` in `system.json`). Fakt `net.gateway`. Der Test spricht **nur** Adressen im privaten Bereich an (10/8, 172.16/12, 192.168/16, 169.254/16); alles andere ist `skipped` mit `not_local`, es wird nichts gesendet.
+- **Messung:** `ISystemInfo::tcp_probe()` baut eine TCP-Verbindung nur auf (nicht blockierend, Frist 1 s) und schließt sie wieder; es werden **keine Daten** gesendet. „Verbunden“ und „abgewiesen“ (RST von einem Port ohne Dienst) zählen als Antwort. Zuerst werden die Ports 80, 443, 53, 22 des Routers der Reihe nach versucht, bis einer antwortet; danach 20 Versuche auf diesem Port mit 150 ms Pause (höchstens etwa 25 s).
+- **Status:** antwortet der Router auf keinen Port (viele verwerfen still), ist der Test `skipped` (`no_response`): Schweigen ist keine Aussage über das Netz. Kein Gateway: `no_gateway`; Sendefehler: `probe_error`. **Nie `failed`.** `warn` bei Verlust ab 20 % (`packet_loss`) oder mittlerer Antwortzeit über 100 ms (`slow_gateway`); beide Schwellen sind eigene Annahmen. Messwerte `probes`, `loss_pct`, `rtt_avg_ms`, `rtt_max_ms`.
+- **Regel `selftest.net_local`** (Hinweis, todo, Verlässlichkeit niedrig): erklärt beide Warnungen (WLAN-Empfang, Kabel, Router neu starten). Gemessen wird nur der Weg zum Router, nicht das Internet; keine Aussage über Download-Geschwindigkeit. `db_version` 2026.11.35.
+- **Beweist nicht:** Internet, Geschwindigkeit, WLAN-Signalstärke, andere Geräte im Netz.
+- Tests: Snapshot-Sonde über `system.json` (`net_probe`: `reply`, `rtt_ms`, `loss_every`), Fixtures `n1_*`.
+
+**An der Test-Konsole** (FW 12.00, Diagnose-Payload): Gateway aus der Routentabelle gefunden, `sw.net.local` **bestanden** (20 Versuche, 0 % Verlust, mittlere Antwortzeit 5,5 ms, höchste 47 ms).

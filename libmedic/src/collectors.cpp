@@ -1486,6 +1486,7 @@ Facts collect_all(const Platform& p) {
     collect_fan_controller(p, f);
     collect_klog(p, f);
     collect_app_registry(p, f);
+    if (const std::string gw = p.sys().default_gateway(); !gw.empty()) f.set("net.gateway", gw);  // fuer den lokalen Netztest des Selbsttests
     return f;
 }
 

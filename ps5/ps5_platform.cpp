@@ -20,6 +20,7 @@
 #include <unistd.h>
 
 #include <cerrno>
+#include <net/route.h>
 #include <chrono>
 #include <cstring>
 #include <string>
@@ -157,6 +158,71 @@ public:
         }
         close(s);
         return state;
+    }
+
+    // Standard-Gateway aus der Routentabelle (sysctl NET_RT_DUMP): die Route mit Ziel 0.0.0.0 und gesetztem Gateway-Flag.
+    std::string default_gateway() const override {
+        int mib[6] = {CTL_NET, PF_ROUTE, 0, AF_INET, NET_RT_DUMP, 0};
+        size_t len = 0;
+        if (sysctl(mib, 6, nullptr, &len, nullptr, 0) != 0 || len == 0) return {};
+        std::vector<char> buf(len + 4096);
+        len = buf.size();
+        if (sysctl(mib, 6, buf.data(), &len, nullptr, 0) != 0) return {};
+        auto sa_size = [](const struct sockaddr* sa) { return sa->sa_len ? ((sa->sa_len + sizeof(long) - 1) & ~(sizeof(long) - 1)) : sizeof(long); };
+        for (size_t off = 0; off + sizeof(struct rt_msghdr) <= len;) {
+            const auto* rtm = reinterpret_cast<const struct rt_msghdr*>(buf.data() + off);
+            if (rtm->rtm_msglen == 0 || off + rtm->rtm_msglen > len) break;
+            if ((rtm->rtm_flags & RTF_GATEWAY) && (rtm->rtm_addrs & RTA_DST) && (rtm->rtm_addrs & RTA_GATEWAY)) {
+                const char* p = reinterpret_cast<const char*>(rtm + 1);
+                const auto* dst = reinterpret_cast<const struct sockaddr*>(p);
+                const auto* gw = reinterpret_cast<const struct sockaddr*>(p + sa_size(dst));
+                if (dst->sa_family == AF_INET && gw->sa_family == AF_INET && reinterpret_cast<const struct sockaddr_in*>(dst)->sin_addr.s_addr == 0) {
+                    char text[32] = {};
+                    const auto addr = reinterpret_cast<const struct sockaddr_in*>(gw)->sin_addr;
+                    if (inet_ntop(AF_INET, &addr, text, sizeof text)) return text;
+                }
+            }
+            off += rtm->rtm_msglen;
+        }
+        return {};
+    }
+
+    ProbeOutcome tcp_probe(const std::string& ipv4, int port, int timeout_ms) const override {
+        ProbeOutcome out;
+        const int s = socket(AF_INET, SOCK_STREAM, 0);
+        if (s < 0) return out;
+        fcntl(s, F_SETFL, fcntl(s, F_GETFL, 0) | O_NONBLOCK);
+        struct sockaddr_in sa;
+        std::memset(&sa, 0, sizeof sa);
+        sa.sin_len = sizeof sa;
+        sa.sin_family = AF_INET;
+        sa.sin_port = htons(static_cast<uint16_t>(port));
+        if (inet_pton(AF_INET, ipv4.c_str(), &sa.sin_addr) != 1) {
+            close(s);
+            return out;
+        }
+        const auto t0 = std::chrono::steady_clock::now();
+        auto since = [&] { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); };
+        if (connect(s, reinterpret_cast<const struct sockaddr*>(&sa), sizeof sa) == 0) {
+            out = {ProbeResult::Connected, since()};
+        } else if (errno == ECONNREFUSED) {
+            out = {ProbeResult::Refused, since()};
+        } else if (errno == EINPROGRESS) {
+            struct pollfd pfd = {s, POLLOUT, 0};
+            if (poll(&pfd, 1, timeout_ms) == 1) {
+                int err = 0;
+                socklen_t elen = sizeof err;
+                if (getsockopt(s, SOL_SOCKET, SO_ERROR, &err, &elen) == 0) {
+                    if (err == 0) out = {ProbeResult::Connected, since()};
+                    else if (err == ECONNREFUSED) out = {ProbeResult::Refused, since()};
+                    else out = {ProbeResult::Error, since()};
+                }
+            } else {
+                out = {ProbeResult::Timeout, since()};
+            }
+        }
+        close(s);
+        return out;
     }
 
     bool read_local_stream(int port, std::size_t max_bytes, int timeout_ms, std::string& out) const override {
