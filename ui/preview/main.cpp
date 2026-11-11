@@ -3,6 +3,7 @@
 // Spielt einen festen Tastenablauf gegen einen Snapshot ab und schreibt jeden Bildschirm als PNG.
 // Die Plattform ist nur lesend: Reparaturen werden angezeigt, aber nie ausgefuehrt. Die Fehlercodes kommen aus knowledge/error_codes.json.
 #include "medic_ui/app.hpp"
+#include "medic_ui/icons.hpp"
 #include "medic_ui/png.hpp"
 
 #include <algorithm>
@@ -20,7 +21,26 @@
 
 using namespace medic::ui;
 
+namespace {
+// Symbolbogen: alle Symbole in Hauptfarbe/Akzent und als Farbfeld, zur Sichtpruefung.
+int write_icon_sheet(const std::string& path) {
+    Canvas c(1920, 1080);
+    c.clear(rgb(14, 18, 24));
+    const Color tints[] = {rgb(76, 154, 255), rgb(167, 139, 250), rgb(45, 212, 191), rgb(251, 146, 60), rgb(255, 92, 92), rgb(76, 208, 138)};
+    const int n = static_cast<int>(Icon::Shield) + 1;
+    for (int i = 0; i < n; ++i) {
+        const int col = i % 8, row = i / 8, x = 40 + col * 232, y = 20 + row * 260;
+        c.fill_round_rect(x, y, 212, 244, 16, rgb(23, 29, 38));
+        draw_icon(c, static_cast<Icon>(i), x + 106, y + 72, 100, rgb(232, 237, 242), rgb(76, 154, 255));
+        draw_icon_badge(c, static_cast<Icon>(i), x + 20, y + 144, 80, tints[i % 6]);
+        draw_icon(c, static_cast<Icon>(i), x + 160, y + 184, 36, rgb(141, 153, 168));
+    }
+    return write_png(path, c, 1) ? 0 : 2;
+}
+}  // namespace
+
 int main(int argc, char** argv) {
+    if (argc == 3 && std::string(argv[1]) == "--icons") return write_icon_sheet(argv[2]);
     if (argc < 3) {
         std::cerr << "Aufruf: medic-ui-preview <snapshot-ordner> <ausgabe-ordner> [--lang de|en] [--rules datei] [--scale N]\n";
         return 2;

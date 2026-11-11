@@ -199,6 +199,8 @@ const char* screen_name(App::Screen s) {
         case App::Screen::ErrorCodes: return "Fehlercodes";
         case App::Screen::ErrorCodeDetail: return "Fehlercode-Detail";
         case App::Screen::ErrorCodeSource: return "Fehlercode-Quelle";
+        case App::Screen::SelfTest: return "Selbsttest";
+        case App::Screen::UserTest: return "Nutzer-Test";
     }
     return "?";
 }

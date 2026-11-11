@@ -6,6 +6,7 @@
 #include "medic/history.hpp"
 #include "medic_ui/app.hpp"
 #include "medic_ui/font.hpp"
+#include "medic_ui/icons.hpp"
 #include "medic/http.hpp"
 #include "medic/sha256.hpp"
 #include "medic/signature.hpp"
@@ -2766,6 +2767,55 @@ void selftest_ui_tests() {
     CHECK(svc4.selftest_runs == run_all, "Selbsttest-UI: Gruendlich nach Bestaetigung laeuft alle Tests (ohne Nutzer-Tests)");
 }
 
+void icon_tests() {
+    // Jedes Symbol malt in jeder Groesse sichtbar und innerhalb seines Feldes; Akzentfarbe und Hauptfarbe kommen vor (wo das Symbol einen Akzent hat)
+    const Color bg = rgb(0, 0, 0), main_c = rgb(255, 0, 0), acc_c = rgb(0, 0, 255);
+    bool all_visible = true, inside_field = true;
+    int with_accent = 0;
+    for (int i = 0; i <= static_cast<int>(Icon::Shield); ++i)
+        for (int size : {24, 48, 96}) {
+            Canvas c(size + 40, size + 40);
+            c.clear(bg);
+            draw_icon(c, static_cast<Icon>(i), (size + 40) / 2, (size + 40) / 2, size, main_c, acc_c);
+            int painted = 0, blue = 0, outside = 0;
+            for (int y = 0; y < size + 40; ++y)
+                for (int x = 0; x < size + 40; ++x) {
+                    const Color px = c.at(x, y);
+                    if ((px & 0xFFFFFF) == 0) continue;
+                    ++painted;
+                    if ((px & 0xFF) > 60) ++blue;
+                    if (x < 20 || y < 20 || x >= 20 + size || y >= 20 + size) ++outside;
+                }
+            all_visible = all_visible && painted > size;  // mehr als ein Strich der Laenge "Feld"
+            inside_field = inside_field && outside == 0;
+            if (size == 96 && blue > 0) ++with_accent;
+        }
+    CHECK(all_visible, "Symbole: jedes Symbol ist in 24, 48 und 96 Punkten sichtbar");
+    CHECK(inside_field, "Symbole: nichts ausserhalb des Feldes");
+    CHECK(with_accent >= 15, "Symbole: viele Symbole nutzen die Akzentfarbe");
+    Canvas c(200, 200);
+    c.clear(rgb(0, 0, 0));
+    draw_icon_badge(c, Icon::Gear, 20, 20, 100, rgb(60, 160, 255));
+    CHECK(c.at(70, 24) != rgb(0, 0, 0) && c.at(70, 24) != c.at(70, 112) && c.at(5, 5) == rgb(0, 0, 0), "Symbolfeld: Verlauf von oben nach unten, nichts ausserhalb");
+    CHECK(c.at(60, 20 + 100 + 10) == rgb(0, 0, 0), "Symbolfeld: begrenzt");
+    CHECK((lighten(rgb(100, 100, 100), 128) & 0xFF) > 100 && (darken(rgb(100, 100, 100), 128) & 0xFF) < 100, "Symbole: heller und dunkler");
+    // Verlaeufe und Linienzug
+    Canvas g(40, 40);
+    g.fill_vgradient(0, 0, 40, 40, rgb(0, 0, 0), rgb(200, 200, 200));
+    CHECK((g.at(5, 0) & 0xFF) == 0 && (g.at(5, 39) & 0xFF) == 200 && (g.at(5, 20) & 0xFF) > 80 && (g.at(5, 20) & 0xFF) < 120, "Canvas: senkrechter Verlauf");
+    Canvas l(40, 40);
+    l.clear(rgb(0, 0, 0));
+    l.stroke_polyline({{5, 20}, {35, 20}}, 4, rgb(255, 255, 255));
+    CHECK((l.at(20, 20) & 0xFF) == 255 && (l.at(20, 5) & 0xFF) == 0, "Canvas: Linienzug");
+    // Die Oberflaeche zeichnet reproduzierbar: zwei Bilder desselben Zustands sind gleich (Hintergrund aus dem Zwischenspeicher)
+    FakeService fake;
+    App app(fake);
+    Canvas a(App::kWidth, App::kHeight), b(App::kWidth, App::kHeight);
+    app.render(a);
+    app.render(b);
+    CHECK(a.at(10, 10) == b.at(10, 10) && a.at(App::kWidth / 2, 400) == b.at(App::kWidth / 2, 400) && std::equal(a.data(), a.data() + 4096, b.data()), "UI: Hintergrund wird reproduzierbar gezeichnet");
+}
+
 }  // namespace
 
 void ui_tests() {
@@ -2778,6 +2828,7 @@ void ui_tests() {
     redetect_ui_tests();
     confidence_ui_tests();
     selftest_ui_tests();
+    icon_tests();
     shot_hook_tests();
     usertest_ui_tests();
     history_ui_tests();

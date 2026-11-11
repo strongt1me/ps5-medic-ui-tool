@@ -85,6 +85,67 @@ void Canvas::stroke_round_rect(int x, int y, int w, int h, int radius, int thick
         }
 }
 
+void Canvas::fill_vgradient(int x, int y, int w, int h, Color top, Color bottom) {
+    if (w <= 0 || h <= 0) return;
+    for (int py = std::max(y, 0); py < std::min(y + h, h_); ++py) {
+        const unsigned t = static_cast<unsigned>(255 * (py - y) / std::max(h - 1, 1));
+        const Color row = blend(top | 0xFF000000u, bottom | 0xFF000000u, t);
+        for (int px = std::max(x, 0); px < std::min(x + w, w_); ++px) px_[static_cast<std::size_t>(py) * w_ + px] = row;
+    }
+}
+
+void Canvas::fill_round_rect_vgradient(int x, int y, int w, int h, int radius, Color top, Color bottom) {
+    if (w <= 0 || h <= 0) return;
+    const float r = static_cast<float>(std::min(radius, std::min(w, h) / 2));
+    const float cx = x + w / 2.0f, cy = y + h / 2.0f, hw = w / 2.0f, hh = h / 2.0f;
+    for (int py = std::max(y, 0); py < std::min(y + h, h_); ++py) {
+        const unsigned t = static_cast<unsigned>(255 * (py - y) / std::max(h - 1, 1));
+        const Color row = blend(top | 0xFF000000u, bottom | 0xFF000000u, t);
+        for (int px = std::max(x, 0); px < std::min(x + w, w_); ++px) {
+            const float sd = sdf_round_box(px + 0.5f, py + 0.5f, cx, cy, hw, hh, r);
+            put(px, py, row, static_cast<unsigned>(clamp01(0.5f - sd) * 255.0f));
+        }
+    }
+}
+
+void Canvas::fill_disc(float cx, float cy, float r, Color c) {
+    for (int py = std::max(static_cast<int>(cy - r) - 1, 0); py <= std::min(static_cast<int>(cy + r) + 1, h_ - 1); ++py)
+        for (int px = std::max(static_cast<int>(cx - r) - 1, 0); px <= std::min(static_cast<int>(cx + r) + 1, w_ - 1); ++px)
+            put(px, py, c, static_cast<unsigned>(clamp01(r + 0.5f - std::hypot(px + 0.5f - cx, py + 0.5f - cy)) * 255.0f));
+}
+
+void Canvas::glow(int cx, int cy, int radius, Color c, unsigned max_alpha) {
+    if (radius <= 0) return;
+    const float rr = static_cast<float>(radius);
+    for (int py = std::max(cy - radius, 0); py < std::min(cy + radius, h_); ++py)
+        for (int px = std::max(cx - radius, 0); px < std::min(cx + radius, w_); ++px) {
+            const float t = std::hypot(static_cast<float>(px - cx), static_cast<float>(py - cy)) / rr;
+            if (t >= 1.0f) continue;
+            const float f = (1.0f - t) * (1.0f - t);  // quadratisch ausklingend: weicher Rand
+            put(px, py, c, static_cast<unsigned>(f * static_cast<float>(max_alpha)));
+        }
+}
+
+void Canvas::stroke_polyline(const std::vector<std::pair<float, float>>& pts, float width, Color c) {
+    // Je Teilstrecke nur ihr eigenes Rechteck; an den Gelenken wird zweimal gemischt, darum fuer deckende Farben gedacht.
+    const float half = width / 2.0f;
+    for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
+        const float ax = pts[i].first, ay = pts[i].second, bx = pts[i + 1].first, by = pts[i + 1].second;
+        for (int py = std::max(static_cast<int>(std::min(ay, by) - half) - 1, 0); py <= std::min(static_cast<int>(std::max(ay, by) + half) + 1, h_ - 1); ++py)
+            for (int px = std::max(static_cast<int>(std::min(ax, bx) - half) - 1, 0); px <= std::min(static_cast<int>(std::max(ax, bx) + half) + 1, w_ - 1); ++px) {
+                const float d = seg_dist(px + 0.5f, py + 0.5f, ax, ay, bx, by);
+                const unsigned cov = static_cast<unsigned>(clamp01(half + 0.5f - d) * 255.0f);
+                if (cov == 0) continue;
+                auto& p = px_[static_cast<std::size_t>(py) * w_ + px];
+                p = blend(p, c, cov);
+            }
+    }
+}
+
+void Canvas::copy_from(const Canvas& o) {
+    if (o.w_ == w_ && o.h_ == h_) px_ = o.px_;
+}
+
 void Canvas::draw_pad_glyph(PadGlyph g, int cx, int cy, int size, Color c) {
     struct Seg {
         float ax, ay, bx, by;

@@ -3,6 +3,7 @@
 // geschrieben (Vorschau, Tests), auf der Konsole spaeter in den VideoOut-Framebuffer kopiert.
 #pragma once
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace medic::ui {
@@ -29,6 +30,13 @@ public:
     void fill_rect(int x, int y, int w, int h, Color c);
     void fill_round_rect(int x, int y, int w, int h, int radius, Color c);
     void stroke_round_rect(int x, int y, int w, int h, int radius, int thickness, Color c);
+    // Verlaeufe und Zeichenhilfen fuer die Gestaltung (alles kantengeglaettet).
+    void fill_vgradient(int x, int y, int w, int h, Color top, Color bottom);
+    void fill_round_rect_vgradient(int x, int y, int w, int h, int radius, Color top, Color bottom);
+    void fill_disc(float cx, float cy, float r, Color c);
+    void glow(int cx, int cy, int radius, Color c, unsigned max_alpha);  // weicher Lichtfleck, nach aussen ausklingend
+    void copy_from(const Canvas& other);  // gleiche Groesse, sonst nichts
+    void stroke_polyline(const std::vector<std::pair<float, float>>& pts, float width, Color c);
     // Controller-Symbole als Vektorform (unabhaengig von der Schrift). size = Kantenlaenge des Feldes.
     void draw_pad_glyph(PadGlyph g, int cx, int cy, int size, Color c);
 

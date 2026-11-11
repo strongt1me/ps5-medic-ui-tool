@@ -49,6 +49,7 @@ add_library(medic_ui STATIC
   ui/src/font_data.cpp
   ui/src/i18n.cpp
   ui/src/i18n_embedded.cpp
+  ui/src/icons.cpp
   ui/src/png.cpp
   ui/src/shot_hook.cpp
   ui/src/app.cpp

@@ -90,3 +90,14 @@ Der Start geht auch ohne Make: im websrv-Launcher (`http://<ip>:8080`) erscheint
 1. Start ohne PC: Eintrag im Launcher reicht; websrv muss dafür laufen (im Autoloader der Test-Konsole als `websrv`-ELF vorhanden, nach einem Neustart prüfen).
 2. Phase 4 (Bericht, Anonymisierung, QR-Code, README, Release-Paket): siehe `docs/PHASE4.md`. Die „PPSA-Ordner/param.json"-Installation aus dem Plan entfällt: der Launcher-Eintrag (`ps5/homebrew/`) ersetzt sie.
 3. ~~Fehlende Regeln A2, A4, C1–C3~~ erledigt (22 Regeln, siehe `docs/RULES.md`, „Nachtrag").
+
+## Nachtrag: Gestaltung mit Symbolen (11. Nov. 2026)
+
+Die Oberfläche hat einen eigenen Symbolsatz (`ui/src/icons.cpp`, `ui/include/medic_ui/icons.hpp`): 31 Vektorsymbole (Linien, Kreise, Füllungen, Aussparungen), je Größe einmal in eine Deckkraftkarte gerechnet und danach nur noch eingefärbt. Keine Bilddateien, nichts wird geladen, keine Schrift nötig. `draw_icon_badge` setzt ein Symbol auf ein abgerundetes Farbfeld mit Verlauf. Der Symbolbogen zur Sichtprüfung entsteht mit `medic-ui-preview --icons <datei.png>`.
+
+- **Start:** große Kachel mit Verlauf, Stethoskop und Herzschlaglinie; vier Kacheln (Verlauf, Einstellungen, Fehlercodes, Selbsttest) mit farbigem Symbolfeld; „Letzter Check-up“ mit großem Statussymbol (Haken, Warnung, Fehler, Info). Eine Teilprüfung bleibt blau („nicht alles gelesen“), nie grün.
+- **Kopfzeile:** Logo (Kreuz im Farbfeld), Firmware-Chip. **Hinweisleiste** unten auf einer Fläche. **Hintergrund:** Verlauf mit zwei weichen Lichtflecken, gedithert (keine sichtbaren Stufen), einmal gebaut und je Bild kopiert.
+- **Prüfung läuft:** Stethoskop und eine laufende Herzschlaglinie statt des Balkens.
+- **Befunde und Detail:** Symbol je Schweregrad (Kritisch, Warnung, Info), Schraubenschlüssel bzw. Glühbirne bei Reparatur bzw. Anleitung. **Verlauf, Einstellungen, Fehlercodes, Ergebnis-Bildschirme:** Titel mit Symbolfeld, Statussymbole je Zeile.
+- **Selbsttest:** je Test ein Symbol (Laufwerk, Thermometer, Datenbank, Datei, Tacho, WLAN, Flamme, Chip, Stift, Controller, Anzeige) und je Ergebnis ein Statussymbol (Haken, Warnung, Kreuz, Strich, offener Kreis). Zeilen sind enger, damit alle elf Tests über der Hinweisleiste Platz haben.
+- Tests: `icon_tests` in `tests/test_ui.cpp` (jedes Symbol sichtbar, im Feld, Akzent, Verlauf).

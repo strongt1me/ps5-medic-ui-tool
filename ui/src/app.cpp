@@ -2,10 +2,12 @@
 #include "medic_ui/app.hpp"
 
 #include "medic_ui/font.hpp"
+#include "medic_ui/icons.hpp"
 
 #include "medic/history.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace medic::ui {
 
@@ -69,6 +71,99 @@ int text_right(Canvas& c, const Font& f, int right, int y, const std::string& s,
 void card(Canvas& c, int x, int y, int w, int h, bool selected) {
     c.fill_round_rect(x, y, w, h, 16, selected ? kPanelHi : kPanel);
     if (selected) c.stroke_round_rect(x, y, w, h, 16, 3, kAccent);
+}
+
+Color rgba(unsigned r, unsigned g, unsigned b, unsigned a) { return (a << 24) | (r << 16) | (g << 8) | b; }
+
+const Color kTintBlue = rgb(76, 154, 255), kTintViolet = rgb(167, 139, 250), kTintTeal = rgb(45, 212, 191), kTintOrange = rgb(251, 146, 60),
+            kTintSlate = rgb(125, 146, 178), kTintGreen = rgb(76, 208, 138), kTintPink = rgb(244, 114, 182);
+
+Icon sev_icon(medic::Severity s) {
+    switch (s) {
+        case medic::Severity::Critical: return Icon::Critical;
+        case medic::Severity::Warning: return Icon::Warning;
+        case medic::Severity::Info: break;
+    }
+    return Icon::Info;
+}
+
+// Symbol und Farbe je Selbsttest (nach der ID; unbekannte bekommen ein Haeckchen-Brett)
+std::pair<Icon, Color> test_look(const std::string& id) {
+    if (id == "sw.storage.mounts") return {Icon::Drive, kTintTeal};
+    if (id == "hw.sensors.plausible") return {Icon::Thermometer, kTintOrange};
+    if (id == "sw.db.headers") return {Icon::Database, kTintViolet};
+    if (id == "sw.files.sanity") return {Icon::File, kTintBlue};
+    if (id == "hw.storage.read_throughput") return {Icon::Gauge, kTintTeal};
+    if (id == "sw.net.local") return {Icon::Wifi, kTintBlue};
+    if (id == "hw.thermal.short_soak") return {Icon::Flame, kTintOrange};
+    if (id == "hw.mem.userland_pattern") return {Icon::Chip, kTintViolet};
+    if (id == "hw.storage.write_verify") return {Icon::Pencil, kTintPink};
+    if (id == "hw.pad.buttons") return {Icon::Gamepad, kTintGreen};
+    if (id == "hw.display.pattern") return {Icon::Display, kTintGreen};
+    return {Icon::Checklist, kTintSlate};
+}
+
+Icon status_icon(medic::TestStatus st) {
+    switch (st) {
+        case medic::TestStatus::Passed: return Icon::Ok;
+        case medic::TestStatus::Warn: return Icon::Warning;
+        case medic::TestStatus::Failed:
+        case medic::TestStatus::Error: return Icon::Critical;
+        case medic::TestStatus::Skipped:
+        case medic::TestStatus::Cancelled: return Icon::Skip;
+        default: break;
+    }
+    return Icon::Circle;
+}
+
+// Titel mit Symbolfeld davor (Bildschirmtitel bei y = 130); liefert die x-Position des Textes
+int title_icon(Canvas& c, Icon icon, Color tint, const std::string& text, int y = 130) {
+    draw_icon_badge(c, icon, M, y - 4, 64, tint);
+    title().draw(c, M + 88, y, text, kText);
+    return M + 88;
+}
+
+// Herzschlaglinie: Verlauf einer Welle ueber [x0, x0 + width], phase verschiebt sie (fuer die Bewegung)
+std::vector<std::pair<float, float>> ecg_points(float x0, float width, float base, float amp, float period, float phase) {
+    static const float tpl[][2] = {{0.00f, 0}, {0.28f, 0}, {0.33f, -0.14f}, {0.38f, 0}, {0.45f, 0}, {0.48f, 0.2f}, {0.53f, -1.0f}, {0.58f, 0.6f}, {0.62f, 0}, {0.74f, 0}, {0.80f, -0.26f}, {0.86f, 0}, {1.00f, 0}};
+    auto wave = [&](float t) {
+        t -= std::floor(t);
+        for (int i = 0; i + 1 < 13; ++i)
+            if (t <= tpl[i + 1][0]) return tpl[i][1] + (tpl[i + 1][1] - tpl[i][1]) * (t - tpl[i][0]) / (tpl[i + 1][0] - tpl[i][0]);
+        return 0.0f;
+    };
+    std::vector<std::pair<float, float>> pts;
+    for (float x = 0; x <= width; x += 3.0f) pts.emplace_back(x0 + x, base + amp * wave((x + phase) / period));
+    return pts;
+}
+
+// Hintergrund: senkrechter Verlauf mit zwei weichen Lichtflecken, mit Raster-Dithering, damit es keine sichtbaren Stufen gibt (8 Bit je Farbe)
+void build_background(Canvas& bg) {
+    static const int bayer[4][4] = {{0, 8, 2, 10}, {12, 4, 14, 6}, {3, 11, 1, 9}, {15, 7, 13, 5}};
+    struct Glow {
+        float cx, cy, r, cr, cg, cb, a;
+    };
+    const int w = bg.width(), h = bg.height();
+    const Glow glows[2] = {{static_cast<float>(w - 160), 40.0f, 620.0f, 40, 96, 190, 0.20f}, {120.0f, static_cast<float>(h - 60), 520.0f, 60, 50, 140, 0.12f}};
+    const float top[3] = {18, 25, 38}, bottom[3] = {9, 12, 18};
+    for (int y = 0; y < h; ++y) {
+        const float ty = static_cast<float>(y) / static_cast<float>(h - 1);
+        for (int x = 0; x < w; ++x) {
+            float col[3];
+            for (int k = 0; k < 3; ++k) col[k] = top[k] + (bottom[k] - top[k]) * ty;
+            for (const auto& g : glows) {
+                const float t = std::hypot(static_cast<float>(x) - g.cx, static_cast<float>(y) - g.cy) / g.r;
+                if (t >= 1.0f) continue;
+                const float f = (1.0f - t) * (1.0f - t) * g.a;
+                col[0] += (g.cr - col[0]) * f;
+                col[1] += (g.cg - col[1]) * f;
+                col[2] += (g.cb - col[2]) * f;
+            }
+            const float d = static_cast<float>(bayer[y & 3][x & 3]) / 16.0f;  // 0 .. 0.94
+            auto q = [&](float v) { return static_cast<unsigned>(std::clamp(v + d, 0.0f, 255.0f)); };
+            bg.put(x, y, rgb(q(col[0]), q(col[1]), q(col[2])));
+        }
+    }
 }
 
 // ---- Fehlercodes: Textzeilen der Detailansicht ---------------------------------
@@ -632,7 +727,11 @@ void App::update() {
 // ---- Darstellung ------------------------------------------------------------
 
 void App::render(Canvas& c) const {
-    c.clear(kBg);
+    if (!bg_ || bg_->width() != c.width() || bg_->height() != c.height()) {  // Hintergrund einmal bauen: Verlauf und zwei weiche Lichtflecken
+        bg_ = std::make_unique<Canvas>(c.width(), c.height());
+        build_background(*bg_);
+    }
+    c.copy_from(*bg_);
     draw_chrome(c);
     switch (screen_) {
         case Screen::Start: draw_start(c); break;
@@ -736,7 +835,7 @@ void App::draw_selftest(Canvas& c) const {
             default: return kDim;
         }
     };
-    title().draw(c, M, 130, S("selftest.title"), kText);
+    title_icon(c, Icon::Checklist, kTintTeal, S("selftest.title"));
 
     if (st_state_ == StState::Confirm) {
         int total = 0;
@@ -747,8 +846,9 @@ void App::draw_selftest(Canvas& c) const {
             reads = reads || d.risk == "read";
         }
         c.fill_round_rect(M, 230, W - 2 * M, 460, 24, kPanel);
-        body().draw(c, M + 48, 262, S(st_tier_ >= 2 ? "selftest.confirm_title_thorough" : "selftest.confirm_title"), st_tier_ >= 2 ? kWarn : kText);
-        int y = 330;
+        draw_icon_badge(c, st_tier_ >= 2 ? Icon::Flame : Icon::Checklist, M + 48, 254, 72, st_tier_ >= 2 ? kTintOrange : kTintTeal);
+        body().draw(c, M + 144, 254 + (72 - body().line_height()) / 2, S(st_tier_ >= 2 ? "selftest.confirm_title_thorough" : "selftest.confirm_title"), st_tier_ >= 2 ? kWarn : kText);
+        int y = 346;
         for (auto& l : wrap_text(body(), S.fmt(st_tier_ >= 2 ? "selftest.confirm_thorough" : (reads ? "selftest.confirm_read" : "selftest.confirm_none"), {{"s", std::to_string(total)}}), W - 2 * M - 96, 9)) {
             body().draw(c, M + 48, y, l, kDim);
             y += body().line_height() + 6;
@@ -762,8 +862,12 @@ void App::draw_selftest(Canvas& c) const {
         c.fill_round_rect(M, 230, W - 2 * M, 330, 24, kPanel);
         const std::size_t shown = std::min(st_next_, n ? n - 1 : 0);
         const std::string name = n ? (de ? st_defs_[st_ids_[shown]].name_de : st_defs_[st_ids_[shown]].name_en) : std::string();
-        body().draw(c, M + 48, 262, S.fmt("selftest.running", {{"i", std::to_string(std::min(st_next_ + 1, n))}, {"n", std::to_string(n)}}), kText);
-        small().draw(c, M + 48, 322, name, kDim);
+        {
+            const auto look = test_look(n ? st_defs_[st_ids_[shown]].id : std::string());
+            draw_icon_badge(c, look.first, M + 48, 256, 120, look.second);
+        }
+        body().draw(c, M + 204, 270, S.fmt("selftest.running", {{"i", std::to_string(std::min(st_next_ + 1, n))}, {"n", std::to_string(n)}}), kText);
+        small().draw(c, M + 204, 330, name, kDim);
         const int bw = W - 2 * M - 96;
         c.fill_round_rect(M + 48, 400, bw, 20, 10, kLine);
         if (n) c.fill_round_rect(M + 48, 400, std::max(20, static_cast<int>(bw * (static_cast<double>(st_next_) + st_progress_) / static_cast<double>(n))), 20, 10, kAccent);
@@ -773,8 +877,8 @@ void App::draw_selftest(Canvas& c) const {
     }
 
     // Liste: letztes Ergebnis je Test (bei Done das frische)
-    small().draw(c, M + 4, 192, S("selftest.sub"), kDim);
-    int y = 226;
+    small().draw(c, M + 4, 196, S("selftest.sub"), kDim);
+    int y = 230;
     int passed = 0, warn = 0, failed = 0, skipped = 0;
     for (const auto& d : st_defs_) {
         const medic::TestResult* r = nullptr;
@@ -785,14 +889,20 @@ void App::draw_selftest(Canvas& c) const {
         else if (st == medic::TestStatus::Warn) ++warn;
         else if (st == medic::TestStatus::Failed || st == medic::TestStatus::Error) ++failed;
         else if (st == medic::TestStatus::Skipped) ++skipped;
-        c.fill_round_rect(M, y, W - 2 * M, 64, 14, kPanel);
-        body().draw(c, M + 32, y + 0, de ? d.name_de : d.name_en, kText, W - 2 * M - 420);
+        c.fill_round_rect(M, y, W - 2 * M, 58, 14, kPanel);
+        {
+            const auto look = test_look(d.id);
+            draw_icon_badge(c, look.first, M + 12, y + 5, 48, look.second);
+        }
+        body().draw(c, M + 80, y + 0, de ? d.name_de : d.name_en, kText, W - 2 * M - 480);
         std::string sub = S(d.tier == medic::TestTier::Quick ? "selftest.tier_quick" : (d.tier == medic::TestTier::Standard ? "selftest.tier_standard" : (d.tier == medic::TestTier::Thorough ? "selftest.tier_thorough" : "selftest.tier_user"))) + " · " + S.fmt("selftest.est", {{"s", std::to_string(d.est_seconds)}});
         if (r && !r->reason.empty()) sub += " · " + (S.has("selftest.reason." + r->reason) ? S("selftest.reason." + r->reason) : r->reason);
-        small().draw(c, M + 32, y + 36, elide(small(), sub, W - 2 * M - 420), kDim);
+        small().draw(c, M + 80, y + 29, elide(small(), sub, W - 2 * M - 480), kDim);
         const std::string label = S(std::string("selftest.status.") + medic::to_string(st));
-        draw_badge(c, W - M - 32 - (small().width(label) + 24), y + 15, label, status_color(st));
-        y += 70;
+        const int bx = W - M - 32 - (small().width(label) + 24);
+        draw_badge(c, bx, y + 12, label, status_color(st));
+        draw_icon(c, status_icon(st), bx - 28, y + 29, 30, status_color(st), status_color(st));
+        y += 63;
     }
     if (!st_last_.empty())
         small().draw(c, M + 4, y + 6, S.fmt("selftest.summary", {{"p", std::to_string(passed)}, {"w", std::to_string(warn)}, {"f", std::to_string(failed)}, {"s", std::to_string(skipped)}}), kDim);
@@ -885,7 +995,7 @@ void App::draw_usertest(Canvas& c) const {
         small().draw(c, 40, H - 60, S.fmt("usertest.display_hint", {{"i", std::to_string(ut_color_ + 1)}, {"n", "6"}}), hint);
         return;
     }
-    title().draw(c, M, 130, S(ut_pad_ ? "usertest.pad_title" : "usertest.display_title"), kText);
+    title_icon(c, ut_pad_ ? Icon::Gamepad : Icon::Display, kTintGreen, S(ut_pad_ ? "usertest.pad_title" : "usertest.display_title"));
     if (ut_pad_) {
         small().draw(c, M + 4, 192, S("usertest.pad_sub"), kDim);
         const char* names[11] = {"usertest.btn.up", "usertest.btn.down", "usertest.btn.left", "usertest.btn.right", "usertest.btn.cross", "usertest.btn.circle",
@@ -894,7 +1004,8 @@ void App::draw_usertest(Canvas& c) const {
         for (int i = 0; i < 11; ++i) {
             const int x = M + (i % cols) * (cw + gap), y = 250 + (i / cols) * (ch + gap);
             c.fill_round_rect(x, y, cw, ch, 16, ut_pressed_[i] ? kOk : kPanel);
-            body().draw(c, x + 32, y + 44, S(names[i]), ut_pressed_[i] ? kBg : kText, cw - 64);
+            body().draw(c, x + 32, y + 44, S(names[i]), ut_pressed_[i] ? kBg : kText, cw - 120);
+            draw_icon(c, ut_pressed_[i] ? Icon::Ok : Icon::Circle, x + cw - 48, y + 65, 40, ut_pressed_[i] ? kBg : kLine, ut_pressed_[i] ? kBg : kLine);
         }
         small().draw(c, M + 4, 250 + 3 * (ch + gap) + 6, S.fmt("usertest.pad_count", {{"n", std::to_string(ut_presses_)}}), kDim);
         draw_hints(c, {{PadGlyph::Circle, S("usertest.pad_exit")}});
@@ -911,10 +1022,16 @@ void App::draw_usertest(Canvas& c) const {
 
 void App::draw_chrome(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    title().draw(c, M, 28, S("app.title"), kText);
+    draw_icon_badge(c, Icon::Medic, M, 24, 66, kTintBlue);
+    title().draw(c, M + 90, 28, S("app.title"), kText);
     const std::string sys = has_result_ && !result_.fw.empty() ? S.fmt("header.system", {{"fw", result_.fw}, {"model", result_.model}})
                                                                 : (has_result_ ? S("header.unknown") : std::string());
-    if (!sys.empty()) text_right(c, small(), W - M, 52, sys, kDim);
+    if (!sys.empty()) {
+        const int w = small().width(sys);
+        c.fill_round_rect(W - M - w - 64, 36, w + 64, 44, 22, rgba(255, 255, 255, 14));
+        draw_icon(c, Icon::Gamepad, W - M - w - 64 + 28, 58, 26, kDim, kDim);
+        small().draw(c, W - M - w - 18, 44, sys, kDim);
+    }
     c.fill_rect(M, 112, W - 2 * M, 2, kLine);
     c.fill_rect(M, 112, 160, 2, kAccent);
 }
@@ -922,6 +1039,7 @@ void App::draw_chrome(Canvas& c) const {
 void App::draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::string>>& hints) const {
     int x = M;
     const int y = H - 92;
+    c.fill_round_rect(40, H - 108, W - 80, 80, 22, rgba(255, 255, 255, 12));
     for (const auto& [g, label] : hints) {
         Color col = kText;
         switch (g) {
@@ -939,36 +1057,64 @@ void App::draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::strin
 
 void App::draw_start(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    // Grosser Knopf
+    // Grosse Kachel: Check-up starten (Verlauf, Herzschlaglinie als Bild, Stethoskop)
     const bool sel0 = start_sel_ == 0;
-    c.fill_round_rect(M, 160, W - 2 * M, 190, 24, sel0 ? kAccent : rgb(38, 82, 140));
-    if (sel0) c.stroke_round_rect(M, 160, W - 2 * M, 190, 24, 4, rgb(190, 220, 255));
-    title().draw(c, M + 48, 190, S("start.check"), rgb(255, 255, 255));
-    body().draw(c, M + 48, 266, S("start.check_sub"), rgb(220, 234, 255), W - 2 * M - 96);
+    c.fill_round_rect_vgradient(M, 160, W - 2 * M, 190, 28, sel0 ? rgb(88, 170, 255) : rgb(56, 104, 176), sel0 ? rgb(38, 92, 210) : rgb(28, 58, 112));
+    c.stroke_polyline(ecg_points(M + 1020, W - 2 * M - 1080, 262, 58, 400, 0), 6, sel0 ? rgb(176, 214, 255) : rgb(96, 136, 196));
+    if (sel0) c.stroke_round_rect(M, 160, W - 2 * M, 190, 28, 4, rgb(200, 226, 255));
+    c.fill_round_rect(M + 36, 188, 134, 134, 38, rgba(255, 255, 255, sel0 ? 46 : 30));
+    draw_icon(c, Icon::Stethoscope, M + 103, 255, 98, rgb(255, 255, 255), rgb(190, 224, 255));
+    title().draw(c, M + 204, 186, S("start.check"), rgb(255, 255, 255));
+    {
+        int ty = 252;
+        for (const auto& l : wrap_text(body(), S("start.check_sub"), 780, 2)) {
+            body().draw(c, M + 204, ty, l, rgb(224, 236, 255));
+            ty += body().line_height() + 2;
+        }
+    }
 
-    // Vier kleine Knoepfe (Verlauf, Einstellungen, Fehlercodes, Selbsttest)
+    // Vier kleine Kacheln mit Symbolfeld (Verlauf, Einstellungen, Fehlercodes, Selbsttest)
     const int gap = 24, cw = (W - 2 * M - 3 * gap) / 4;
     const char* keys[4][2] = {{"start.history", "start.history_sub"}, {"start.settings", "start.settings_sub"}, {"start.errors", "start.errors_sub"}, {"start.selftest", "start.selftest_sub"}};
+    const Icon icons[4] = {Icon::History, Icon::Gear, Icon::Book, Icon::Checklist};
+    const Color tints[4] = {kTintViolet, kTintSlate, kTintOrange, kTintTeal};
     for (int i = 0; i < 4; ++i) {
         const int x = M + i * (cw + gap);
-        card(c, x, 380, cw, 150, start_sel_ == i + 1);
-        body().draw(c, x + 32, 400, S(keys[i][0]), kText, cw - 64);
-        int ty = 446;
-        for (const auto& l : wrap_text(small(), S(keys[i][1]), cw - 64, 2)) {
-            small().draw(c, x + 32, ty, l, kDim);
+        card(c, x, 380, cw, 190, start_sel_ == i + 1);
+        draw_icon_badge(c, icons[i], x + 28, 404, 76, tints[i]);
+        body().draw(c, x + 120, 404 + (76 - body().line_height()) / 2, S(keys[i][0]), kText, cw - 148);
+        int ty = 498;
+        for (const auto& l : wrap_text(small(), S(keys[i][1]), cw - 56, 2)) {
+            small().draw(c, x + 28, ty, l, kDim);
             ty += small().line_height() + 2;
         }
     }
 
-    // Letztes Ergebnis
-    c.fill_round_rect(M, 560, W - 2 * M, 240, 20, kPanel);
-    small().draw(c, M + 36, 584, S("start.last"), kDim);
+    // Letztes Ergebnis: grosses Statussymbol links, Text rechts davon
+    c.fill_round_rect(M, 600, W - 2 * M, 236, 22, kPanel);
+    Icon st_icon = Icon::Info;
+    Color st_col = kDim;
+    if (has_result_ && result_.findings.empty()) {
+        const bool partial = std::any_of(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; });
+        st_icon = partial ? Icon::Info : Icon::Ok;  // nicht alles gelesen: nie "in Ordnung" in Gruen
+        st_col = partial ? kInfo : kOk;
+    } else if (has_result_) {
+        medic::Severity worst = medic::Severity::Info;
+        for (auto& f : result_.findings)
+            if (f.severity == medic::Severity::Critical || (f.severity == medic::Severity::Warning && worst == medic::Severity::Info)) worst = f.severity;
+        st_icon = sev_icon(worst);
+        st_col = sev_color(worst);
+    }
+    c.fill_round_rect(M + 36, 650, 136, 136, 40, rgba((st_col >> 16) & 0xFF, (st_col >> 8) & 0xFF, st_col & 0xFF, 34));
+    draw_icon(c, st_icon, M + 104, 718, 92, st_col, st_col);
+    const int tx = M + 204, tw = W - 2 * M - 204 - 40;
+    small().draw(c, tx, 624, S("start.last"), kDim);
     if (!has_result_) {
-        body().draw(c, M + 36, 636, S("start.last_none"), kText);
+        body().draw(c, tx, 676, S("start.last_none"), kText);
     } else if (result_.findings.empty()) {
         const int untested = static_cast<int>(std::count_if(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; }));
-        body().draw(c, M + 36, 636, S(untested ? "start.last_clean_partial" : "start.last_clean"), untested ? kText : kOk);
-        if (untested) small().draw(c, M + 36, 690, S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), kDim);
+        body().draw(c, tx, 676, S(untested ? "start.last_clean_partial" : "start.last_clean"), untested ? kText : kOk, tw);
+        if (untested) small().draw(c, tx, 740, S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), kDim);
     } else {
         int crit = 0, warn = 0, info = 0;
         for (auto& f : result_.findings) {
@@ -976,13 +1122,13 @@ void App::draw_start(Canvas& c) const {
             else if (f.severity == medic::Severity::Warning) ++warn;
             else ++info;
         }
-        body().draw(c, M + 36, 636,
+        body().draw(c, tx, 676,
                     S.fmt("start.last_summary", {{"n", std::to_string(result_.findings.size())}, {"crit", std::to_string(crit)}, {"warn", std::to_string(warn)}, {"info", std::to_string(info)}}),
-                    kText, W - 2 * M - 72);
+                    kText, tw);
         if (const int untested = static_cast<int>(std::count_if(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; })))
-            small().draw(c, M + 36, 700, S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), kDim);
+            small().draw(c, tx, 740, S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), kDim);
     }
-    if (has_result_ && !result_.rules_version.empty()) small().draw(c, M + 36, 744, S.fmt("start.rules", {{"v", result_.rules_version}}), kDim);
+    if (has_result_ && !result_.rules_version.empty()) small().draw(c, tx, 784, S.fmt("start.rules", {{"v", result_.rules_version}}), kDim);
 
     draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}, {PadGlyph::Circle, S("common.quit")}});
 }
@@ -990,13 +1136,17 @@ void App::draw_start(Canvas& c) const {
 void App::draw_running(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     c.fill_round_rect(M, 300, W - 2 * M, 330, 24, kPanel);
+    c.fill_round_rect(M + 48, 336, 150, 150, 44, rgba(76, 154, 255, 40));
+    draw_icon(c, Icon::Stethoscope, M + 123, 411, 108, kText, kAccent);
     std::string dots(static_cast<std::size_t>(tick_ % 4), '.');
-    title().draw(c, M + 60, 360, S("running.title") + dots, kText);
-    body().draw(c, M + 60, 450, S("running.sub"), kDim, W - 2 * M - 120);
-    // Laufbalken
-    const int bw = W - 2 * M - 120, seg = 260, pos = (tick_ * 40) % (bw + seg) - seg;
-    c.fill_round_rect(M + 60, 540, bw, 12, 6, kLine);
-    for (int x = std::max(pos, 0); x < std::min(pos + seg, bw); ++x) c.fill_rect(M + 60 + x, 540, 1, 12, kAccent);
+    title().draw(c, M + 240, 350, S("running.title") + dots, kText);
+    body().draw(c, M + 240, 430, S("running.sub"), kDim, W - 2 * M - 300);
+    // Herzschlaglinie läuft von rechts nach links; der helle Teil wandert mit
+    const int bw = W - 2 * M - 120;
+    const auto pts = ecg_points(static_cast<float>(M + 60), static_cast<float>(bw), 560.0f, 46.0f, 420.0f, static_cast<float>(tick_ * 14));
+    c.stroke_polyline(pts, 5, rgb(52, 70, 98));
+    const std::size_t from = pts.size() * static_cast<std::size_t>((tick_ * 9) % 100) / 100;
+    c.stroke_polyline(std::vector<std::pair<float, float>>(pts.begin() + static_cast<long>(from), pts.begin() + static_cast<long>(std::min(pts.size(), from + pts.size() / 4))), 6, kAccent);
 }
 
 void App::draw_findings(Canvas& c) const {
@@ -1027,10 +1177,10 @@ void App::draw_findings(Canvas& c) const {
         for (auto& f : fs) count += f.severity == sev;
         if (!count) continue;
         const std::string label = S(sev_key(sev)) + " " + std::to_string(count);
-        const int w = small().width(label) + 50;
+        const int w = small().width(label) + 62;
         c.fill_round_rect(cx, 142, w, 34, 17, kPanel);
-        c.fill_round_rect(cx + 14, 154, 10, 10, 5, sev_color(sev));
-        small().draw(c, cx + 34, 146, label, kText);
+        draw_icon(c, sev_icon(sev), cx + 24, 159, 22, sev_color(sev), sev_color(sev));
+        small().draw(c, cx + 44, 146, label, kText);
         cx += w + 14;
     }
     const int last = std::min(n, top_ + kListVisible);
@@ -1044,12 +1194,19 @@ void App::draw_findings(Canvas& c) const {
         const Color sc = sev_color(f.severity);
         card(c, M, y, cw, ch, i == sel_);
         c.fill_round_rect(M, y + 16, 10, ch - 32, 5, sc);
-        const int bw = draw_badge(c, M + 36, y + 16, S(sev_key(f.severity)), sc);
-        small().draw(c, M + 36 + bw + 16, y + 20, f.rule_id, kDim);
-        if (!f.fix.empty()) text_right(c, small(), M + cw - 32, y + 20, S(is_hint_fix(f.fix) ? "findings.hintable" : "findings.fixable"), kOk);
-        const auto lines = wrap_text(body(), finding_text(f), cw - 72, 2);
+        c.fill_round_rect(M + 34, y + (ch - 76) / 2, 76, 76, 24, rgba((sc >> 16) & 0xFF, (sc >> 8) & 0xFF, sc & 0xFF, 40));
+        draw_icon(c, sev_icon(f.severity), M + 72, y + ch / 2, 54, sc, sc);
+        const int tx = M + 134;
+        const int bw = draw_badge(c, tx, y + 16, S(sev_key(f.severity)), sc);
+        small().draw(c, tx + bw + 16, y + 20, f.rule_id, kDim);
+        if (!f.fix.empty()) {
+            const std::string label = S(is_hint_fix(f.fix) ? "findings.hintable" : "findings.fixable");
+            const int lw = text_right(c, small(), M + cw - 32, y + 20, label, kOk);
+            draw_icon(c, is_hint_fix(f.fix) ? Icon::Lightbulb : Icon::Wrench, M + cw - 32 - lw - 22, y + 33, 28, kOk, kOk);
+        }
+        const auto lines = wrap_text(body(), finding_text(f), cw - 134 - 36, 2);
         for (std::size_t k = 0; k < lines.size(); ++k)
-            body().draw(c, M + 36, y + 62 + static_cast<int>(k) * (body().line_height() + 2), lines[k], kText);
+            body().draw(c, tx, y + 62 + static_cast<int>(k) * (body().line_height() + 2), lines[k], kText);
     }
     if (n > kListVisible) {  // Scrollleiste
         const int track_h = kListVisible * (ch + gap) - gap;
@@ -1070,7 +1227,7 @@ void App::draw_findings(Canvas& c) const {
 
 void App::draw_report(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    title().draw(c, M, 132, S("report.title"), kText);
+    title_icon(c, Icon::Report, kTintBlue, S("report.title"), 132);
 
     // Links: Status und Hinweise
     const int px0 = M, py0 = 230, pw = 880, pad = 36, tw = pw - 2 * pad;
@@ -1108,8 +1265,9 @@ void App::draw_detail(Canvas& c) const {
     if (!f) return;
     const int cw = W - 2 * M;
     int y = 140;
-    const int bw = draw_badge(c, M, y, S(sev_key(f->severity)), sev_color(f->severity));
-    body().draw(c, M + bw + 20, y, f->rule_id, kDim);
+    draw_icon(c, sev_icon(f->severity), M + 24, y + 17, 46, sev_color(f->severity), sev_color(f->severity));
+    const int bw = draw_badge(c, M + 62, y, S(sev_key(f->severity)), sev_color(f->severity));
+    body().draw(c, M + 62 + bw + 20, y, f->rule_id, kDim);
     const medic::Confidence conf = medic::effective_confidence(*f);
     {
         // Verlaesslichkeit (hoch/mittel/niedrig) mit der Grundlage; Farbe: Gruen = hoch, Orange = niedrig (nie "in Ordnung" suggerieren)
@@ -1207,7 +1365,7 @@ void App::draw_detail(Canvas& c) const {
 void App::draw_fix_preview(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     const int cw = W - 2 * M;
-    title().draw(c, M, 130, S("fixprev.title"), kText);
+    title_icon(c, Icon::Wrench, kTintOrange, S("fixprev.title"));
     small().draw(c, M + 4, 192, plan_.fix_id.empty() ? std::string() : fix_name(plan_.fix_id), kDim);
 
     int y = 232;
@@ -1290,7 +1448,12 @@ void App::draw_fix_done(Canvas& c) const {
     else sub = S.fmt("fixdone.fail_sub", {{"error", done_text_}});
 
     c.fill_round_rect(M, 260, W - 2 * M, 400, 24, kPanel);
-    title().draw(c, M + 60, 316, S(head), done_ok_ ? kOk : kCrit);
+    {
+        const Color rc = done_ok_ ? kOk : kCrit;
+        c.fill_round_rect(M + 60, 290, 104, 104, 32, rgba((rc >> 16) & 0xFF, (rc >> 8) & 0xFF, rc & 0xFF, 40));
+        draw_icon(c, done_ok_ ? Icon::Ok : Icon::Critical, M + 112, 342, 72, rc, rc);
+    }
+    title().draw(c, M + 196, 320, S(head), done_ok_ ? kOk : kCrit);
     int y = 410;
     for (auto& l : wrap_text(body(), sub, W - 2 * M - 120, 5)) {
         body().draw(c, M + 60, y, l, kText);
@@ -1317,7 +1480,7 @@ void App::draw_fix_done(Canvas& c) const {
 
 void App::draw_history(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    title().draw(c, M, 130, S("history.title"), kText);
+    title_icon(c, Icon::History, kTintViolet, S("history.title"));
     const int n = static_cast<int>(hist_.size());
     if (n == 0) {
         c.fill_round_rect(M, 260, W - 2 * M, 160, 20, kPanel);
@@ -1331,10 +1494,12 @@ void App::draw_history(Canvas& c) const {
     for (int i = hist_top_; i < last; ++i, y += ch + gap) {
         const auto& t = hist_[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == hist_sel_);
-        small().draw(c, M + 32, y + 14, pretty_ts(t.ts.empty() ? t.txn : t.ts) + "   " + t.rule, kDim, cw - 400);
-        body().draw(c, M + 32, y + 44, elide(body(), fix_name(t.fix), cw - 520), kText);
-        const std::string skey = "history.state." + t.state;
         const Color sc = t.state == "applied" ? kOk : (t.state == "undone" ? kDim : kWarn);
+        c.fill_round_rect(M + 24, y + 18, 60, 60, 18, rgba((sc >> 16) & 0xFF, (sc >> 8) & 0xFF, sc & 0xFF, 40));
+        draw_icon(c, t.state == "applied" ? Icon::Ok : (t.state == "undone" ? Icon::Undo : Icon::Warning), M + 54, y + 48, 40, sc, sc);
+        small().draw(c, M + 108, y + 14, pretty_ts(t.ts.empty() ? t.txn : t.ts) + "   " + t.rule, kDim, cw - 476);
+        body().draw(c, M + 108, y + 44, elide(body(), fix_name(t.fix), cw - 596), kText);
+        const std::string skey = "history.state." + t.state;
         text_right(c, body(), M + cw - 32, y + 14, S.has(skey) ? S(skey) : t.state, sc);
         text_right(c, small(), M + cw - 32, y + 56, S.fmt("history.ops", {{"n", std::to_string(t.ops)}}), kDim);
     }
@@ -1349,7 +1514,9 @@ void App::draw_history(Canvas& c) const {
 void App::draw_undo_confirm(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     c.fill_round_rect(M, 260, W - 2 * M, 380, 24, kPanel);
-    title().draw(c, M + 60, 310, S("undo.title"), kWarn);
+    c.fill_round_rect(M + 60, 286, 104, 104, 32, rgba(255, 179, 71, 40));
+    draw_icon(c, Icon::Undo, M + 112, 338, 72, kWarn, kWarn);
+    title().draw(c, M + 196, 312, S("undo.title"), kWarn);
     int y = 410;
     for (auto& l : wrap_text(body(), S.fmt("undo.body", {{"fix", fix_name(undo_target_.fix)}, {"ts", pretty_ts(undo_target_.ts.empty() ? undo_target_.txn : undo_target_.ts)}}), W - 2 * M - 120, 5)) {
         body().draw(c, M + 60, y, l, kText);
@@ -1360,10 +1527,11 @@ void App::draw_undo_confirm(Canvas& c) const {
 
 void App::draw_settings(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    title().draw(c, M, 130, S("settings.title"), kText);
+    title_icon(c, Icon::Gear, kTintSlate, S("settings.title"));
     card(c, M, 230, W - 2 * M, 150, settings_sel_ == 0);
-    body().draw(c, M + 40, 262, S("settings.language"), kText);
-    small().draw(c, M + 40, 316, S("settings.note"), kDim);
+    draw_icon_badge(c, Icon::Globe, M + 36, 266, 78, kTintViolet);
+    body().draw(c, M + 144, 262, S("settings.language"), kText);
+    small().draw(c, M + 144, 316, S("settings.note"), kDim);
     int x = W - M - 40;
     for (Lang l : {Lang::En, Lang::De}) {
         const std::string name = S(l == Lang::De ? "settings.lang_de" : "settings.lang_en");
@@ -1375,8 +1543,9 @@ void App::draw_settings(Canvas& c) const {
         x -= 16;
     }
     card(c, M, 410, W - 2 * M, 150, settings_sel_ == 1);
-    body().draw(c, M + 40, 442, S("settings.rules_update"), kText);
-    small().draw(c, M + 40, 496, S("settings.rules_update_sub"), kDim);
+    draw_icon_badge(c, Icon::Download, M + 36, 446, 78, kTintTeal);
+    body().draw(c, M + 144, 442, S("settings.rules_update"), kText);
+    small().draw(c, M + 144, 496, S("settings.rules_update_sub"), kDim);
     if (has_result_ && !result_.rules_version.empty()) small().draw(c, M + 8, 590, S.fmt("settings.rules", {{"v", result_.rules_version}}), kDim);
     if (settings_sel_ == 0) draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::LeftRight, S("common.toggle")}, {PadGlyph::Circle, S("common.back")}});
     else draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}, {PadGlyph::Circle, S("common.back")}});
@@ -1384,7 +1553,7 @@ void App::draw_settings(Canvas& c) const {
 
 void App::draw_rules_update(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    title().draw(c, M, 130, S("update.title"), kText);
+    title_icon(c, Icon::Download, kTintTeal, S("update.title"));
     const int pad = 40, pw = W - 2 * M, tw = pw - 2 * pad;
     c.fill_round_rect(M, 230, pw, 500, 20, kPanel);
     int y = 262;
@@ -1506,7 +1675,7 @@ int App::error_scroll_max() const {
 
 void App::draw_error_codes(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    title().draw(c, M, 130, S("errors.title"), kText);
+    title_icon(c, Icon::Book, kTintOrange, S("errors.title"));
     const int n = static_cast<int>(errors_.codes.size());
     if (n == 0) {
         c.fill_round_rect(M, 260, W - 2 * M, 300, 20, kPanel);
@@ -1528,10 +1697,11 @@ void App::draw_error_codes(Canvas& c) const {
         const auto& e = errors_.codes[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == err_sel_);
         const int ty = y + (ch - body().line_height()) / 2;
-        body().draw(c, M + 32, ty, e.id, kText);
+        draw_icon(c, e.level == "doc" ? Icon::Ok : Icon::Info, M + 52, y + ch / 2, 40, level_color(e), level_color(e));
+        body().draw(c, M + 94, ty, e.id, kText);
         const std::string level = S("errors.level." + e.level);
         const int lw = text_right(c, small(), M + cw - 32, y + (ch - small().line_height()) / 2, level, level_color(e));
-        const int tx = M + 32 + 250;
+        const int tx = M + 94 + 250;
         body().draw(c, tx, ty, elide(body(), lang_ == Lang::De ? e.title_de : e.title_en, M + cw - 32 - lw - 28 - tx), kDim);
     }
     if (n > kErrVisible) {  // Scrollleiste
@@ -1557,7 +1727,8 @@ void App::draw_error_detail(Canvas& c) const {
     const int cw = W - 2 * M, n = static_cast<int>(errors_.codes.size());
 
     // Kopf: Code, Herkunft der Angaben (Sony-Seite oder Community), Kurztitel, Position
-    title().draw(c, M, 126, e->id, kText);
+    draw_icon_badge(c, Icon::Book, M, 124, 60, kTintOrange);
+    title().draw(c, M + 80, 126, e->id, kText);
     const std::string level = S("errors.level." + e->level);
     const int bw = small().width(level) + 24;
     draw_badge(c, W - M - bw, 138, level, level_color(*e));
@@ -1566,7 +1737,7 @@ void App::draw_error_detail(Canvas& c) const {
         if (reported_error_ == e->id) pos += (pos.empty() ? "" : " · ") + S("errors.in_report");
         text_right(c, small(), W - M, 204, pos, reported_error_ == e->id ? kOk : kDim);
     }
-    body().draw(c, M, 196, elide(body(), lang_ == Lang::De ? e->title_de : e->title_en, cw - 220), kDim);
+    body().draw(c, M + 80, 196, elide(body(), lang_ == Lang::De ? e->title_de : e->title_en, cw - 300), kDim);
 
     // Text: Zeilen ab err_scroll_, soweit sie in das Panel passen
     c.fill_round_rect(M, kErrPanelY, cw, kErrPanelH, 20, kPanel);
@@ -1610,7 +1781,7 @@ void App::draw_error_source(Canvas& c) const {
     if (!e) return;
     const auto sources = error_sources(*e);
     const int idx = std::clamp(err_src_, 0, static_cast<int>(sources.size()) - 1);
-    title().draw(c, M, 132, S("errors.source_title"), kText);
+    title_icon(c, Icon::Book, kTintOrange, S("errors.source_title"), 132);
     small().draw(c, M + 4, 192, e->id, kDim);
 
     const int px0 = M, py0 = 230, pw = 880, pad = 36, tw = pw - 2 * pad;

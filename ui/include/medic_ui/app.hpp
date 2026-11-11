@@ -15,6 +15,7 @@
 #include "medic_ui/input.hpp"
 #include "medic_ui/service.hpp"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -99,6 +100,7 @@ private:
     const medic::Finding* current_finding() const;
 
     IMedicService& svc_;
+    mutable std::unique_ptr<Canvas> bg_;  // Hintergrund (Verlauf, Lichtflecken), einmal gezeichnet
     Lang lang_;
     Screen screen_ = Screen::Start;
     int tick_ = 0;
