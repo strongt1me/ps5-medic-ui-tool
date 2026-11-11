@@ -353,3 +353,21 @@ Alle drei tragen eine ausdrückliche Verlässlichkeit mit Grund (mittel). Fixtur
 | `GetCurrentFanDuty`, `GetCpuUsage`, `GetBioUsageAll` | Fehler (andere Argumente nötig) | Signatur unbekannt |
 
 Entscheidung: **nichts davon geht als Fakt oder Regel ins Produkt**, solange Einheit und Bedeutung nicht an einer zweiten Quelle belegt sind (Leitregel 1). Nächster Schritt wäre, die Signaturen und Einheiten aus den Disassemblies der Funktionen (REA, libkernel der Konsole) zu belegen; Lüfter-Auslastung und Leistungsaufnahme wären dann die wertvollsten Messwerte für den Verlauf.
+
+### Ergänzung zu Batch 5: Signaturen belegt, Einheiten nicht (11. Nov. 2026)
+
+**Disassembly.** Aus Marcs eigener, bereits entschlüsselt vorliegender Sammlung wurde die Klartext-`libkernel` von FW 7.61 (ELF, 544 288 Byte) mit REA/Ghidra statisch gelesen. Die Namen sind in der Datei nur als NID vorhanden; der NID-Hash (SHA-1 über Name plus festem Salz, die ersten 8 Byte umgekehrt, Base64) ist an den beiden Kontrollfunktionen `GetCpuTemperature` und `GetSocSensorTemperature` bestätigt. Statische Analyse beweist kein Laufzeitverhalten; die Aufrufe unten sind an der Test-Konsole (FW 12.00) gegengeprüft.
+
+| Funktion | belegt aus der Disassembly (FW 7.61) |
+|---|---|
+| `GetSocPowerConsumption(out)` | öffnet `/dev/mp1`, `ioctl 0xc040ae1f`, kopiert **64 Byte** nach `out` |
+| `GetSocClock(out)` | `/dev/mp1`, `ioctl 0x4068ae01` mit Eingabe 0x16, kopiert eine **104-Byte**-Struktur |
+| `GetCpuCoreClock(out)` | `/dev/mp1`, je Kern 0 bis 7 `ioctl 0xc00cae1e`, schreibt **8 × u32** |
+| `IccGetPowerNumberOfBootShutdown(out)` | `/dev/icc_power`, `ioctl 0xc00c9904`, **12 Byte** (drei u32; an der Konsole 0, 757, 755) |
+| `IccGetPowerOperatingTime(out)` | `/dev/icc_power`, `ioctl 0xc0109905`, **16 Byte** |
+| `GetCpuUsage()` | **kein Ausgabeparameter** (liefert nur einen Status; meine Probe mit Puffer lief deshalb ins Leere) |
+| `GetCurrentFanDuty` | in 7.61 nicht vorhanden (NID nicht gefunden), also nicht analysierbar |
+
+**Lasttest (Test-Konsole, 8 Rechenthreads über 3 Sekunden).** CPU-Kerntakte (`3200 3200 3200 3200 800 800 800 800`) und die SoC-Takttabelle (`1254 500 762 762 762 2000 …`) blieben vor, während und nach der Last **bitgleich**: Das sind Konfigurations- oder Grenzwerte, keine Live-Frequenzen. Die CPU-Temperatur blieb bei 38 °C (drei Sekunden reichen nicht zum Aufheizen). In der 64-Byte-Struktur der Leistungsaufnahme schwanken einzelne Felder ohne erkennbare Beziehung zur Last (z. B. 1257 → 7 → 1149 → 1193 im ersten Feld), andere sind konstant. **Entscheidung: nichts davon geht als Messwert ins Produkt.** Für eine Leistungsanzeige müsste erst die Struktur feldweise gedeutet werden (Gerätetreiber, nicht die Hülle); der Aufwand steht in keinem Verhältnis zum Nutzen für die Diagnose. Wertvoll bleiben die Zähler `757/755` (Starts und Abschaltungen), sobald ein zweiter Beleg für Feldreihenfolge und Einheit vorliegt (Vergleich mit dem Startverlauf `vshlog`).
+
+**Zwischenfall und Lehre.** Der erste Lasttest rief `fork()` bei laufenden Rechenthreads auf. Der Aufruf blieb hängen, die Threads liefen endlos weiter und legten FTP, ELF-Lader und Shell der Test-Konsole lahm; nur ein Neustart half (Jailbreak danach neu gesetzt). Behoben in `ps5/probe_sensors.cpp`: Die Rechenthreads beenden sich selbst zum Stichtag (höchstens 6 Sekunden, nach der Uhr, unabhängig vom Hauptthread), Messungen während der Last laufen direkt im Elternprozess, `fork` wird nur ohne weitere Threads benutzt. Regel für künftige Proben: **nie `fork()` mit laufenden Threads, jede Last mit eigenem Zeitlimit.** Das Hilfsprogramm `ps5/proc_tool.cpp` (Prozessliste lesend, optional genau eine PID beenden, Handbau mit `prospero-clang++ -DKILL_PID=<pid>`) entstand dabei; ein Lauf gegen die hängende Konsole kam nicht mehr zustande (der ELF-Lader antwortete nicht).

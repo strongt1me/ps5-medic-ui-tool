@@ -9,6 +9,7 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <poll.h>
+#include <pthread.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -120,6 +121,82 @@ void out(const std::string& line) {
     }
 }
 
+// ---- Lastphase ---------------------------------------------------------------------------------------------------------------------
+// Aus der Disassemblie der libkernel (FW 7.61, REA) sind die Signaturen belegt: SocPower(out: 64 Byte, ioctl auf /dev/mp1),
+// SocClock(out: 104 Byte), CpuCoreClock(out: 8 x u32, je Kern), IccGetPowerNumberOfBootShutdown(out: 12 Byte, /dev/icc_power),
+// IccGetPowerOperatingTime(out: 16 Byte). Die Einheiten stehen nicht in den Huellen. Darum: alle Felder als u32 ausgeben, dann
+// 4 Sekunden lang alle Kerne auslasten und erneut ausgeben. Felder, die auf Last reagieren, sind Takt/Leistung.
+// Die Rechenthreads beenden sich selbst zum Stichtag (Uhr), unabhaengig vom Hauptthread: haengt dieser, laufen sie nicht weiter.
+// (Beim ersten Versuch blieben sie nach einem haengenden fork() auf der Konsole endlos aktiv und legten deren Dienste lahm.)
+struct Burn {
+    std::time_t deadline = 0;
+};
+
+void* burn_thread(void* arg) {
+    const auto* b = static_cast<const Burn*>(arg);
+    volatile std::uint64_t x = 1;
+    for (;;) {
+        for (int i = 0; i < 200000; ++i) x = x * 6364136223846793005ULL + 1442695040888963407ULL;
+        if (std::time(nullptr) >= b->deadline) break;
+    }
+    return nullptr;
+}
+
+void dump_u32(const char* name, const char* phase, void* sym, int words) {
+    // Direkt im Elternprozess (kein fork bei laufenden Threads): diese Aufrufe haben im Kindprozess bereits sauber 0 geliefert.
+    Result r;
+    alignas(16) std::uint64_t buf[32] = {};
+    errno = 0;
+    r.ret = reinterpret_cast<Fn>(sym)(buf, nullptr, nullptr);
+    std::memcpy(r.words, buf, sizeof r.words);
+    const int rc = 0, sig = 0;
+    char line[400];
+    if (rc != 0) {
+        std::snprintf(line, sizeof line, "  %-28s %-8s Fehler rc=%d signal=%d", name, phase, rc, sig);
+    } else {
+        int n = std::snprintf(line, sizeof line, "  %-28s %-8s ret=%ld u32:", name, phase, r.ret);
+        for (int i = 0; i < words && i < 16 && n < static_cast<int>(sizeof line) - 16; ++i)
+            n += std::snprintf(line + n, sizeof line - static_cast<std::size_t>(n), " %u", static_cast<unsigned>((r.words[i / 2] >> (32 * (i % 2))) & 0xffffffffu));
+    }
+    out(line);
+}
+
+void load_phase() {
+    struct Item {
+        const char* name;
+        int words;
+    };
+    const Item items[] = {{"sceKernelGetSocPowerConsumption", 16}, {"sceKernelGetSocClock", 16}, {"sceKernelGetCpuCoreClock", 8}, {"sceKernelGetCpuTemperature", 1}};
+    void* syms[4];
+    for (int i = 0; i < 4; ++i) {
+        syms[i] = resolve(items[i].name);
+        if (!syms[i]) {
+            out("Lastphase uebersprungen: Funktion fehlt");
+            return;
+        }
+    }
+    auto sample = [&](const char* phase) {
+        for (int i = 0; i < 4; ++i) dump_u32(items[i].name, phase, syms[i], items[i].words);
+    };
+    out("Lastphase: Leerlauf");
+    sample("leer");
+    Burn burn;
+    burn.deadline = std::time(nullptr) + 6;  // hoechstens 6 Sekunden
+    pthread_t th[8];
+    int started = 0;
+    for (; started < 8; ++started)
+        if (pthread_create(&th[started], nullptr, burn_thread, &burn) != 0) break;
+    out("Lastphase: " + std::to_string(started) + " Rechenthreads laufen");
+    sleep(2);
+    sample("last");
+    sleep(1);
+    sample("last2");
+    for (int i = 0; i < started; ++i) pthread_join(th[i], nullptr);
+    sleep(3);
+    out("Lastphase: nach der Last");
+    sample("danach");
+}
+
 }  // namespace
 
 int main() {
@@ -155,6 +232,7 @@ int main() {
             if (rc == 4) break;
         }
     }
+    load_phase();
     out("Ende der Liste.");
     return 0;
 }
