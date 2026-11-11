@@ -8,6 +8,7 @@
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
 
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -24,16 +25,32 @@ struct HistoryRun {
     std::string rules_version;
     std::string fw;
     std::vector<std::pair<std::string, std::string>> findings;  // Regel-ID, Schweregrad
+    std::map<std::string, double> metrics;                      // Messwerte (id aus rules.json) dieser Pruefung
 };
 
 // Liest den Verlauf (aelteste zuerst, hoechstens kHistoryMaxRuns). Kaputte Zeilen werden uebersprungen; ohne Datei leer.
 std::vector<HistoryRun> load_history(const IFileSystem& fs);
 
-HistoryRun make_history_run(const std::string& ts, const std::string& rules_version, const std::string& fw, const std::vector<Finding>& findings);
+HistoryRun make_history_run(const std::string& ts, const std::string& rules_version, const std::string& fw, const std::vector<Finding>& findings,
+                            const std::vector<std::pair<std::string, double>>& metrics = {});
 
 // Setzt status ("new" | "recurring"), first_seen und seen_runs der Befunde gegen die letzte Pruefung im Verlauf und liefert die
 // Regel-IDs, die dort noch gemeldet wurden und jetzt fehlen. Ohne Verlauf bleibt alles leer (es gibt keinen Vergleich).
 std::vector<std::string> annotate_with_history(std::vector<Finding>& findings, const std::vector<HistoryRun>& history, const std::string& now_ts);
+
+// Veraenderung eines Messwerts: jetzt, bei der letzten Pruefung mit diesem Wert und der Median der juengsten Pruefungen
+// (hoechstens kMetricWindow, ohne die jetzige) als uebliches Niveau. `prev`/`typical` sind nur gesetzt, wenn es Vergleichswerte gibt.
+constexpr std::size_t kMetricWindow = 20;
+struct MetricChange {
+    std::string id, unit, text_de, text_en;
+    double now = 0;
+    bool has_prev = false;
+    double prev = 0;
+    bool has_typical = false;
+    double typical = 0;      // Median
+    std::size_t samples = 0;  // Pruefungen, aus denen der Median stammt
+};
+std::vector<MetricChange> metric_changes(const RuleSet& rs, const std::vector<std::pair<std::string, double>>& now, const std::vector<HistoryRun>& history);
 
 // Haengt die Pruefung an (ohne fs_rw oder ohne gueltigen Zeitstempel: false). Ueber kHistoryMaxBytes wird die Datei nach
 // /data/ps5medic/history_<zeit>.jsonl verschoben und die neue mit den juengsten kHistoryKeepRuns Pruefungen begonnen.

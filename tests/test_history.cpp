@@ -5,6 +5,7 @@
 #include "medic/history.hpp"
 #include "medic/platform.hpp"
 #include "medic/report.hpp"
+#include "medic/rules.hpp"
 
 #include <filesystem>
 #include <string>
@@ -94,6 +95,69 @@ void history_tests() {
         const auto h = load_history(rw->fs());
         CHECK(h.size() == kHistoryKeepRuns + 1 && h.back().ts == "20261111T110000Z" && h.front().ts == "T" + std::to_string(400 - static_cast<int>(kHistoryKeepRuns)), "Verlauf: neue Datei beginnt mit den juengsten Pruefungen");
         CHECK(slurp(sb.real("/data/ps5medic/history_20261111T110000Z.jsonl")) == big, "Verlauf: die alte Datei liegt unveraendert daneben");
+    }
+    {  // Messwerte: Veraenderung seit der letzten Pruefung und uebliches Niveau (Median)
+        const RuleSet rs = load_rules_from_string(R"({"schema_version":1,"db_version":"t","rules":[],"metrics":[{"id":"cpu","fact":"sys.temp.cpu_c","unit":"°C","text":{"de":"CPU","en":"CPU"}}]})");
+        auto with = [](const char* ts, double v) {
+            HistoryRun r = run(ts, {});
+            r.metrics["cpu"] = v;
+            return r;
+        };
+        auto c0 = metric_changes(rs, {{"cpu", 50}}, {});
+        CHECK(c0.size() == 1 && !c0[0].has_prev && !c0[0].has_typical && c0[0].now == 50, "Messwerte: ohne Verlauf nur der jetzige Wert");
+        CHECK(metric_changes(rs, {{"unbekannt", 1}}, {}).empty(), "Messwerte: unbekannte id wird ignoriert");
+        const std::vector<HistoryRun> h = {with("T1", 40), with("T2", 60), run("T3", {}), with("T4", 44), with("T5", 46)};
+        const auto c = metric_changes(rs, {{"cpu", 70}}, h);
+        CHECK(c.size() == 1 && c[0].has_prev && c[0].prev == 46 && c[0].has_typical && c[0].typical == 45 && c[0].samples == 4 && c[0].unit == "°C",
+              "Messwerte: letzte Pruefung mit Wert und Median (Pruefung ohne Wert zaehlt nicht)");
+        Sandbox sb;
+        auto rw = make_snapshot_platform(sb.dir.string(), true);
+        CHECK(append_history(*rw, make_history_run("20261111T100000Z", "t", "12.00", {}, {{"cpu", 41.5}})), "Messwerte: angehaengt");
+        const auto back = load_history(rw->fs());
+        CHECK(back.size() == 1 && back[0].metrics.count("cpu") && back[0].metrics.at("cpu") == 41.5, "Messwerte: aus der Datei gelesen");
+    }
+    {  // vorlaeufig -> bestaetigt
+        Finding f = mk("a", Severity::Info);
+        f.confirm_runs = 2;
+        CHECK(is_pending(f), "Vorlaeufig: ohne Verlauf (seen_runs 0) ist ein Befund mit confirm_runs 2 vorlaeufig");
+        f.seen_runs = 1;
+        CHECK(is_pending(f), "Vorlaeufig: eine Pruefung reicht nicht");
+        f.seen_runs = 2;
+        CHECK(!is_pending(f), "Vorlaeufig: zwei Pruefungen in Folge bestaetigen");
+        CHECK(!is_pending(mk("b", Severity::Info)), "Vorlaeufig: Standard ist sofort bestaetigt");
+    }
+    {  // Bericht: Messwerte und Vorlaeufig
+        ReportInput in;
+        in.created_utc = "20261111T120000Z";
+        in.rules_version = "t";
+        MetricChange m;
+        m.id = "cpu";
+        m.unit = "°C";
+        m.text_de = "CPU-Temperatur";
+        m.text_en = "CPU temperature";
+        m.now = 70;
+        m.has_prev = true;
+        m.prev = 46;
+        m.has_typical = true;
+        m.typical = 45.5;
+        m.samples = 4;
+        MetricChange free_pct;
+        free_pct.id = "free";
+        free_pct.unit = "%";
+        free_pct.text_de = "Freier Platz";
+        free_pct.text_en = "Free space";
+        free_pct.now = 42.04;
+        in.metrics = {m, free_pct};
+        Finding p = mk("t.pending", Severity::Info);
+        p.confirm_runs = 2;
+        p.status = "new";
+        p.seen_runs = 1;
+        in.findings = {p};
+        auto has = [](const std::string& s, const std::string& n) { return s.find(n) != std::string::npos; };
+        const std::string de = build_report(in, ReportLang::De), en = build_report(in, ReportLang::En);
+        CHECK(has(de, "## Messwerte\n\n- CPU-Temperatur: 70 °C (zuletzt 46, üblich ≈ 45.5 (aus 4 Prüfungen))\n- Freier Platz: 42 %\n"), "Bericht DE: Messwerte mit Veraenderung und Niveau");
+        CHECK(has(en, "- CPU temperature: 70 °C (last 46, usual ≈ 45.5 (from 4 checks))\n"), "Bericht EN: Messwerte");
+        CHECK(has(de, "Vorläufig: wird erst nach 2 Prüfungen in Folge bestätigt") && has(en, "Provisional: confirmed only after 2 checks in a row"), "Bericht: vorlaeufiger Befund");
     }
     {  // Bericht
         ReportInput in;

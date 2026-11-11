@@ -5,6 +5,7 @@
 #pragma once
 #include "medic/facts.hpp"
 #include "medic/fixes.hpp"
+#include "medic/history.hpp"
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
 
@@ -32,6 +33,7 @@ struct ReportInput {
     std::vector<Finding> findings;
     std::vector<CoverageResult> coverage;  // Pruefbereiche (nicht gepruefte stehen im Bericht)
     std::vector<std::string> resolved;     // seit der letzten Pruefung behobene Regeln (Verlauf)
+    std::vector<MetricChange> metrics;     // Messwerte mit Veraenderung (Verlauf)
     Facts facts;                 // Umgebung: Firmware, Modell, Versionen, Prozesse, Speicher
     std::vector<TxnInfo> history;
     std::vector<UnknownLine> unknown_lines;  // fehlerartige Logzeilen ohne passenden Befund

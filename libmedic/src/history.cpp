@@ -33,6 +33,9 @@ bool parse_run(const std::string& line, HistoryRun& run) {
     run.ts = j["ts"].get<std::string>();
     if (j.contains("rules") && j["rules"].is_string()) run.rules_version = j["rules"].get<std::string>();
     if (j.contains("fw") && j["fw"].is_string()) run.fw = j["fw"].get<std::string>();
+    if (j.contains("metrics") && j["metrics"].is_object())
+        for (auto it = j["metrics"].begin(); it != j["metrics"].end(); ++it)
+            if (it.value().is_number()) run.metrics[it.key()] = it.value().get<double>();
     for (const auto& f : j["findings"])
         if (f.is_object() && f.contains("id") && f["id"].is_string())
             run.findings.emplace_back(f["id"].get<std::string>(), f.contains("sev") && f["sev"].is_string() ? f["sev"].get<std::string>() : std::string());
@@ -57,12 +60,14 @@ std::vector<HistoryRun> load_history(const IFileSystem& fs) {
     return out;
 }
 
-HistoryRun make_history_run(const std::string& ts, const std::string& rules_version, const std::string& fw, const std::vector<Finding>& findings) {
+HistoryRun make_history_run(const std::string& ts, const std::string& rules_version, const std::string& fw, const std::vector<Finding>& findings,
+                            const std::vector<std::pair<std::string, double>>& metrics) {
     HistoryRun r;
     r.ts = ts;
     r.rules_version = rules_version;
     r.fw = fw;
     for (const auto& f : findings) r.findings.emplace_back(f.rule_id, to_string(f.severity));
+    for (const auto& [id, v] : metrics) r.metrics[id] = v;
     return r;
 }
 
@@ -95,7 +100,8 @@ std::vector<std::string> annotate_with_history(std::vector<Finding>& findings, c
 bool append_history(Platform& p, const HistoryRun& run) {
     IFileSystemRW* rw = p.fs_rw();
     if (!rw || !valid_ts(run.ts)) return false;
-    json rec = {{"ts", run.ts}, {"rules", run.rules_version}, {"fw", run.fw}, {"findings", json::array()}};
+    json rec = {{"ts", run.ts}, {"rules", run.rules_version}, {"fw", run.fw}, {"findings", json::array()}, {"metrics", json::object()}};
+    for (const auto& [id, v] : run.metrics) rec["metrics"][id] = v;
     for (const auto& [id, sev] : run.findings) rec["findings"].push_back({{"id", id}, {"sev", sev}});
 
     std::string text;
@@ -112,6 +118,39 @@ bool append_history(Platform& p, const HistoryRun& run) {
     if (!text.empty() && text.back() != '\n') text += '\n';
     text += rec.dump() + "\n";
     return rw->write_file(kHistoryPath, text);
+}
+
+std::vector<MetricChange> metric_changes(const RuleSet& rs, const std::vector<std::pair<std::string, double>>& now, const std::vector<HistoryRun>& history) {
+    std::vector<MetricChange> out;
+    for (const auto& [id, value] : now) {
+        const auto def = std::find_if(rs.metrics.begin(), rs.metrics.end(), [&](const MetricItem& m) { return m.id == id; });
+        if (def == rs.metrics.end()) continue;
+        MetricChange c;
+        c.id = id;
+        c.unit = def->unit;
+        c.text_de = def->text_de;
+        c.text_en = def->text_en;
+        c.now = value;
+        std::vector<double> past;
+        for (auto it = history.rbegin(); it != history.rend() && past.size() < kMetricWindow; ++it) {
+            const auto m = it->metrics.find(id);
+            if (m == it->metrics.end()) continue;
+            if (past.empty()) {
+                c.has_prev = true;
+                c.prev = m->second;
+            }
+            past.push_back(m->second);
+        }
+        if (!past.empty()) {
+            std::sort(past.begin(), past.end());
+            const std::size_t n = past.size();
+            c.has_typical = true;
+            c.typical = n % 2 ? past[n / 2] : (past[n / 2 - 1] + past[n / 2]) / 2.0;
+            c.samples = n;
+        }
+        out.push_back(std::move(c));
+    }
+    return out;
 }
 
 std::string urgency_of(const Finding& f) {

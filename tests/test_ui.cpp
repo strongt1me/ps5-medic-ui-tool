@@ -2561,6 +2561,27 @@ void history_ui_tests() {
     detail("new", 1, fresh);
     detail("recurring", 4, rec);
     CHECK(differs(none, fresh) && differs(fresh, rec) && differs(none, rec), "Verlauf: die Details zeigen neu und wiederkehrend verschieden");
+    {  // vorlaeufig: confirm_runs 2 bei einer Pruefung sieht anders aus als sofort bestaetigt
+        auto pending = [&](int confirm, Canvas& cv) {
+            FakeService fk;
+            fk.result.fw = "12.00";
+            fk.result.model = "CFI-7021";
+            fk.result.rules_version = "t";
+            Finding f = mk_finding("a.info", Severity::Info, false);
+            f.status = "new";
+            f.seen_runs = 1;
+            f.confirm_runs = confirm;
+            fk.result.findings = {f};
+            App app(fk);
+            run_check_via_ui(app, cv);
+            press(app, {Button::Cross});
+            app.render(cv);
+        };
+        Canvas sure(App::kWidth, App::kHeight), prov(App::kWidth, App::kHeight);
+        pending(1, sure);
+        pending(2, prov);
+        CHECK(differs(sure, prov), "Verlauf: ein vorlaeufiger Befund wird in den Details als vorlaeufig gezeigt");
+    }
 }
 
 }  // namespace

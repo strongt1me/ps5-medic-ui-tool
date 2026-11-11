@@ -850,6 +850,7 @@ void App::draw_detail(Canvas& c) const {
             const std::string day = f->first_seen.size() >= 8 ? f->first_seen.substr(0, 4) + "-" + f->first_seen.substr(4, 2) + "-" + f->first_seen.substr(6, 2) : f->first_seen;
             line += "  ·  " + S.fmt("detail.history_recurring", {{"since", day}, {"n", std::to_string(f->seen_runs)}});
         }
+        if (medic::is_pending(*f)) line += "  ·  " + S.fmt("detail.pending", {{"k", std::to_string(f->seen_runs < 1 ? 1 : f->seen_runs)}, {"n", std::to_string(f->confirm_runs)}});
         small().draw(c, M + 4, y + 44, line, urg == "high" ? kWarn : kDim);
         y += 82;
     }

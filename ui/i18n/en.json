@@ -58,6 +58,7 @@
   "urgency.low": "low",
   "detail.history_new": "New since the last check",
   "detail.history_recurring": "Since {since} ({n} checks in a row)",
+  "detail.pending": "Provisional ({k} of {n} checks in a row)",
   "detail.explanation": "Explanation",
   "detail.evidence": "Evidence",
   "detail.evidence_more": "… and {n} more",

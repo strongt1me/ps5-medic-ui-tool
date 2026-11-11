@@ -58,6 +58,7 @@
   "urgency.low": "niedrig",
   "detail.history_new": "Neu seit der letzten Prüfung",
   "detail.history_recurring": "Seit {since} ({n} Prüfungen in Folge)",
+  "detail.pending": "Vorläufig ({k} von {n} Prüfungen in Folge)",
   "detail.explanation": "Erklärung",
   "detail.evidence": "Evidenz",
   "detail.evidence_more": "… und {n} weitere",

@@ -1,6 +1,13 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.25",
+  "db_version": "2026.11.26",
+  "metrics": [
+    {"id": "cpu_temp", "fact": "sys.temp.cpu_c", "unit": "°C", "text": {"de": "CPU-Temperatur", "en": "CPU temperature"}},
+    {"id": "soc_temp", "fact": "sys.temp.soc_c", "unit": "°C", "text": {"de": "SoC-Temperatur", "en": "SoC temperature"}},
+    {"id": "data_free_pct", "fact": "storage.data_free_pct", "unit": "%", "text": {"de": "Freier Platz auf /data", "en": "Free space on /data"}},
+    {"id": "unclean_boots_14d", "fact": "boot.unclean_14d", "unit": "", "text": {"de": "Neustarts ohne Herunterfahren (14 Tage)", "en": "Restarts without shutdown (14 days)"}},
+    {"id": "error_entries", "fact": "errors.total", "unit": "", "text": {"de": "Einträge im Fehlerverlauf", "en": "Entries in the error history"}}
+  ],
   "coverage": [
     { "id": "processes", "text": { "de": "Laufende Prozesse", "en": "Running processes" }, "tested_when": { "all": [ { "fact": "proc.running", "exists": true } ] } },
     { "id": "storage", "text": { "de": "Speicherplatz der Laufwerke", "en": "Drive free space" }, "tested_when": { "all": [ { "fact": "storage.mounts", "exists": true } ] } },
@@ -1217,6 +1224,7 @@
     {
       "id": "sys.temp_high",
       "severity": "info",
+      "confirm_runs": 2,
       "when": {
         "any": [
           { "fact": "sys.temp.cpu_c", "gt": "85" },

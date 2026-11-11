@@ -41,10 +41,14 @@ CheckResult LocalService::run_check() {
     r.coverage = medic::evaluate_coverage(rules_, facts_);
     // Verlauf: gegen die letzte Pruefung vergleichen, dann diese Pruefung anhaengen (ohne Schreibzugriff nur der Vergleich).
     const std::string now = clock_();
-    r.resolved = medic::annotate_with_history(r.findings, medic::load_history(p_.fs()), now);
-    medic::append_history(p_, medic::make_history_run(now, rules_.db_version, r.fw, r.findings));
+    const auto hist = medic::load_history(p_.fs());
+    const auto metrics = medic::evaluate_metrics(rules_, facts_);
+    r.resolved = medic::annotate_with_history(r.findings, hist, now);
+    r.metrics = medic::metric_changes(rules_, metrics, hist);
+    medic::append_history(p_, medic::make_history_run(now, rules_.db_version, r.fw, r.findings, metrics));
     last_findings_ = r.findings;
     last_resolved_ = r.resolved;
+    last_metrics_ = r.metrics;
     return r;
 }
 
@@ -234,6 +238,7 @@ ReportResult LocalService::make_report(medic::ReportLang lang) {
     const std::string ts = clock_();
     medic::ReportInput in = medic::make_report_input(p_, facts_, rules_, last_findings_, ts);
     in.resolved = last_resolved_;
+    in.metrics = last_metrics_;
     if (const medic::ErrorCode* e = error_codes_.find(reported_error_)) {
         in.error_code = e->id;
         in.error_title_de = e->title_de;

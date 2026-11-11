@@ -655,6 +655,8 @@ void collect_storage(const Platform& p, Facts& f) {
                        {"fstype", s.fstype}, {"readonly", s.read_only}});
     }
     f.set("storage.mounts", std::move(arr));
+    for (auto& s : p.sys().storage())  // einfacher Pfad fuer die Messwerte im Verlauf
+        if (s.mount == "/data" && s.total_bytes) f.set("storage.data_free_pct", 100.0 * static_cast<double>(s.free_bytes) / static_cast<double>(s.total_bytes));
 }
 
 // kstuff.version, kstuff.origin, smp.version, etahen.version ... (Quelle: ISystemInfo::components)

@@ -472,6 +472,27 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
                 const std::string day = x.first_seen.size() >= 8 ? x.first_seen.substr(0, 4) + "-" + x.first_seen.substr(4, 2) + "-" + x.first_seen.substr(6, 2) : x.first_seen;
                 o << (de ? ". Verlauf: seit " : ". History: since ") << day << " (" << x.seen_runs << (de ? " Prüfungen in Folge)" : " checks in a row)");
             }
+            if (is_pending(x)) o << (de ? ". Vorläufig: wird erst nach " : ". Provisional: confirmed only after ") << x.confirm_runs << (de ? " Prüfungen in Folge bestätigt" : " checks in a row");
+            o << "\n";
+        }
+        o << "\n";
+    }
+    if (!in.metrics.empty()) {
+        o << (de ? "## Messwerte\n\n" : "## Measurements\n\n");
+        auto num = [](double v) {
+            char b[32];
+            std::snprintf(b, sizeof b, "%.1f", v);
+            std::string s = b;
+            if (s.size() > 2 && s.compare(s.size() - 2, 2, ".0") == 0) s.resize(s.size() - 2);
+            return s;
+        };
+        for (const auto& m : in.metrics) {
+            const std::string unit = m.unit.empty() ? "" : (m.unit == "%" ? " %" : " " + m.unit);
+            o << "- " << (de ? m.text_de : m.text_en) << ": " << num(m.now) << unit;
+            std::string extra;
+            if (m.has_prev) extra += (de ? "zuletzt " : "last ") + num(m.prev);
+            if (m.has_typical && m.samples >= 3) extra += (extra.empty() ? "" : ", ") + std::string(de ? "üblich ≈ " : "usual ≈ ") + num(m.typical) + (de ? " (aus " : " (from ") + std::to_string(m.samples) + (de ? " Prüfungen)" : " checks)");
+            if (!extra.empty()) o << " (" << extra << ")";
             o << "\n";
         }
         o << "\n";

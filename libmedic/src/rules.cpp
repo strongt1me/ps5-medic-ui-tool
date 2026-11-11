@@ -153,6 +153,10 @@ Rule parse_rule(const json& j, std::size_t index) {
         r.fix_params = j["fix_params"];
     }
     if (j.contains("applies_fw")) r.applies_fw = need_string(j, "applies_fw", where);
+    if (j.contains("confirm_runs")) {
+        if (!j["confirm_runs"].is_number_integer() || j["confirm_runs"].get<long>() < 1 || j["confirm_runs"].get<long>() > 10) fail(where, "'confirm_runs' muss eine Ganzzahl von 1 bis 10 sein");
+        r.confirm_runs = static_cast<int>(j["confirm_runs"].get<long>());
+    }
     return r;
 }
 
@@ -428,6 +432,27 @@ RuleSet load_rules_from_string(const std::string& text) {
             rs.coverage.push_back(std::move(item));
         }
     }
+    if (j.contains("metrics")) {
+        if (!j["metrics"].is_array()) fail("Datei", "'metrics' muss ein Array sein");
+        std::set<std::string> seen_m;
+        for (std::size_t i = 0; i < j["metrics"].size(); ++i) {
+            const json& m = j["metrics"][i];
+            std::string where = "metrics[" + std::to_string(i) + "]";
+            if (!m.is_object()) fail(where, "Eintrag muss ein Objekt sein");
+            MetricItem item;
+            item.id = need_string(m, "id", where);
+            where = "metric '" + item.id + "'";
+            if (!std::regex_match(item.id, std::regex("^[a-z0-9_.]+$"))) fail(where, "ungueltige ID (erlaubt: a-z 0-9 _ .)");
+            if (!seen_m.insert(item.id).second) fail(where, "doppelte ID");
+            item.fact = need_string(m, "fact", where);
+            if (item.fact.empty() || item.fact.find("[]") != std::string::npos) fail(where, "'fact' muss ein einfacher Faktpfad ohne [] sein");
+            if (m.contains("unit")) item.unit = need_string(m, "unit", where);
+            if (!m.contains("text") || !m["text"].is_object()) fail(where, "'text' fehlt oder ist kein Objekt");
+            item.text_de = need_string(m["text"], "de", where + ".text");
+            item.text_en = need_string(m["text"], "en", where + ".text");
+            rs.metrics.push_back(std::move(item));
+        }
+    }
     return rs;
 }
 
@@ -493,6 +518,7 @@ std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts) {
         f.source = r.source;
         f.verified = r.verified;
         f.confidence = r.confidence;
+        f.confirm_runs = r.confirm_runs;
         out.push_back(std::move(f));
     }
 
@@ -500,6 +526,15 @@ std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts) {
         if (a.severity != b.severity) return a.severity < b.severity;  // Critical < Warning < Info
         return a.rule_id < b.rule_id;
     });
+    return out;
+}
+
+std::vector<std::pair<std::string, double>> evaluate_metrics(const RuleSet& rs, const Facts& facts) {
+    std::vector<std::pair<std::string, double>> out;
+    for (const MetricItem& m : rs.metrics) {
+        const json* v = facts.get(m.fact);
+        if (v && v->is_number()) out.emplace_back(m.id, v->get<double>());
+    }
     return out;
 }
 

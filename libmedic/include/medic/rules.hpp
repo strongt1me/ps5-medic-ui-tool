@@ -35,6 +35,7 @@ struct Rule {
     std::string verified;       // doc | community | todo
     Confidence confidence;      // Standard aus `verified`, siehe default_confidence
     std::string applies_fw;     // optional, z. B. ">=7.00 <=13.60"
+    int confirm_runs = 1;       // Pruefungen in Folge, ab denen der Befund als bestaetigt gilt (1: sofort); davor "vorlaeufig"
 };
 
 struct Finding {
@@ -52,10 +53,21 @@ struct Finding {
     std::string status;      // new (nicht in der letzten Pruefung) | recurring (auch in der letzten Pruefung)
     std::string first_seen;  // Zeitstempel der ersten Pruefung der aktuellen Folge ("YYYYMMDDTHHMMSSZ")
     int seen_runs = 0;       // Pruefungen in Folge, diese eingeschlossen
+    int confirm_runs = 1;    // aus der Regel: so viele Pruefungen in Folge bis "bestaetigt"
 };
 
 // Verlaesslichkeit des Befunds; fehlende Felder (Befunde aus Tests oder alten Regeldateien) kommen aus `verified`.
 Confidence effective_confidence(const Finding& f);
+
+// Vorlaeufig: die Regel verlangt mehrere Pruefungen in Folge (confirm_runs), der Befund wurde aber erst seltener gemeldet. Gezeigt wird er
+// trotzdem, nur mit dem Hinweis "vorlaeufig" (eine einzelne Messung kann ein Ausreisser sein).
+inline bool is_pending(const Finding& f) { return f.confirm_runs > 1 && (f.seen_runs < 1 ? 1 : f.seen_runs) < f.confirm_runs; }
+
+// Ein Messwert, den der Verlauf mitschreibt (z. B. Temperatur). `fact` ist ein einfacher Faktpfad ohne [].
+struct MetricItem {
+    std::string id, fact, unit;
+    std::string text_de, text_en;
+};
 
 // Ein Pruefbereich der App. `tested_when` ist eine Bedingung wie bei den Regeln (gegen die Fakten): trifft sie zu, lagen fuer den Bereich
 // lesbare Daten vor und er wurde geprueft; sonst gilt er als nicht geprueft. "Keine Befunde" heisst fuer einen nicht gepruefte Bereich
@@ -76,6 +88,7 @@ struct RuleSet {
     int requires_level = 1;
     std::vector<Rule> rules;
     std::vector<CoverageItem> coverage;  // optional
+    std::vector<MetricItem> metrics;     // optional: Messwerte fuer den Verlauf
 };
 
 struct CoverageResult {
@@ -89,6 +102,9 @@ RuleSet load_rules_from_file(const std::string& path);
 
 // Ergebnis nach Schweregrad (kritisch zuerst), dann nach Regel-ID sortiert.
 std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts);
+
+// Aktuelle Werte der Messwerte aus der Regeldatei (nur Zahlen, die die Fakten liefern), je id.
+std::vector<std::pair<std::string, double>> evaluate_metrics(const RuleSet& rs, const Facts& facts);
 
 // Welche Pruefbereiche waren gedeckt, in der Reihenfolge der Regeldatei. Ohne Abdeckungsliste in der Regeldatei: leer.
 std::vector<CoverageResult> evaluate_coverage(const RuleSet& rs, const Facts& facts);

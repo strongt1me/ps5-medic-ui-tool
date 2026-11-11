@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <set>
 #include <sstream>
 
@@ -384,6 +385,34 @@ static void new_fact_tests() {
                   throws(R"([{"id":"a","text":{"de":"A"},"tested_when":{"all":[{"fact":"x","exists":true}]}}])") && throws(R"([{"id":"a","text":{"de":"A","en":"A"},"tested_when":{"bogus":1}}])"),
               "Abdeckung: fehlendes tested_when, ungueltige ID, fehlender Text, ungueltige Bedingung -> Fehler");
         CHECK(medic::load_rules_from_string("{\"schema_version\":1,\"db_version\":\"t\",\"rules\":[]}").coverage.empty(), "Abdeckung: Liste ist optional");
+    }
+    {  // Messwerte und confirm_runs
+        auto throws = [](const std::string& extra, const std::string& rule_extra = "") {
+            try {
+                medic::load_rules_from_string("{\"schema_version\":1,\"db_version\":\"t\",\"rules\":[" +
+                                              (rule_extra.empty() ? std::string() : "{\"id\":\"x.y\",\"severity\":\"info\",\"when\":{\"all\":[{\"fact\":\"a\",\"exists\":true}]},\"text\":{\"de\":\"d\",\"en\":\"e\"},\"source\":\"https://example.org\",\"verified\":\"doc\"," + rule_extra + "}") +
+                                              "]" + extra + "}");
+                return false;
+            } catch (const std::exception&) {
+                return true;
+            }
+        };
+        const std::string ok_m = R"({"id":"a","fact":"sys.temp.cpu_c","unit":"C","text":{"de":"A","en":"A"}})";
+        CHECK(!throws(",\"metrics\":[]") && !throws(",\"metrics\":[" + ok_m + "]"), "Messwerte: gueltige Listen laden");
+        CHECK(throws(",\"metrics\":{}") && throws(",\"metrics\":[1]") && throws(",\"metrics\":[" + ok_m + "," + ok_m + "]") &&
+                  throws(",\"metrics\":[{\"id\":\"A B\",\"fact\":\"x\",\"text\":{\"de\":\"A\",\"en\":\"A\"}}]") && throws(",\"metrics\":[{\"id\":\"a\",\"fact\":\"x[].y\",\"text\":{\"de\":\"A\",\"en\":\"A\"}}]") &&
+                  throws(",\"metrics\":[{\"id\":\"a\",\"fact\":\"x\",\"text\":{\"de\":\"A\"}}]") && throws(",\"metrics\":[{\"id\":\"a\",\"text\":{\"de\":\"A\",\"en\":\"A\"}}]"),
+              "Messwerte: kein Array, kein Objekt, doppelte ID, ungueltige ID, [] im Pfad, fehlender Text oder Fakt -> Fehler");
+        CHECK(!throws("", "\"confirm_runs\":2") && throws("", "\"confirm_runs\":0") && throws("", "\"confirm_runs\":11") && throws("", "\"confirm_runs\":\"2\""), "confirm_runs: 1 bis 10, sonst Fehler");
+        const auto rules = medic::load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+        CHECK(rules.metrics.size() == 5 && rules.metrics[0].id == "cpu_temp", "Messwerte: fuenf Messwerte aus der Regeldatei");
+        const auto hot = medic::evaluate_metrics(rules, facts_of("sys_pos_temp"));
+        std::map<std::string, double> got(hot.begin(), hot.end());
+        CHECK(got.at("cpu_temp") == 91 && got.at("soc_temp") == 88 && got.at("data_free_pct") > 44.4 && got.at("data_free_pct") < 44.5 && !got.count("unclean_boots_14d"),
+              "Messwerte: Werte aus den Fakten (fehlende fehlen)");
+        const auto fnd = medic::evaluate(rules, facts_of("sys_pos_temp"));
+        const auto it = std::find_if(fnd.begin(), fnd.end(), [](const medic::Finding& f) { return f.rule_id == "sys.temp_high"; });
+        CHECK(it != fnd.end() && it->confirm_runs == 2 && medic::is_pending(*it), "confirm_runs: sys.temp_high ist eine Momentaufnahme und zunaechst vorlaeufig");
     }
     {  // Formatstufe: ohne Angabe Stufe 1, hoehere Stufen lehnt der Lader ab
         auto with = [](const std::string& level) { return "{\"schema_version\":1,\"db_version\":\"t\",\"rules\":[]" + (level.empty() ? std::string() : ",\"requires_level\":" + level) + "}"; };

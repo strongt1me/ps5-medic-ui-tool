@@ -7,6 +7,20 @@
     "schema_version": { "const": 1 },
     "db_version": { "type": "string" },
     "requires_level": { "type": "integer", "minimum": 1, "description": "Formatstufe, die die App mindestens kennen muss (kRuleFormatLevel in rules.hpp); fehlt die Angabe, gilt 1. Hoehere Stufen lehnt eine aeltere App als zu neu ab." },
+    "metrics": {
+      "type": "array",
+      "description": "Messwerte, die der Verlauf der Check-ups mitschreibt (Veraenderung seit der letzten Pruefung, uebliches Niveau).",
+      "items": {
+        "type": "object",
+        "required": ["id", "fact", "text"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_.]+$" },
+          "fact": { "type": "string", "description": "einfacher Faktpfad ohne []" },
+          "unit": { "type": "string" },
+          "text": { "type": "object", "required": ["de", "en"], "properties": { "de": { "type": "string" }, "en": { "type": "string" } } }
+        }
+      }
+    },
     "coverage": {
       "type": "array",
       "items": {
@@ -54,6 +68,7 @@
               }
             }
           },
+          "confirm_runs": { "type": "integer", "minimum": 1, "maximum": 10, "description": "Pruefungen in Folge, bis der Befund als bestaetigt gilt (Standard 1); davor wird er als vorlaeufig gezeigt" },
           "applies_fw": { "type": "string", "description": "Versionsbereich, z. B. \">=7.00 <=13.60\"" }
         }
       }
