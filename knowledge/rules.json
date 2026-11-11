@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.33",
+  "db_version": "2026.11.34",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -224,6 +224,21 @@
         "all": [
           {
             "fact": "klog.readable",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "app_registry",
+      "text": {
+        "de": "Titelregister (app.db, nur Titel-ID und Pfad)",
+        "en": "Title registry (app.db, title ID and path only)"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "appdb.registered",
             "exists": true
           }
         ]
@@ -2250,6 +2265,62 @@
         "reason": {
           "de": "Die Zeile steht im Kernel-Log (gelesen). Dass dadurch Trophäen fehlen, stammt aus Berichten zu Version 1.11 auf FW 13.x (Issues 95 und 106, der Autor von 95 ist bei der Ursache unsicher); an dieser Konsole (FW 12.00, kstuff-lite 1.10) ist es nicht nachgeprüft.",
           "en": "The line is in the kernel log (read). That trophies go missing because of it comes from reports about version 1.11 on FW 13.x (issues 95 and 106, the author of 95 is unsure about the cause); not verified on this console (FW 12.00, kstuff-lite 1.10)."
+        }
+      }
+    },
+    {
+      "id": "appdb.orphan_entry",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "appdb.orphans[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Die Datenbank der Systemsoftware (app.db) führt einen Titel, dessen Ordner unter /user/app oder /system_ex/app fehlt (Evidenz: Titel-ID). Das ist eine Kachel ohne Spiel: Sie lässt sich nicht starten und bleibt in der Bibliothek, bis der Eintrag entfernt wird. Häufige Ursachen sind ein abgezogenes oder ausgeschaltetes Laufwerk, von dem ShadowMount+ den Titel eingebunden hatte, eine abgebrochene Deinstallation oder von Hand gelöschte Ordner. Zuerst prüfen, ob das Laufwerk angeschlossen ist und ShadowMount+ den Titel wieder findet; sonst die Kachel in der Spielebibliothek über das Optionsmenü löschen. Medic ändert die Datenbank nicht.",
+        "en": "The system software's database (app.db) lists a title whose folder under /user/app or /system_ex/app is missing (evidence: title ID). That is a tile without a game: it cannot be started and stays in the library until the entry is removed. Common causes are an unplugged or switched-off drive from which ShadowMount+ had mounted the title, an aborted uninstall or manually deleted folders. First check whether the drive is connected and ShadowMount+ finds the title again; otherwise delete the tile in the game library through the options menu. Medic does not change the database."
+      },
+      "evidence": "appdb.orphans[].titleid",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Eintrag und fehlender Ordner sind beide gelesen. Die genannten Ursachen sind übliche Möglichkeiten, nicht belegt; an der Test-Konsole stimmten alle Einträge mit den Ordnern überein.",
+          "en": "The entry and the missing folder are both read. The causes listed are common possibilities, not proven; on the test console all entries matched the folders."
+        }
+      }
+    },
+    {
+      "id": "appdb.unregistered_folder",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "appdb.unregistered[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Unter /user/app liegt ein Titelordner (PPSA/CUSA), den die Datenbank der Systemsoftware nicht kennt (Evidenz). Das Spiel erscheint dann nicht in der Bibliothek. Bei einem per ShadowMount+ eingebundenen Titel heißt das meist, dass die Registrierung scheitert oder noch läuft (siehe die Befunde zu „Register failed“); bei einem Rest einer Deinstallation ist der Ordner ein Überbleibsel. Medic ändert nichts daran.",
+        "en": "Under /user/app there is a title folder (PPSA/CUSA) that the system software's database does not know (evidence). The game then does not appear in the library. For a title mounted by ShadowMount+ this usually means registration fails or is still running (see the findings about “Register failed”); for the rest of an uninstall the folder is a leftover. Medic changes nothing here."
+      },
+      "evidence": "appdb.unregistered[].titleid",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Ordner und Datenbankeinträge sind gelesen. Warum der Eintrag fehlt, lässt sich daraus nicht sagen; während ShadowMount+ gerade registriert, kann der Befund kurz auftreten.",
+          "en": "Folder and database entries are read. Why the entry is missing cannot be told from that; while ShadowMount+ is registering, the finding can appear briefly."
         }
       }
     }

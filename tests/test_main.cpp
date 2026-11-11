@@ -354,7 +354,7 @@ static void new_fact_tests() {
     }
     {  // Abdeckung: "nicht geprueft" statt "in Ordnung" (Bereiche stehen in knowledge/rules.json)
         const auto rules = medic::load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
-        CHECK(rules.coverage.size() == 12 && rules.coverage[0].id == "processes" && rules.coverage.back().id == "klog", "Abdeckung: 12 Bereiche aus der Regeldatei (zuletzt der Kernel-Log)");
+        CHECK(rules.coverage.size() == 13 && rules.coverage[0].id == "processes" && rules.coverage[11].id == "klog" && rules.coverage.back().id == "app_registry", "Abdeckung: 13 Bereiche aus der Regeldatei (zuletzt Kernel-Log und Titelregister)");
         auto cov = [&](const char* fixture) {
             std::map<std::string, bool> m;
             for (const auto& c : medic::evaluate_coverage(rules, facts_of(fixture))) m[c.id] = c.tested;
@@ -436,6 +436,28 @@ static void new_fact_tests() {
             return false;
         };
         CHECK(cov(f) && !cov(none), "klog: Abdeckung 'Kernel-Log' nur bei lesbarem Port (sonst nicht geprueft)");
+    }
+    {  // Titelregister (app.db): nur Titel-ID und Pfad, Abgleich mit den Ordnern; ohne lesbare Datenbank "nicht geprueft"
+        const auto rules = medic::load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+        const auto f = facts_of("ap1_pos_orphan");
+        CHECK(f.get("appdb.registered")->get<long>() == 2 && f.get("appdb.entries")->size() == 2 && f.get("appdb.orphans")->size() == 1 && (*f.get("appdb.orphans"))[0]["titleid"] == "PPSA00002" && f.get("appdb.unregistered")->empty(),
+              "Titelregister: zwei Eintraege, einer ohne Ordner");
+        const auto u = facts_of("ap1_pos_unregistered");
+        CHECK(u.get("appdb.orphans")->empty() && u.get("appdb.unregistered")->size() == 1 && (*u.get("appdb.unregistered"))[0]["titleid"] == "PPSA00003", "Titelregister: Ordner ohne Eintrag");
+        const auto ok = facts_of("ap1_neg_ok");
+        CHECK(ok.get("appdb.orphans")->empty() && ok.get("appdb.unregistered")->empty(), "Titelregister: System-Eintraege ohne /user/app-Pfad und NPXS-Ordner sind keine Befunde");
+        const auto none = facts_of("a3_neg");
+        CHECK(!none.get("appdb.registered"), "Titelregister: ohne app.db keine Fakten");
+        auto cov = [&](const medic::Facts& x) {
+            for (const auto& c : medic::evaluate_coverage(rules, x))
+                if (c.id == "app_registry") return c.tested;
+            return false;
+        };
+        CHECK(cov(f) && !cov(none), "Titelregister: Abdeckung nur bei lesbarer Datenbank");
+        CHECK(!facts_of("db1_pos_header").get("appdb.registered"), "Titelregister: eine Datei ohne gueltigen Kopf wird nicht gelesen");
+        const std::string reg = medic::sqlite_make_registry({{"PPSA00001", "/user/app/PPSA00001/sce_sys"}});
+        const auto rows = medic::sqlite_select_text(reg, "", "SELECT titleId, metaDataPath FROM tbl_contentinfo", 2, 10);
+        CHECK(rows.ran && rows.rows.size() == 1 && rows.rows[0][0] == "PPSA00001" && !medic::sqlite_select_text(reg, "", "SELECT x FROM gibt_es_nicht", 1, 10).ran, "Titelregister: Abfrage auf der Arbeitskopie, fehlende Tabelle = nicht ausfuehrbar");
     }
     {  // Formatstufe: ohne Angabe Stufe 1, hoehere Stufen lehnt der Lader ab
         auto with = [](const std::string& level) { return "{\"schema_version\":1,\"db_version\":\"t\",\"rules\":[]" + (level.empty() ? std::string() : ",\"requires_level\":" + level) + "}"; };

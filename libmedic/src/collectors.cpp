@@ -1419,6 +1419,50 @@ bool persist_klog(Platform& p, const Facts& facts) {
     return (added || !p.fs().exists(kKlogBootPath)) && rw->write_file(kKlogBootPath, out);
 }
 
+// Titelabgleich (Ausnahme von D17, Freigabe von Marc am 11. Nov. 2026): liest aus /system_data/priv/mms/app.db NUR die Spalten titleId und metaDataPath
+// der Tabelle tbl_contentinfo (nie Namen, Spielzeiten, Konten oder Kaeufe) auf einer Kopie im Speicher und vergleicht mit den Ordnern /user/app und
+// /system_ex/app. Nicht gelesen wird bei offenem Journal, Dateien ueber 32 MiB, wenn sich Datei oder WAL beim zweimaligen Lesen unterscheiden oder die
+// Tabelle fehlt (dann bleibt appdb.registered ungesetzt: nicht geprueft).
+// appdb.registered, appdb.entries[].{titleid,path}, appdb.orphans[].{titleid,path,dir}, appdb.unregistered[].{titleid,path}
+void collect_app_registry(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    const std::string path = "/system_data/priv/mms/app.db";
+    if (!fs.exists(path)) return;
+    std::string first, second, wal1, wal2, jh;
+    std::uint64_t size = 0, wal_size = 0;
+    for (const auto& e : fs.list_dir("/system_data/priv/mms")) {
+        if (e.name == "app.db") size = e.size;
+        if (e.name == "app.db-wal") wal_size = e.size;
+    }
+    if (size < 512 || size > (32u << 20) || wal_size > (32u << 20)) return;
+    if (fs.read_range(path + "-journal", 0, 8, jh) && jh == std::string("\xd9\xd5\x05\xf9\x20\xa1\x63\xd7", 8)) return;  // offenes Journal
+    const bool wal_used = wal_size > 32;
+    if (!fs.read_file(path, first) || !fs.read_file(path, second) || (wal_used && (!fs.read_file(path + "-wal", wal1) || !fs.read_file(path + "-wal", wal2)))) return;
+    if (first != second || wal1 != wal2 || first.size() != size) return;
+    const SqliteRows rows = sqlite_select_text(first, wal1, "SELECT titleId, metaDataPath FROM tbl_contentinfo", 2, 2000);
+    if (!rows.ran) return;
+    json entries = json::array(), orphans = json::array(), unregistered = json::array();
+    std::set<std::string> known;  // Ordnernamen und Titel-IDs der Eintraege
+    static const std::regex under_app(R"(^(/user/app|/system_ex/app)/([^/]+)/)");
+    for (const auto& r : rows.rows) {
+        if (entries.size() < 500) entries.push_back({{"titleid", r[0]}, {"path", r[1]}});
+        known.insert(r[0]);
+        std::smatch m;
+        if (std::regex_search(r[1], m, under_app)) {
+            known.insert(m[2].str());
+            const std::string dir = m[1].str() + "/" + m[2].str();
+            if (!fs.is_dir(dir) && orphans.size() < 100) orphans.push_back({{"titleid", r[0]}, {"path", r[1]}, {"dir", dir}});
+        }
+    }
+    static const std::regex game_id(R"(^(PPSA|CUSA)[0-9]{5}$)");
+    for (const auto& e : fs.list_dir("/user/app"))
+        if (e.is_dir && std::regex_match(e.name, game_id) && !known.count(e.name) && unregistered.size() < 100) unregistered.push_back({{"titleid", e.name}, {"path", "/user/app/" + e.name}});
+    f.set("appdb.registered", static_cast<long>(rows.rows.size()));
+    f.set("appdb.entries", std::move(entries));
+    f.set("appdb.orphans", std::move(orphans));
+    f.set("appdb.unregistered", std::move(unregistered));
+}
+
 Facts collect_all(const Platform& p) {
     Facts f;
     collect_firmware(p, f);
@@ -1441,6 +1485,7 @@ Facts collect_all(const Platform& p) {
     collect_selftest(p, f);
     collect_fan_controller(p, f);
     collect_klog(p, f);
+    collect_app_registry(p, f);
     return f;
 }
 

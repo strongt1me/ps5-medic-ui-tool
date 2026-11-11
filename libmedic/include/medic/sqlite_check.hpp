@@ -3,6 +3,8 @@
 // oeffnen, aendern oder loeschen. Der Aufrufer liest die Datei (zweimal, zum Vergleich) und uebergibt den Inhalt; die Pruefung arbeitet auf einer Kopie.
 #pragma once
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace medic {
 
@@ -19,5 +21,16 @@ SqliteCheck sqlite_integrity_check(const std::string& image, const std::string& 
 
 // Kleine, absichtlich beschaedigte Datenbank (synthetisch, ohne echten Inhalt) fuer den Snapshot-Export und Tests.
 std::string sqlite_broken_sample();
+
+// Liest die ersten `columns` Spalten einer SELECT-Abfrage als Text (NULL = leer) aus derselben Arbeitskopie im Speicher (nur lesend; die echte Datei
+// bleibt unberuehrt). `ran` false: Datenbank oder Abfrage nicht ausfuehrbar (z. B. Tabelle fehlt). Hoechstens `max_rows` Zeilen.
+struct SqliteRows {
+    bool ran = false;
+    std::vector<std::vector<std::string>> rows;
+};
+SqliteRows sqlite_select_text(const std::string& image, const std::string& wal, const std::string& sql, int columns, std::size_t max_rows);
+
+// Synthetische Registry-Datenbank (Tabelle tbl_contentinfo mit titleId und metaDataPath) fuer den Snapshot-Export und Tests.
+std::string sqlite_make_registry(const std::vector<std::pair<std::string, std::string>>& entries);
 
 }  // namespace medic

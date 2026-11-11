@@ -12,6 +12,7 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <regex>
 #include <map>
 #include <set>
 
@@ -478,6 +479,25 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
     if (const auto* l = facts.get("games.case_mismatch"); l && l->is_array())
         for (const auto& e : *l)
             if (e.is_object() && e.contains("path") && e["path"].is_string()) ex.write(e["path"].get<std::string>(), std::string());
+
+    // Titelregister (app.db): eine echte kleine Datenbank mit denselben titleId/metaDataPath-Zeilen (ueberschreibt den Ersatzkopf von oben) und die Ordner,
+    // die es auf der Konsole gibt (leere Ordner), damit der Abgleich am PC dasselbe Ergebnis hat.
+    if (const auto* en = facts.get("appdb.entries"); en && en->is_array()) {
+        std::vector<std::pair<std::string, std::string>> rows;
+        for (const auto& e : *en)
+            if (e.is_object() && e.contains("titleid") && e["titleid"].is_string() && e.contains("path") && e["path"].is_string()) {
+                rows.emplace_back(e["titleid"].get<std::string>(), e["path"].get<std::string>());
+                static const std::regex under_app(R"(^(/user/app|/system_ex/app)/([^/]+)/)");
+                std::smatch m;
+                const std::string path = e["path"].get<std::string>();
+                if (std::regex_search(path, m, under_app) && p.fs().is_dir(m[1].str() + "/" + m[2].str())) ex.mkdir(m[1].str() + "/" + m[2].str());
+            }
+        if (const auto* un = facts.get("appdb.unregistered"); un && un->is_array())
+            for (const auto& e : *un)
+                if (e.is_object() && e.contains("path") && e["path"].is_string()) ex.mkdir(e["path"].get<std::string>());
+        const std::string db = sqlite_make_registry(rows);
+        if (!db.empty()) ex.write("/system_data/priv/mms/app.db", db);
+    }
 
     // eboot.bin-Probleme (Befund game.eboot_invalid): Ersatzdatei mit demselben Befund
     if (const auto* l = facts.get("games.eboot_problems"); l && l->is_array())

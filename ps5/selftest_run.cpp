@@ -36,7 +36,7 @@ int main() {
     const medic::Thermal t0 = platform->sys().thermal();
     std::printf("Ruhewert: CPU %d C, SoC %d C\n", t0.cpu_c, t0.soc_c);
 
-    const std::vector<std::string> ids = {"hw.thermal.short_soak", "hw.storage.write_verify"};
+    const std::vector<std::string> ids = {"hw.thermal.short_soak", "hw.mem.userland_pattern", "hw.storage.write_verify"};
     const bool marker = medic::selftest_begin(*platform, ts, ids);
     std::printf("Marker gesetzt: %s\n", marker ? "ja" : "nein");
 

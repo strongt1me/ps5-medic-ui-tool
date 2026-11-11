@@ -175,6 +175,76 @@ SqliteCheck sqlite_integrity_check(const std::string& image, const std::string& 
     return r;
 }
 
+SqliteRows sqlite_select_text(const std::string& image, const std::string& wal, const std::string& sql, int columns, std::size_t max_rows) {
+    SqliteRows r;
+    if (image.size() < 512 || image.size() > kMaxImageBytes || columns < 1) return r;
+    unsigned page = (static_cast<unsigned>(static_cast<unsigned char>(image[16])) << 8) | static_cast<unsigned char>(image[17]);
+    if (page == 1) page = 65536;
+    const std::string work = wal.size() >= 32 && page >= 512 ? apply_wal(image, wal, page) : image;
+    if (work.size() < 512 || work.size() > kMaxImageBytes) return r;
+    auto* buf = static_cast<unsigned char*>(sqlite3_malloc64(work.size()));
+    if (!buf) return r;
+    std::memcpy(buf, work.data(), work.size());
+    if (buf[18] == 2) buf[18] = 1;
+    if (buf[19] == 2) buf[19] = 1;
+    sqlite3* db = nullptr;
+    if (sqlite3_open_v2(":memory:", &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr) != SQLITE_OK) {
+        sqlite3_close(db);
+        sqlite3_free(buf);
+        return r;
+    }
+    if (sqlite3_deserialize(db, "main", buf, static_cast<sqlite3_int64>(work.size()), static_cast<sqlite3_int64>(work.size()), SQLITE_DESERIALIZE_FREEONCLOSE | SQLITE_DESERIALIZE_READONLY) != SQLITE_OK) {
+        sqlite3_close(db);
+        return r;
+    }
+    sqlite3_stmt* st = nullptr;
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &st, nullptr) == SQLITE_OK && sqlite3_column_count(st) >= columns) {
+        int step = 0;
+        while ((step = sqlite3_step(st)) == SQLITE_ROW && r.rows.size() < max_rows) {
+            std::vector<std::string> row;
+            for (int c = 0; c < columns; ++c) {
+                const unsigned char* t = sqlite3_column_text(st, c);
+                row.push_back(t ? reinterpret_cast<const char*>(t) : "");
+            }
+            r.rows.push_back(std::move(row));
+        }
+        r.ran = step == SQLITE_ROW || step == SQLITE_DONE;
+    }
+    sqlite3_finalize(st);
+    sqlite3_close(db);
+    return r;
+}
+
+std::string sqlite_make_registry(const std::vector<std::pair<std::string, std::string>>& entries) {
+    std::string out;
+    sqlite3* db = nullptr;
+    if (sqlite3_open_v2(":memory:", &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr) != SQLITE_OK) {
+        sqlite3_close(db);
+        return out;
+    }
+    sqlite3_exec(db, "PRAGMA page_size=512", nullptr, nullptr, nullptr);
+    sqlite3_exec(db, "CREATE TABLE tbl_contentinfo(titleId TEXT PRIMARY KEY, metaDataPath TEXT)", nullptr, nullptr, nullptr);
+    sqlite3_stmt* ins = nullptr;
+    if (sqlite3_prepare_v2(db, "INSERT OR IGNORE INTO tbl_contentinfo VALUES(?1, ?2)", -1, &ins, nullptr) == SQLITE_OK) {
+        for (const auto& [id, path] : entries) {
+            sqlite3_bind_text(ins, 1, id.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(ins, 2, path.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_step(ins);
+            sqlite3_reset(ins);
+        }
+    }
+    sqlite3_finalize(ins);
+    sqlite3_int64 size = 0;
+    unsigned char* ser = sqlite3_serialize(db, "main", &size, 0);
+    if (ser && size >= 512) {
+        out.assign(reinterpret_cast<const char*>(ser), static_cast<std::size_t>(size));
+        if (out.size() > 20) out[18] = out[19] = 1;  // Rollback-Journal statt WAL
+    }
+    sqlite3_free(ser);
+    sqlite3_close(db);
+    return out;
+}
+
 std::string sqlite_broken_sample() {
     std::string out;
     sqlite3* db = nullptr;
