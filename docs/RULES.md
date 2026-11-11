@@ -416,3 +416,5 @@ Das Selbsttest-Framework (siehe Nachtrag zu Batch 7) hat jetzt eine dritte Stufe
 **UI.** Dreieck startet „Gründlich“ (Hinweis in Orange mit Last, Schreibdatei, Tageslimit und Abbruchmöglichkeit, Dauer als Summe); Kreuz = Standard, Quadrat = nur Schnell. Der Diagnose-Payload führt Gründlich-Tests **nie** automatisch aus.
 
 **Nicht gebaut:** Nutzer-Tests (Pad, Anzeige, Audio, D14: erst wenn die UI Ton und 1:1-Bild nachweislich ausgibt), Speicher-Muster-Test, Netz-Tests (D1), `hw.cpu.compute_check`. **An der Test-Konsole nicht ausgeführt:** der Wärme- und der Schreibtest laufen bisher nur am PC (mit Temperaturfolge und Fehlerinjektion); wegen des Zwischenfalls vom 11. Nov. nur nach ausdrücklicher Freigabe an der Konsole.
+
+**Beobachtung zum Lesetest (Test-Konsole, zwei Läufe hintereinander):** 196 MB/s beim ersten, 1159 MB/s beim zweiten Lauf derselben 128 MiB: Der zweite Lauf liest aus dem Zwischenspeicher des Betriebssystems. Der Durchsatz ist nur beim ersten Lauf nach dem Start aussagekräftig und taugt für einen Vergleich nur mit anderen kalten Läufen; der „Beweist nicht“-Text des Tests nennt das jetzt.
