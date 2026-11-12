@@ -200,6 +200,12 @@ int main(int argc, char** argv) {
             png("21_game_list.png");
             ga.handle(Button::Cross);
             png("22_game_detail.png");
+            ga.handle(Button::R1);
+            png("22b_game_detail_next.png");
+            ga.handle(Button::R1);
+            png("22c_game_detail_next.png");
+            ga.handle(Button::L1);
+            ga.handle(Button::L1);
             ga.handle(Button::Cross);
             png("23_game_finding.png");
         }
@@ -213,6 +219,44 @@ int main(int argc, char** argv) {
                 if (!write_png((out / "00_splash.png").string(), canvas, scale)) throw std::runtime_error("PNG nicht schreibbar: 00_splash.png");
                 ++shots;
             }
+        }
+        {  // Verlauf: Check-up-Liste und Reparaturen. Arbeitskopie des Snapshots, damit gespeichert werden darf (Uhr: je Check-up eine Minute weiter)
+            const std::filesystem::path work = out / "_work";
+            std::error_code ec;
+            std::filesystem::remove_all(work, ec);
+            std::filesystem::copy(argv[1], work, std::filesystem::copy_options::recursive, ec);
+            if (!ec) {
+                auto wp = medic::make_snapshot_platform(work.string(), true);
+                int minute = 0;
+                LocalService ws(*wp, medic::load_rules_from_file(rules_path), [&minute] {
+                    char b[32];
+                    std::snprintf(b, sizeof b, "20261112T18%02d00Z", 10 + minute++);
+                    return std::string(b);
+                });
+                ws.set_error_codes(medic::load_error_codes_from_file(MEDIC_DEFAULT_ERROR_CODES));
+                for (int k = 0; k < 3; ++k) {
+                    CheckResult cr = ws.run_check();
+                    if (k == 1)
+                        for (const auto& f : cr.findings)
+                            if (!f.fix.empty()) {
+                                ws.apply_fix(ws.plan_fix(f));
+                                break;
+                            }
+                }
+                App wa(ws, lang);
+                if (has_backdrop) wa.set_background(backdrop);
+                auto png = [&](const char* name) {
+                    wa.render(canvas);
+                    if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
+                    ++shots;
+                };
+                wa.handle(Button::Down);
+                wa.handle(Button::Cross);
+                png("30_check_list.png");
+                wa.handle(Button::Square);
+                png("31_repairs.png");
+            }
+            std::filesystem::remove_all(work, ec);
         }
         std::cout << shots << " Bilder in " << out.string() << "\n";
     } catch (const std::exception& e) {

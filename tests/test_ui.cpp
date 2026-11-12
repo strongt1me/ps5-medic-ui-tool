@@ -130,6 +130,8 @@ struct FakeService : IMedicService {
         return result;
     }
     void set_progress(std::function<void(double)> cb) override { progress_cb = std::move(cb); }
+    std::vector<medic::GameInfo> games() override { return game_list; }
+    std::vector<medic::GameInfo> game_list;
     std::function<void(double)> progress_cb;
     std::vector<double> progress_steps;
     FixPlan plan_fix(const Finding&) override {
@@ -371,6 +373,56 @@ void png_tests() {
     CHECK(write_png(p.string(), c, 2), "PNG: verkleinert schreiben");
     std::error_code ec;
     fs::remove(p, ec);
+}
+
+// Spiel-Einzelansicht mit vielen Angaben (Muster: zwei Quellen, Backport fehlt, wiederkehrender Fehler, Log, mehrere Gruende) in allen Sprachen;
+// mit MEDIC_TEST_SHOTS=<ordner> werden die Bilder zusaetzlich als PNG geschrieben (Sichtpruefung).
+void game_detail_rich_tests() {
+    FakeService svc;
+    svc.result.fw = "4.03";
+    svc.result.model = "CFI-1216A";
+    auto mk = [](const char* id, Severity sev, const char* de, const char* en) {
+        Finding f;
+        f.rule_id = id;
+        f.severity = sev;
+        f.text_de = de;
+        f.text_en = en;
+        return f;
+    };
+    svc.result.findings = {mk("errors.recurring_title", Severity::Warning, "Der Fehlerverlauf der Systemsoftware (/system_data/priv/error/history) enthaelt denselben CE-Fehlercode mehrfach fuer denselben Titel.", "The error history repeats the same CE code for the same title."),
+                           mk("game.needs_backport", Severity::Warning, "Fuer diese Spiele verlangt die param.json eine hoehere Firmware-Version, als die Konsole hat (Evidenz: Titel und verlangte Version).", "param.json asks for a higher firmware version than the console has."),
+                           mk("smp.duplicate_titleid", Severity::Warning, "Dieselbe TITLE_ID liegt in mehreren Quellen vor (z. B. ein Spielordner und ein Image desselben Spiels). ShadowMount+ nutzt nur eine.", "The same TITLE_ID exists in several sources."),
+                           mk("smp.register_failed", Severity::Warning, "Die Registrierung eines Spiels ist fehlgeschlagen. Zuerst das Launcher-Icon entfernen und neu registrieren.", "Registering a game failed."),
+                           mk("custom.neue_regel_ohne_titel", Severity::Info, "Eine Regel aus einem Update ohne Kurztitel: der erste Satz dient als Titel. Der Rest ist die Erklaerung.", "A rule from an update without a short title.")};
+    medic::GameInfo g;
+    g.titleid = "PPSA01234";
+    g.name = "Testspiel Eins";
+    g.sources = {{"/data/homebrew/GameA", "/data/homebrew", "folder", false, 2}, {"/mnt/usb0/PPSA01234.ffpfs", "/mnt/usb0", "image", true, 2}};
+    g.registered = -1;
+    g.required_fw = "13.60";
+    g.backport = 0;
+    g.needs_backport = true;
+    g.oversized = true;
+    g.errors = {{"CE-108262-9", 3, "2035-06-02"}};
+    g.log_lines = {"[REG] FAIL: 0x80F50005 PPSA01234", "retry PPSA01234 attach failed"};
+    g.findings = {0, 1, 2, 3, 4};
+    svc.game_list = {g};
+    const char* dir = std::getenv("MEDIC_TEST_SHOTS");
+    Canvas cv(App::kWidth, App::kHeight);
+    for (Lang lang : {Lang::De, Lang::En, Lang::Fr, Lang::It, Lang::Es}) {
+        App app(svc, lang);
+        run_check_via_ui(app, cv);
+        app.handle(Button::Circle);  // Befundliste -> Start
+        for (int i = 0; i < 5; ++i) app.handle(Button::Down);
+        app.handle(Button::Cross);  // Spiele
+        app.handle(Button::Cross);  // Einzelansicht
+        CHECK(app.screen() == App::Screen::GameDetail, "Spiel-Detail (viele Angaben): Einzelansicht offen");
+        app.render(cv);
+        for (int i = 0; i < 4; ++i) app.handle(Button::Down);  // durch die Gruende blaettern: nichts bricht
+        app.render(cv);
+        CHECK(app.screen() == App::Screen::GameDetail, "Spiel-Detail (viele Angaben): Blaettern in den Gruenden");
+        if (dir) write_png(std::string(dir) + "/game_detail_" + (lang == Lang::De ? "de" : lang == Lang::En ? "en" : lang == Lang::Fr ? "fr" : lang == Lang::It ? "it" : "es") + ".png", cv, 1);
+    }
 }
 
 // Fortschritt des Check-ups: die Herzlinie fuellt sich, der Host wird zwischen den Schritten zum Zeichnen aufgerufen
@@ -3130,6 +3182,7 @@ void ui_tests() {
     redetect_ui_tests();
     confidence_ui_tests();
     check_progress_tests();
+    game_detail_rich_tests();
     selftest_ui_tests();
     checks_archive_tests();
     games_tests();

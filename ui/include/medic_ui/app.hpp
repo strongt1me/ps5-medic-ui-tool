@@ -114,6 +114,9 @@ private:
     void finish_usertest(medic::TestStatus st, const std::string& reason, double missing);
 
     std::string finding_text(const medic::Finding& f) const;
+    std::string rule_title(const std::string& id, const std::string& text) const;  // Kurztitel der Regel (Standard: erster Satz des Textes)
+    std::string finding_title(const medic::Finding& f) const;
+    std::string finding_desc(const medic::Finding& f) const;
     std::string fix_name(const std::string& id) const;
     const medic::Finding* current_finding() const;
 

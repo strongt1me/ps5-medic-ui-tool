@@ -349,6 +349,33 @@ App::App(IMedicService& svc, Lang lang) : svc_(svc), lang_(lang) {
 
 std::string App::finding_text(const medic::Finding& f) const { return pick_text(lang_, f.text_de, f.text_en, "rules", f.rule_id, "text"); }
 
+// Kurztitel einer Regel (ui/i18n: rule.title.<id>). Fehlt er (neue Regel aus einem Update), dient der erste Satz des Textes; ohne Text die Kennung.
+std::string App::rule_title(const std::string& id, const std::string& text) const {
+    const auto& S = Strings::get(lang_);
+    const std::string key = "rule.title." + id;
+    if (S.has(key)) return S(key);
+    std::string t = text.empty() ? id : text;
+    for (std::size_t i = 8; i + 1 < t.size(); ++i)
+        if ((t[i] == '.' || t[i] == ':' || t[i] == ';') && t[i + 1] == ' ') {
+            t.resize(i);
+            break;
+        }
+    return t;
+}
+
+std::string App::finding_title(const medic::Finding& f) const { return rule_title(f.rule_id, finding_text(f)); }
+
+// Erklaerung unter dem Titel. Dient der erste Satz des Textes als Titel (Regel ohne Kurztitel), steht er nicht noch einmal darunter.
+std::string App::finding_desc(const medic::Finding& f) const {
+    const std::string text = finding_text(f);
+    if (Strings::get(lang_).has("rule.title." + f.rule_id)) return text;
+    const std::string title = rule_title(f.rule_id, text);
+    if (text.rfind(title, 0) != 0) return text;
+    std::size_t i = title.size();
+    while (i < text.size() && (text[i] == '.' || text[i] == ':' || text[i] == ';' || text[i] == ' ')) ++i;
+    return text.substr(i);
+}
+
 std::string App::fix_name(const std::string& id) const {
     const auto& S = Strings::get(lang_);
     const std::string key = "fix." + id;
@@ -1449,16 +1476,19 @@ void App::draw_findings(Canvas& c) const {
         c.fill_round_rect(M + 34, y + (ch - 76) / 2, 76, 76, 24, rgba((sc >> 16) & 0xFF, (sc >> 8) & 0xFF, sc & 0xFF, 40));
         draw_icon(c, sev_icon(f.severity), M + 72, y + ch / 2, 54, sc, sc);
         const int tx = M + 134;
-        const int bw = draw_badge(c, tx, y + 16, S(sev_key(f.severity)), sc);
-        small().draw(c, tx + bw + 16, y + 20, f.rule_id, kDim);
+        // Kopfzeile: Schweregrad-Marke und Kurztitel (gross); darunter die Erklaerung klein; rechts, ob sich etwas reparieren laesst
+        const int bw = draw_badge(c, tx, y + 14, S(sev_key(f.severity)), sc);
+        int fixw = 0;
         if (!f.fix.empty() && !viewing_old_) {
             const std::string label = S(is_hint_fix(f.fix) ? "findings.hintable" : "findings.fixable");
-            const int lw = text_right(c, small(), M + cw - 32, y + 20, label, kOk);
-            draw_icon(c, is_hint_fix(f.fix) ? Icon::Lightbulb : Icon::Wrench, M + cw - 32 - lw - 22, y + 33, 28, kOk, kOk);
+            const int lw = text_right(c, small(), M + cw - 32, y + 18, label, kOk);
+            draw_icon(c, is_hint_fix(f.fix) ? Icon::Lightbulb : Icon::Wrench, M + cw - 32 - lw - 22, y + 31, 28, kOk, kOk);
+            fixw = lw + 22 + 28 + 24;
         }
-        const auto lines = wrap_text(body(), finding_text(f), cw - 134 - 36, 2);
+        body().draw(c, tx + bw + 16, y + 12, elide(body(), finding_title(f), cw - 134 - bw - 16 - 32 - fixw), kText);
+        const auto lines = wrap_text(small(), finding_desc(f), cw - 134 - 36, 2);
         for (std::size_t k = 0; k < lines.size(); ++k)
-            body().draw(c, tx, y + 62 + static_cast<int>(k) * (body().line_height() + 2), lines[k], kText);
+            small().draw(c, tx, y + 64 + static_cast<int>(k) * (small().line_height() + 4), lines[k], kDim);
     }
     if (n > kListVisible) {  // Scrollleiste
         const int track_h = kListVisible * (ch + gap) - gap;
@@ -1519,7 +1549,7 @@ void App::draw_detail(Canvas& c) const {
     int y = 140;
     draw_icon(c, sev_icon(f->severity), M + 24, y + 17, 46, sev_color(f->severity), sev_color(f->severity));
     const int bw = draw_badge(c, M + 62, y, S(sev_key(f->severity)), sev_color(f->severity));
-    body().draw(c, M + 62 + bw + 20, y, f->rule_id, kDim);
+    body().draw(c, M + 62 + bw + 20, y, elide(body(), finding_title(*f), W - 2 * M - 62 - bw - 20 - 440), kText);
     const medic::Confidence conf = medic::effective_confidence(*f);
     {
         // Verlaesslichkeit (hoch/mittel/niedrig) mit der Grundlage; Farbe: Gruen = hoch, Orange = niedrig (nie "in Ordnung" suggerieren)
@@ -1530,7 +1560,7 @@ void App::draw_detail(Canvas& c) const {
     {
         // Dringlichkeit und Verlauf (neu / seit wann), eine kleine Zeile unter der Kopfzeile
         const std::string urg = medic::urgency_of(*f);
-        std::string line = S.fmt("detail.urgency", {{"u", S("urgency." + urg)}});
+        std::string line = f->rule_id + "  ·  " + S.fmt("detail.urgency", {{"u", S("urgency." + urg)}});
         if (f->status == "new") line += "  ·  " + S("detail.history_new");
         else if (f->status == "recurring") {
             const std::string day = f->first_seen.size() >= 8 ? f->first_seen.substr(0, 4) + "-" + f->first_seen.substr(4, 2) + "-" + f->first_seen.substr(6, 2) : f->first_seen;
@@ -1750,11 +1780,15 @@ void App::draw_history(Canvas& c) const {
         const Color sc = t.state == "applied" ? kOk : (t.state == "undone" ? kDim : kWarn);
         c.fill_round_rect(M + 24, y + 18, 60, 60, 18, rgba((sc >> 16) & 0xFF, (sc >> 8) & 0xFF, sc & 0xFF, 40));
         draw_icon(c, t.state == "applied" ? Icon::Ok : (t.state == "undone" ? Icon::Undo : Icon::Warning), M + 54, y + 48, 40, sc, sc);
-        small().draw(c, M + 108, y + 14, pretty_ts(t.ts.empty() ? t.txn : t.ts) + "   " + t.rule, kDim, cw - 476);
-        body().draw(c, M + 108, y + 44, elide(body(), fix_name(t.fix), cw - 596), kText);
+        // Was wurde gemacht (gross), wegen welches Problems und wann (klein); rechts der Zustand als Marke und die Zahl der Schritte
+        const int rightw = 300;
+        body().draw(c, M + 108, y + 12, elide(body(), fix_name(t.fix), cw - 108 - rightw - 32), kText);
+        small().draw(c, M + 108, y + 56, elide(small(), rule_title(t.rule, "") + "  ·  " + pretty_ts(t.ts.empty() ? t.txn : t.ts), cw - 108 - rightw - 32), kDim);
         const std::string skey = "history.state." + t.state;
-        text_right(c, body(), M + cw - 32, y + 14, S.has(skey) ? S(skey) : t.state, sc);
-        text_right(c, small(), M + cw - 32, y + 56, S.fmt("history.ops", {{"n", std::to_string(t.ops)}}), kDim);
+        const std::string st = S.has(skey) ? S(skey) : t.state;
+        const int bw = small().width(st) + 24;
+        draw_badge(c, M + cw - 32 - bw, y + 14, st, sc);
+        text_right(c, small(), M + cw - 32, y + 56, t.ops == 1 ? S("history.ops_one") : S.fmt("history.ops", {{"n", std::to_string(t.ops)}}), kDim);
     }
     const bool can_undo = hist_sel_ >= 0 && hist_sel_ < n && undoable(hist_[static_cast<std::size_t>(hist_sel_)].state);
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
@@ -1779,6 +1813,14 @@ void App::draw_checklist(Canvas& c) const {
     if (n > kChkVisible) text_right(c, small(), W - M, 148, S.fmt("findings.range", {{"from", std::to_string(chk_top_ + 1)}, {"to", std::to_string(last)}, {"n", std::to_string(n)}}), kDim);
     const int cw = W - 2 * M, ch = 76, gap = 8, y0 = 232;
     int y = y0;
+    // Marke mit Symbol und Zahl (z. B. Warnsymbol 2), rechtsbuendig bei `right`; liefert die Breite
+    auto chip = [&](int right, int cy, Icon ic, Color col, const std::string& text) {
+        const int w = 14 + 24 + 8 + small().width(text) + 16;
+        c.fill_round_rect(right - w, cy, w, 34, 17, rgba((col >> 16) & 0xFF, (col >> 8) & 0xFF, col & 0xFF, 44));
+        draw_icon(c, ic, right - w + 14 + 12, cy + 17, 24, col, col);
+        small().draw(c, right - w + 14 + 24 + 8, cy + 3, text, col);
+        return w;
+    };
     for (int i = chk_top_; i < last; ++i, y += ch + gap) {
         const auto& e = chk_[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == chk_sel_);
@@ -1796,22 +1838,29 @@ void App::draw_checklist(Canvas& c) const {
             const int bx = M + 94 + body().width(pretty_ts(e.ts)) + 20;
             draw_badge(c, bx, y + 8, S("checks.latest"), kAccent);
         }
-        small().draw(c, M + 94, y + 42, S.fmt("checks.line", {{"fw", e.fw.empty() ? "?" : e.fw}, {"rules", e.rules_version.empty() ? "?" : e.rules_version}}), kDim, cw - 700);
-        // rechts: Zahl der Befunde je Schweregrad, sonst "keine Befunde"
-        int x = M + cw - 32;
+        small().draw(c, M + 94, y + 42, S.fmt("checks.line", {{"fw", e.fw.empty() ? "?" : e.fw}, {"rules", e.rules_version.empty() ? "?" : e.rules_version}}), kDim, cw - 900);
+        // rechts oben: Marken je Schweregrad (Symbol und Zahl), sonst "keine Befunde"; darunter der Vergleich mit dem Check-up davor
+        int x = M + cw - 28;
         if (e.total == 0) {
-            x -= text_right(c, body(), x, y + 20, S(partial ? "checks.untested" : "checks.none"), partial ? kDim : kOk);
+            chip(x, y + 8, partial ? Icon::Info : Icon::Ok, partial ? kInfo : kOk, S(partial ? "checks.untested" : "checks.none"));
         } else {
             const std::pair<int, Severity> parts[3] = {{e.info, Severity::Info}, {e.warning, Severity::Warning}, {e.critical, Severity::Critical}};
             for (const auto& pr : parts) {
                 if (!pr.first) continue;
-                const std::string num = std::to_string(pr.first);
-                const int w = body().width(num);
-                body().draw(c, x - w, y + 20, num, kText);
-                draw_icon(c, sev_icon(pr.second), x - w - 26, y + 38, 34, sev_color(pr.second), sev_color(pr.second));
-                x -= w + 26 + 34;
+                x -= chip(x, y + 8, sev_icon(pr.second), sev_color(pr.second), std::to_string(pr.first)) + 8;
             }
         }
+        std::string delta;
+        Color dcol = kDim;
+        if (i + 1 < n) {
+            const int d = e.total - chk_[static_cast<std::size_t>(i + 1)].total;
+            if (d > 0) { delta = S.fmt("checks.delta_more", {{"n", std::to_string(d)}}); dcol = kWarn; }
+            else if (d < 0) { delta = S.fmt("checks.delta_less", {{"n", std::to_string(-d)}}); dcol = kOk; }
+            else delta = S("checks.delta_same");
+        } else if (static_cast<std::size_t>(n) < medic::kChecksListMax) {
+            delta = S("checks.delta_first");
+        }
+        if (!delta.empty()) text_right(c, small(), M + cw - 28, y + 46, delta, dcol);
     }
     if (n > kChkVisible) {  // Scrollleiste
         const int track_h = kChkVisible * (ch + gap) - gap;
@@ -1908,84 +1957,98 @@ void App::draw_gamedetail(Canvas& c) const {
     text_right(c, small(), W - M, 148, S.fmt("games.pos", {{"i", std::to_string(game_sel_ + 1)}, {"n", std::to_string(total)}}), kDim);
     small().draw(c, M + 4, 196, (g.name.empty() ? std::string() : g.titleid + "  ·  ") + S.fmt("games.console_fw", {{"fw", result_.fw.empty() ? "?" : result_.fw}}), kDim);
 
-    // Links: was Medic zu diesem Titel gefunden hat
-    const int px = M, py = 232, pw = 840, ph = 694, pad = 32, lw = 230, vw = pw - 2 * pad - lw;
+    // Links: der Zustand des Spiels als Liste mit Statussymbol. Gruen = in Ordnung, Orange/Rot = Problem, Grau = nicht bekannt.
+    const int px = M, py = 232, pw = 780, ph = 716, pad = 28;
     c.fill_round_rect(px, py, pw, ph, 20, kPanel);
-    int y = py + 26;
-    const int pitch = body().line_height() + 14;
-    auto row = [&](const std::string& label, const std::string& value, Color col, bool first = true) {
-        if (first) small().draw(c, px + pad, y + (body().line_height() - small().line_height()) / 2 + 2, label, kDim);
-        body().draw(c, px + pad + lw, y, elide(body(), value, vw), col);
-        y += pitch;
-    };
-    // Gefunden in
-    if (g.sources.empty()) {
-        row(S("games.d.where"), S("games.d.where_none"), kDim);
-    } else {
-        for (std::size_t i = 0; i < g.sources.size() && i < 2; ++i) {
-            const auto& s = g.sources[i];
-            std::string v = S(s.kind == "image" ? "games.kind_image" : "games.kind_folder") + (s.active ? "  " + S("games.d.active") : std::string());
-            row(S("games.d.where"), v, s.active ? kText : kDim, i == 0);
-            if (!s.path.empty()) {
-                small().draw(c, px + pad + lw, y - 8, elide(small(), s.path, vw), kDim);
-                y += small().line_height() + 2;
-            }
+    int y = py + 10;
+    enum class St { Ok, Warn, Crit, Info, Unknown };
+    auto tint = [](Color col, int a) { return rgba((col >> 16) & 0xFF, (col >> 8) & 0xFF, col & 0xFF, a); };
+    auto row = [&](St st, const std::string& label, const std::string& value, const std::vector<std::string>& extra = {}) {
+        const Color col = st == St::Ok ? kOk : st == St::Warn ? kWarn : st == St::Crit ? kCrit : st == St::Info ? kInfo : kDim;
+        const Icon ic = st == St::Ok ? Icon::Ok : st == St::Warn ? Icon::Warning : st == St::Crit ? Icon::Critical : st == St::Info ? Icon::Info : Icon::Skip;
+        const int lh = small().line_height();
+        const int rh = 14 + lh + 2 + body().line_height() + 12 + static_cast<int>(extra.size()) * (lh + 4);
+        c.fill_round_rect(px + pad, y + 10, 52, 52, 16, tint(col, 40));
+        draw_icon(c, ic, px + pad + 26, y + 36, 32, col, col);
+        const int tx = px + pad + 74, tw = pw - 2 * pad - 74;
+        small().draw(c, tx, y + 8, label, kDim);
+        body().draw(c, tx, y + 8 + lh + 2, elide(body(), value, tw), (st == St::Ok) ? kText : col);
+        int ey = y + 8 + lh + 2 + body().line_height() + 4;
+        for (const auto& e : extra) {
+            small().draw(c, tx, ey, elide(small(), e, tw), kDim);
+            ey += lh + 4;
         }
-        if (g.sources.size() > 2) row("", S.fmt("games.d.more", {{"n", std::to_string(g.sources.size() - 2)}}), kDim, false);
-        if (g.sources.front().dup_count > 1) row("", S.fmt("games.d.dup", {{"n", std::to_string(g.sources.front().dup_count)}}), kWarn, false);
+        y += rh;
+        c.fill_rect(px + pad, y - 2, pw - 2 * pad, 1, kLine);
+    };
+    const std::string fw = result_.fw.empty() ? "?" : result_.fw;
+
+    // Fundort
+    if (g.sources.empty()) {
+        row(St::Unknown, S("games.d.where_short"), S("games.d.where_none"));
+    } else {
+        const std::size_t n_src = g.sources.size();
+        const int dups = std::max<int>(g.sources.front().dup_count, static_cast<int>(n_src));
+        std::vector<std::string> paths;
+        for (std::size_t i = 0; i < n_src && i < 2; ++i) paths.push_back(S(g.sources[i].kind == "image" ? "games.kind_image" : "games.kind_folder") + "   " + g.sources[i].path);
+        if (n_src > 2) paths.push_back(S.fmt("games.d.more", {{"n", std::to_string(n_src - 2)}}));
+        if (dups > 1) row(St::Warn, S("games.d.where_short"), S.fmt("games.d.src_many", {{"n", std::to_string(dups)}}), paths);
+        else row(St::Ok, S("games.d.where_short"), S("games.d.src_one"), paths);
     }
     // Systemdatenbank
-    if (g.orphan) row(S("games.d.reg"), S("games.d.reg_orphan"), kWarn);
-    else if (g.registered == 1) row(S("games.d.reg"), S("games.d.reg_yes"), kText);
-    else if (g.registered == 0) row(S("games.d.reg"), S("games.d.reg_no"), kWarn);
-    else row(S("games.d.reg"), S("games.d.reg_unknown"), kDim);
+    if (g.orphan) row(St::Warn, S("games.d.reg"), S("games.d.reg_orphan"));
+    else if (g.registered == 1) row(St::Ok, S("games.d.reg"), S("games.d.reg_yes"));
+    else if (g.registered == 0) row(St::Warn, S("games.d.reg"), S("games.d.reg_no"));
+    else row(St::Unknown, S("games.d.reg"), S("games.d.reg_unknown"));
     // Firmware
-    if (g.required_fw.empty()) {
-        row(S("games.d.fw"), S("games.d.fw_none"), kDim);
-    } else {
-        const std::string fw = result_.fw.empty() ? "?" : result_.fw;
-        if (g.needs_backport) row(S("games.d.fw"), S.fmt("games.d.fw_need", {{"req", g.required_fw}, {"fw", fw}}), kWarn);
-        else if (g.backport == 1) row(S("games.d.fw"), S.fmt(g.backport_inline ? "games.d.fw_backport_inline" : "games.d.fw_backport", {{"req", g.required_fw}, {"fw", fw}}), kText);
-        else row(S("games.d.fw"), S.fmt("games.d.fw_line", {{"req", g.required_fw}, {"fw", fw}}), kText);
-    }
-    // Dateien
+    if (g.required_fw.empty()) row(St::Unknown, S("games.d.fw"), S("games.d.fw_none"));
+    else if (g.needs_backport) row(St::Warn, S("games.d.fw"), S.fmt("games.d.fw_short_need", {{"req", g.required_fw}, {"fw", fw}}));
+    else if (g.backport == 1) row(St::Ok, S("games.d.fw"), S.fmt("games.d.fw_short_backport", {{"req", g.required_fw}}));
+    else row(St::Ok, S("games.d.fw"), S.fmt("games.d.fw_ok", {{"req", g.required_fw}}));
+    // Dateien: schlimmster Punkt als Wert, weitere darunter
     {
-        bool any = false;
-        auto file_row = [&](const char* key, Color col) {
-            row(S("games.d.files"), S(key), col, !any);
-            any = true;
-        };
-        if (g.eboot_bad) file_row("games.d.eboot", kCrit);
-        if (g.case_mismatch) file_row("games.d.case", kWarn);
-        if (g.oversized) file_row("games.d.oversized", kInfo);
-        if (!any) row(S("games.d.files"), S("games.d.files_none"), kDim);
+        std::vector<std::pair<St, std::string>> probs;
+        if (g.eboot_bad) probs.emplace_back(St::Crit, S("games.d.eboot"));
+        if (g.case_mismatch) probs.emplace_back(St::Warn, S("games.d.case"));
+        if (g.oversized) probs.emplace_back(St::Info, S("games.d.oversized"));
+        if (probs.empty()) {
+            row(St::Ok, S("games.d.files"), S("games.d.files_none"));
+        } else {
+            std::vector<std::string> rest;
+            for (std::size_t i = 1; i < probs.size(); ++i) rest.push_back(probs[i].second);
+            row(probs[0].first, S("games.d.files"), probs[0].second, rest);
+        }
     }
     // Fehler der Konsole
     if (g.errors.empty()) {
-        row(S("games.d.errors"), S("games.d.errors_none"), kDim);
+        row(St::Ok, S("games.d.errors"), S("games.d.errors_none"));
     } else {
-        for (std::size_t i = 0; i < g.errors.size() && i < 2; ++i) {
-            const auto& e = g.errors[i];
-            std::string v = g.errors.size() > 2 && i == 1 ? S.fmt("games.d.errors_more", {{"n", std::to_string(g.errors.size() - 1)}}) : g.errors[i].code + "   " + S.fmt("games.d.error_n", {{"n", std::to_string(e.count)}}) + (e.last.empty() ? std::string() : ", " + S.fmt("games.d.error_last", {{"day", e.last}}));
-            row(S("games.d.errors"), v, kWarn, i == 0);
-        }
+        const auto& e = g.errors.front();
+        std::vector<std::string> rest;
+        if (!e.last.empty()) rest.push_back(S.fmt("games.d.err_last_short", {{"day", e.last}}));
+        if (g.errors.size() > 1) rest.push_back(S.fmt("games.d.errors_more", {{"n", std::to_string(g.errors.size())}}));
+        row(St::Warn, S("games.d.errors"), S.fmt("games.d.err_short", {{"code", e.code}, {"n", std::to_string(e.count)}}), rest);
     }
-    if (g.foreign_saves > 0) row(S("games.d.saves"), S.fmt("games.d.saves_foreign", {{"n", std::to_string(g.foreign_saves)}}), kWarn);
-    // Log
+    if (g.foreign_saves > 0) row(St::Warn, S("games.d.saves"), S.fmt("games.d.saves_foreign", {{"n", std::to_string(g.foreign_saves)}}));
+    // Letzte Meldungen aus dem Log: dunkler Einschub, so viele Zeilen, wie noch Platz haben
     if (!g.log_lines.empty()) {
-        y += 6;
-        small().draw(c, px + pad, y, S("games.d.log"), kDim);
-        y += small().line_height() + 6;
-        for (const auto& l : g.log_lines) {
-            small().draw(c, px + pad, y, elide(small(), l, pw - 2 * pad), kText);
-            y += small().line_height() + 4;
+        const int lh = small().line_height() + 4;
+        const int room = py + ph - 16 - (y + 10) - (small().line_height() + 22);
+        const int fit = std::min<int>(static_cast<int>(g.log_lines.size()), std::min(3, room / lh));
+        if (fit >= 1) {
+            const int bh = 14 + small().line_height() + 8 + fit * lh + 6;
+            c.fill_round_rect(px + pad, y + 10, pw - 2 * pad, bh, 14, kBg);
+            small().draw(c, px + pad + 20, y + 10 + 12, S("games.d.log_title"), kDim);
+            int ly = y + 10 + 12 + small().line_height() + 8;
+            for (std::size_t i = g.log_lines.size() - static_cast<std::size_t>(fit); i < g.log_lines.size(); ++i, ly += lh)
+                small().draw(c, px + pad + 20, ly, elide(small(), g.log_lines[i], pw - 2 * pad - 40), kText);
         }
     }
 
-    // Rechts: moegliche Gruende = die Befunde dieses Titels
+    // Rechts: moegliche Gruende = die Befunde dieses Titels. Kurztitel gross, die Erklaerung klein darunter; Details im Befund selbst.
     const int rx = M + pw + 24, rw = W - M - rx;
-    small().draw(c, rx + 4, py - 2, S("games.d.reasons"), kDim);
     const int n = static_cast<int>(g.findings.size());
+    small().draw(c, rx + 4, py - 2, S("games.d.reasons") + (n > 0 ? "  (" + std::to_string(n) + ")" : std::string()), kDim);
     if (n == 0) {
         c.fill_round_rect(rx, py + 36, rw, 250, 20, kPanel);
         int ty = py + 64;
@@ -1994,7 +2057,7 @@ void App::draw_gamedetail(Canvas& c) const {
             ty += body().line_height() + 4;
         }
     } else {
-        const int ch = 120, gap = 10;
+        const int ch = 124, gap = 8;
         int cy = py + 36;
         const int last = std::min(n, gd_top_ + kGdVisible);
         for (int i = gd_top_; i < last; ++i, cy += ch + gap) {
@@ -2004,12 +2067,12 @@ void App::draw_gamedetail(Canvas& c) const {
             const Color sc = sev_color(f.severity);
             card(c, rx, cy, rw, ch, i == gd_sel_);
             c.fill_round_rect(rx, cy + 14, 8, ch - 28, 4, sc);
-            draw_icon(c, sev_icon(f.severity), rx + 44, cy + 36, 40, sc, sc);
-            const int tx = rx + 82;
-            const int bw = draw_badge(c, tx, cy + 12, S(sev_key(f.severity)), sc);
-            small().draw(c, tx + bw + 14, cy + 16, elide(small(), f.rule_id, rw - 82 - bw - 40), kDim);
-            const auto lines = wrap_text(small(), finding_text(f), rw - 82 - 24, 2);
-            for (std::size_t k = 0; k < lines.size(); ++k) small().draw(c, tx, cy + 54 + static_cast<int>(k) * (small().line_height() + 2), lines[k], kText);
+            c.fill_round_rect(rx + 28, cy + (ch - 60) / 2, 60, 60, 18, tint(sc, 40));
+            draw_icon(c, sev_icon(f.severity), rx + 58, cy + ch / 2, 36, sc, sc);
+            const int tx = rx + 108, tw = rw - 108 - 28;
+            body().draw(c, tx, cy + 12, elide(body(), finding_title(f), tw), kText);
+            const auto lines = wrap_text(small(), finding_desc(f), tw, 2);
+            for (std::size_t k = 0; k < lines.size(); ++k) small().draw(c, tx, cy + 12 + body().line_height() + 6 + static_cast<int>(k) * (small().line_height() + 2), lines[k], kDim);
         }
         if (n > kGdVisible) {
             const int track_h = kGdVisible * (ch + gap) - gap;
@@ -2041,7 +2104,7 @@ void App::draw_compare(Canvas& c) const {
     std::vector<Row> rows;
     auto section = [&](const char* key, const std::vector<medic::Finding>& v, Color col) {
         rows.push_back({true, S.fmt(key, {{"n", std::to_string(v.size())}}), col, nullptr});
-        for (const auto& f : v) rows.push_back({false, f.rule_id, col, &f});
+        for (const auto& f : v) rows.push_back({false, finding_title(f), col, &f});
     };
     section("compare.added", cmp_diff_.added, kWarn);
     section("compare.resolved", cmp_diff_.resolved, kOk);
@@ -2055,8 +2118,7 @@ void App::draw_compare(Canvas& c) const {
             body().draw(c, M + 36, y, r.text, r.col);
         } else {
             draw_icon(c, sev_icon(r.f->severity), M + 56, y + 20, 30, sev_color(r.f->severity), sev_color(r.f->severity));
-            small().draw(c, M + 92, y + 8, r.text, kText);
-            small().draw(c, M + 560, y + 8, elide(small(), finding_text(*r.f), W - 2 * M - 560 - 80), kDim);
+            body().draw(c, M + 92, y + 4, elide(body(), r.text, W - 2 * M - 92 - 100), kText);
         }
         y += 50;
     }
