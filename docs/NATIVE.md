@@ -24,6 +24,6 @@ Einschränkungen der Umgebung, die den Code prägen:
 - Meilenstein 3: `RemoteService` in der UI, Ersetzen des Starters `FAKE42007`.
 
 ## Offene Risiken
-- Die Importe der App (libc aus `libSceLibcInternal`, `libScePad`, `libSceVideoOut`) sind auf der Konsole noch nicht bestätigt; ein fehlender Import beendet die App vor `main()` ohne Meldung.
-- `/data` ist aus der Sandbox nicht beschreibbar/lesbar; das Protokoll `native.log` entsteht dort nur, wenn ShadowMount+ es erlaubt.
+- Die Importe der App (libc, `libScePad`, `libSceVideoOut`, `libSceUserService`) sind auf FW 12.00 bestätigt; auf anderen Firmwares ungeprüft, ein fehlender Import beendet die App vor `main()` ohne Meldung.
+- Die App kann unter `/data/ps5medic/` Dateien anlegen, schreiben und lesen (bestätigt: `native.log`). Das Auflisten von Ordnern und `stat` sind laut Boilerplate-Doku aus der Sandbox verweigert, `/mnt` und die Systemordner bleiben unzugänglich: der Dienst-Payload bleibt nötig.
 - Lapy-Sandbox-Elevation (aus dem Boilerplate) wäre ein Weg, den Dienst einzusparen; sie ist nur auf FW 6.02 bis 12.70 bestätigt und wird bewusst nicht genutzt.
