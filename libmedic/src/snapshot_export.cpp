@@ -259,7 +259,7 @@ public:
                 } else {
                     mkdir(path);
                 }
-            } else if (lower_ext(e.name) == ".exfat" && stub_images.count(path)) {
+            } else if (stub_images.count(path)) {
                 // schon als winziges Image mit Ersatz-eboot.bin geschrieben (siehe oben)
             } else if (lower_ext(e.name) == ".exfat") {
                 std::string head;
@@ -434,9 +434,20 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
                         } else {
                             // Image: ein winziges exFAT-Image mit derselben Cluster-Einteilung, das nur die Ersatz-eboot.bin enthaelt (nur vollstaendige
                             // .exfat-Images; der Kopf-Export in mirror() wuerde es sonst durch den blossen Kopf ersetzen)
+                            // .exfat: Cluster-Einteilung des Originals; andere Formate (.ffpkg, .ffpfs, .ffpfsc): feste Einteilung. Der Leser erkennt das
+                            // Format am Inhalt, nicht am Namen: das Ersatz-Image ist immer exFAT.
                             std::string raw;
-                            if (src.size() > 6 && lower_ext(src) == ".exfat" && p.fs().read_range(src, 0, 512, raw) && raw.size() >= 112 && raw.compare(3, 8, "EXFAT   ") == 0) {
-                                const unsigned bps = static_cast<unsigned char>(raw[108]), spc = static_cast<unsigned char>(raw[109]);
+                            unsigned bps = 9, spc = 3;
+                            bool ok = true;
+                            if (lower_ext(src) == ".exfat") {
+                                ok = p.fs().read_range(src, 0, 512, raw) && raw.size() >= 112 && raw.compare(3, 8, "EXFAT   ") == 0;
+                                if (ok) {
+                                    bps = static_cast<unsigned char>(raw[108]);
+                                    spc = static_cast<unsigned char>(raw[109]);
+                                }
+                            }
+                            const std::string ext = lower_ext(src);
+                            if (ok && (ext == ".exfat" || ext == ".ffpkg" || ext == ".ffpfs" || ext == ".ffpfsc")) {
                                 const std::string image = build_exfat_stub(bps, spc, "eboot.bin", stub);
                                 if (!image.empty()) {
                                     ex.write(src, image);

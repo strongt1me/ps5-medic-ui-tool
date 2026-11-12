@@ -6,6 +6,7 @@
 #include "medic/sqlite_check.hpp"
 #include "medic/collectors.hpp"
 #include "medic/exfat.hpp"
+#include "medic/image_reader.hpp"
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
 #include "check.hpp"
@@ -192,6 +193,12 @@ static void new_fact_tests() {
             const json* mg = img.get("games.fw");
             CHECK(mg && mg->size() == 1 && (*mg)[0]["eboot_sdk"] == "12.00" && (*mg)[0]["backport_inline"] == true && img.get("games.need_backport")->empty(),
                   "G1: eboot.bin im exFAT-Image mit SDK 12.00 gilt als eingebauter Backport");
+            for (const char* fixture : {"g1_neg_inline_ffpfs", "g1_neg_inline_ffpfsc"}) {  // PFS-Behaelter mit dem exFAT-Image (unkomprimiert, PFSC-komprimiert)
+                auto pf = facts_of(fixture);
+                const json* pg = pf.get("games.fw");
+                CHECK(pg && pg->size() == 1 && (*pg)[0]["eboot_sdk"] == "12.00" && (*pg)[0]["backport_inline"] == true && pf.get("games.need_backport")->empty(),
+                      std::string("G1: eboot.bin im Image-Behaelter (") + fixture + ") mit SDK 12.00 gilt als eingebauter Backport");
+            }
             auto imgnew = facts_of("g1_pos_image_ebootnew");
             const json* ig2 = imgnew.get("games.fw");
             CHECK(ig2 && ig2->size() == 1 && (*ig2)[0]["eboot_sdk"] == "13.60" && imgnew.get("games.need_backport")->size() == 1, "G1: Image mit SDK 13.60: der Befund bleibt");
@@ -606,7 +613,7 @@ static void fixture_tests() {
     }
 }
 
-void exfat_tests() {
+void image_tests() {
     using namespace medic;
     namespace fs = std::filesystem;
     std::string content(0x1200 + 77, 'x');
@@ -625,30 +632,28 @@ void exfat_tests() {
             out.write(img.data(), static_cast<std::streamsize>(img.size()));
         }
         auto p = make_snapshot_platform(root.string());
-        ExfatImage image;
-        ExfatFile file;
-        CHECK(ExfatImage::open(p->fs(), "/data/t.exfat", image) && image.cluster_bytes() == (std::uint64_t{1} << (bps + spc)), "exFAT: Kopf gelesen " + tag);
-        CHECK(image.find_root_file("EBOOT.BIN", file) && file.size == content.size(), "exFAT: Datei im Wurzelverzeichnis gefunden (Gross-/Kleinschreibung egal) " + tag);
+        const auto image = ImageReader::open(p->fs(), "/data/t.exfat");
+        CHECK(image && image->kind() == "exfat", "Image: als exFAT erkannt " + tag);
+        if (!image) continue;
         std::string got;
-        CHECK(image.read(file, 0, content.size(), got) && got == content, "exFAT: ganze Datei gelesen " + tag);
-        CHECK(image.read(file, 4000, 300, got) && got == content.substr(4000, 300), "exFAT: Bereich ueber Clustergrenzen " + tag);
-        CHECK(!image.read(file, 0, content.size() + 1, got) && !image.read(file, content.size() + 1, 1, got), "exFAT: ueber das Dateiende hinaus lesen scheitert " + tag);
-        CHECK(!image.find_root_file("nicht-da.bin", file), "exFAT: fehlende Datei " + tag);
+        CHECK(image->read_file("/EBOOT.BIN", 0, content.size(), got) && got == content, "Image: ganze Datei gelesen (Gross-/Kleinschreibung egal) " + tag);
+        CHECK(image->read_file("/eboot.bin", 4000, 300, got) && got == content.substr(4000, 300), "Image: Bereich ueber Clustergrenzen " + tag);
+        CHECK(!image->read_file("/eboot.bin", 0, content.size() + 1, got) && !image->read_file("/eboot.bin", content.size() + 1, 1, got), "Image: ueber das Dateiende hinaus lesen scheitert " + tag);
+        CHECK(!image->read_file("/nicht-da.bin", 0, 1, got), "Image: fehlende Datei " + tag);
     }
     {  // kein exFAT
         std::ofstream out(root / "fs/data/t.exfat", std::ios::binary);
         out << std::string(2048, 'z');
     }
     auto p = make_snapshot_platform(root.string());
-    ExfatImage image;
-    CHECK(!ExfatImage::open(p->fs(), "/data/t.exfat", image) && !ExfatImage::open(p->fs(), "/data/gibt-es-nicht.exfat", image), "exFAT: kein exFAT und fehlende Datei werden abgelehnt");
+    CHECK(!ImageReader::open(p->fs(), "/data/t.exfat") && !ImageReader::open(p->fs(), "/data/gibt-es-nicht.exfat"), "Image: kein bekanntes Format und fehlende Datei werden abgelehnt");
     CHECK(build_exfat_stub(9, 0, "dieser-name-ist-zu-lang.bin", "x").empty() && build_exfat_stub(8, 0, "a", "x").empty(), "exFAT: Bauer lehnt unpassende Angaben ab");
     fs::remove_all(root, ec);
 }
 
 int main() {
     unit_tests();
-    exfat_tests();
+    image_tests();
     platform_tests();
     new_fact_tests();
     fixture_tests();

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/collectors.hpp"
-#include "medic/exfat.hpp"
+#include "medic/image_reader.hpp"
 #include "medic/history.hpp"
 #include "medic/selftest.hpp"
 
@@ -751,11 +751,10 @@ void collect_game_firmware(const Platform& p, Facts& f) {
                 if (fs.is_dir(src)) {
                     const std::string eboot = join_path(src, "eboot.bin");
                     raw = eboot_sdk_raw([&](std::uint64_t off, std::size_t n, std::string& out) { return fs.read_range(eboot, off, n, out); });
-                } else if (lower_ext_of(src) == ".exfat") {  // Image: ohne Einhaengen aus dem Wurzelverzeichnis des Images lesen
-                    ExfatImage img;
-                    ExfatFile file;
-                    if (ExfatImage::open(fs, src, img) && img.find_root_file("eboot.bin", file))
-                        raw = eboot_sdk_raw([&](std::uint64_t off, std::size_t n, std::string& out) { return img.read(file, off, n, out); });
+                } else if (const std::string ext = lower_ext_of(src); ext == ".exfat" || ext == ".ffpkg" || ext == ".ffpfs" || ext == ".ffpfsc") {
+                    // Image (exFAT, UFS2, PFS, PFSC): ohne Einhaengen aus dem Image lesen (libmedic/src/imgread.c)
+                    if (const auto img = ImageReader::open(fs, src))
+                        raw = eboot_sdk_raw([&](std::uint64_t off, std::size_t n, std::string& out) { return img->read_file("/eboot.bin", off, n, out); });
                 }
                 eboot_sdk = sdk_raw_to_fw(raw);
                 if (!eboot_sdk.empty()) break;

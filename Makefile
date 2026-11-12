@@ -34,7 +34,9 @@ PS5_CXX := $(PS5_PAYLOAD_SDK)/bin/prospero-clang++
 PS5_CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Ilibmedic/include -Ithird_party -Ips5 -Iui/include -Iui/src -I$(PS5_HOMEBREW)/include
 
 PS5_CORE_SRCS := $(wildcard libmedic/src/*.cpp) third_party/qrcodegen/qrcodegen.cpp ps5/ps5_platform.cpp
-PS5_C_SRCS := third_party/tweetnacl/tweetnacl.c third_party/sqlite3/sqlite3.c
+PS5_C_SRCS := third_party/tweetnacl/tweetnacl.c third_party/sqlite3/sqlite3.c libmedic/src/imgread.c \
+              third_party/libdeflate/lib/adler32.c third_party/libdeflate/lib/deflate_decompress.c third_party/libdeflate/lib/zlib_decompress.c \
+              third_party/libdeflate/lib/utils.c third_party/libdeflate/lib/x86/cpu_features.c
 # png.cpp und shot_hook.cpp: PNG-Schreiber fuer den Screenshot-Hook der UI (Entwicklung, siehe shot_hook.hpp).
 PS5_UI_SRCS := ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp ui/src/i18n.cpp ui/src/i18n_embedded.cpp \
                ui/src/icons.cpp ui/src/png.cpp ui/src/shot_hook.cpp ui/src/splash.cpp ui/src/app.cpp ui/src/local_service.cpp
@@ -61,7 +63,7 @@ TILE_DIR := build-title/FAKE42007
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
 
-.PHONY: host test clean ps5-update-probe ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
+.PHONY: host test clean ps5-image-probe ps5-update-probe ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
 
 # UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
 SNAP ?=
@@ -98,7 +100,7 @@ $(PS5_BUILD)/%.o: %.cpp
 $(PS5_BUILD)/%.o: %.c
 	@test -x $(PS5_CXX) || { echo "ps5-payload-sdk nicht gefunden: $(PS5_PAYLOAD_SDK) (PS5_PAYLOAD_SDK=... setzen)"; exit 1; }
 	@mkdir -p $(dir $@)
-	$(PS5_CXX) -x c -std=gnu11 -O2 -w $(PS5_C_EXTRA) -MMD -MP -c $< -o $@
+	$(PS5_CXX) -x c -std=gnu11 -O2 -w -Ilibmedic/include -Ithird_party $(PS5_C_EXTRA) -MMD -MP -c $< -o $@
 
 # SQLite ohne Dateizugriff (nur Speicher-Datenbanken, siehe libmedic/src/sqlite_check.cpp)
 $(PS5_BUILD)/third_party/sqlite3/sqlite3.o: PS5_C_EXTRA := -DSQLITE_OS_OTHER=1 -DSQLITE_THREADSAFE=0 -DSQLITE_TEMP_STORE=3 -DSQLITE_OMIT_LOAD_EXTENSION=1 -DSQLITE_OMIT_SHARED_CACHE=1 -DSQLITE_OMIT_DEPRECATED=1 -DSQLITE_OMIT_LOCALTIME=1 -DSQLITE_OMIT_PROGRESS_CALLBACK=1 -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_MAX_MMAP_SIZE=0
@@ -133,6 +135,12 @@ $(PS5_START_ELF): $(PS5_START_OBJS)
 # Der Starter der Kachel (nativer Titel, eboot.bin) traegt ps5medic-start.elf; build-title/FAKE42007 enthaelt die fertige Ordner-App.
 $(TILE_DIR)/eboot.bin: $(PS5_START_ELF) title/starter.c title/build_title.sh title/title.ld title/symbols.map ps5/homebrew/sce_sys/icon0.png
 	bash title/build_title.sh $(PS5_START_ELF)
+
+# Entwicklungswerkzeug: Image-Leser an allen Images der Konsole pruefen (ps5/image_probe.cpp), Ergebnis /data/ps5medic/image_probe.log
+PS5_IMAGEPROBE_ELF := $(PS5_BUILD)/ps5medic-image-probe.elf
+ps5-image-probe: $(PS5_IMAGEPROBE_ELF)
+$(PS5_IMAGEPROBE_ELF): $(PS5_BUILD)/ps5/image_probe.o $(PS5_BUILD)/ps5/ps5_platform.o $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS)) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
+	$(PS5_CXX) $^ -lkernel_sys -o $@
 
 # Entwicklungswerkzeug: Regel-Update-Ablauf ohne Bildschirm (ps5/update_probe.cpp), Ergebnis /data/ps5medic/update_probe.log
 PS5_UPDATEPROBE_ELF := $(PS5_BUILD)/ps5medic-update-probe.elf

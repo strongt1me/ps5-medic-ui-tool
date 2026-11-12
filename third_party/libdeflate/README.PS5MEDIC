@@ -1,0 +1,3 @@
+libdeflate 1.26 (https://github.com/ebiggers/libdeflate, tag v1.26, commit 92e6a0d), unchanged (MIT, see COPYING).
+Only the zlib-format DEcompression on x86-64 is kept (inflate of PFSC blocks in .ffpfsc images; libmedic/src/imgread.c). Copied from the
+source of PS5 Cooling & System Center (same author as this project), which keeps the same trimmed set.

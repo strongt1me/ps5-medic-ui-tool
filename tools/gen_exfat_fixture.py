@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Erzeugt die synthetischen exFAT-Images der Fixtures g1_neg_inline_image und g1_pos_image_ebootnew (tests/fixtures/).
+"""Erzeugt die synthetischen Images der Fixtures g1_neg_inline_image, g1_pos_image_ebootnew (exFAT) und g1_neg_inline_ffpfs, g1_neg_inline_ffpfsc
+(derselbe exFAT-Inhalt im PFS-Behaelter, unkomprimiert bzw. PFSC-komprimiert) unter tests/fixtures/.
 
 Unabhaengig vom C++-Bauer build_exfat_stub (libmedic/src/exfat.cpp): Die eboot.bin liegt hier **zerstueckelt** in der FAT-Kette (ohne
 NoFatChain), das Verzeichnis hat zwei Dateien und der Name steht in anderer Schreibung ("EBOOT.BIN"). So prueft der Test den Leser gegen einen
@@ -9,6 +10,7 @@ zweiten Aufbau. Nur erfundene Inhalte. Aufruf: python3 tools/gen_exfat_fixture.p
 import os
 import shutil
 import struct
+import zlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = os.path.join(ROOT, "tests", "fixtures")
@@ -111,6 +113,60 @@ def build_image(eboot):
     return bytes(img)
 
 
+PFS_BS = 0x10000
+
+
+def pfs_container(payload, compressed):
+    """PFS-Behaelter (Version 2) mit genau einer Datei, dem exFAT-Image: Block 0 Kopf, Block 1 Inode-Tabelle (Inode 3 ist die Datei),
+    ab Block 2 die Daten, bei compressed als PFSC (Tabelle bei 0x400, Bloecke zu 64 KiB roh oder zlib)."""
+    head = bytearray(PFS_BS)
+    struct.pack_into("<Q", head, 0, 2)
+    struct.pack_into("<Q", head, 8, 20130315)
+    struct.pack_into("<I", head, 0x20, PFS_BS)
+    inodes = bytearray(PFS_BS)
+    ino = 3 * 0xA8
+    first_block = 2
+    if not compressed:
+        struct.pack_into("<I", inodes, ino + 0x04, 0)
+        struct.pack_into("<Q", inodes, ino + 0x08, len(payload))
+        struct.pack_into("<I", inodes, ino + 0x64, first_block)
+        body = payload
+    else:
+        lbs = PFS_BS
+        blocks = (len(payload) + lbs - 1) // lbs
+        offs = [0x400 + (blocks + 1) * 8]
+        data = []
+        for i in range(blocks):
+            chunk = payload[i * lbs:(i + 1) * lbs].ljust(lbs, b"\x00")
+            z = zlib.compress(chunk, 9)
+            blk = z if len(z) < lbs else chunk
+            data.append(blk)
+            offs.append(offs[-1] + len(blk))
+        pfsc = bytearray(0x30)
+        struct.pack_into("<I", pfsc, 0, 0x43534650)
+        struct.pack_into("<I", pfsc, 8, 6)
+        struct.pack_into("<I", pfsc, 0x0C, lbs)
+        struct.pack_into("<Q", pfsc, 0x18, 0x400)
+        struct.pack_into("<Q", pfsc, 0x28, len(payload))
+        table = b"".join(struct.pack("<Q", o) for o in offs)
+        body = bytes(pfsc).ljust(0x400, b"\x00") + table + b"".join(data)
+        struct.pack_into("<I", inodes, ino + 0x04, 1)
+        struct.pack_into("<Q", inodes, ino + 0x08, len(body))
+        struct.pack_into("<I", inodes, ino + 0x64, first_block)
+    return bytes(head) + bytes(inodes) + body
+
+
+def make_pfs(name, ext, compressed, sdk):
+    dst = os.path.join(FIX, name)
+    if os.path.exists(dst):
+        shutil.rmtree(dst)
+    shutil.copytree(os.path.join(FIX, "g1_neg_backport"), dst)
+    shutil.rmtree(os.path.join(dst, "fs/mnt/usb0/homebrew/backports"))
+    home = os.path.join(dst, "fs/mnt/usb0/homebrew")
+    open(os.path.join(home, "PPSA00001" + ext), "wb").write(pfs_container(build_image(fake_eboot(sdk)), compressed))
+    open(os.path.join(dst, "expect.json"), "w", encoding="utf-8", newline="\n").write('{"expect": [], "neg_for": ["game.needs_backport"]}\n')
+
+
 def make(name, sdk, expect):
     dst = os.path.join(FIX, name)
     if os.path.exists(dst):
@@ -125,4 +181,6 @@ def make(name, sdk, expect):
 if __name__ == "__main__":
     make("g1_neg_inline_image", 0x12000040, '{"expect": ["smp.exfat_cluster"], "neg_for": ["game.needs_backport"]}')
     make("g1_pos_image_ebootnew", 0x13600040, '{"expect": ["game.needs_backport", "smp.exfat_cluster"]}')
+    make_pfs("g1_neg_inline_ffpfs", ".ffpfs", False, 0x12000040)
+    make_pfs("g1_neg_inline_ffpfsc", ".ffpfsc", True, 0x12000040)
     print("ok")

@@ -19,6 +19,13 @@ add_library(medic STATIC
   libmedic/src/selftest.cpp
   libmedic/src/error_codes.cpp
   libmedic/src/exfat.cpp
+  libmedic/src/image_reader.cpp
+  libmedic/src/imgread.c
+  third_party/libdeflate/lib/adler32.c
+  third_party/libdeflate/lib/deflate_decompress.c
+  third_party/libdeflate/lib/zlib_decompress.c
+  third_party/libdeflate/lib/utils.c
+  third_party/libdeflate/lib/x86/cpu_features.c
   libmedic/src/text_policy.cpp
   libmedic/src/sqlite_check.cpp
   libmedic/src/sha256.cpp
@@ -40,7 +47,7 @@ add_library(medic STATIC
   third_party/sqlite3/sqlite3.c)
 target_include_directories(medic PUBLIC libmedic/include third_party)
 target_compile_options(medic PRIVATE -Wall -Wextra)
-set_source_files_properties(third_party/qrcodegen/qrcodegen.cpp third_party/tweetnacl/tweetnacl.c PROPERTIES COMPILE_OPTIONS "-w")  # Fremdcode unveraendert lassen
+set_source_files_properties(third_party/qrcodegen/qrcodegen.cpp third_party/tweetnacl/tweetnacl.c third_party/libdeflate/lib/adler32.c third_party/libdeflate/lib/deflate_decompress.c third_party/libdeflate/lib/zlib_decompress.c third_party/libdeflate/lib/utils.c third_party/libdeflate/lib/x86/cpu_features.c PROPERTIES COMPILE_OPTIONS "-w")  # Fremdcode unveraendert lassen
 # SQLite ohne Dateizugriff (nur Speicher-Datenbanken, siehe libmedic/src/sqlite_check.cpp)
 set_source_files_properties(third_party/sqlite3/sqlite3.c PROPERTIES COMPILE_OPTIONS "-w;-O1"
   COMPILE_DEFINITIONS "SQLITE_OS_OTHER=1;SQLITE_THREADSAFE=0;SQLITE_TEMP_STORE=3;SQLITE_OMIT_LOAD_EXTENSION=1;SQLITE_OMIT_SHARED_CACHE=1;SQLITE_OMIT_DEPRECATED=1;SQLITE_OMIT_LOCALTIME=1;SQLITE_OMIT_PROGRESS_CALLBACK=1;SQLITE_DEFAULT_MEMSTATUS=0;SQLITE_DQS=0;SQLITE_MAX_MMAP_SIZE=0")

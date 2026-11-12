@@ -14,6 +14,8 @@ Nicht im Repo, nur zum Bauen benötigt: [ps5-payload-sdk](https://github.com/ps5
 
 Kachel-Starter (`title/`): `title/title.ld` und `title/symbols.map` stammen aus [ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) (GPL-3.0-or-later, BlackBearReloaded; der Kopf der Datei nennt das). `make title` nutzt dessen Werkzeug `ps5-native-tool` und kopiert den signierten Laufzeit-Shim `libc.prx` aus einem lokalen Checkout; beides liegt nicht im Repo, und der Titel ist nicht Teil von `make dist` (siehe `docs/TITLE.md`).
 
+Im Repo (`third_party/libdeflate/`): libdeflate 1.26 (MIT, Eric Biggers, Lizenztext in `COPYING`), unverändert, nur die zlib-Entpackung für x86-64 (`README.PS5MEDIC`); entpackt die PFSC-Blöcke der `.ffpfsc`-Images. `libmedic/src/imgread.c` und `libmedic/include/medic/imgread.h` stammen aus PS5 Cooling & System Center (derselbe Autor, GPL-3.0-or-later).
+
 Im Repo (`third_party/stb/`): `stb_image.h` (Sean Barrett, stb_image 2.30, MIT oder Public Domain, Lizenztext in `third_party/stb/LICENSE`, Stand der Quelle in `UPSTREAM`), nur JPEG und PNG aus dem Speicher; entschlüsselt das Startbild (`ui/src/splash.cpp`). Die Kopie stammt aus dem Quelltext von PS5 Cooling & System Center (tvapp, GPL-3.0-or-later, unverändert).
 
 Übersetzungen: Die französischen, italienischen und spanischen Texte in `ui/i18n/` und `knowledge/l10n/` sind eigene Übersetzungen der deutschen und englischen Texte dieses Projekts (GPL-3.0-or-later).
