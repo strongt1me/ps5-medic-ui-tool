@@ -2999,7 +2999,13 @@ void start_nav_tests() {
         FakeService fk;
         App app(fk);
         press(app, {Button::Down, Button::Down, Button::Down, Button::Up, Button::Down, Button::Cross});
-        CHECK(app.screen() == App::Screen::CheckList, "Start: Runter aus dem Check-up waehlt die erste kleine Kachel (Verlauf)");
+        CHECK(app.screen() == App::Screen::ErrorCodes, "Start: Runter aus dem Check-up geht zur kleinen Kachel zurueck, von der man kam (Fehlercodes)");
+    }
+    {
+        FakeService fk;
+        App app(fk);
+        press(app, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Up, Button::Down, Button::Cross});  // von Spiele (5) hoch und wieder runter
+        CHECK(app.screen() == App::Screen::Running || app.screen() == App::Screen::GameList, "Start: Runter aus dem Check-up geht zu Spiele zurueck");
     }
     {
         FakeService fk;

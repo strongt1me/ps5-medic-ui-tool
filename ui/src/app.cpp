@@ -582,15 +582,21 @@ void App::handle(Button b) {
     switch (screen_) {
         case Screen::Start:
             // Die grosse Kachel (0) liegt ueber den fuenf kleinen (1..5), die nebeneinander liegen: Hoch von jeder kleinen Kachel fuehrt
-            // gleich zur grossen, Runter von der grossen zur ersten kleinen (weiter mit Runter oder Rechts).
-            if (b == Button::Up) start_sel_ = 0;
-            else if (b == Button::L1) start_sel_ = std::max(start_sel_ - 1, 0);
+            // gleich zur grossen, Runter von der grossen wieder zu der kleinen Kachel, von der man gekommen ist (start_small_).
+            if (b == Button::Up) {
+                if (start_sel_ >= 1) start_small_ = start_sel_;
+                start_sel_ = 0;
+            } else if (b == Button::L1) start_sel_ = std::max(start_sel_ - 1, 0);
+            else if (b == Button::Down && start_sel_ == 0) start_sel_ = std::clamp(start_small_, 1, 5);
             else if (b == Button::Down || b == Button::R1) {
                 start_sel_ = std::min(start_sel_ + 1, 5);
             } else if (b == Button::Left && start_sel_ >= 2) --start_sel_;
             else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < 5) ++start_sel_;
             else if (b == Button::Cross) {
-                if (start_sel_ == 0) start_check();
+                if (start_sel_ == 0) {
+                    start_small_ = 1;  // wer den Check-up startet, beginnt beim naechsten Mal wieder bei der ersten kleinen Kachel
+                    start_check();
+                }
                 else if (start_sel_ == 1) open_checks();
                 else if (start_sel_ == 2) screen_ = Screen::Settings;
                 else if (start_sel_ == 3) open_error_codes();

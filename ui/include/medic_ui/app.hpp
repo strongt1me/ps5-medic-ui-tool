@@ -121,6 +121,7 @@ private:
     bool quit_ = false;
 
     int start_sel_ = 0;
+    int start_small_ = 1;  // kleine Kachel (1..5), von der man zur grossen hochgegangen ist: Ziel von Runter
 
     bool has_result_ = false;
     CheckResult result_;
