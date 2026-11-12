@@ -155,6 +155,11 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
             g.log_lines = std::move(hits);
         }
 
+    // Namen aus den Metadaten der Konsole (titles.names: /user/appmeta, PS4-param.sfo) fuer alle Titel, die noch keinen haben
+    if (const json* names = facts.get("titles.names"); names && names->is_object())
+        for (auto& [id, g] : games)
+            if (g.name.empty() && names->contains(id) && (*names)[id].is_string()) g.name = (*names)[id].get<std::string>();
+
     std::vector<GameInfo> out;
     out.reserve(games.size());
     for (auto& [id, g] : games) out.push_back(std::move(g));

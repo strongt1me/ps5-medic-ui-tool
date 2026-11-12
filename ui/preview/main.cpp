@@ -253,6 +253,9 @@ int main(int argc, char** argv) {
                 wa.handle(Button::Down);
                 wa.handle(Button::Cross);
                 png("30_check_list.png");
+                wa.handle(Button::Down);  // Zeile "Fruehere Check-ups" -> aufklappen
+                wa.handle(Button::Cross);
+                png("30b_check_list_open.png");
                 wa.handle(Button::Square);
                 png("31_repairs.png");
             }

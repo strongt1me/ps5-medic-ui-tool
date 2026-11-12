@@ -171,6 +171,7 @@ private:
     // Archiv der Check-ups: Liste, ein gespeicherter Check-up im Befund-Bildschirm ("viewing_old_": nur ansehen, nie reparieren) und Vergleich
     std::vector<medic::CheckSummary> chk_;
     int chk_sel_ = 0, chk_top_ = 0;
+    bool chk_expanded_ = false;  // Check-up-Verlauf: fruehere Check-ups aufgeklappt
     bool chk_unreadable_ = false;
     bool viewing_old_ = false;
     std::string view_ts_;

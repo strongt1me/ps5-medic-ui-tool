@@ -790,6 +790,50 @@ void collect_game_firmware(const Platform& p, Facts& f) {
     f.set("games.need_backport", std::move(need));
 }
 
+namespace {
+// "TITLE" aus einer param.sfo (PS4-Titel): Kopf "\0PSF", Schluesseltabelle ab Offset 8, Datentabelle ab 12, Anzahl bei 16, Eintraege zu 16 Bytes ab 20.
+std::string sfo_title(const std::string& d) {
+    auto u16 = [&](std::size_t o) { return static_cast<std::uint32_t>(static_cast<unsigned char>(d[o])) | (static_cast<std::uint32_t>(static_cast<unsigned char>(d[o + 1])) << 8); };
+    auto u32 = [&](std::size_t o) { return u16(o) | (u16(o + 2) << 16); };
+    if (d.size() < 20 || d.compare(0, 4, std::string("\0PSF", 4)) != 0) return {};
+    const std::size_t kt = u32(8), dt = u32(12), n = std::min<std::size_t>(u32(16), 256);
+    for (std::size_t i = 0; i < n; ++i) {
+        const std::size_t e = 20 + 16 * i;
+        if (e + 16 > d.size()) break;
+        const std::size_t k = kt + u16(e);
+        if (k >= d.size() || d.compare(k, 6, std::string("TITLE\0", 6)) != 0) continue;
+        const std::size_t off = dt + u32(e + 12), len = std::min<std::size_t>(u32(e + 4), 128);
+        if (off >= d.size()) return {};
+        std::string t = d.substr(off, std::min(len, d.size() - off));
+        t.resize(std::strlen(t.c_str()));
+        return t;
+    }
+    return {};
+}
+}  // namespace
+
+// titles.names: Anzeigenamen je Titel-Kennung aus den Metadaten der Konsole, auch fuer nicht eingehaengte Titel: /user/appmeta/<ID>/param.json
+// (PS5, und Homebrew mit param.json) und /system_data/priv/appmeta/<ID>/param.sfo (PS4). Nur lesen, nur Namen (D17).
+void collect_title_names(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    static const std::regex id_re("^(PPSA|CUSA)[0-9]{5}$");
+    json names = json::object();
+    std::size_t n = 0;
+    for (const auto& e : fs.list_dir("/user/appmeta")) {
+        if (!e.is_dir || !std::regex_match(e.name, id_re) || ++n > 600) continue;
+        std::string name, text;
+        if (fs.read_file(join_path(join_path("/user/appmeta", e.name), "param.json"), text) && text.size() <= (256u << 10)) {
+            const json j = json::parse(text, nullptr, false);
+            if (j.is_object()) name = app_title_name(j, std::string());
+        }
+        if (name.empty() && e.name.compare(0, 4, "CUSA") == 0 &&
+            fs.read_file(join_path(join_path("/system_data/priv/appmeta", e.name), "param.sfo"), text) && text.size() <= (64u << 10))
+            name = sfo_title(text);
+        if (!name.empty()) names[e.name] = name;
+    }
+    f.set("titles.names", std::move(names));
+}
+
 void collect_storage(const Platform& p, Facts& f) {
     json arr = json::array();
     for (auto& s : p.sys().storage()) {
@@ -1611,7 +1655,7 @@ void collect_app_registry(const Platform& p, Facts& f) {
 Facts collect_all(const Platform& p, const std::function<void(int, int)>& progress) {
     Facts f;
     json failed = json::array();
-    constexpr int kSteps = 22;  // 21 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
+    constexpr int kSteps = 23;  // 22 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
     int done = 0;
     // Jeder Collector einzeln: ein Fehler (z. B. beschaedigtes JSON in einer von Hand bearbeiteten Datei) beendet nicht den ganzen Check-up,
     // sondern wird als collector.failed vermerkt; die uebrigen Fakten bleiben gueltig (Audit 12. Nov. 2026)
@@ -1635,6 +1679,7 @@ Facts collect_all(const Platform& p, const std::function<void(int, int)>& progre
     MEDIC_RUN(collect_plugins);
     MEDIC_RUN(collect_apps);
     MEDIC_RUN(collect_game_firmware);
+    MEDIC_RUN(collect_title_names);
     MEDIC_RUN(collect_autoload);
     MEDIC_RUN(collect_payload_files);
     MEDIC_RUN(collect_helpers);

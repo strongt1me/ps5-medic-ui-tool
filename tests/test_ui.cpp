@@ -2931,6 +2931,13 @@ void checks_archive_tests() {
         press(app, {Button::Circle, Button::Down, Button::Cross});
         CHECK(app.screen() == App::Screen::CheckList, "Check-up-Verlauf: Start -> Verlauf zeigt die Check-ups");
         app.render(cv);
+        // Nur der aktuellste Check-up ist sichtbar; darunter die Zeile "Fruehere Check-ups". Weiter als bis dorthin geht es zugeklappt nicht;
+        // Kreuz auf dieser Zeile klappt auf (der Bildschirm bleibt), erst danach sind die aelteren waehlbar
+        press(app, {Button::Down, Button::Down});
+        app.render(cv);
+        press(app, {Button::Cross});
+        CHECK(app.screen() == App::Screen::CheckList, "Check-up-Verlauf: Kreuz auf der Zeile Fruehere klappt nur auf");
+        app.render(cv);
         press(app, {Button::Down, Button::Down});
         press(app, {Button::Cross});
         CHECK(app.screen() == App::Screen::Findings, "Check-up-Verlauf: Kreuz zeigt den gewaehlten Check-up");

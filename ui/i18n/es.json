@@ -485,5 +485,9 @@
   "title.system_app": "app del sistema",
   "detail.affects": "Afecta a: {list}",
   "detail.affects_more": "{list} y {n} más",
-  "games.d.name_unknown": "Nombre no encontrado"
+  "games.d.name_unknown": "Nombre no encontrado",
+  "games.d.name_gone": "No encontrado en la consola",
+  "checks.earlier": "Chequeos anteriores ({n})",
+  "checks.expand": "Mostrar",
+  "checks.collapse": "Ocultar"
 }

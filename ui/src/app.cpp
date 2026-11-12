@@ -15,7 +15,7 @@ namespace medic::ui {
 namespace {
 
 constexpr int W = App::kWidth, H = App::kHeight, M = 96;
-constexpr int kListVisible = 4, kHistVisible = 6, kErrVisible = 8, kChkVisible = 8, kCmpVisible = 13, kGameVisible = 8, kGdVisible = 5;
+constexpr int kListVisible = 4, kHistVisible = 6, kErrVisible = 8, kChkRows = 7, kChkBigH = 124, kChkToggleH = 64, kChkRowH = 76, kCmpVisible = 13, kGameVisible = 8, kGdVisible = 5;
 
 const Color kBg = rgb(14, 18, 24), kPanel = rgb(23, 29, 38), kPanelHi = rgb(33, 42, 56), kLine = rgb(42, 52, 66);
 const Color kText = rgb(232, 237, 242), kDim = rgb(141, 153, 168), kAccent = rgb(76, 154, 255);
@@ -477,6 +477,10 @@ void App::page_selection(int& sel, int& top, int count, int visible, int dir) {
     if (sel >= top + visible) sel = std::min(top + visible - 1, count - 1);
 }
 
+// Zeilen der Check-up-Liste: 0 = aktuellster Check-up (gross), 1 = "Fruehere Check-ups" (auf-/zuklappen), danach (aufgeklappt) die aelteren.
+static int chk_row_count(int n, bool expanded) { return n <= 1 ? n : (expanded ? n + 1 : 2); }
+static int chk_entry_of_row(int row, int n) { return row == 0 ? 0 : (row == 1 && n > 1 ? -1 : row - 1); }
+
 void App::open_history() {
     hist_ = svc_.history();
     std::reverse(hist_.begin(), hist_.end());  // neueste zuerst
@@ -487,6 +491,7 @@ void App::open_history() {
 void App::open_checks() {
     chk_ = svc_.checks();
     chk_sel_ = chk_top_ = 0;
+    chk_expanded_ = false;
     chk_unreadable_ = false;
     screen_ = Screen::CheckList;
 }
@@ -766,16 +771,25 @@ void App::handle(Button b) {
                 open_history();
             }
             break;
-        case Screen::CheckList:
-            if (b == Button::Up) move_selection(chk_sel_, chk_top_, static_cast<int>(chk_.size()), kChkVisible, -1);
-            else if (b == Button::Down) move_selection(chk_sel_, chk_top_, static_cast<int>(chk_.size()), kChkVisible, 1);
-            else if (b == Button::L1) page_selection(chk_sel_, chk_top_, static_cast<int>(chk_.size()), kChkVisible, -1);
-            else if (b == Button::R1) page_selection(chk_sel_, chk_top_, static_cast<int>(chk_.size()), kChkVisible, 1);
-            else if (b == Button::Cross) open_stored(chk_sel_);
-            else if (b == Button::Triangle) open_compare(chk_sel_);
+        case Screen::CheckList: {
+            const int n = static_cast<int>(chk_.size()), rows = chk_row_count(n, chk_expanded_), ent = chk_entry_of_row(chk_sel_, n);
+            if (b == Button::Up) move_selection(chk_sel_, chk_top_, rows, kChkRows, -1);
+            else if (b == Button::Down) move_selection(chk_sel_, chk_top_, rows, kChkRows, 1);
+            else if (b == Button::L1) page_selection(chk_sel_, chk_top_, rows, kChkRows, -1);
+            else if (b == Button::R1) page_selection(chk_sel_, chk_top_, rows, kChkRows, 1);
+            else if (b == Button::Cross) {
+                if (n > 1 && ent < 0) {  // "Fruehere Check-ups": auf- bzw. zuklappen, die Auswahl bleibt auf dieser Zeile
+                    chk_expanded_ = !chk_expanded_;
+                    chk_sel_ = 1;
+                    chk_top_ = 0;
+                } else {
+                    open_stored(ent);
+                }
+            } else if (b == Button::Triangle) open_compare(ent);
             else if (b == Button::Square) open_history();
             else if (b == Button::Circle) screen_ = Screen::Start;
             break;
+        }
         case Screen::GameList:
             if (b == Button::Up) move_selection(game_sel_, game_top_, static_cast<int>(games_.size()), kGameVisible, -1);
             else if (b == Button::Down) move_selection(game_sel_, game_top_, static_cast<int>(games_.size()), kGameVisible, 1);
@@ -1364,6 +1378,18 @@ void App::draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::strin
     int x = M;
     const int y = H - 92;
     c.fill_round_rect(40, H - 108, W - 80, 80, 22, rgba(255, 255, 255, 12));
+    // Lange Beschriftungen (Franzoesisch, Italienisch): Abstand verkleinern, damit nichts rechts abgeschnitten wird; reicht das nicht, kleinere Schrift
+    const int avail = W - 2 * M;
+    int sum = 0;
+    for (const auto& h : hints) sum += 54 + body().width(h.second);
+    const int n = static_cast<int>(hints.size());
+    const bool tiny = n > 1 && sum + 24 * (n - 1) > avail;
+    if (tiny) {
+        sum = 0;
+        for (const auto& h : hints) sum += 54 + small().width(h.second);
+    }
+    const int gap = n > 1 ? std::clamp((avail - sum) / (n - 1), 20, 56) : 56;
+    const Font& f = tiny ? small() : body();
     for (const auto& [g, label] : hints) {
         Color col = kText;
         switch (g) {
@@ -1374,9 +1400,8 @@ void App::draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::strin
             default: col = rgb(200, 208, 218); break;
         }
         c.draw_pad_glyph(g, x + 22, y + 22, 44, col);
-        body().draw(c, x + 54, y + (44 - body().line_height()) / 2, label, kText);
-        const int item_w = 54 + body().width(label);
-        x += item_w + 56;
+        f.draw(c, x + 54, y + (44 - f.line_height()) / 2, label, kText);
+        x += 54 + f.width(label) + gap;
     }
 }
 
@@ -1430,8 +1455,7 @@ void App::draw_start(Canvas& c) const {
         st_icon = sev_icon(worst);
         st_col = sev_color(worst);
     }
-    c.fill_round_rect(M + 36, 650, 136, 136, 40, rgba((st_col >> 16) & 0xFF, (st_col >> 8) & 0xFF, st_col & 0xFF, 34));
-    draw_icon(c, st_icon, M + 104, 718, 92, st_col, st_col);
+    draw_icon_badge(c, st_icon, M + 36, 650, 136, st_col);
     const int tx = M + 204, tw = W - 2 * M - 204 - 40;
     small().draw(c, tx, 624, S("start.last"), kDim);
     if (!has_result_) {
@@ -1527,8 +1551,7 @@ void App::draw_findings(Canvas& c) const {
         const Color sc = sev_color(f.severity);
         card(c, M, y, cw, ch, i == sel_);
         c.fill_round_rect(M, y + 16, 10, ch - 32, 5, sc);
-        c.fill_round_rect(M + 34, y + (ch - 76) / 2, 76, 76, 24, rgba((sc >> 16) & 0xFF, (sc >> 8) & 0xFF, sc & 0xFF, 40));
-        draw_icon(c, sev_icon(f.severity), M + 72, y + ch / 2, 54, sc, sc);
+        draw_icon_badge(c, sev_icon(f.severity), M + 34, y + (ch - 76) / 2, 76, sc);
         const int tx = M + 134;
         // Kopfzeile: Schweregrad-Marke und Kurztitel (gross); darunter die Erklaerung klein; rechts, ob sich etwas reparieren laesst
         const int bw = draw_badge(c, tx, y + 14, S(sev_key(f.severity)), sc);
@@ -1793,8 +1816,7 @@ void App::draw_fix_done(Canvas& c) const {
     c.fill_round_rect(M, 260, W - 2 * M, 400, 24, kPanel);
     {
         const Color rc = done_ok_ ? kOk : kCrit;
-        c.fill_round_rect(M + 60, 290, 104, 104, 32, rgba((rc >> 16) & 0xFF, (rc >> 8) & 0xFF, rc & 0xFF, 40));
-        draw_icon(c, done_ok_ ? Icon::Ok : Icon::Critical, M + 112, 342, 72, rc, rc);
+        draw_icon_badge(c, done_ok_ ? Icon::Ok : Icon::Critical, M + 60, 290, 104, rc);
     }
     title().draw(c, M + 196, 320, S(head), done_ok_ ? kOk : kCrit);
     int y = 410;
@@ -1838,8 +1860,7 @@ void App::draw_history(Canvas& c) const {
         const auto& t = hist_[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == hist_sel_);
         const Color sc = t.state == "applied" ? kOk : (t.state == "undone" ? kDim : kWarn);
-        c.fill_round_rect(M + 24, y + 18, 60, 60, 18, rgba((sc >> 16) & 0xFF, (sc >> 8) & 0xFF, sc & 0xFF, 40));
-        draw_icon(c, t.state == "applied" ? Icon::Ok : (t.state == "undone" ? Icon::Undo : Icon::Warning), M + 54, y + 48, 40, sc, sc);
+        draw_icon_badge(c, t.state == "applied" ? Icon::Ok : (t.state == "undone" ? Icon::Undo : Icon::Warning), M + 24, y + 18, 60, sc);
         // Was wurde gemacht (gross), wegen welches Problems und wann (klein); rechts der Zustand als Marke und die Zahl der Schritte
         const int rightw = 300;
         body().draw(c, M + 108, y + 12, elide(body(), fix_name(t.fix), cw - 108 - rightw - 32), kText);
@@ -1869,21 +1890,22 @@ void App::draw_checklist(Canvas& c) const {
         return;
     }
     small().draw(c, M + 4, 196, S("checks.sub"), kDim);
-    const int last = std::min(n, chk_top_ + kChkVisible);
-    if (n > kChkVisible) text_right(c, small(), W - M, 148, S.fmt("findings.range", {{"from", std::to_string(chk_top_ + 1)}, {"to", std::to_string(last)}, {"n", std::to_string(n)}}), kDim);
-    const int cw = W - 2 * M, ch = 76, gap = 8, y0 = 232;
-    int y = y0;
+    const int rows = chk_row_count(n, chk_expanded_);
+    const int cw = W - 2 * M, gap = 8, y0 = 236, ybottom = 944;
     // Marke mit Symbol und Zahl (z. B. Warnsymbol 2), rechtsbuendig bei `right`; liefert die Breite
     auto chip = [&](int right, int cy, Icon ic, Color col, const std::string& text) {
         const int w = 14 + 24 + 8 + small().width(text) + 16;
-        c.fill_round_rect(right - w, cy, w, 34, 17, rgba((col >> 16) & 0xFF, (col >> 8) & 0xFF, col & 0xFF, 44));
+        c.fill_round_rect(right - w, cy, w, 34, 17, rgba((col >> 16) & 0xFF, (col >> 8) & 0xFF, col & 0xFF, 40 + 4));
         draw_icon(c, ic, right - w + 14 + 12, cy + 17, 24, col, col);
         small().draw(c, right - w + 14 + 24 + 8, cy + 3, text, col);
         return w;
     };
-    for (int i = chk_top_; i < last; ++i, y += ch + gap) {
+    // Ein Check-up: Zustandssymbol, Zeitpunkt, Firmware und Regeln, Marken je Schweregrad und der Vergleich mit dem Check-up davor.
+    // big = der aktuellste, gross und abgesetzt.
+    auto entry = [&](int i, int y, bool big, bool selected) {
         const auto& e = chk_[static_cast<std::size_t>(i)];
-        card(c, M, y, cw, ch, i == chk_sel_);
+        const int ch = big ? kChkBigH : kChkRowH;
+        card(c, M, y, cw, ch, selected);
         const bool partial = e.untested > 0;
         Icon ic = Icon::Ok;
         Color col = kOk;
@@ -1891,23 +1913,22 @@ void App::draw_checklist(Canvas& c) const {
         else if (e.warning > 0) { ic = Icon::Warning; col = kWarn; }
         else if (e.info > 0) { ic = Icon::Info; col = kInfo; }
         else if (partial) { ic = Icon::Info; col = kInfo; }  // nicht alles gelesen: nie "in Ordnung" in Gruen
-        c.fill_round_rect(M + 18, y + 10, 56, 56, 18, rgba((col >> 16) & 0xFF, (col >> 8) & 0xFF, col & 0xFF, 40));
-        draw_icon(c, ic, M + 46, y + 38, 38, col, col);
-        body().draw(c, M + 94, y + 6, pretty_ts(e.ts), kText);
-        if (i == 0) {
-            const int bx = M + 94 + body().width(pretty_ts(e.ts)) + 20;
-            draw_badge(c, bx, y + 8, S("checks.latest"), kAccent);
-        }
-        small().draw(c, M + 94, y + 42, S.fmt("checks.line", {{"fw", e.fw.empty() ? "?" : e.fw}, {"rules", e.rules_version.empty() ? "?" : e.rules_version}}), kDim, cw - 900);
+        const int tile = big ? 84 : 56, tx = M + (big ? 120 : 94);
+        draw_icon_badge(c, ic, M + 18, y + (ch - tile) / 2, tile, col);
+        const int ty = big ? y + 18 : y + 6;
+        (big ? title() : body()).draw(c, tx, ty, pretty_ts(e.ts), kText);
+        if (big) draw_badge(c, tx + title().width(pretty_ts(e.ts)) + 24, ty + 8, S("checks.latest"), kAccent);
+        small().draw(c, tx, big ? y + 78 : y + 42, S.fmt("checks.line", {{"fw", e.fw.empty() ? "?" : e.fw}, {"rules", e.rules_version.empty() ? "?" : e.rules_version}}), kDim, cw - 900);
         // rechts oben: Marken je Schweregrad (Symbol und Zahl), sonst "keine Befunde"; darunter der Vergleich mit dem Check-up davor
         int x = M + cw - 28;
+        const int cy = big ? y + 20 : y + 8;
         if (e.total == 0) {
-            chip(x, y + 8, partial ? Icon::Info : Icon::Ok, partial ? kInfo : kOk, S(partial ? "checks.untested" : "checks.none"));
+            chip(x, cy, partial ? Icon::Info : Icon::Ok, partial ? kInfo : kOk, S(partial ? "checks.untested" : "checks.none"));
         } else {
             const std::pair<int, Severity> parts[3] = {{e.info, Severity::Info}, {e.warning, Severity::Warning}, {e.critical, Severity::Critical}};
             for (const auto& pr : parts) {
                 if (!pr.first) continue;
-                x -= chip(x, y + 8, sev_icon(pr.second), sev_color(pr.second), std::to_string(pr.first)) + 8;
+                x -= chip(x, cy, sev_icon(pr.second), sev_color(pr.second), std::to_string(pr.first)) + 8;
             }
         }
         std::string delta;
@@ -1920,20 +1941,41 @@ void App::draw_checklist(Canvas& c) const {
         } else if (static_cast<std::size_t>(n) < medic::kChecksListMax) {
             delta = S("checks.delta_first");
         }
-        if (!delta.empty()) text_right(c, small(), M + cw - 28, y + 46, delta, dcol);
+        if (!delta.empty()) text_right(c, small(), M + cw - 28, big ? y + 78 : y + 46, delta, dcol);
+    };
+    int y = y0;
+    int shown = 0;
+    for (int r = chk_top_; r < rows; ++r) {
+        const int ent = chk_entry_of_row(r, n);
+        const int h = r == 0 ? kChkBigH : (ent < 0 ? kChkToggleH : kChkRowH);
+        if (r > chk_top_ && y + h > ybottom) break;
+        if (ent >= 0) {
+            entry(ent, y, r == 0, r == chk_sel_);
+        } else {  // Zeile "Fruehere Check-ups": klappt die Liste auf und zu
+            card(c, M, y, cw, h, r == chk_sel_);
+            const float cx = static_cast<float>(M + 52), cyf = static_cast<float>(y + h / 2);
+            const float d = chk_expanded_ ? -7.f : 7.f;
+            c.stroke_polyline({{cx - 11.f, cyf - d / 2}, {cx, cyf + d / 2}, {cx + 11.f, cyf - d / 2}}, 4.f, kAccent);
+            body().draw(c, M + 92, y + (h - body().line_height()) / 2, S.fmt("checks.earlier", {{"n", std::to_string(n - 1)}}), kText);
+            text_right(c, small(), M + cw - 28, y + (h - small().line_height()) / 2, S(chk_expanded_ ? "checks.collapse" : "checks.expand"), kDim);
+        }
+        y += h + gap;
+        ++shown;
     }
-    if (n > kChkVisible) {  // Scrollleiste
-        const int track_h = kChkVisible * (ch + gap) - gap;
-        const int thumb_h = std::max(40, track_h * kChkVisible / n);
-        const int thumb_y = y0 + (track_h - thumb_h) * chk_top_ / std::max(n - kChkVisible, 1);
+    if (chk_expanded_ && rows > shown) {  // Scrollleiste
+        const int track_h = ybottom - y0;
+        const int thumb_h = std::max(40, track_h * shown / rows);
+        const int thumb_y = y0 + (track_h - thumb_h) * chk_top_ / std::max(rows - shown, 1);
         c.fill_round_rect(W - 64, y0, 8, track_h, 4, kPanel);
         c.fill_round_rect(W - 64, thumb_y, 8, thumb_h, 4, kDim);
     }
     if (chk_unreadable_) small().draw(c, M + 8, H - 138, S("checks.unreadable"), kWarn);
+    const int sel_entry = chk_entry_of_row(chk_sel_, n);
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
-    if (n > kChkVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
-    hints.emplace_back(PadGlyph::Cross, S("checks.view"));
-    if (chk_sel_ + 1 < n) hints.emplace_back(PadGlyph::Triangle, S("checks.compare"));
+    if (chk_expanded_ && rows > kChkRows) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
+    if (sel_entry < 0) hints.emplace_back(PadGlyph::Cross, S(chk_expanded_ ? "checks.collapse" : "checks.expand"));
+    else hints.emplace_back(PadGlyph::Cross, S("checks.view"));
+    if (sel_entry >= 0 && sel_entry + 1 < n) hints.emplace_back(PadGlyph::Triangle, S("checks.compare"));
     hints.emplace_back(PadGlyph::Square, S("checks.repairs"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
@@ -1964,8 +2006,7 @@ void App::draw_gamelist(Canvas& c) const {
         const bool has = !g.findings.empty();
         const Icon ic = has ? sev_icon(g.worst) : Icon::Gamepad;
         const Color col = has ? sev_color(g.worst) : kTintSlate;
-        c.fill_round_rect(M + 18, y + 10, 56, 56, 18, rgba((col >> 16) & 0xFF, (col >> 8) & 0xFF, col & 0xFF, 40));
-        draw_icon(c, ic, M + 46, y + 38, 38, col, col);
+        draw_icon_badge(c, ic, M + 18, y + 10, 56, col);
         body().draw(c, M + 94, y + 6, elide(body(), g.name.empty() ? g.titleid : g.name, cw - 640), kText);
         std::string kind = S("games.kind_none");
         if (!g.sources.empty()) {
@@ -2024,7 +2065,7 @@ void App::draw_gamedetail(Canvas& c) const {
             small().draw(c, cx + 18, 151, g.titleid, kText);
         }
         text_right(c, small(), W - M, 148, S.fmt("games.pos", {{"i", std::to_string(game_sel_ + 1)}, {"n", std::to_string(total)}}), kDim);
-        small().draw(c, M + 4, 196, (named ? std::string() : S(g.titleid.compare(0, 4, "NPXS") == 0 ? "title.system_app" : "games.d.name_unknown") + "  ·  ") + S.fmt("games.console_fw", {{"fw", result_.fw.empty() ? "?" : result_.fw}}), kDim);
+        small().draw(c, M + 4, 196, (named ? std::string() : S(g.titleid.compare(0, 4, "NPXS") == 0 ? "title.system_app" : (g.installed != 1 && g.sources.empty() ? "games.d.name_gone" : "games.d.name_unknown")) + "  ·  ") + S.fmt("games.console_fw", {{"fw", result_.fw.empty() ? "?" : result_.fw}}), kDim);
     }
 
     // Links: der Zustand des Spiels als Liste mit Statussymbol. Gruen = in Ordnung, Orange/Rot = Problem, Grau = nicht bekannt.
@@ -2032,14 +2073,12 @@ void App::draw_gamedetail(Canvas& c) const {
     c.fill_round_rect(px, py, pw, ph, 20, kPanel);
     int y = py + 10;
     enum class St { Ok, Warn, Crit, Info, Unknown };
-    auto tint = [](Color col, int a) { return rgba((col >> 16) & 0xFF, (col >> 8) & 0xFF, col & 0xFF, a); };
     auto row = [&](St st, const std::string& label, const std::string& value, const std::vector<std::string>& extra = {}) {
         const Color col = st == St::Ok ? kOk : st == St::Warn ? kWarn : st == St::Crit ? kCrit : st == St::Info ? kInfo : kDim;
         const Icon ic = st == St::Ok ? Icon::Ok : st == St::Warn ? Icon::Warning : st == St::Crit ? Icon::Critical : st == St::Info ? Icon::Info : Icon::Skip;
         const int lh = small().line_height();
         const int rh = 14 + lh + 2 + body().line_height() + 12 + static_cast<int>(extra.size()) * (lh + 4);
-        c.fill_round_rect(px + pad, y + 10, 52, 52, 16, tint(col, 40));
-        draw_icon(c, ic, px + pad + 26, y + 36, 32, col, col);
+        draw_icon_badge(c, ic, px + pad, y + 10, 52, col);
         const int tx = px + pad + 74, tw = pw - 2 * pad - 74;
         small().draw(c, tx, y + 8, label, kDim);
         body().draw(c, tx, y + 8 + lh + 2, elide(body(), value, tw), (st == St::Ok) ? kText : col);
@@ -2137,8 +2176,7 @@ void App::draw_gamedetail(Canvas& c) const {
             const Color sc = sev_color(f.severity);
             card(c, rx, cy, rw, ch, i == gd_sel_);
             c.fill_round_rect(rx, cy + 14, 8, ch - 28, 4, sc);
-            c.fill_round_rect(rx + 28, cy + (ch - 60) / 2, 60, 60, 18, tint(sc, 40));
-            draw_icon(c, sev_icon(f.severity), rx + 58, cy + ch / 2, 36, sc, sc);
+            draw_icon_badge(c, sev_icon(f.severity), rx + 28, cy + (ch - 60) / 2, 60, sc);
             const int tx = rx + 108, tw = rw - 108 - 28;
             body().draw(c, tx, cy + 12, elide(body(), finding_title(f), tw), kText);
             const auto lines = wrap_text(small(), finding_desc(f), tw, 2);
