@@ -25,6 +25,10 @@ Fuzzer: 270 000 Läufe über vier Startwerte ohne Absturz. UBSAN meldet nur Link
 - **Testhebel ohne Neubau:** liegt die (leere) Datei `/data/ps5medic/no_budget_syscall` auf der Konsole, lässt hbldr den Syscall `sys_set_budget(0)` weg. Test: Datei anlegen, UI starten, dann den Launcher erneut senden bzw. die Kachel drücken, während die UI läuft. Stürzt die Konsole dann nicht mehr ab, ist S1 bestätigt und der Syscall kann dauerhaft entfallen. Läuft die UI ohne ihn nicht (Zugriff auf `/data`), bleibt er an.
 - Nicht umgesetzt: Titelprüfung des Kindprozesses vor `pt_attach` (S3), `flock` zwischen Launcher/UI/Payload (S8) – beides ohne Konsole nicht prüfbar.
 
+## PS-Taste in der UI (12. Nov. 2026, Konsolentests)
+Befund: In der UI (Big App FAKE00000) führt die PS-Taste nicht zum Homescreen, es ertönt nur ein Ton; in Spielen und anderen Apps geht sie. Kein Tastenereignis erreicht die UI (`ui.log`). **Nicht die Ursache** (je einzeln getestet): neue UI (SDK 0.45) gegen alte UI vom 9. Nov. (`dist/`), neuer gegen alter Launcher, Marker `no_budget_syscall`, Testhebel `raise_skip` (`uid` und `caps` nicht setzen). SDL ruft `sceSystemServiceHideSplashScreen` selbst auf. Offen: Verhalten anderer per hbldr/websrv gestarteter Apps, Start über die Kachel statt per ELF. Ausweg bis dahin: Kreis beendet die UI (sie schließt ihre App selbst).
+Testhebel im Launcher (nur Diagnose): `/data/ps5medic/no_budget_syscall` (leer) und `/data/ps5medic/raise_skip` (Text `uid` und/oder `caps`).
+
 ## Offen, braucht die Konsole (nicht belegt, nur Verdacht)
 1. `hbldr.c`: `sys_set_budget(0)` (Syscall 0x23b) beim Neustart der Big App – der Autor nennt auf älteren Firmwares Kernel-Panic; passt zum Absturzmuster „UI läuft, Kachel startet neu“. Test: Syscall weglassen (UI nutzt absolute Pfade).
 2. Tracer-Prozess wird mitten im ptrace-Tausch beendet (neue Launcher-Instanz) – Phase in einer Sperrdatei führen.

@@ -225,6 +225,7 @@ bigapp_launch_thread(void* arg) {
 
 int (*hbldr_kill_guard)(int app_id) = 0;
 int hbldr_skip_budget = 0;
+int hbldr_raise_skip = 0;
 
 
 /**

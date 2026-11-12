@@ -314,6 +314,17 @@ pid_t launch_ui(const char* why) {
     struct stat mk;
     hbldr_skip_budget = ::stat("/data/ps5medic/no_budget_syscall", &mk) == 0 ? 1 : 0;
     if (hbldr_skip_budget) trace("Marker no_budget_syscall gefunden: Syscall sys_set_budget wird weggelassen");
+    {  // Testdatei: Text "uid" und/oder "caps" in /data/ps5medic/raise_skip (Diagnose der PS-Taste, kein Dauerbetrieb)
+        hbldr_raise_skip = 0;
+        if (std::FILE* rf = std::fopen("/data/ps5medic/raise_skip", "r")) {
+            char buf[64] = {0};
+            std::fread(buf, 1, sizeof buf - 1, rf);
+            std::fclose(rf);
+            if (std::strstr(buf, "uid")) hbldr_raise_skip |= 1;
+            if (std::strstr(buf, "caps")) hbldr_raise_skip |= 2;
+            trace("raise_skip gefunden, Maske " + std::to_string(hbldr_raise_skip));
+        }
+    }
     set_phase("launching");
     pid_t pid = -1;
     // Hoechstens zwei Versuche, und nur wenn keine Big App laeuft: ein haengender LaunchApp-Aufruf kann sonst noch eine App starten, die

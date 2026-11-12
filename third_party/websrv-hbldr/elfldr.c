@@ -326,6 +326,7 @@ elfldr_payload_args(pid_t pid) {
 
 int
 elfldr_raise_privileges(pid_t pid) {
+  extern int hbldr_raise_skip;  /* PS5 Medic: Testhebel, siehe hbldr.h (1 = uid nicht auf 0, 2 = Faehigkeiten nicht setzen) */
   static const uint8_t caps[16] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 				   0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff};
   intptr_t vnode;
@@ -339,10 +340,10 @@ elfldr_raise_privileges(pid_t pid) {
   if(kernel_set_proc_jaildir(pid, 0)) {
     return -1;
   }
-  if(kernel_set_ucred_uid(pid, 0)) {
+  if(!(hbldr_raise_skip & 1) && kernel_set_ucred_uid(pid, 0)) {
     return -1;
   }
-  if(kernel_set_ucred_caps(pid, caps)) {
+  if(!(hbldr_raise_skip & 2) && kernel_set_ucred_caps(pid, caps)) {
     return -1;
   }
 
