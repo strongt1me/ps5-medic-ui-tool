@@ -193,7 +193,7 @@ int main(int argc, char** argv) {
             ga.handle(Button::Cross);
             png("23_game_finding.png");
         }
-        {  // Startbild und Zeiger (Pfeil und Hand)
+        {  // Startbild
             App sp(svc, lang);
             Canvas img(App::kWidth, App::kHeight);
             if (load_splash(img)) {
@@ -202,16 +202,6 @@ int main(int argc, char** argv) {
                 if (!write_png((out / "00_splash.png").string(), canvas, scale)) throw std::runtime_error("PNG nicht schreibbar: 00_splash.png");
                 ++shots;
             }
-            App pg(svc, lang);
-            auto png = [&](const char* name) {
-                pg.render(canvas);
-                if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
-                ++shots;
-            };
-            pg.pointer_move(1180, 760);
-            png("24_pointer_arrow.png");
-            pg.pointer_move(560, 470);  // ueber der Kachel "Einstellungen"
-            png("25_pointer_hand.png");
         }
         std::cout << shots << " Bilder in " << out.string() << "\n";
     } catch (const std::exception& e) {

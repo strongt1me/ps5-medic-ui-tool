@@ -4,7 +4,7 @@
 
 # PS5 Medic
 
-**Diagnostic, explications en clair et réparation sûre pour les consoles PS5 jailbreakées, sous forme d'application plein écran pour la télévision, avec la DualSense (ou un pointeur).**
+**Diagnostic, explications en clair et réparation sûre pour les consoles PS5 jailbreakées, sous forme d'application plein écran pour la télévision, avec la DualSense.**
 
 ![Version](https://img.shields.io/badge/Version-0.4.0--dev-1f6feb)
 ![Firmware](https://img.shields.io/badge/FW-4.00%20%C3%A0%2014.10-2ea44f)
@@ -61,8 +61,8 @@
       Rapport Markdown avec code QR pour le téléphone (IP/MAC, ID de compte et numéros de série sont retirés). Nouvelles règles et nouveaux codes d'erreur par fichier ou, uniquement après confirmation, depuis votre propre adresse, <b>uniquement avec une signature Ed25519 valide</b>.
     </td>
     <td valign="top">
-      <h3>🌍 Cinq langues, manette et pointeur</h3>
-      Deutsch, English, Français, Italiano et Español (Paramètres, le choix est enregistré). Utilisation avec la DualSense ; en complément, un <b>pointeur</b> (stick droit, R3 ou pression sur le pavé tactile pour cliquer ; les événements de souris sont également compris) avec flèche et main.
+      <h3>🌍 Cinq langues</h3>
+      Deutsch, English, Français, Italiano et Español (Paramètres, le choix est enregistré). Utilisation avec la DualSense .
     </td>
   </tr>
 </table>
@@ -80,7 +80,7 @@
   </tr>
   <tr>
     <td><img src="docs/images/fr/10_error_codes.png" alt="Codes d'erreur"></td>
-    <td><img src="docs/images/fr/25_pointer_hand.png" alt="Pointeur : main au-dessus d'une tuile"></td>
+    <td></td>
   </tr>
 </table>
 
@@ -117,7 +117,6 @@ Le Launcher ne ferme que les fausses applications Homebrew (dont le Starter de l
 | Aperçu de la réparation | ✕ confirmer (écrit) · ◯ annuler |
 | Jeux | ↑↓ choisir · ✕ ouvrir · L1/R1 autre jeu · ◯ retour |
 | Historique, autotest, codes d'erreur | la barre d'aide en bas indique les touches |
-| Pointeur | le **stick droit** le déplace, **R3** ou une **pression sur le pavé tactile** clique (comme ✕) ; un clic sur la barre d'aide actionne la touche. Au-dessus des éléments sélectionnables, le pointeur devient une main ; il disparaît dès que l'on utilise les touches. Nouveau : testé sur PC, pas encore éprouvé sur la console. |
 
 ## Payload de diagnostic
 

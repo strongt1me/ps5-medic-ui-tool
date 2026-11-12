@@ -4,7 +4,7 @@
 
 # PS5 Medic
 
-**Chequeo, diagnóstico en lenguaje claro y reparación segura para consolas PS5 con jailbreak, como aplicación a pantalla completa para el televisor con DualSense (o puntero).**
+**Chequeo, diagnóstico en lenguaje claro y reparación segura para consolas PS5 con jailbreak, como aplicación a pantalla completa para el televisor con DualSense.**
 
 ![Versión](https://img.shields.io/badge/Versión-0.4.0--dev-1f6feb)
 ![Firmware](https://img.shields.io/badge/FW-4.00%20a%2014.10-2ea44f)
@@ -61,8 +61,8 @@
       Informe en Markdown con código QR para el móvil (se eliminan IP/MAC, IDs de cuenta y números de serie). Reglas y códigos de error nuevos por archivo o, solo tras confirmación, desde la dirección propia, <b>solo con una firma Ed25519 válida</b>.
     </td>
     <td valign="top">
-      <h3>🌍 Cinco idiomas, mando y puntero</h3>
-      Deutsch, English, Français, Italiano y Español (Ajustes; la elección se guarda). Manejo con el DualSense; además un <b>puntero</b> (stick derecho, R3 o pulsación del touchpad para hacer clic; también se entienden los eventos de ratón) con flecha y mano.
+      <h3>🌍 Cinco idiomas</h3>
+      Deutsch, English, Français, Italiano y Español (Ajustes; la elección se guarda). Manejo con el DualSense.
     </td>
   </tr>
 </table>
@@ -80,7 +80,7 @@
   </tr>
   <tr>
     <td><img src="docs/images/es/10_error_codes.png" alt="Códigos de error"></td>
-    <td><img src="docs/images/es/25_pointer_hand.png" alt="Puntero: mano sobre un mosaico"></td>
+    <td></td>
   </tr>
 </table>
 
@@ -117,7 +117,6 @@ El launcher solo cierra aplicaciones falsas de Homebrew (entre ellas el Starter 
 | Vista previa de reparación | ✕ confirmar (escribe) · ◯ cancelar |
 | Juegos | ↑↓ elegir · ✕ abrir · L1/R1 otro juego · ◯ atrás |
 | Historial, autotest, códigos de error | La barra de ayuda inferior muestra los botones |
-| Puntero | El **stick derecho** lo mueve, **R3** o la **pulsación del touchpad** hacen clic (como ✕); un clic en la barra de ayuda pulsa el botón. Sobre las opciones el puntero se convierte en una mano; desaparece en cuanto se usan los botones. Novedad: probado en el PC, aún no probado en la consola. |
 
 ## Payload de diagnóstico
 

@@ -4,7 +4,7 @@
 
 # PS5 Medic
 
-**Check-up, plain-language diagnosis and safe repair for jailbroken PS5 consoles, as a full-screen app for the TV with DualSense (or pointer).**
+**Check-up, plain-language diagnosis and safe repair for jailbroken PS5 consoles, as a full-screen app for the TV with DualSense.**
 
 ![Version](https://img.shields.io/badge/Version-0.4.0--dev-1f6feb)
 ![Firmware](https://img.shields.io/badge/FW-4.00%20to%2014.10-2ea44f)
@@ -61,8 +61,8 @@
       Markdown report with a QR code for your phone (IP/MAC, account IDs and serial numbers are removed). New rules and error codes by file or, only on confirmation, from your own address, <b>only with a valid Ed25519 signature</b>.
     </td>
     <td valign="top">
-      <h3>🌍 Five languages, controller and pointer</h3>
-      Deutsch, English, Français, Italiano and Español (settings, the choice is saved). Operation with the DualSense; in addition a <b>pointer</b> (right stick, R3 or touchpad press to click; mouse events are understood as well) with arrow and hand.
+      <h3>🌍 Five languages</h3>
+      Deutsch, English, Français, Italiano and Español (settings, the choice is saved). Operation with the DualSense.
     </td>
   </tr>
 </table>
@@ -80,7 +80,7 @@
   </tr>
   <tr>
     <td><img src="docs/images/en/10_error_codes.png" alt="Error codes"></td>
-    <td><img src="docs/images/en/25_pointer_hand.png" alt="Pointer: hand over a tile"></td>
+    <td></td>
   </tr>
 </table>
 
@@ -117,7 +117,6 @@ The launcher closes only Homebrew fake apps (including the tile's starter) and s
 | Repair preview | ✕ confirm (writes) · ◯ cancel |
 | Games | ↑↓ select · ✕ open · L1/R1 other game · ◯ back |
 | History, self-test, error codes | The hint bar at the bottom shows the buttons |
-| Pointer | **Right stick** moves it, **R3** or **touchpad press** clicks (like ✕); a click on the hint bar presses the button. Over selectable items the pointer turns into a hand; it disappears as soon as buttons are used. New: tested on the PC, not yet tried on the console. |
 
 ## Diagnostic payload
 

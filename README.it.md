@@ -4,7 +4,7 @@
 
 # PS5 Medic
 
-**Check-up, diagnosi in linguaggio semplice e riparazione sicura per console PS5 con jailbreak, come app a schermo intero per il televisore con DualSense (o puntatore).**
+**Check-up, diagnosi in linguaggio semplice e riparazione sicura per console PS5 con jailbreak, come app a schermo intero per il televisore con DualSense.**
 
 ![Versione](https://img.shields.io/badge/Versione-0.4.0--dev-1f6feb)
 ![Firmware](https://img.shields.io/badge/FW-da%204.00%20a%2014.10-2ea44f)
@@ -61,8 +61,8 @@
       Rapporto in Markdown con codice QR per il telefono (IP/MAC, ID account e numeri di serie vengono rimossi). Nuove regole e nuovi codici di errore tramite file oppure, solo dopo conferma, dal proprio indirizzo, <b>solo con firma Ed25519 valida</b>.
     </td>
     <td valign="top">
-      <h3>🌍 Cinque lingue, controller e puntatore</h3>
-      Deutsch, English, Français, Italiano ed Español (Impostazioni, la scelta viene salvata). Uso con il DualSense; in più un <b>puntatore</b> (stick destro, R3 o pressione del touchpad per cliccare; vengono riconosciuti anche gli eventi del mouse) con freccia e mano.
+      <h3>🌍 Cinque lingue</h3>
+      Deutsch, English, Français, Italiano ed Español (Impostazioni, la scelta viene salvata). Uso con il DualSense.
     </td>
   </tr>
 </table>
@@ -80,7 +80,7 @@
   </tr>
   <tr>
     <td><img src="docs/images/it/10_error_codes.png" alt="Codici di errore"></td>
-    <td><img src="docs/images/it/25_pointer_hand.png" alt="Puntatore: mano su un riquadro"></td>
+    <td></td>
   </tr>
 </table>
 
@@ -117,7 +117,6 @@ Il launcher chiude solo le app Homebrew false (tra cui lo starter del riquadro) 
 | Anteprima della riparazione | ✕ confermare (scrive) · ◯ annullare |
 | Giochi | ↑↓ scegliere · ✕ aprire · L1/R1 altro gioco · ◯ indietro |
 | Cronologia, autotest, codici di errore | la barra dei suggerimenti in basso mostra i tasti |
-| Puntatore | lo **stick destro** lo muove, **R3** o la **pressione del touchpad** clicca (come ✕); un clic sulla barra dei suggerimenti preme il tasto. Sopra le voci selezionabili il puntatore diventa una mano; scompare non appena si usano i tasti. Novità: provato al PC, non ancora provato sulla console. |
 
 ## Payload di diagnosi
 

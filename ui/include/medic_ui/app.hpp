@@ -33,17 +33,8 @@ public:
     void update();
     void render(Canvas& c) const;
 
-    // Startbild: wird einige Sekunden gezeigt (jede Taste und jeder Klick ueberspringt es), danach der Startbildschirm.
+    // Startbild: wird einige Sekunden gezeigt (jede Taste ueberspringt es), danach der Startbildschirm.
     void show_splash(const Canvas& image);
-
-    // Zeiger (Maus bzw. rechter Stick des Controllers): Bildschirmposition in Bildpunkten (0..kWidth, 0..kHeight). Der Zeiger erscheint
-    // bei der ersten Bewegung und verschwindet nach einigen Sekunden ohne Bewegung; ueber einer Auswahl wird er zur Hand.
-    void pointer_move(int x, int y);
-    void pointer_click();  // wie ein Druck auf die Auswahl unter dem Zeiger (Kreuz) bzw. auf die Taste in der Hinweisleiste
-    bool pointer_visible() const { return pointer_on_; }
-    int pointer_x() const { return px_; }
-    int pointer_y() const { return py_; }
-    bool pointer_over_target() const;  // liegt der Zeiger ueber etwas Anklickbarem (nach dem letzten Zeichnen)
 
     Screen screen() const { return screen_; }
     Lang lang() const { return lang_; }
@@ -116,17 +107,6 @@ private:
     void handle_usertest(Button b);
     void finish_usertest(medic::TestStatus st, const std::string& reason, double missing);
 
-    // Anklickbare Flaechen: jede Zeichenfunktion meldet sie beim Zeichnen (hot), pointer_click wertet die oberste unter dem Zeiger aus.
-    enum class HotKind { Press, Start, Finding, Check, History, Game, GameFinding, Error, Settings, Language };
-    struct Hot {
-        int x, y, w, h;
-        HotKind kind;
-        int index;
-        int press;  // Taste (Button) die danach gedrueckt wird, -1: nur auswaehlen
-    };
-    void hot(int x, int y, int w, int h, HotKind kind, int index, int press) const;
-    void draw_pointer(Canvas& c) const;
-
     std::string finding_text(const medic::Finding& f) const;
     std::string fix_name(const std::string& id) const;
     const medic::Finding* current_finding() const;
@@ -136,10 +116,6 @@ private:
     Lang lang_;
     std::unique_ptr<Canvas> splash_;
     int splash_until_ = 0;
-    mutable std::vector<Hot> hot_;
-    int px_ = kWidth / 2, py_ = kHeight / 2;
-    bool pointer_on_ = false;
-    int pointer_seen_ = 0;
     Screen screen_ = Screen::Start;
     int tick_ = 0;
     bool quit_ = false;

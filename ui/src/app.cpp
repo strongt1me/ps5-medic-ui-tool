@@ -575,7 +575,6 @@ void App::begin_fix(int index, Screen origin) {
 }
 
 void App::handle(Button b) {
-    pointer_on_ = false;  // wer Tasten benutzt, braucht den Zeiger nicht (pointer_click holt ihn danach zurueck)
     if (screen_ == Screen::Splash) {  // jede Taste ueberspringt das Startbild
         screen_ = Screen::Start;
         return;
@@ -868,60 +867,9 @@ void App::show_splash(const Canvas& image) {
     screen_ = Screen::Splash;
 }
 
-void App::hot(int x, int y, int w, int h, HotKind kind, int index, int press) const { hot_.push_back({x, y, w, h, kind, index, press}); }
-
-bool App::pointer_over_target() const {
-    for (const Hot& h : hot_)
-        if (px_ >= h.x && px_ < h.x + h.w && py_ >= h.y && py_ < h.y + h.h) return true;
-    return false;
-}
-
-void App::pointer_move(int x, int y) {
-    px_ = std::clamp(x, 0, kWidth - 1);
-    py_ = std::clamp(y, 0, kHeight - 1);
-    pointer_on_ = true;
-    pointer_seen_ = tick_;
-}
-
-void App::pointer_click() {
-    pointer_seen_ = tick_;
-    if (screen_ == Screen::Splash) {
-        screen_ = Screen::Start;
-        return;
-    }
-    for (auto it = hot_.rbegin(); it != hot_.rend(); ++it) {  // zuletzt gezeichnet = oben
-        const Hot& h = *it;
-        if (px_ < h.x || px_ >= h.x + h.w || py_ < h.y || py_ >= h.y + h.h) continue;
-        switch (h.kind) {
-            case HotKind::Press: break;
-            case HotKind::Start: start_sel_ = h.index; break;
-            case HotKind::Finding: sel_ = h.index; break;
-            case HotKind::Check: chk_sel_ = h.index; break;
-            case HotKind::History: hist_sel_ = h.index; break;
-            case HotKind::Game: game_sel_ = h.index; break;
-            case HotKind::GameFinding: gd_sel_ = h.index; break;
-            case HotKind::Error: err_sel_ = h.index; break;
-            case HotKind::Settings: settings_sel_ = h.index; break;
-            case HotKind::Language:
-                if (h.index >= 0 && h.index < static_cast<int>(sizeof kAllLangs / sizeof kAllLangs[0])) {
-                    lang_ = kAllLangs[h.index];
-                    svc_.set_language(lang_code(lang_));
-                }
-                return;
-        }
-        if (h.press >= 0) {
-            handle(static_cast<Button>(h.press));
-            pointer_on_ = true;
-            pointer_seen_ = tick_;
-        }
-        return;
-    }
-}
-
 void App::update() {
     ++tick_;
     if (screen_ == Screen::Splash && tick_ >= splash_until_) screen_ = Screen::Start;
-    if (pointer_on_ && tick_ - pointer_seen_ > 150) pointer_on_ = false;  // etwa 5 Sekunden ohne Bewegung
     if (pending_check_ && running_rendered_) {  // erst ausfuehren, wenn "Pruefe..." sichtbar war
         pending_check_ = false;
         result_ = svc_.run_check();
@@ -955,63 +903,6 @@ void App::update() {
     }
 }
 
-// ---- Zeiger -----------------------------------------------------------------
-
-namespace {
-
-// Gefuelltes Vieleck (gerade-ungerade-Regel), Eckpunkte relativ zu (ox, oy).
-void fill_poly(Canvas& c, const std::vector<std::pair<float, float>>& pts, int ox, int oy, Color col) {
-    float miny = 1e9f, maxy = -1e9f;
-    for (const auto& p : pts) {
-        miny = std::min(miny, p.second);
-        maxy = std::max(maxy, p.second);
-    }
-    for (int y = static_cast<int>(miny); y <= static_cast<int>(maxy); ++y) {
-        const float fy = static_cast<float>(y) + 0.5f;
-        std::vector<float> xs;
-        for (std::size_t i = 0; i < pts.size(); ++i) {
-            const auto& a = pts[i];
-            const auto& b = pts[(i + 1) % pts.size()];
-            if ((a.second <= fy && b.second > fy) || (b.second <= fy && a.second > fy)) xs.push_back(a.first + (fy - a.second) * (b.first - a.first) / (b.second - a.second));
-        }
-        std::sort(xs.begin(), xs.end());
-        for (std::size_t i = 0; i + 1 < xs.size(); i += 2)
-            for (int x = static_cast<int>(xs[i] + 0.5f); x < static_cast<int>(xs[i + 1] + 0.5f); ++x) c.put(ox + x, oy + y, col);
-    }
-}
-
-}  // namespace
-
-void App::draw_pointer(Canvas& c) const {
-    const Color fg = rgb(255, 255, 255), edge = rgb(18, 22, 30);
-    if (pointer_over_target()) {
-        // Hand mit ausgestrecktem Zeigefinger (Spitze des Fingers = Zeigerpunkt), 1,6-fach vergroessert
-        struct Part { int x, y, w, h, r; };
-        const Part parts[] = {{-5, 0, 11, 30, 5},      // Zeigefinger
-                              {7, 12, 10, 22, 5},      // Mittelfinger
-                              {18, 15, 10, 20, 5},     // Ringfinger
-                              {29, 19, 9, 17, 4},      // kleiner Finger
-                              {-20, 26, 10, 19, 5},    // Daumen
-                              {-11, 24, 51, 28, 12}};  // Handflaeche
-        auto k = [](int v) { return v * 16 / 10; };
-        const int ox = px_, oy = py_;
-        for (int d = 0; d < 8; ++d) {
-            static const int dx[8] = {-2, 0, 2, -2, 2, -2, 0, 2}, dy[8] = {-2, -2, -2, 0, 0, 2, 2, 2};
-            for (const Part& p : parts) c.fill_round_rect(ox + k(p.x) + dx[d], oy + k(p.y) + dy[d], k(p.w), k(p.h), k(p.r), edge);
-        }
-        for (const Part& p : parts) c.fill_round_rect(ox + k(p.x), oy + k(p.y), k(p.w), k(p.h), k(p.r), fg);
-        // feine Linien zwischen den Fingern
-        for (int x : {6, 17, 28}) c.fill_rect(ox + k(x), oy + k(30), 1, k(12), rgb(150, 160, 175));
-    } else {
-        const std::vector<std::pair<float, float>> arrow = {{0, 0}, {0, 30}, {7.5f, 23}, {13, 35}, {19, 32.5f}, {13.5f, 21}, {23, 21}};
-        for (int d = 0; d < 8; ++d) {
-            static const int dx[8] = {-2, 0, 2, -2, 2, -2, 0, 2}, dy[8] = {-2, -2, -2, 0, 0, 2, 2, 2};
-            fill_poly(c, arrow, px_ + dx[d], py_ + dy[d], edge);
-        }
-        fill_poly(c, arrow, px_, py_, fg);
-    }
-}
-
 // ---- Darstellung ------------------------------------------------------------
 
 void App::render(Canvas& c) const {
@@ -1019,10 +910,8 @@ void App::render(Canvas& c) const {
         bg_ = std::make_unique<Canvas>(c.width(), c.height());
         build_background(*bg_);
     }
-    hot_.clear();
     if (screen_ == Screen::Splash && splash_) {
         c.copy_from(*splash_);
-        if (pointer_on_) draw_pointer(c);
         return;
     }
     c.copy_from(*bg_);
@@ -1056,7 +945,6 @@ void App::render(Canvas& c) const {
             break;
         case Screen::UserTest: draw_usertest(c); break;
     }
-    if (pointer_on_) draw_pointer(c);
 }
 
 void App::open_selftest() {
@@ -1360,15 +1248,6 @@ void App::draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::strin
         c.draw_pad_glyph(g, x + 22, y + 22, 44, col);
         body().draw(c, x + 54, y + (44 - body().line_height()) / 2, label, kText);
         const int item_w = 54 + body().width(label);
-        int press = -1;  // Steuerkreuz und Schultertasten gehen nicht per Klick
-        switch (g) {
-            case PadGlyph::Cross: press = static_cast<int>(Button::Cross); break;
-            case PadGlyph::Circle: press = static_cast<int>(Button::Circle); break;
-            case PadGlyph::Square: press = static_cast<int>(Button::Square); break;
-            case PadGlyph::Triangle: press = static_cast<int>(Button::Triangle); break;
-            default: break;
-        }
-        if (press >= 0) hot(x - 12, H - 104, item_w + 24, 72, HotKind::Press, 0, press);
         x += item_w + 56;
     }
 }
@@ -1377,7 +1256,6 @@ void App::draw_start(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     // Grosse Kachel: Check-up starten (Verlauf, Herzschlaglinie als Bild, Stethoskop)
     const bool sel0 = start_sel_ == 0;
-    hot(M, 160, W - 2 * M, 190, HotKind::Start, 0, static_cast<int>(Button::Cross));
     c.fill_round_rect_vgradient(M, 160, W - 2 * M, 190, 28, sel0 ? rgb(88, 170, 255) : rgb(56, 104, 176), sel0 ? rgb(38, 92, 210) : rgb(28, 58, 112));
     c.stroke_polyline(ecg_points(M + 1020, W - 2 * M - 1080, 262, 58, 400, 0), 6, sel0 ? rgb(176, 214, 255) : rgb(96, 136, 196));
     if (sel0) c.stroke_round_rect(M, 160, W - 2 * M, 190, 28, 4, rgb(200, 226, 255));
@@ -1400,7 +1278,6 @@ void App::draw_start(Canvas& c) const {
     for (int i = 0; i < 5; ++i) {
         const int x = M + i * (cw + gap);
         card(c, x, 380, cw, 190, start_sel_ == i + 1);
-        hot(x, 380, cw, 190, HotKind::Start, i + 1, static_cast<int>(Button::Cross));
         draw_icon_badge(c, icons[i], x + 22, 404, 64, tints[i]);
         body().draw(c, x + 98, 404 + (64 - body().line_height()) / 2, S(keys[i][0]), kText, cw - 112);
         int ty = 488;
@@ -1514,7 +1391,6 @@ void App::draw_findings(Canvas& c) const {
         const auto& f = fs[static_cast<std::size_t>(i)];
         const Color sc = sev_color(f.severity);
         card(c, M, y, cw, ch, i == sel_);
-        hot(M, y, cw, ch, HotKind::Finding, i, static_cast<int>(Button::Cross));
         c.fill_round_rect(M, y + 16, 10, ch - 32, 5, sc);
         c.fill_round_rect(M + 34, y + (ch - 76) / 2, 76, 76, 24, rgba((sc >> 16) & 0xFF, (sc >> 8) & 0xFF, sc & 0xFF, 40));
         draw_icon(c, sev_icon(f.severity), M + 72, y + ch / 2, 54, sc, sc);
@@ -1817,7 +1693,6 @@ void App::draw_history(Canvas& c) const {
     for (int i = hist_top_; i < last; ++i, y += ch + gap) {
         const auto& t = hist_[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == hist_sel_);
-        hot(M, y, cw, ch, HotKind::History, i, -1);  // nur auswaehlen: Rueckgaengig bleibt ein bewusster Druck auf die Hinweisleiste
         const Color sc = t.state == "applied" ? kOk : (t.state == "undone" ? kDim : kWarn);
         c.fill_round_rect(M + 24, y + 18, 60, 60, 18, rgba((sc >> 16) & 0xFF, (sc >> 8) & 0xFF, sc & 0xFF, 40));
         draw_icon(c, t.state == "applied" ? Icon::Ok : (t.state == "undone" ? Icon::Undo : Icon::Warning), M + 54, y + 48, 40, sc, sc);
@@ -1853,7 +1728,6 @@ void App::draw_checklist(Canvas& c) const {
     for (int i = chk_top_; i < last; ++i, y += ch + gap) {
         const auto& e = chk_[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == chk_sel_);
-        hot(M, y, cw, ch, HotKind::Check, i, static_cast<int>(Button::Cross));
         const bool partial = e.untested > 0;
         Icon ic = Icon::Ok;
         Color col = kOk;
@@ -1924,7 +1798,6 @@ void App::draw_gamelist(Canvas& c) const {
     for (int i = game_top_; i < last; ++i, y += ch + gap) {
         const auto& g = games_[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == game_sel_);
-        hot(M, y, cw, ch, HotKind::Game, i, static_cast<int>(Button::Cross));
         const bool has = !g.findings.empty();
         const Icon ic = has ? sev_icon(g.worst) : Icon::Gamepad;
         const Color col = has ? sev_color(g.worst) : kTintSlate;
@@ -2076,7 +1949,6 @@ void App::draw_gamedetail(Canvas& c) const {
             const auto& f = result_.findings[fi];
             const Color sc = sev_color(f.severity);
             card(c, rx, cy, rw, ch, i == gd_sel_);
-            hot(rx, cy, rw, ch, HotKind::GameFinding, i, static_cast<int>(Button::Cross));
             c.fill_round_rect(rx, cy + 14, 8, ch - 28, 4, sc);
             draw_icon(c, sev_icon(f.severity), rx + 44, cy + 36, 40, sc, sc);
             const int tx = rx + 82;
@@ -2165,7 +2037,6 @@ void App::draw_settings(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     title_icon(c, Icon::Gear, kTintSlate, S("settings.title"));
     card(c, M, 230, W - 2 * M, 150, settings_sel_ == 0);
-    hot(M, 230, W - 2 * M, 150, HotKind::Settings, 0, -1);
     draw_icon_badge(c, Icon::Globe, M + 36, 266, 78, kTintViolet);
     body().draw(c, M + 144, 262, S("settings.language"), kText);
     small().draw(c, M + 144, 316, S("settings.note"), kDim);
@@ -2177,12 +2048,10 @@ void App::draw_settings(Canvas& c) const {
         x -= w;
         const bool on = l == lang_;
         c.fill_round_rect(x, 262, w, 56, 28, on ? kAccent : kLine);
-        hot(x, 262, w, 56, HotKind::Language, 4 - static_cast<int>(it - std::rbegin(kAllLangs)), -1);
         body().draw(c, x + 24, 262 + (56 - body().line_height()) / 2, name, on ? rgb(255, 255, 255) : kDim);
         x -= 12;
     }
     card(c, M, 410, W - 2 * M, 150, settings_sel_ == 1);
-    hot(M, 410, W - 2 * M, 150, HotKind::Settings, 1, static_cast<int>(Button::Cross));
     draw_icon_badge(c, Icon::Download, M + 36, 446, 78, kTintTeal);
     body().draw(c, M + 144, 442, S("settings.rules_update"), kText);
     small().draw(c, M + 144, 496, S("settings.rules_update_sub"), kDim);
@@ -2336,7 +2205,6 @@ void App::draw_error_codes(Canvas& c) const {
     for (int i = err_top_; i < last; ++i, y += ch + gap) {
         const auto& e = errors_.codes[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == err_sel_);
-        hot(M, y, cw, ch, HotKind::Error, i, static_cast<int>(Button::Cross));
         const int ty = y + (ch - body().line_height()) / 2;
         draw_icon(c, e.level == "doc" ? Icon::Ok : Icon::Info, M + 52, y + ch / 2, 40, level_color(e), level_color(e));
         body().draw(c, M + 94, ty, e.id, kText);

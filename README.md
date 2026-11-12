@@ -4,7 +4,7 @@
 
 # PS5 Medic
 
-**Check-up, Klartext-Diagnose und sichere Reparatur für gejailbreakte PS5-Konsolen, als Vollbild-App für den Fernseher mit DualSense (oder Zeiger).**
+**Check-up, Klartext-Diagnose und sichere Reparatur für gejailbreakte PS5-Konsolen, als Vollbild-App für den Fernseher mit DualSense.**
 
 ![Version](https://img.shields.io/badge/Version-0.4.0--dev-1f6feb)
 ![Firmware](https://img.shields.io/badge/FW-4.00%20bis%2014.10-2ea44f)
@@ -61,8 +61,8 @@
       Markdown-Bericht mit QR-Code fürs Handy (IP/MAC, Konto-IDs, Seriennummern werden entfernt). Neue Regeln und Fehlercodes per Datei oder, nur auf Bestätigung, von der eigenen Adresse, <b>nur mit gültiger Ed25519-Signatur</b>.
     </td>
     <td valign="top">
-      <h3>🌍 Fünf Sprachen, Controller und Zeiger</h3>
-      Deutsch, English, Français, Italiano und Español (Einstellungen, die Wahl wird gespeichert). Bedienung mit dem DualSense; zusätzlich ein <b>Zeiger</b> (rechter Stick, R3 oder Touchpad-Druck zum Klicken; Maus-Ereignisse werden ebenfalls verstanden) mit Pfeil und Hand.
+      <h3>🌍 Fünf Sprachen</h3>
+      Deutsch, English, Français, Italiano und Español (Einstellungen, die Wahl wird gespeichert). Bedienung mit dem DualSense.
     </td>
   </tr>
 </table>
@@ -80,7 +80,7 @@
   </tr>
   <tr>
     <td><img src="docs/images/de/10_error_codes.png" alt="Fehlercodes"></td>
-    <td><img src="docs/images/de/25_pointer_hand.png" alt="Zeiger: Hand über einer Kachel"></td>
+    <td></td>
   </tr>
 </table>
 
@@ -117,7 +117,6 @@ Der Launcher schließt nur Homebrew-Fake-Apps (darunter den Starter der Kachel) 
 | Reparatur-Vorschau | ✕ bestätigen (schreibt) · ◯ abbrechen |
 | Spiele | ↑↓ wählen · ✕ öffnen · L1/R1 anderes Spiel · ◯ zurück |
 | Verlauf, Selbsttest, Fehlercodes | Hinweisleiste unten zeigt die Tasten |
-| Zeiger | **rechter Stick** bewegt ihn, **R3** oder **Touchpad-Druck** klickt (wie ✕); ein Klick auf die Hinweisleiste drückt die Taste. Über Auswahlen wird der Zeiger zur Hand; er verschwindet, sobald man Tasten benutzt. Neu: am PC getestet, an der Konsole noch nicht erprobt. |
 
 ## Diagnose-Payload
 

@@ -3009,8 +3009,8 @@ void start_nav_tests() {
     }
 }
 
-void pointer_tests() {
-    // Startbild: jede Taste, jeder Klick und der Ablauf der Zeit fuehren zum Startbildschirm
+void splash_tests() {
+    // Startbild: jede Taste, der Ablauf der Zeit fuehren zum Startbildschirm
     {
         FakeService fk;
         Canvas img(App::kWidth, App::kHeight);
@@ -3031,57 +3031,6 @@ void pointer_tests() {
             for (int i = 0; i < 200 && app.screen() == App::Screen::Splash; ++i) app.update();
             CHECK(app.screen() == App::Screen::Start, "Startbild: nach einigen Sekunden der Startbildschirm");
         }
-        {
-            App app(fk);
-            app.show_splash(img);
-            app.pointer_move(500, 500);
-            app.pointer_click();
-            CHECK(app.screen() == App::Screen::Start, "Startbild: ein Klick ueberspringt es");
-        }
-    }
-    // Zeiger: sichtbar nach der Bewegung, Hand ueber Kacheln, Klick wie Kreuz
-    {
-        FakeService fk;
-        App app(fk);
-        Canvas cv(App::kWidth, App::kHeight);
-        CHECK(!app.pointer_visible(), "Zeiger: anfangs unsichtbar");
-        app.render(cv);
-        app.pointer_move(1180, 760);  // leere Flaeche
-        app.render(cv);
-        CHECK(app.pointer_visible() && !app.pointer_over_target(), "Zeiger: sichtbar, ueber leerer Flaeche ein Pfeil");
-        app.pointer_move(560, 470);  // Kachel "Einstellungen"
-        app.render(cv);
-        CHECK(app.pointer_over_target(), "Zeiger: ueber einer Kachel zeigt er die Hand");
-        app.pointer_click();
-        CHECK(app.screen() == App::Screen::Settings, "Zeiger: Klick auf die Kachel oeffnet die Einstellungen");
-        app.render(cv);
-        // Sprache per Klick auf den Wahlknopf (Chips rechts in der ersten Zeile)
-        const Lang before = app.lang();
-        app.pointer_move(1500, 290);
-        app.render(cv);
-        app.pointer_click();
-        CHECK(app.screen() == App::Screen::Settings && (app.lang() != before || before == Lang::Fr), "Zeiger: Klick auf einen Sprachknopf wechselt die Sprache");
-        // Hinweisleiste: Kreis = Zurueck
-        app.render(cv);
-        app.pointer_move(180, 1010);  // erster Eintrag der Hinweisleiste liegt links unten
-        app.render(cv);
-        app.pointer_click();
-        // egal welcher Eintrag links liegt: der Zeiger ueber der Leiste ist ein anklickbares Ziel und fuehrt nicht ins Leere
-        CHECK(app.screen() == App::Screen::Settings || app.screen() == App::Screen::Start, "Zeiger: Klick auf die Hinweisleiste bleibt in einem gueltigen Bildschirm");
-        // nach einigen Sekunden ohne Bewegung verschwindet der Zeiger
-        for (int i = 0; i < 200; ++i) app.update();
-        CHECK(!app.pointer_visible(), "Zeiger: verschwindet ohne Bewegung");
-    }
-    // Zeiger auf dem Startbildschirm: grosse Kachel startet den Check-up (wie Kreuz)
-    {
-        FakeService fk;
-        App app(fk);
-        Canvas cv(App::kWidth, App::kHeight);
-        app.render(cv);
-        app.pointer_move(700, 250);
-        app.render(cv);
-        app.pointer_click();
-        CHECK(app.screen() == App::Screen::Running, "Zeiger: Klick auf die grosse Kachel startet den Check-up");
     }
 }
 
@@ -3149,7 +3098,7 @@ void ui_tests() {
     checks_archive_tests();
     games_tests();
     start_nav_tests();
-    pointer_tests();
+    splash_tests();
     icon_tests();
     shot_hook_tests();
     usertest_ui_tests();
