@@ -13,6 +13,7 @@ add_library(medic STATIC
   libmedic/src/collectors.cpp
   libmedic/src/collectors_stack.cpp
   libmedic/src/rules.cpp
+  libmedic/src/finding.cpp
   libmedic/src/checks.cpp
   libmedic/src/games.cpp
   libmedic/src/history.cpp

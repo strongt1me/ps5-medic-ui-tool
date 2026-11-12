@@ -1,0 +1,32 @@
+/mnt/c/Users/stron/Documents/ps5-medic/.claude/worktrees/upbeat-wescoff-193043/build-native/obj/ui_src_font_data.cpp.o: \
+  /mnt/c/Users/stron/Documents/ps5-medic/.claude/worktrees/upbeat-wescoff-193043/ui/src/font_data.cpp \
+  /mnt/c/Users/stron/Documents/ps5-medic/.claude/worktrees/upbeat-wescoff-193043/ui/src/font_data.hpp \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/cstddef \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__assert \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__assertion_handler \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__config \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__config_site \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__verbose_abort \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__availability \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__type_traits/enable_if.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__type_traits/integral_constant.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__type_traits/is_integral.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__type_traits/remove_cv.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__type_traits/remove_const.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__type_traits/remove_volatile.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/version \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/stddef.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/stddef.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/sys/cdefs.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/sys/_null.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/sys/_types.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/machine/_types.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/x86/_types.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/machine/_limits.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/x86/_limits.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/cstdint \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/stdint.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/stdint.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/machine/_stdint.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/x86/_stdint.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/sys/_stdint.h

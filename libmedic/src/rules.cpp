@@ -297,37 +297,7 @@ constexpr std::size_t kMaxBindings = 100000;
 
 }  // namespace
 
-const char* to_string(Severity s) {
-    switch (s) {
-        case Severity::Critical: return "critical";
-        case Severity::Warning: return "warning";
-        case Severity::Info: return "info";
-    }
-    return "info";
-}
-
-Confidence default_confidence(const std::string& verified) {
-    Confidence c;
-    if (verified == "doc") {
-        c.level = "high";
-        c.basis = "doc";
-    } else if (verified == "community") {
-        c.level = "medium";
-        c.basis = "community";
-    } else {
-        c.level = "low";
-        c.basis = "unknown";
-    }
-    return c;
-}
-
-Confidence effective_confidence(const Finding& f) {
-    Confidence c = f.confidence;
-    const Confidence d = default_confidence(f.verified);
-    if (c.level.empty()) c.level = d.level;
-    if (c.basis.empty()) c.basis = d.basis;
-    return c;
-}
+// to_string(Severity), default_confidence und effective_confidence stehen in finding.cpp (ohne Ausnahmen, auch in der nativen App)
 
 namespace {
 

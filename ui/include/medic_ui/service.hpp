@@ -118,7 +118,11 @@ public:
     }
     // Selbsttest (libmedic/include/medic/selftest.hpp): nur lesende Tests. begin sammelt frische Fakten und setzt den Absturz-Marker (false: kein
     // Schreibzugriff, der Lauf geht trotzdem), run fuehrt einen Test aus, end schreibt Ergebnis und setzt den Marker auf "done".
+#ifdef MEDIC_NATIVE_APP
+    virtual std::vector<medic::TestDef> selftest_defs() { return {}; }  // die native App kennt die Tests nicht selbst, der Dienst liefert sie
+#else
     virtual std::vector<medic::TestDef> selftest_defs() { return medic::selftest_registry(); }
+#endif
     virtual std::vector<medic::TestResult> selftest_last() { return {}; }
     virtual bool selftest_begin(const std::vector<std::string>& ids) {
         (void)ids;

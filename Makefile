@@ -221,6 +221,17 @@ deploy-title: title
 	done
 	@echo "Hochgeladen. ShadowMount+ legt die Kachel \"PS5 Medic\" unter Medien innerhalb von Sekunden an. Voraussetzung beim Start: der ELF-Lader (Port 9021) laeuft und der Ordner PS5MEDIC (make deploy-ui) liegt in /data/homebrew/."
 
+# Die Oberflaeche als native App (eigener Titel, siehe docs/NATIVE.md): `make native-ui` baut build-native/<NATIVE_ID>, `make deploy-native` legt sie
+# per FTP nach /data/homebrew/<NATIVE_ID> (ShadowMount+ legt die Kachel an). Test-Kachel neben dem Starter FAKE42007.
+NATIVE_ID := FAKE42009
+native-ui:
+	bash title/build_native_ui.sh $(NATIVE_ID)
+
+deploy-native: native-ui
+	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (FTP-Server auf Port $(PS5_FTP_PORT) muss laufen)"; exit 1; }
+	for f in eboot.bin sce_module/libc.prx sce_sys/icon0.png sce_sys/param.json; do 	    curl --fail --ftp-create-dirs -T build-native/$(NATIVE_ID)/$$f ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/$(NATIVE_ID)/$$f || exit 1; 	done
+	@echo "Hochgeladen. ShadowMount+ legt die Kachel \"PS5 Medic (nativ)\" unter Medien an."
+
 # Signierte Regeln fuer den Download (nur am PC; der Privatschluessel liegt ausserhalb des Repositorys).
 # Ablauf: Regeln aendern, db_version hochzaehlen, `make sign-rules`, `make serve-rules`; auf der Konsole: Einstellungen -> Regel-Update -> Herunterladen.
 SIGN_KEY ?= $(HOME)/.ps5medic/rules-signing.key

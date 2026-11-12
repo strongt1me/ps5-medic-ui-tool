@@ -876,18 +876,7 @@ bool valid_ts(const std::string& ts) {
 
 }  // namespace
 
-const char* to_string(TestStatus s) {
-    switch (s) {
-        case TestStatus::NotRun: return "not_run";
-        case TestStatus::Passed: return "passed";
-        case TestStatus::Warn: return "warn";
-        case TestStatus::Failed: return "failed";
-        case TestStatus::Error: return "error";
-        case TestStatus::Cancelled: return "cancelled";
-        case TestStatus::Skipped: return "skipped";
-    }
-    return "not_run";
-}
+// to_string(TestStatus) steht in finding.cpp (ohne Ausnahmen, auch in der nativen App)
 
 TestStatus test_status_from_string(const std::string& s) {
     for (TestStatus x : {TestStatus::Passed, TestStatus::Warn, TestStatus::Failed, TestStatus::Error, TestStatus::Cancelled, TestStatus::Skipped})

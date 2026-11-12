@@ -9,17 +9,26 @@ namespace medic {
 
 bool qr_encode(const std::string& text, QrCode& out) {
     out = QrCode{};
+#if defined(__cpp_exceptions)
     try {
+#else
+    // Native App ohne Ausnahmen: die Aufrufer halten den Text unter kQrMaxBytes, das passt in jede QR-Version
+    {
+#endif
         const qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(text.c_str(), qrcodegen::QrCode::Ecc::MEDIUM);
         out.size = qr.getSize();
         out.modules.assign(static_cast<std::size_t>(out.size) * static_cast<std::size_t>(out.size), 0);
         for (int y = 0; y < out.size; ++y)
             for (int x = 0; x < out.size; ++x) out.modules[static_cast<std::size_t>(y * out.size + x)] = qr.getModule(x, y) ? 1 : 0;
         return true;
+#if defined(__cpp_exceptions)
     } catch (const std::length_error&) {  // qrcodegen::data_too_long
         out = QrCode{};
         return false;
     }
+#else
+    }
+#endif
 }
 
 std::string qr_to_text(const QrCode& qr) {

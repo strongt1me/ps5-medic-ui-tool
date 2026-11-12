@@ -154,10 +154,6 @@ std::vector<MetricChange> metric_changes(const RuleSet& rs, const std::vector<st
     return out;
 }
 
-std::string urgency_of(const Finding& f) {
-    int level = f.severity == Severity::Critical ? 2 : (f.severity == Severity::Warning ? 1 : 0);
-    if (f.status == "recurring" && f.seen_runs >= 3 && effective_confidence(f).level != "low") level = std::min(2, level + 1);
-    return level == 2 ? "high" : (level == 1 ? "medium" : "low");
-}
+// urgency_of steht in finding.cpp (ohne Dateizugriff, auch in der nativen App)
 
 }  // namespace medic
