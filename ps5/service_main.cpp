@@ -17,9 +17,6 @@
 #include "medic_ui/splash.hpp"
 
 #include <poll.h>
-#include <fstream>
-#include <sstream>
-#include <nlohmann/json.hpp>
 #include <signal.h>
 #include <time.h>
 
@@ -64,24 +61,9 @@ void trace(const std::string& raw) {
     }
 }
 
-// Diagnose der Ladezeit (12. Nov. 2026): Datei lesen, nur parsen, dann das volle Laden
-void profile_file(const char* path) {
-    const std::uint32_t t0 = now_ms();
-    std::ifstream in(path, std::ios::binary);
-    std::ostringstream ss;
-    ss << in.rdbuf();
-    const std::string text = ss.str();
-    const std::uint32_t t1 = now_ms();
-    const nlohmann::json j = nlohmann::json::parse(text, nullptr, false);
-    const std::uint32_t t2 = now_ms();
-    trace(std::string("Messung ") + path + ": lesen " + std::to_string(t1 - t0) + " ms (" + std::to_string(text.size()) + " Byte), parsen " +
-          std::to_string(t2 - t1) + " ms, gueltig=" + (j.is_discarded() ? "nein" : "ja"));
-}
-
 medic::RuleSet load_rules() {
     for (const char* path : kRulesCandidates) {
         if (!std::filesystem::exists(path)) continue;
-        profile_file(path);
         try {
             auto rules = medic::load_rules_from_file(path);
             trace("Regeln: " + rules.db_version + " (" + std::to_string(rules.rules.size()) + ") aus " + path);
@@ -97,7 +79,6 @@ medic::RuleSet load_rules() {
 medic::ErrorCodeSet load_error_codes() {
     for (const char* path : kErrorCodesCandidates) {
         if (!std::filesystem::exists(path)) continue;
-        profile_file(path);
         try {
             auto codes = medic::load_error_codes_from_file(path);
             trace("Fehlercodes: " + codes.db_version + " (" + std::to_string(codes.codes.size()) + ") aus " + path);

@@ -153,7 +153,9 @@ void build_background(Canvas& bg, const Canvas* image) {
             float col[3];
             for (int k = 0; k < 3; ++k) col[k] = top[k] + (bottom[k] - top[k]) * ty;
             for (const auto& g : glows) {
-                const float t = std::hypot(static_cast<float>(x) - g.cx, static_cast<float>(y) - g.cy) / g.r;
+                const float dx = static_cast<float>(x) - g.cx, dy = static_cast<float>(y) - g.cy;
+                if (dx > g.r || dx < -g.r || dy > g.r || dy < -g.r) continue;  // ausserhalb des Quadrats um den Lichtfleck: kein Einfluss
+                const float t = std::sqrt(dx * dx + dy * dy) / g.r;  // statt std::hypot (auf der Konsole sehr langsam, der Aufbau kostete 1,8 s)
                 if (t >= 1.0f) continue;
                 const float f = (1.0f - t) * (1.0f - t) * g.a;
                 col[0] += (g.cr - col[0]) * f;
@@ -172,8 +174,8 @@ void build_background(Canvas& bg, const Canvas* image) {
                 mix *= 1.0f - 0.35f * std::clamp((static_cast<float>(y) - static_cast<float>(h - 140)) / 140.0f, 0.0f, 1.0f);  // unten (Hinweisleiste)
                 {  // das Wappen mit dem Kreuz (oben in der Mitte) liegt sonst hinter Titelzeilen und Listenkoepfen
                     const float ex = (static_cast<float>(x) - 962.0f) / 360.0f, ey = (static_cast<float>(y) - 215.0f) / 250.0f;
-                    const float t = std::clamp(1.0f - std::sqrt(ex * ex + ey * ey), 0.0f, 1.0f);
-                    mix *= 1.0f - 0.80f * t;
+                    const float e2 = ex * ex + ey * ey;
+                    if (e2 < 1.0f) mix *= 1.0f - 0.80f * (1.0f - std::sqrt(e2));  // ausserhalb der Ellipse ist t = 0
                 }
                 const float dim = 0.60f;
                 col[0] += (ix * dim - col[0]) * mix;
