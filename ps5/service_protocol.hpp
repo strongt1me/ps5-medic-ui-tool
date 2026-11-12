@@ -7,6 +7,7 @@
 //                   'B' Streifen    (u16 y0, u16 Zeilen, dann Zeilen*Breite ARGB-Pixel, 0xAARRGGBB little endian)
 //                   'P' Bild fertig (leer): jetzt anzeigen
 //                   'Q' Ende        (leer): die Oberflaeche wurde beendet, App schliessen
+//                   'G' Fortschritt (u8 Prozent 0..100): Ladestand des Dienstes, die App zeigt ihn im Balken des Startbilds
 //   App -> Dienst:  'S' Pad-Zustand (u32 Tasten wie ScePad, u8 linker Stick x, u8 y, u8 rechter x, u8 y)
 //                   'X' Dienst beenden (leer)
 #pragma once
@@ -26,7 +27,7 @@ constexpr int kLoaderPort = 9021;
 constexpr int kWidth = 1920, kHeight = 1080;
 constexpr int kBandRows = 8;  // Rastergroesse, in dem Aenderungen erkannt werden
 
-constexpr char kHello = 'H', kBand = 'B', kPresent = 'P', kQuit = 'Q', kPad = 'S', kShutdown = 'X';
+constexpr char kHello = 'H', kBand = 'B', kPresent = 'P', kQuit = 'Q', kProgress = 'G', kPad = 'S', kShutdown = 'X';
 
 inline void put32(std::uint8_t* p, std::uint32_t v) {
     for (int i = 0; i < 4; ++i) p[i] = static_cast<std::uint8_t>(v >> (8 * i));

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/text_policy.hpp"
 
+#include <initializer_list>
 #include <regex>
+#include <string>
 #include <stdexcept>
 #include <vector>
 
@@ -51,9 +53,28 @@ void walk(const json& j, const std::string& path, const std::string& what) {
     }
 }
 
+// Notwendige Bedingung fuer jedes der Muster oben: ein Hauptwort (firmware, ...system..., sistema, micrologiciel) UND ein Verb bzw. "neueste"
+// (update, upgrade, aktualisier, actualis/actualiz, aggiorn, mise, mettre, neueste, neuste, latest, newest). Fehlt eines, kann keines der Muster
+// greifen -- die std::regex-Suche (mit icase und "[^.\n]{0,80}") ist dann unnoetig. Sie kostete auf der Konsole 1,4 s bis 2,1 s beim Laden der
+// Regeln und Fehlercodes (Messung 12. Nov. 2026). Die Treffer bleiben dieselben; die Vorpruefung ist nur schneller.
+bool contains_any(const std::string& low, std::initializer_list<const char*> words) {
+    for (const char* w : words)
+        if (low.find(w) != std::string::npos) return true;
+    return false;
+}
+
+bool may_match(const std::string& text) {
+    std::string low = text;
+    for (char& c : low)
+        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    return contains_any(low, {"firmware", "syst", "sistema", "micrologiciel"}) &&
+           contains_any(low, {"update", "upgrade", "aktualisier", "actualis", "actualiz", "aggiorn", "mise", "mettre", "neueste", "neuste", "latest", "newest"});
+}
+
 }  // namespace
 
 std::string find_system_update_advice(const std::string& text) {
+    if (!may_match(text)) return {};
     for (const std::regex& re : patterns()) {
         std::smatch m;
         if (std::regex_search(text, m, re)) return m.str();

@@ -194,6 +194,32 @@ using medic::ui::Font;
 // Bild des Dienstes ist dasselbe Startbild, der Uebergang faellt also nicht auf. Ohne Startbild ein einfacher dunkler Hintergrund.
 Canvas* g_splash = nullptr;
 
+// Der Fortschrittsbalken des Startbilds (ui/assets/splash.jpg, unten links, 1920x1080): innen x 237..657, y 962..980. Er wird mit einem eigenen
+// Balken aus 14 Segmenten uebermalt, die sich nach dem Fortschritt fuellen (Farben aus dem Bild).
+void draw_progress(Canvas& c, float percent) {
+    using medic::ui::rgb;
+    if (g_splash) c.copy_from(*g_splash);
+    else c.clear(rgb(12, 18, 32));
+    constexpr int kX = 237, kY = 962, kH = 19, kSegments = 14, kPitch = 30, kSegW = 26;
+    c.fill_rect(kX - 2, kY - 1, kSegments * kPitch + 2, kH + 2, rgb(15, 32, 58));
+    const float full = percent / 100.0f * kSegments;
+    for (int k = 0; k < kSegments; ++k) {
+        const int x = kX + k * kPitch;
+        if (static_cast<float>(k + 1) <= full) {
+            c.fill_vgradient(x, kY, kSegW, kH, rgb(71, 201, 253), rgb(20, 106, 181));
+        } else if (static_cast<float>(k) < full) {  // das gerade fuellende Segment: anteilig, vorn mit hellem Rand
+            const int w = static_cast<int>((full - static_cast<float>(k)) * kSegW);
+            c.fill_rect(x, kY, kSegW, kH, rgb(22, 46, 78));
+            if (w > 0) {
+                c.fill_vgradient(x, kY, w, kH, rgb(71, 201, 253), rgb(20, 106, 181));
+                c.fill_rect(x + w - 2 < x ? x : x + w - 2, kY, 2, kH, rgb(163, 198, 230));
+            }
+        } else {
+            c.fill_rect(x, kY, kSegW, kH, rgb(22, 46, 78));
+        }
+    }
+}
+
 void draw_status(Canvas& c, const char* line1, const char* line2) {
     if (g_splash) c.copy_from(*g_splash);
     else c.clear(medic::ui::rgb(12, 18, 32));
@@ -233,6 +259,7 @@ public:
     explicit StreamReader(std::uint32_t* screen) : screen_(screen) {}
     bool frame_ready = false;
     bool quit = false;
+    int progress = 0;  // letzter 'G'-Wert des Dienstes (0..100)
 
     // false: Verbindung weg
     bool pump(int fd) {
@@ -300,6 +327,7 @@ private:
     void finish_message() {
         if (type_ == medic::proto::kPresent) frame_ready = true;
         if (type_ == medic::proto::kQuit) quit = true;
+        if (type_ == medic::proto::kProgress && skip_[0] <= 100) progress = skip_[0];
         head_got_ = 0;
         type_ = 0;
     }
@@ -375,17 +403,28 @@ int main() {
         draw_status(status, a, b);
         show(status.data());
     };
+    // Balken des Startbilds: zeigt weich nachlaufend dem Ziel entgegen (nie rueckwaerts, nie voll vor dem ersten Bild)
+    float shown = 0, target = 4;
+    auto bar_frame = [&](float to) {
+        if (to > target) target = to;
+        if (target > 99) target = 99;
+        shown += (target - shown) * 0.10f + 0.04f;  // naehert sich dem Ziel, bleibt aber nie stehen
+        if (shown > target) shown = target;
+        draw_progress(status, shown);
+        show(status.data());
+    };
 
     // Ein Bild zeigen, damit der Bildschirm nicht schwarz bleibt, waehrend der Dienst startet
-    show_status("Dienst wird gestartet ...", "");
-    show_status("Dienst wird gestartet ...", "");
-    trace("Statusbild angezeigt");
+    bar_frame(4);
+    bar_frame(4);
+    trace("Startbild mit Balken angezeigt");
 
     int sock = -1;
     bool first_frame_logged = false;
     for (;;) {
         // --- Verbindung herstellen (notfalls den Dienst starten) ---
         if (sock < 0) {
+            bar_frame(8);
             sock = medic::proto::connect_local(medic::proto::kPort, 2);
             if (sock < 0) {
                 const int rc = send_service_elf();
@@ -396,10 +435,9 @@ int main() {
                     sceKernelUsleep(3000000);
                     continue;
                 }
-                for (int i = 0; i < 40 && sock < 0; ++i) {
-                    show_status("Dienst wird gestartet ...", "");
-                    sock = medic::proto::connect_local(medic::proto::kPort, 2);
-                    if (sock < 0) sceKernelUsleep(500000);
+                for (int i = 0; i < 400 && sock < 0; ++i) {  // bis etwa 20 s, der Balken laeuft dabei weiter
+                    for (int k = 0; k < 3; ++k) bar_frame(14);
+                    if (i % 5 == 0) sock = medic::proto::connect_local(medic::proto::kPort, 2);
                 }
             }
             if (sock < 0) {
@@ -411,6 +449,7 @@ int main() {
             trace("Mit dem Dienst verbunden");
             reader = StreamReader(screen.data());
             first_frame_logged = false;
+            bar_frame(22);
         }
 
         // --- Pad lesen und senden ---
@@ -456,11 +495,19 @@ int main() {
         }
         if (reader.frame_ready) {
             reader.frame_ready = false;
-            show(screen.data());
-            if (!first_frame_logged) {
+            if (!first_frame_logged) {  // der Balken laeuft kurz voll, dann erscheint die Oberflaeche
                 first_frame_logged = true;
+                target = 100;
+                for (int k = 0; k < 6; ++k) {
+                    shown += (100 - shown) * 0.5f;
+                    draw_progress(status, shown);
+                    show(status.data());
+                }
                 trace("Erstes Bild des Dienstes angezeigt");
             }
+            show(screen.data());
+        } else if (!first_frame_logged) {
+            bar_frame(22.0f + static_cast<float>(reader.progress) * 0.73f);  // 22 % (verbunden) bis 95 % (Dienst bereit)
         } else {
             (void)sceKernelUsleep(8000);
         }

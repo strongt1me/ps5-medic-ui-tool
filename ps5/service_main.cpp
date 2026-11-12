@@ -17,6 +17,9 @@
 #include "medic_ui/splash.hpp"
 
 #include <poll.h>
+#include <fstream>
+#include <sstream>
+#include <nlohmann/json.hpp>
 #include <signal.h>
 #include <time.h>
 
@@ -61,9 +64,24 @@ void trace(const std::string& raw) {
     }
 }
 
+// Diagnose der Ladezeit (12. Nov. 2026): Datei lesen, nur parsen, dann das volle Laden
+void profile_file(const char* path) {
+    const std::uint32_t t0 = now_ms();
+    std::ifstream in(path, std::ios::binary);
+    std::ostringstream ss;
+    ss << in.rdbuf();
+    const std::string text = ss.str();
+    const std::uint32_t t1 = now_ms();
+    const nlohmann::json j = nlohmann::json::parse(text, nullptr, false);
+    const std::uint32_t t2 = now_ms();
+    trace(std::string("Messung ") + path + ": lesen " + std::to_string(t1 - t0) + " ms (" + std::to_string(text.size()) + " Byte), parsen " +
+          std::to_string(t2 - t1) + " ms, gueltig=" + (j.is_discarded() ? "nein" : "ja"));
+}
+
 medic::RuleSet load_rules() {
     for (const char* path : kRulesCandidates) {
         if (!std::filesystem::exists(path)) continue;
+        profile_file(path);
         try {
             auto rules = medic::load_rules_from_file(path);
             trace("Regeln: " + rules.db_version + " (" + std::to_string(rules.rules.size()) + ") aus " + path);
@@ -79,6 +97,7 @@ medic::RuleSet load_rules() {
 medic::ErrorCodeSet load_error_codes() {
     for (const char* path : kErrorCodesCandidates) {
         if (!std::filesystem::exists(path)) continue;
+        profile_file(path);
         try {
             auto codes = medic::load_error_codes_from_file(path);
             trace("Fehlercodes: " + codes.db_version + " (" + std::to_string(codes.codes.size()) + ") aus " + path);
@@ -127,17 +146,24 @@ int listen_local() {
 
 // Eine Verbindung bedienen. Rueckgabe: true = Oberflaeche beendet (Dienst endet), false = Verbindung weg (auf die App warten)
 bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::IHttpClient>& http) {
+    auto progress = [&](int percent) {
+        const std::uint8_t p = static_cast<std::uint8_t>(percent);
+        proto::send_message(client, proto::kProgress, &p, 1);  // Fehler hier faellt beim ersten Bild auf
+    };
+    progress(5);
     medic::RuleSet rules = load_rules();
+    progress(40);
     LocalService service(platform, std::move(rules));
     service.set_error_codes(load_error_codes());
+    progress(70);
     service.set_http_client(http.get());
     App app(service);
     {
+        // Kein eigenes Startbild: die App zeigt es waehrend des Ladens (mit dem Fortschrittsbalken), danach folgt gleich der Startbildschirm.
         Canvas background(App::kWidth, App::kHeight);
         if (load_background(background)) app.set_background(background);
-        Canvas splash(App::kWidth, App::kHeight);
-        if (load_splash(splash)) app.show_splash(splash);
     }
+    progress(95);
 
     trace("Sitzung: Regeln und Fehlercodes geladen, Oberflaeche und Bilder bereit");
     std::uint8_t hello[4];
