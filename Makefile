@@ -61,7 +61,7 @@ TILE_DIR := build-title/FAKE42007
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
 
-.PHONY: host test clean ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
+.PHONY: host test clean ps5-update-probe ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
 
 # UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
 SNAP ?=
@@ -133,6 +133,12 @@ $(PS5_START_ELF): $(PS5_START_OBJS)
 # Der Starter der Kachel (nativer Titel, eboot.bin) traegt ps5medic-start.elf; build-title/FAKE42007 enthaelt die fertige Ordner-App.
 $(TILE_DIR)/eboot.bin: $(PS5_START_ELF) title/starter.c title/build_title.sh title/title.ld title/symbols.map ps5/homebrew/sce_sys/icon0.png
 	bash title/build_title.sh $(PS5_START_ELF)
+
+# Entwicklungswerkzeug: Regel-Update-Ablauf ohne Bildschirm (ps5/update_probe.cpp), Ergebnis /data/ps5medic/update_probe.log
+PS5_UPDATEPROBE_ELF := $(PS5_BUILD)/ps5medic-update-probe.elf
+ps5-update-probe: $(PS5_UPDATEPROBE_ELF)
+$(PS5_UPDATEPROBE_ELF): $(PS5_BUILD)/ps5/update_probe.o $(PS5_BUILD)/ps5/ps5_platform.o $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS)) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
+	$(PS5_CXX) $^ -lkernel_sys -o $@
 
 # Entwicklungswerkzeug: startet einen Titel wie ein Druck auf die Kachel (ps5/launch_title.cpp), siehe docs/TITLE.md
 PS5_LAUNCHTITLE_ELF := $(PS5_BUILD)/ps5medic-launch-title.elf
