@@ -41,7 +41,7 @@ cxx=("$CLANG" "${common[@]}" -std=c++20 -fno-exceptions -fno-rtti
      -DNDEBUG=1 -DMEDIC_NATIVE_APP=1 -DNLOHMANN_JSON_NOEXCEPTION=1)
 
 sources=(
-    ps5/native_ui_main.cpp ps5/native_shim.cpp
+    ps5/native_ui_main.cpp ps5/native_shim.cpp ps5/native_runtime.cpp
     ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp ui/src/i18n.cpp ui/src/i18n_embedded.cpp ui/src/icons.cpp
     ui/src/splash.cpp ui/src/app.cpp
 )
@@ -53,14 +53,14 @@ for s in "${sources[@]}"; do
     "${cxx[@]}" -MD -MF "$o.d" -c "$REPO/$s" -o "$o"
     objs+=("$o")
 done
-for f in app_crt app_cpp_runtime; do
+for f in app_crt; do
     "$CLANG" "${common[@]}" -std=c++20 -fno-exceptions -fno-rtti -c "$NATIVE/$f.cpp" -o "$B/$f.o"
     objs+=("$B/$f.o")
 done
 
 "$SDK/bin/prospero-lld" -T "$NATIVE/ps5-pie.ld" --eh-frame-hdr --version-script "$NATIVE/app-symbols.map" \
-    -e _start -o "$B/pie.elf" "$B/app_crt.o" "$B/app_cpp_runtime.o" $(printf '%s ' "${objs[@]}" | sed "s#$B/app_crt.o##; s#$B/app_cpp_runtime.o##") \
-    --why-extract="$B/why.txt" --error-limit=0 -L"$SDK/target/lib" --start-group "$SDK/target/lib/libc++.a" "$SDK/target/lib/libc++abi.a" "$SDK/target/lib/libpthread.a" --end-group --as-needed "$SDK"/target/lib/*.so
+    -e _start -o "$B/pie.elf" "$B/app_crt.o" $(printf '%s ' "${objs[@]}" | sed "s#$B/app_crt.o##") \
+    --why-extract="$B/why.txt" -Map="$B/map.txt" --error-limit=0 -L"$SDK/target/lib" --start-group "$SDK/target/lib/libc++.a" "$SDK/target/lib/libc++abi.a" "$SDK/target/lib/libpthread.a" --end-group --as-needed "$SDK"/target/lib/*.so
 
 "$TOOL" link --in "$B/pie.elf" --out "$B/eboot.elf" --stub-dir "$SDK/target/lib" \
     --module-sdk "$MODULE_SDK" --companion-sdk "$COMPANION_SDK" --file-name eboot.elf

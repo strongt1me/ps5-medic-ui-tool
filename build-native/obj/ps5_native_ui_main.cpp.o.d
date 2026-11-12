@@ -939,4 +939,16 @@
   /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__charconv/from_chars_result.h \
   /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/__charconv/to_chars.h \
   /mnt/c/Users/stron/Documents/ps5-medic/.claude/worktrees/upbeat-wescoff-193043/ui/include/medic_ui/pad_nav.hpp \
-  /mnt/c/Users/stron/Documents/ps5-medic/.claude/worktrees/upbeat-wescoff-193043/ui/include/medic_ui/splash.hpp
+  /mnt/c/Users/stron/Documents/ps5-medic/.claude/worktrees/upbeat-wescoff-193043/ui/include/medic_ui/splash.hpp \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/c++/v1/csignal \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/signal.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/sys/signal.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/machine/signal.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/x86/signal.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/machine/trap.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/x86/trap.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/machine/ucontext.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/x86/ucontext.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/sys/_ucontext.h \
+  /home/stron/ps5-sdk-045/PS5_PAYLOAD_SDK/target/include/sys/unistd.h \
+  /mnt/c/Users/stron/Documents/ps5-medic/.claude/worktrees/upbeat-wescoff-193043/ps5/native_tilemap.inc

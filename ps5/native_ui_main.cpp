@@ -3,7 +3,7 @@
 // ohne Rechte-Anhebung. Gebaut mit title/build_native_ui.sh (ps5-native-tool, libc.prx), nicht mit dem Makefile-Ziel der UI.
 //
 // Eine sandboxed App sieht /data und /mnt nicht; die Daten kommen deshalb von einem Dienst-Payload auf 127.0.0.1 (siehe docs/NATIVE.md).
-// Stand: Meilenstein 1 -- die UI laeuft mit einem Platzhalter-Dienst (StubService), um VideoOut, Pad und die PS-Taste in der App zu pruefen.
+// Stand: Meilenstein 1 (auf der Konsole bestaetigt: Bild, Pad, PS-Taste) -- die UI laeuft mit einem Platzhalter-Dienst (StubService).
 #include "medic_ui/app.hpp"
 #include "medic_ui/pad_nav.hpp"
 #include "medic_ui/splash.hpp"
@@ -11,8 +11,11 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <csignal>
 #include <ctime>
+#include <unistd.h>
 
 extern "C" {
 std::size_t sceKernelGetDirectMemorySize();
@@ -133,6 +136,66 @@ public:
     medic::RuleDownloadResult download_rule_update() override { return {}; }
 };
 
+// Absturzmeldung: Signal, Befehlszeiger, Stapel und Adresse in die Protokolldatei (FreeBSD-amd64-Layout der ucontext: Signalmaske 16 Byte, dann
+// mcontext; mc_addr bei 152, mc_rip bei 176, mc_rsp bei 200). `on_crash` wird mitgeschrieben, damit sich der Befehlszeiger gegen die Datei umrechnen laesst.
+void on_crash(int sig, siginfo_t*, void* uc) {
+    const auto* b = static_cast<const std::uint8_t*>(uc);
+    std::uint64_t addr, rip, rsp;
+    std::memcpy(&addr, b + 152, 8);
+    std::memcpy(&rip, b + 176, 8);
+    std::memcpy(&rsp, b + 200, 8);
+    char line[200];
+    std::snprintf(line, sizeof line, "ABSTURZ Signal %d rip=%llx rsp=%llx addr=%llx handler=%llx", sig, static_cast<unsigned long long>(rip),
+                  static_cast<unsigned long long>(rsp), static_cast<unsigned long long>(addr), static_cast<unsigned long long>(reinterpret_cast<std::uintptr_t>(&on_crash)));
+    trace(line);
+    // Rohwerte der Signal-Umgebung (zum Entschluesseln, falls die Offsets oben nicht stimmen)
+    for (int row = 0; row < 40; row += 4) {
+        std::uint64_t w[4];
+        std::memcpy(w, b + row * 8, sizeof w);
+        std::snprintf(line, sizeof line, "ctx[%02d] %016llx %016llx %016llx %016llx", row, static_cast<unsigned long long>(w[0]), static_cast<unsigned long long>(w[1]),
+                      static_cast<unsigned long long>(w[2]), static_cast<unsigned long long>(w[3]));
+        trace(line);
+    }
+    _exit(1);
+}
+
+void install_crash_handler() {
+    struct sigaction sa;
+    std::memset(&sa, 0, sizeof sa);
+    sa.sa_sigaction = on_crash;
+    sa.sa_flags = SA_SIGINFO;
+    for (int sig : {SIGSEGV, SIGBUS, SIGILL, SIGTRAP, SIGABRT, SIGFPE, SIGSYS}) sigaction(sig, &sa, nullptr);
+}
+
+// Der Bildspeicher ist gekachelt (Kachelmodus 0, Kacheln zu 512x128 Pixeln in der Anordnung aus SDL_ps5tilemap.inc des SDL-Treibers fuer die
+// PS5; Konsolentest 12. Nov. 2026: lineares Schreiben ergab ein zerstueckeltes Bild). Die Zielposition jedes Pixels wird einmal berechnet.
+#include "native_tilemap.inc"
+
+std::uint32_t* g_tile_index = nullptr;  // fuer Pixel i (zeilenweise) der Index im Bildspeicher
+
+void build_tile_index() {
+    g_tile_index = new std::uint32_t[static_cast<std::size_t>(kW) * kH];
+    const double tiles_per_row = static_cast<double>(kW) / PS5_TILE_WIDTH;
+    for (unsigned y = 0; y < kH; ++y)
+        for (unsigned x = 0; x < kW; ++x) {
+            const int tx = static_cast<int>(x / PS5_TILE_WIDTH), ty = static_cast<int>(y / PS5_TILE_HEIGHT);
+            const int t = static_cast<int>(PS5_TILE_SIZE * (tx + ty * tiles_per_row));
+            g_tile_index[static_cast<std::size_t>(y) * kW + x] = static_cast<std::uint32_t>(t + PS5_tilemap[y % PS5_TILE_HEIGHT][x % PS5_TILE_WIDTH]);
+        }
+}
+
+// ARGB (0xAARRGGBB) -> RGBA (Bytes R,G,B,A = 0xAABBGGRR als 32-Bit-Wert) an die gekachelte Zielposition, dann aus dem Cache in den Bildspeicher
+void copy_to_buffer(const medic::ui::Canvas& canvas, void* target) {
+    if (!g_tile_index) build_tile_index();
+    auto* out = static_cast<std::uint32_t*>(target);
+    const std::uint32_t* in = canvas.data();
+    for (std::size_t i = 0; i < static_cast<std::size_t>(kW) * kH; ++i) {
+        const std::uint32_t p = in[i];
+        out[g_tile_index[i]] = (p & 0xFF00FF00u) | ((p & 0x00FF0000u) >> 16) | ((p & 0x000000FFu) << 16);
+    }
+    flush_range(target, kFrameBytes);
+}
+
 [[noreturn]] void leave() {
     notify("PS5 Medic: beendet.");
     sceSystemServiceLoadExec("exit", nullptr);
@@ -145,18 +208,26 @@ int main() {
     using namespace medic::ui;
     g_log = std::fopen("/data/ps5medic/native.log", "a");
     trace("PS5 Medic (native App) startet");
-
+    install_crash_handler();
     StubService service;
+    trace("Dienst bereit");
     App app(service);
+    trace("App erstellt");
     {
         Canvas background(App::kWidth, App::kHeight);
+        trace("Zeichenflaeche fuer den Hintergrund angelegt");
         if (load_background(background)) app.set_background(background);
+        trace("Hintergrund geladen");
         Canvas splash(App::kWidth, App::kHeight);
+        trace("Zeichenflaeche fuer das Startbild angelegt");
         if (load_splash(splash)) app.show_splash(splash);
+        trace("Startbild geladen");
     }
 
     (void)sceSystemServiceHideSplashScreen();
+    trace("Startbildschirm der Konsole ausgeblendet");
     const int video = sceVideoOutOpen(0xff, 0, 0, nullptr);
+    trace("sceVideoOutOpen zurueck");
     if (video < 0) {
         notify("PS5 Medic: Bildausgabe nicht verfuegbar.");
         trace("sceVideoOutOpen fehlgeschlagen");
@@ -197,6 +268,17 @@ int main() {
     Canvas canvas(App::kWidth, App::kHeight);
     std::int64_t frame = 0;
     trace("Bildausgabe und Pad bereit");
+    // Wie der Demo-Renderer des Boilerplates: erst beide Puffer fuellen, dann das erste Bild (Puffer 0) anzeigen
+    app.render(canvas);
+    copy_to_buffer(canvas, buffers[0].data);
+    copy_to_buffer(canvas, buffers[1].data);
+    {
+        const int rc = sceVideoOutSubmitFlip(video, 0, 1, 1);
+        char line[64];
+        std::snprintf(line, sizeof line, "Erstes Bild: SubmitFlip rc=%d", rc);
+        trace(line);
+        (void)sceVideoOutWaitVblank(video);
+    }
 
     for (;;) {
         const std::uint32_t t = now_ms();
@@ -241,16 +323,15 @@ int main() {
         app.update();
         app.render(canvas);
 
-        // ARGB (0xAARRGGBB) -> RGBA im Speicher (Bytes R,G,B,A = 0xAABBGGRR als 32-Bit-Wert)
         const std::size_t back = static_cast<std::size_t>(frame & 1) ^ 1U;
-        auto* out = static_cast<std::uint32_t*>(buffers[back].data);
-        const std::uint32_t* in = canvas.data();
-        for (unsigned i = 0; i < kW * kH; ++i) {
-            const std::uint32_t p = in[i];
-            out[i] = (p & 0xFF00FF00u) | ((p & 0x00FF0000u) >> 16) | ((p & 0x000000FFu) << 16);
+        copy_to_buffer(canvas, buffers[back].data);
+        const int flip_rc = sceVideoOutSubmitFlip(video, static_cast<std::int32_t>(back), 1, frame + 2);
+        if (frame < 5 || flip_rc < 0) {
+            char line[64];
+            std::snprintf(line, sizeof line, "Bild %lld: SubmitFlip rc=%d", static_cast<long long>(frame), flip_rc);
+            if (frame < 5 || (frame % 300) == 0) trace(line);
         }
-        flush_range(buffers[back].data, kW * kH * 4);
-        if (sceVideoOutSubmitFlip(video, static_cast<std::int32_t>(back), 1, frame + 2) < 0) (void)sceKernelUsleep(4000);
+        if (flip_rc < 0) (void)sceKernelUsleep(4000);
         (void)sceVideoOutWaitVblank(video);
         (void)sceVideoOutWaitVblank(video);  // ~30 Bilder/s
         ++frame;

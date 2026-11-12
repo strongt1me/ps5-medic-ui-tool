@@ -19,7 +19,7 @@ Einschränkungen der Umgebung, die den Code prägen:
 - `libc++.a` und `libc++abi.a` des SDK werden statisch gelinkt (für `std::string` usw.).
 
 ## Stand
-- **Meilenstein 1 (gebaut, noch nicht auf der Konsole getestet):** UI mit Platzhalter-Dienst (`StubService`, meldet „Prüfung unvollständig"): Bild, Pad, Startbild, Hintergrund. Prüffragen: startet die App, zeigt sie das Bild, reagiert das Pad, **führt die PS-Taste zum Homescreen**, beendet Kreis die App.
+- **Meilenstein 1 (12. Nov. 2026 auf der Konsole bestätigt, FW 12.00):** Bild, Pad und **PS-Taste führt zum Homescreen** (in der geliehenen Big App `FAKE00000` ging sie nicht). Funde beim Test: (1) der App-Heap ist klein, große Blöcke gehen deshalb über eigene Speicherseiten (`ps5/native_runtime.cpp`); (2) der Bildspeicher ist gekachelt (`ps5/native_tilemap.inc`, aus dem SDL-Treiber); (3) beim Beenden mit der PS-Taste läuft die App im Hintergrund weiter, ihre Dateien bleiben bis zum Schließen gesperrt (FTP 550). Ursprünglicher Plan: UI mit Platzhalter-Dienst (`StubService`, meldet „Prüfung unvollständig"): Bild, Pad, Startbild, Hintergrund. Geprüft wurde: startet die App, zeigt sie das Bild, reagiert das Pad, **führt die PS-Taste zum Homescreen**, beendet Kreis die App.
 - Meilenstein 2: Dienst-Payload mit Protokoll (JSON-Zeilen über localhost) für alle `IMedicService`-Aufrufe.
 - Meilenstein 3: `RemoteService` in der UI, Ersetzen des Starters `FAKE42007`.
 
