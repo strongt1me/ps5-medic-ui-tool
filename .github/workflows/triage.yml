@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Vorsortierung eingesandter Berichte (docs/COMMUNITY.md). Nur Lesen und Kommentieren: Der Issue-Text wird ausschliesslich als Daten an
+# tools/triage_report.py gegeben (Umgebungsvariable, nie in einer Shell-Zeile), es laeuft nichts aus dem Issue, es gibt keine Geheimnisse
+# und keine Regel entsteht ohne Pruefung durch den Maintainer.
+name: Bericht vorsortieren
+
+on:
+  issues:
+    types: [opened, edited]
+  schedule:
+    - cron: "17 5 * * 1"   # montags: Rangliste der unbekannten Zeilen
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  comment:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bericht lesen und kommentieren
+        env:
+          TRIAGE_BODY: ${{ github.event.issue.body }}
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 tools/triage_report.py comment - > comment.md
+          # Etiketten stehen in der letzten Zeile "<!-- triage:label=a,b -->"
+          labels=$(grep -o 'triage:label=[a-z,-]*' comment.md | head -1 | cut -d= -f2)
+          # ein frueherer Kommentar dieses Workflows wird ersetzt, damit Bearbeitungen keine Kommentarflut erzeugen
+          old=$(gh api "repos/$REPO/issues/$ISSUE/comments" --jq '[.[] | select(.user.login=="github-actions[bot]") | select(.body | contains("Automatische Vorsortierung")) | .id] | first // empty')
+          if [ -n "$old" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$old" -F body=@comment.md > /dev/null
+          else
+            gh issue comment "$ISSUE" --repo "$REPO" --body-file comment.md
+          fi
+          for l in $(echo "$labels" | tr ',' ' '); do
+            gh issue edit "$ISSUE" --repo "$REPO" --add-label "$l" || true
+          done
+
+  ranking:
+    if: github.event_name != 'issues'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rangliste erzeugen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh issue list --repo "$REPO" --state all --limit 500 --json number,title,body,url > issues.json
+          python3 tools/triage_report.py cluster issues.json > ranking.md
+          existing=$(gh issue list --repo "$REPO" --state open --label rangliste --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --repo "$REPO" --body-file ranking.md
+          else
+            gh issue create --repo "$REPO" --title "Unbekannte Fehlerzeilen: Rangliste" --body-file ranking.md --label rangliste
+          fi

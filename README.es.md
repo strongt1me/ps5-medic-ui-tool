@@ -172,6 +172,7 @@ Una regla nueva necesita: una entrada en `knowledge/rules.json` con fuente, un f
 | `docs/ROADMAP.md` | Fases 0–5 |
 | `docs/PHASE2.md` a `PHASE5.md` | Consola y snapshot, interfaz y contexto de aplicación, informe y versión, actualización de reglas y comunidad |
 | `docs/TESTER.md` | Colaborar como probador |
+| `docs/COMMUNITY.md` | Enviar informes; cómo se convierten en reglas nuevas y actualizaciones de reglas |
 | `docs/TITLE.md` | Mosaico e inicio sin cargador de Homebrew: Starter, launcher, aplicación en carpeta |
 | `knowledge/` | Reglas (`rules.json`), códigos de error (`error_codes.json`), traducciones (`l10n/`) y esquemas JSON |
 

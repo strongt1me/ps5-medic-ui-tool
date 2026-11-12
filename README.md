@@ -172,6 +172,7 @@ Eine neue Regel braucht: einen Eintrag in `knowledge/rules.json` mit Quelle, ein
 | `docs/ROADMAP.md` | Phasen 0–5 |
 | `docs/PHASE2.md` bis `PHASE5.md` | Konsole und Snapshot, Oberfläche und App-Kontext, Bericht und Release, Regel-Update und Community |
 | `docs/TESTER.md` | Mitmachen als Tester |
+| `docs/COMMUNITY.md` | Berichte einsenden, wie daraus neue Regeln und Regel-Updates werden |
 | `docs/TITLE.md` | Kachel und Start ohne Homebrew-Lader: Starter, Launcher, Ordner-App |
 | `knowledge/` | Regeln (`rules.json`), Fehlercodes (`error_codes.json`), Übersetzungen (`l10n/`) und JSON-Schemas |
 

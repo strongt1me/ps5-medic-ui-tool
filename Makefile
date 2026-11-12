@@ -77,6 +77,7 @@ host:
 
 test: host
 	$(BUILD)/medic-tests
+	python3 tests/test_triage.py
 
 clean:
 	rm -rf $(BUILD) $(PS5_BUILD) dist build-title

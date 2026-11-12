@@ -172,6 +172,7 @@ A new rule needs: an entry in `knowledge/rules.json` with a source, a positive a
 | `docs/ROADMAP.md` | Phases 0–5 |
 | `docs/PHASE2.md` to `PHASE5.md` | Console and snapshot, interface and app context, report and release, rule update and community |
 | `docs/TESTER.md` | Taking part as a tester |
+| `docs/COMMUNITY.md` | Sending reports, and how they become new rules and rule updates |
 | `docs/TITLE.md` | Tile and start without a Homebrew loader: starter, launcher, folder app |
 | `knowledge/` | Rules (`rules.json`), error codes (`error_codes.json`), translations (`l10n/`) and JSON schemas |
 

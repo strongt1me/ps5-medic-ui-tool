@@ -172,6 +172,7 @@ Una nuova regola richiede: una voce in `knowledge/rules.json` con fonte, una fix
 | `docs/ROADMAP.md` | Fasi 0–5 |
 | `docs/PHASE2.md` fino a `PHASE5.md` | Console e snapshot, interfaccia e contesto app, rapporto e release, aggiornamento delle regole e community |
 | `docs/TESTER.md` | Partecipare come tester |
+| `docs/COMMUNITY.md` | Inviare rapporti; come diventano nuove regole e aggiornamenti delle regole |
 | `docs/TITLE.md` | Riquadro e avvio senza loader Homebrew: starter, launcher, app-cartella |
 | `knowledge/` | Regole (`rules.json`), codici di errore (`error_codes.json`), traduzioni (`l10n/`) e schemi JSON |
 
