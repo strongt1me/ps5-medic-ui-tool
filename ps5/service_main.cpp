@@ -70,6 +70,11 @@ Lang console_language() {
     const int rc = sceSystemServiceParamGetInt(1, &id);
     const Lang lang = lang_from_system_id(rc == 0 ? id : -1);
     trace("Systemsprache: rc=" + std::to_string(rc) + " Wert=" + std::to_string(id) + " -> " + lang_code(lang));
+    // Die native App kennt die Systemsprache selbst nicht (kein Import dafuer); sie liest diese Datei fuer ihre Meldungen vor dem Dienst.
+    if (std::FILE* f = std::fopen("/data/ps5medic/system_language", "w")) {
+        std::fputs(lang_code(lang), f);
+        std::fclose(f);
+    }
     return lang;
 }
 

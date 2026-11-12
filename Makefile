@@ -16,7 +16,7 @@
 #   make serve-rules  dist/rules/ per HTTP im LAN anbieten (RULES_PORT, RULES_BIND); die Konsole holt sie unter Regel-Update
 #   make set-update-url  update_url in /data/ps5medic/config.ini der Konsole setzen (PS5_HOST=<ip> UPDATE_URL=http://...)
 #   make title     Starter-Titel (nativer Titel mit eboot.bin) fuer die Kachel unter "Medien" bauen: build-title/FAKE42007 (docs/TITLE.md)
-#   make deploy-title Ordner-App FAKE42007 per FTP nach /data/homebrew/FAKE42007/ legen; ShadowMount+ legt die Kachel an (PS5_HOST=<ip> noetig)
+#   make deploy-title Alter Weg, braucht ALLOW_OLD_STARTER=1 (gleiche Kennung wie die native App!): Ordner-App FAKE42007 per FTP nach /data/homebrew/FAKE42007/ legen; ShadowMount+ legt die Kachel an (PS5_HOST=<ip> noetig)
 #
 # SDK: PS5_PAYLOAD_SDK zeigt auf den Ordner mit bin/, target/, toolchain/ (Standard: ~/ps5-sdk-045/PS5_PAYLOAD_SDK, ps5-payload-sdk 0.45).
 # SDL2 fuer ps5-ui liegt im selben SDK-Sysroot unter target/user/homebrew/ (dort von `make deps` o.ae. installiert,
@@ -135,7 +135,8 @@ $(PS5_BUILD)/ui/src/splash.o: ui/assets/splash.jpg ui/assets/background.jpg
 
 $(PS5_BUILD)/ps5/launcher_main.o: private PS5_CXXFLAGS += -Ithird_party/websrv-hbldr
 # Installer: die Dateien stecken per .incbin im Objekt. native-ui (phony) baut die App neu, bevor sie eingebunden wird.
-$(PS5_BUILD)/ps5/installer_main.o: private PS5_CXXFLAGS += '-DMEDIC_TILE_DIR="$(CURDIR)/build-native/FAKE42007"' '-DMEDIC_SERVICE_ELF="$(CURDIR)/$(PS5_SERVICE_ELF)"'     '-DMEDIC_RULES_JSON="$(CURDIR)/knowledge/rules.json"' '-DMEDIC_ERROR_CODES_JSON="$(CURDIR)/knowledge/error_codes.json"' '-DMEDIC_FOLDER_ICON="$(CURDIR)/ps5/homebrew/sce_sys/icon0.png"'
+INSTALL_ROOT ?= /data/homebrew
+$(PS5_BUILD)/ps5/installer_main.o: private PS5_CXXFLAGS += '-DMEDIC_INSTALL_ROOT="$(INSTALL_ROOT)"' '-DMEDIC_TILE_DIR="$(CURDIR)/build-native/FAKE42007"' '-DMEDIC_SERVICE_ELF="$(CURDIR)/$(PS5_SERVICE_ELF)"'     '-DMEDIC_RULES_JSON="$(CURDIR)/knowledge/rules.json"' '-DMEDIC_ERROR_CODES_JSON="$(CURDIR)/knowledge/error_codes.json"' '-DMEDIC_FOLDER_ICON="$(CURDIR)/ps5/homebrew/sce_sys/icon0.png"'
 
 $(PS5_BUILD)/ps5/installer_main.o: ps5/installer_main.cpp native-ui $(PS5_SERVICE_ELF) knowledge/rules.json knowledge/error_codes.json ps5/homebrew/sce_sys/icon0.png
 	@mkdir -p $(dir $@)
@@ -226,6 +227,7 @@ title: $(TILE_DIR)/eboot.bin
 
 TITLE_ID := FAKE42007
 deploy-title: title
+	@test "$(ALLOW_OLD_STARTER)" = "1" || { echo "Der alte Starter traegt dieselbe Kennung FAKE42007 wie die native App und wuerde ihre Kachel ueberschreiben (docs/TITLE.md). Nur mit ALLOW_OLD_STARTER=1 (und nur, wenn die native App nicht installiert ist)."; exit 1; }
 	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (FTP-Server auf Port $(PS5_FTP_PORT) muss laufen)"; exit 1; }
 	for f in eboot.bin sce_module/libc.prx sce_sys/icon0.png sce_sys/param.json; do \
 	    curl --fail --ftp-create-dirs -T build-title/$(TITLE_ID)/$$f ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/$(TITLE_ID)/$$f || exit 1; \

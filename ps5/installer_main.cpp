@@ -44,8 +44,12 @@ namespace fs = std::filesystem;
 
 namespace {
 
-constexpr const char* kAppDir = "/data/homebrew/FAKE42007";
-constexpr const char* kSvcDir = "/data/homebrew/PS5MEDIC";
+// MEDIC_INSTALL_ROOT nur fuer Tests (make ps5-launcher INSTALL_ROOT=/data/ps5medic/install_test): dann schreibt der Installer dorthin statt nach /data/homebrew.
+#ifndef MEDIC_INSTALL_ROOT
+#define MEDIC_INSTALL_ROOT "/data/homebrew"
+#endif
+constexpr const char* kAppDir = MEDIC_INSTALL_ROOT "/FAKE42007";
+constexpr const char* kSvcDir = MEDIC_INSTALL_ROOT "/PS5MEDIC";
 constexpr const char* kLogPath = "/data/ps5medic/installer.log";
 
 std::FILE* g_log = nullptr;

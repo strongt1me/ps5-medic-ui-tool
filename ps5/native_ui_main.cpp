@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include <csignal>
 #include <cerrno>
 #include <ctime>
@@ -72,6 +73,59 @@ void flush_range(void* address, std::size_t length) {
     const auto* end = at + length;
     for (; at < end; at += 64) __asm__ volatile("clflush (%0)" : : "r"(at) : "memory");
     __asm__ volatile("mfence" ::: "memory");
+}
+
+// ---- Sprache der Meldungen vor dem Dienst ---------------------------------------------------------------------------------------------
+// Die App hat keinen Zugriff auf die Systemfunktion fuer die Konsolensprache (ein weiterer Import wuerde auf anderen Firmwares das Starten
+// riskieren). Sie liest stattdessen die Sprache, die der Dienst schreibt: zuerst die gewaehlte Sprache aus config.ini (language=xx), sonst die
+// Systemsprache, die der Dienst nach jedem Start in /data/ps5medic/system_language ablegt, sonst Englisch (Marc, 13. Nov. 2026).
+enum Msg { kMsgBye, kMsgNoVideo, kMsgNoFrameMem, kMsgNoMap, kMsgNoRegister, kMsgNoServiceFile, kMsgNoLoader, kMsgCheckLoader, kMsgNoAnswer, kMsgLogHint,
+           kMsgLost, kMsgRetry, kMsgCount };
+// Zeilen 0 bis 4 (Benachrichtigungen) bleiben ASCII, damit nichts verstuemmelt wird; die Statuszeilen nutzen die Schrift der UI (mit Akzenten).
+constexpr const char* kMsgs[5][kMsgCount] = {
+    {"PS5 Medic: beendet.", "PS5 Medic: Bildausgabe nicht verfuegbar.", "PS5 Medic: Bildspeicher nicht verfuegbar.", "PS5 Medic: Bildspeicher nicht abbildbar.",
+     "PS5 Medic: Puffer nicht registrierbar.", "Dienstdatei fehlt: ", "ELF-Lader (Port 9021) nicht erreichbar.", "Jailbreak/Lader pruefen, dann die App neu starten.",
+     "Der Dienst antwortet nicht.", "Protokoll: ", "Verbindung zum Dienst verloren ...", "Neuer Versuch"},
+    {"PS5 Medic: closed.", "PS5 Medic: video output unavailable.", "PS5 Medic: frame memory unavailable.", "PS5 Medic: frame memory cannot be mapped.",
+     "PS5 Medic: buffer cannot be registered.", "Service file missing: ", "ELF loader (port 9021) not reachable.", "Check the jailbreak/loader, then restart the app.",
+     "The service is not responding.", "Log: ", "Connection to the service lost ...", "Trying again"},
+    {"PS5 Medic : ferme.", "PS5 Medic : sortie video indisponible.", "PS5 Medic : memoire d'image indisponible.", "PS5 Medic : memoire d'image non mappable.",
+     "PS5 Medic : tampon non enregistrable.", "Fichier du service introuvable : ", "Chargeur ELF (port 9021) injoignable.",
+     "Vérifiez le jailbreak/chargeur, puis relancez l'application.", "Le service ne répond pas.", "Journal : ", "Connexion au service perdue ...", "Nouvel essai"},
+    {"PS5 Medic: chiuso.", "PS5 Medic: uscita video non disponibile.", "PS5 Medic: memoria immagine non disponibile.", "PS5 Medic: memoria immagine non mappabile.",
+     "PS5 Medic: buffer non registrabile.", "File del servizio mancante: ", "ELF loader (porta 9021) non raggiungibile.",
+     "Controllare jailbreak/loader, poi riavviare l'app.", "Il servizio non risponde.", "Registro: ", "Connessione al servizio persa ...", "Nuovo tentativo"},
+    {"PS5 Medic: cerrado.", "PS5 Medic: salida de video no disponible.", "PS5 Medic: memoria de imagen no disponible.", "PS5 Medic: memoria de imagen no mapeable.",
+     "PS5 Medic: bufer no registrable.", "Falta el archivo del servicio: ", "Cargador ELF (puerto 9021) inaccesible.",
+     "Comprueba el jailbreak/cargador y reinicia la aplicación.", "El servicio no responde.", "Registro: ", "Conexión con el servicio perdida ...", "Reintentando"},
+};
+int g_lang = 1;  // 0 de, 1 en, 2 fr, 3 it, 4 es; bis zur Erkennung Englisch
+const char* tr(Msg m) { return kMsgs[g_lang][m]; }
+
+int lang_index(const char* code) {
+    static const char* const codes[] = {"de", "en", "fr", "it", "es"};
+    for (int i = 0; i < 5; ++i)
+        if (std::strncmp(code, codes[i], 2) == 0 && (code[2] == 0 || code[2] <= ' ')) return i;  // danach Zeilenende, Leerzeichen oder Steuerzeichen
+    return -1;
+}
+
+// language=xx aus config.ini (gewaehlte Sprache), sonst die Zeile aus system_language, sonst Englisch
+int detect_language() {
+    if (std::FILE* f = std::fopen("/data/ps5medic/config.ini", "r")) {
+        char line[160];
+        int found = -1;
+        while (found < 0 && std::fgets(line, sizeof line, f))
+            if (std::strncmp(line, "language=", 9) == 0) found = lang_index(line + 9);
+        std::fclose(f);
+        if (found >= 0) return found;
+    }
+    if (std::FILE* f = std::fopen("/data/ps5medic/system_language", "r")) {
+        char line[16] = {0};
+        const bool ok = std::fgets(line, sizeof line, f) != nullptr;
+        std::fclose(f);
+        if (ok && lang_index(line) >= 0) return lang_index(line);
+    }
+    return 1;
 }
 
 void notify(const char* msg) {
@@ -181,7 +235,7 @@ void copy_to_buffer(const std::uint32_t* in, void* target) {
 }
 
 [[noreturn]] void leave() {
-    notify("PS5 Medic: beendet.");
+    notify(tr(kMsgBye));
     sceSystemServiceLoadExec("exit", nullptr);
     for (;;) sceKernelUsleep(1000000);
 }
@@ -346,25 +400,27 @@ int main() {
     g_t0 = now_ms();
     g_log = std::fopen("/data/ps5medic/native.log", "a");
     trace("PS5 Medic (native App) startet");
+    g_lang = detect_language();
+    trace(g_lang == 0 ? "Sprache der Meldungen: de" : g_lang == 1 ? "Sprache der Meldungen: en" : g_lang == 2 ? "Sprache der Meldungen: fr" : g_lang == 3 ? "Sprache der Meldungen: it" : "Sprache der Meldungen: es");
     install_crash_handler();
 
     (void)sceSystemServiceHideSplashScreen();
     const int video = sceVideoOutOpen(0xff, 0, 0, nullptr);
     if (video < 0) {
-        notify("PS5 Medic: Bildausgabe nicht verfuegbar.");
+        notify(tr(kMsgNoVideo));
         trace("sceVideoOutOpen fehlgeschlagen");
         leave();
     }
     const std::size_t pool = sceKernelGetDirectMemorySize();
     std::int64_t phys = 0;
     if (pool < kMemBytes || sceKernelAllocateDirectMemory(0, static_cast<std::int64_t>(pool), kMemBytes, kMemAlign, kMemTypeWcGarlic, &phys) < 0) {
-        notify("PS5 Medic: Bildspeicher nicht verfuegbar.");
+        notify(tr(kMsgNoFrameMem));
         trace("Direktspeicher fehlgeschlagen");
         leave();
     }
     void* mapped = nullptr;
     if (sceKernelMapDirectMemory(&mapped, kMemBytes, kMapProtection, 0, phys, kMemAlign) < 0) {
-        notify("PS5 Medic: Bildspeicher nicht abbildbar.");
+        notify(tr(kMsgNoMap));
         trace("MapDirectMemory fehlgeschlagen");
         leave();
     }
@@ -374,7 +430,7 @@ int main() {
     (void)sceVideoOutSetFlipRate(video, 0);
     sceVideoOutSetBufferAttribute2(&attr, kPixelFormatRgba8Srgb, 0, kW, kH, 0, 0, 0);
     if (sceVideoOutRegisterBuffers2(video, 0, 0, buffers.data(), 2, &attr, 0, nullptr) < 0) {
-        notify("PS5 Medic: Puffer nicht registrierbar.");
+        notify(tr(kMsgNoRegister));
         trace("RegisterBuffers fehlgeschlagen");
         leave();
     }
@@ -430,8 +486,8 @@ int main() {
                 const int rc = send_service_elf();
                 trace(rc == 0 ? "Dienst-ELF an den Lader gesendet" : "Dienst-ELF konnte nicht gesendet werden");
                 if (rc != 0) {
-                    show_status(rc == 1 ? "Dienstdatei fehlt: /data/homebrew/PS5MEDIC/ps5medicservice.elf" : "ELF-Lader (Port 9021) nicht erreichbar.",
-                                "Jailbreak/Lader pruefen, dann die App neu starten.");
+                    const std::string line1 = rc == 1 ? std::string(tr(kMsgNoServiceFile)) + "/data/homebrew/PS5MEDIC/ps5medicservice.elf" : std::string(tr(kMsgNoLoader));
+                    show_status(line1.c_str(), tr(kMsgCheckLoader));
                     sceKernelUsleep(3000000);
                     continue;
                 }
@@ -442,7 +498,8 @@ int main() {
             }
             if (sock < 0) {
                 trace("Dienst nicht erreichbar");
-                show_status("Der Dienst antwortet nicht.", "Protokoll: /data/ps5medic/service.log");
+                const std::string hint = std::string(tr(kMsgLogHint)) + "/data/ps5medic/service.log";
+                show_status(tr(kMsgNoAnswer), hint.c_str());
                 sceKernelUsleep(3000000);
                 continue;
             }
@@ -490,7 +547,7 @@ int main() {
             trace("Verbindung zum Dienst verloren");
             close(sock);
             sock = -1;
-            show_status("Verbindung zum Dienst verloren ...", "Neuer Versuch");
+            show_status(tr(kMsgLost), tr(kMsgRetry));
             continue;
         }
         if (reader.frame_ready) {
