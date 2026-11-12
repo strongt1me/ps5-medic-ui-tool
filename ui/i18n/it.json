@@ -481,5 +481,9 @@
 "checks.delta_less": "{n} in meno di prima",
 "checks.delta_same": "Invariato rispetto al controllo precedente",
 "checks.delta_first": "Primo controllo salvato",
-"history.ops_one": "1 passaggio"
+"history.ops_one": "1 passaggio",
+"title.system_app": "app di sistema",
+"detail.affects": "Riguarda: {list}",
+"detail.affects_more": "{list} e altri {n}",
+"games.d.name_unknown": "Nome non trovato"
 }

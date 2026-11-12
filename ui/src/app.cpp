@@ -376,6 +376,56 @@ std::string App::finding_desc(const medic::Finding& f) const {
     return text.substr(i);
 }
 
+// Namen der Spiele aus dem letzten Check-up (nur was die Konsole verraet: param.json der installierten Titel) und die Spiele je Befund.
+void App::refresh_game_names() {
+    title_names_.clear();
+    finding_games_.assign(result_.findings.size(), {});
+    for (const auto& g : svc_.games()) {
+        if (!g.name.empty() && g.name != g.titleid) title_names_[g.titleid] = g.name;
+        const std::string label = g.name.empty() || g.name == g.titleid ? g.titleid : g.name + " (" + g.titleid + ")";
+        for (const std::size_t idx : g.findings)
+            if (idx < finding_games_.size()) finding_games_[idx].push_back(label);
+    }
+}
+
+// Haengt hinter jede Titel-Kennung (PPSA12345, CUSA12345, NPXS12345 ...) den Namen des Spiels. Unbekannte Namen bleiben aus; NPXS sind Systemanwendungen.
+std::string App::annotate_titles(const std::string& text) const {
+    const auto& S = Strings::get(lang_);
+    std::string out;
+    std::size_t i = 0;
+    const std::size_t n = text.size();
+    auto upper = [](char ch) { return ch >= 'A' && ch <= 'Z'; };
+    auto digit = [](char ch) { return ch >= '0' && ch <= '9'; };
+    auto alnum = [&](char ch) { return upper(ch) || digit(ch) || (ch >= 'a' && ch <= 'z'); };
+    while (i < n) {
+        bool match = i + 9 <= n && (i == 0 || !alnum(text[i - 1])) && (i + 9 == n || !alnum(text[i + 9]));
+        for (std::size_t k = 0; match && k < 9; ++k) match = k < 4 ? upper(text[i + k]) : digit(text[i + k]);
+        if (!match) {
+            out += text[i++];
+            continue;
+        }
+        const std::string id = text.substr(i, 9);
+        out += id;
+        i += 9;
+        if (text.compare(i, 2, " (") == 0) continue;  // schon beschriftet
+        const auto it = title_names_.find(id);
+        if (it != title_names_.end()) out += " (" + it->second + ")";
+        else if (id.compare(0, 4, "NPXS") == 0) out += " (" + S("title.system_app") + ")";
+    }
+    return out;
+}
+
+// "Betrifft: Spiel A, Spiel B und 2 weitere" fuer den Befund mit diesem Index; leer, wenn er kein Spiel betrifft.
+std::string App::affected_text(std::size_t finding_index) const {
+    const auto& S = Strings::get(lang_);
+    if (viewing_old_ || finding_index >= finding_games_.size() || finding_games_[finding_index].empty()) return {};
+    const auto& v = finding_games_[finding_index];
+    std::string list;
+    for (std::size_t i = 0; i < v.size() && i < 2; ++i) list += (list.empty() ? "" : ", ") + v[i];
+    if (v.size() > 2) list = S.fmt("detail.affects_more", {{"list", list}, {"n", std::to_string(v.size() - 2)}});
+    return S.fmt("detail.affects", {{"list", list}});
+}
+
 std::string App::fix_name(const std::string& id) const {
     const auto& S = Strings::get(lang_);
     const std::string key = "fix." + id;
@@ -532,6 +582,8 @@ void App::open_error_for_finding() {
 // Angaben der Konsole zum gewaehlten Code (nur lesen, aus dem letzten Check-up) und Zustand des Scrollens neu setzen.
 void App::refresh_error_context() {
     err_ctx_ = current_error() ? svc_.code_context(*current_error()) : CodeContext{};
+    for (auto& line : err_ctx_.lines)
+        for (auto& kv : line.args) kv.second = annotate_titles(kv.second);
     scroll_streak_ = 0;
 }
 
@@ -948,6 +1000,7 @@ void App::update() {
         pending_check_ = false;
         result_ = run_check_with_progress();
         has_result_ = true;
+        refresh_game_names();
         sel_ = top_ = 0;
         screen_ = Screen::Findings;
         if (after_check_games_) {
@@ -959,6 +1012,7 @@ void App::update() {
     if (verify_ == Verify::Pending && verify_rendered_ && screen_ == Screen::FixDone) {  // Re-Detect nach der Reparatur
         result_ = svc_.run_check();
         has_result_ = true;
+        refresh_game_names();
         sel_ = top_ = 0;
         const bool still = std::any_of(result_.findings.begin(), result_.findings.end(), [&](const medic::Finding& f) { return f.rule_id == verify_rule_; });
         verify_ = still ? Verify::Persists : Verify::Fixed;
@@ -1486,9 +1540,11 @@ void App::draw_findings(Canvas& c) const {
             fixw = lw + 22 + 28 + 24;
         }
         body().draw(c, tx + bw + 16, y + 12, elide(body(), finding_title(f), cw - 134 - bw - 16 - 32 - fixw), kText);
-        const auto lines = wrap_text(small(), finding_desc(f), cw - 134 - 36, 2);
+        const std::string affects = affected_text(static_cast<std::size_t>(i));
+        const auto lines = wrap_text(small(), finding_desc(f), cw - 134 - 36, affects.empty() ? 2 : 1);
         for (std::size_t k = 0; k < lines.size(); ++k)
             small().draw(c, tx, y + 64 + static_cast<int>(k) * (small().line_height() + 4), lines[k], kDim);
+        if (!affects.empty()) small().draw(c, tx, y + 64 + static_cast<int>(lines.size()) * (small().line_height() + 4), elide(small(), affects, cw - 134 - 36), kText);
     }
     if (n > kListVisible) {  // Scrollleiste
         const int track_h = kListVisible * (ch + gap) - gap;
@@ -1578,6 +1634,10 @@ void App::draw_detail(Canvas& c) const {
         const int ph = 22 + small().line_height() + 10 + static_cast<int>(lines.size()) * lh + 22;
         c.fill_round_rect(M, y, cw, ph, 18, kPanel);
         small().draw(c, M + 36, y + 20, S("detail.explanation"), kDim);
+        if (const std::string affects = affected_text(static_cast<std::size_t>(sel_)); !affects.empty()) {
+            const int lw = small().width(S("detail.explanation")) + 36 + 40;
+            text_right(c, small(), M + cw - 36, y + 20, elide(small(), affects, cw - lw - 36), kText);
+        }
         int ty = y + 20 + small().line_height() + 10;
         for (const auto& l : lines) {
             body().draw(c, M + 36, ty, l, kText);
@@ -1602,7 +1662,7 @@ void App::draw_detail(Canvas& c) const {
             small().draw(c, M + 36, ty, S("detail.evidence_none"), kDim);
         } else {
             for (std::size_t i = 0; i < std::min(f->evidence.size(), kMaxEvidence); ++i, ty += lh)
-                small().draw(c, M + 36, ty, elide(small(), f->evidence[i], cw - 72), kText);
+                small().draw(c, M + 36, ty, elide(small(), annotate_titles(f->evidence[i]), cw - 72), kText);
             if (f->evidence.size() > kMaxEvidence)
                 small().draw(c, M + 36, ty, S.fmt("detail.evidence_more", {{"n", std::to_string(f->evidence.size() - kMaxEvidence)}}), kDim);
         }
@@ -1953,9 +2013,19 @@ void App::draw_gamedetail(Canvas& c) const {
     if (game_sel_ < 0 || game_sel_ >= static_cast<int>(games_.size())) return;
     const auto& g = games_[static_cast<std::size_t>(game_sel_)];
     const int total = static_cast<int>(games_.size());
-    title_icon(c, Icon::Gamepad, kTintPink, elide(title(), g.name.empty() ? g.titleid : g.name, W - 2 * M - 420));
-    text_right(c, small(), W - M, 148, S.fmt("games.pos", {{"i", std::to_string(game_sel_ + 1)}, {"n", std::to_string(total)}}), kDim);
-    small().draw(c, M + 4, 196, (g.name.empty() ? std::string() : g.titleid + "  ·  ") + S.fmt("games.console_fw", {{"fw", result_.fw.empty() ? "?" : result_.fw}}), kDim);
+    {
+        // Name des Spiels gross, die Titel-Kennung als Marke daneben; ohne bekannten Namen steht die Kennung gross und darunter ein Hinweis
+        const bool named = !g.name.empty() && g.name != g.titleid;
+        const std::string head = elide(title(), named ? g.name : g.titleid, W - 2 * M - 420 - (named ? small().width(g.titleid) + 80 : 0));
+        title_icon(c, Icon::Gamepad, kTintPink, head);
+        if (named) {
+            const int cx = M + 88 + title().width(head) + 24, cw2 = small().width(g.titleid) + 36;
+            c.fill_round_rect(cx, 146, cw2, 40, 20, kPanelHi);
+            small().draw(c, cx + 18, 151, g.titleid, kText);
+        }
+        text_right(c, small(), W - M, 148, S.fmt("games.pos", {{"i", std::to_string(game_sel_ + 1)}, {"n", std::to_string(total)}}), kDim);
+        small().draw(c, M + 4, 196, (named ? std::string() : S("games.d.name_unknown") + "  ·  ") + S.fmt("games.console_fw", {{"fw", result_.fw.empty() ? "?" : result_.fw}}), kDim);
+    }
 
     // Links: der Zustand des Spiels als Liste mit Statussymbol. Gruen = in Ordnung, Orange/Rot = Problem, Grau = nicht bekannt.
     const int px = M, py = 232, pw = 780, ph = 716, pad = 28;

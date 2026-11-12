@@ -394,6 +394,7 @@ void game_detail_rich_tests() {
                            mk("smp.duplicate_titleid", Severity::Warning, "Dieselbe TITLE_ID liegt in mehreren Quellen vor (z. B. ein Spielordner und ein Image desselben Spiels). ShadowMount+ nutzt nur eine.", "The same TITLE_ID exists in several sources."),
                            mk("smp.register_failed", Severity::Warning, "Die Registrierung eines Spiels ist fehlgeschlagen. Zuerst das Launcher-Icon entfernen und neu registrieren.", "Registering a game failed."),
                            mk("custom.neue_regel_ohne_titel", Severity::Info, "Eine Regel aus einem Update ohne Kurztitel: der erste Satz dient als Titel. Der Rest ist die Erklaerung.", "A rule from an update without a short title.")};
+    svc.result.findings[1].evidence = {"PPSA01234: 13.60", "NPXS20001 (Konsole 4.03)"};
     medic::GameInfo g;
     g.titleid = "PPSA01234";
     g.name = "Testspiel Eins";
@@ -412,6 +413,15 @@ void game_detail_rich_tests() {
     for (Lang lang : {Lang::De, Lang::En, Lang::Fr, Lang::It, Lang::Es}) {
         App app(svc, lang);
         run_check_via_ui(app, cv);
+        app.render(cv);
+        if (dir && lang == Lang::De) {
+            write_png(std::string(dir) + "/findings_de.png", cv, 1);
+            app.handle(Button::Down);
+            app.handle(Button::Cross);  // Befund 2 (mit Evidenz) ansehen
+            app.render(cv);
+            write_png(std::string(dir) + "/finding_detail_de.png", cv, 1);
+            app.handle(Button::Circle);
+        }
         app.handle(Button::Circle);  // Befundliste -> Start
         for (int i = 0; i < 5; ++i) app.handle(Button::Down);
         app.handle(Button::Cross);  // Spiele

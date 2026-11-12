@@ -481,5 +481,9 @@
   "checks.delta_less": "{n} fewer than before",
   "checks.delta_same": "Same as the check-up before",
   "checks.delta_first": "First saved check-up",
-  "history.ops_one": "1 step"
+  "history.ops_one": "1 step",
+  "title.system_app": "system app",
+  "detail.affects": "Affects: {list}",
+  "detail.affects_more": "{list} and {n} more",
+  "games.d.name_unknown": "Name not found"
 }

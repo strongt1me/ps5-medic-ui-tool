@@ -481,5 +481,9 @@
   "checks.delta_less": "{n} de moins qu'avant",
   "checks.delta_same": "Identique au contrôle précédent",
   "checks.delta_first": "Premier contrôle enregistré",
-  "history.ops_one": "1 étape"
+  "history.ops_one": "1 étape",
+  "title.system_app": "app système",
+  "detail.affects": "Concerne : {list}",
+  "detail.affects_more": "{list} et {n} autres",
+  "games.d.name_unknown": "Nom introuvable"
 }

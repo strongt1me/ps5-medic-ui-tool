@@ -492,7 +492,11 @@ R"JSON(  "rule.title.appdb.orphan_entry": "Datenbank kennt ein Spiel ohne Ordner
   "checks.delta_less": "{n} weniger als davor",
   "checks.delta_same": "Unverändert zum Check-up davor",
   "checks.delta_first": "Erster gespeicherter Check-up",
-  "history.ops_one": "1 Schritt"
+  "history.ops_one": "1 Schritt",
+  "title.system_app": "Systemanwendung",
+  "detail.affects": "Betrifft: {list}",
+  "detail.affects_more": "{list} und {n} weitere",
+  "games.d.name_unknown": "Name nicht ermittelt"
 }
 )JSON";
 
@@ -983,7 +987,11 @@ R"JSON(  "games.d.log": "Latest in the ShadowMount+ log",
   "checks.delta_less": "{n} fewer than before",
   "checks.delta_same": "Same as the check-up before",
   "checks.delta_first": "First saved check-up",
-  "history.ops_one": "1 step"
+  "history.ops_one": "1 step",
+  "title.system_app": "system app",
+  "detail.affects": "Affects: {list}",
+  "detail.affects_more": "{list} and {n} more",
+  "games.d.name_unknown": "Name not found"
 }
 )JSON";
 
@@ -1475,7 +1483,11 @@ R"JSON(  "rule.title.appdb.orphan_entry": "La base connaît un jeu sans dossier"
   "checks.delta_less": "{n} de moins qu'avant",
   "checks.delta_same": "Identique au contrôle précédent",
   "checks.delta_first": "Premier contrôle enregistré",
-  "history.ops_one": "1 étape"
+  "history.ops_one": "1 étape",
+  "title.system_app": "app système",
+  "detail.affects": "Concerne : {list}",
+  "detail.affects_more": "{list} et {n} autres",
+  "games.d.name_unknown": "Nom introuvable"
 }
 )JSON";
 
@@ -1966,7 +1978,11 @@ R"JSON("games.d.fw": "Firmware richiesto",
 "checks.delta_less": "{n} in meno di prima",
 "checks.delta_same": "Invariato rispetto al controllo precedente",
 "checks.delta_first": "Primo controllo salvato",
-"history.ops_one": "1 passaggio"
+"history.ops_one": "1 passaggio",
+"title.system_app": "app di sistema",
+"detail.affects": "Riguarda: {list}",
+"detail.affects_more": "{list} e altri {n}",
+"games.d.name_unknown": "Nome non trovato"
 }
 )JSON";
 
@@ -2457,7 +2473,11 @@ R"JSON(  "games.d.oversized": "Reserva de espacio excesiva",
   "checks.delta_less": "{n} menos que antes",
   "checks.delta_same": "Igual que la revisión anterior",
   "checks.delta_first": "Primera revisión guardada",
-  "history.ops_one": "1 paso"
+  "history.ops_one": "1 paso",
+  "title.system_app": "app del sistema",
+  "detail.affects": "Afecta a: {list}",
+  "detail.affects_more": "{list} y {n} más",
+  "games.d.name_unknown": "Nombre no encontrado"
 }
 )JSON";
 

@@ -15,6 +15,7 @@
 #include "medic_ui/input.hpp"
 #include "medic_ui/service.hpp"
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -117,6 +118,9 @@ private:
     std::string rule_title(const std::string& id, const std::string& text) const;  // Kurztitel der Regel (Standard: erster Satz des Textes)
     std::string finding_title(const medic::Finding& f) const;
     std::string finding_desc(const medic::Finding& f) const;
+    void refresh_game_names();
+    std::string annotate_titles(const std::string& text) const;
+    std::string affected_text(std::size_t finding_index) const;
     std::string fix_name(const std::string& id) const;
     const medic::Finding* current_finding() const;
 
@@ -130,6 +134,8 @@ private:
     int tick_ = 0;
     bool quit_ = false;
     std::function<void()> redraw_;
+    std::map<std::string, std::string> title_names_;       // Titel-Kennung -> Name (nur bekannte)
+    std::vector<std::vector<std::string>> finding_games_;  // je Befund die betroffenen Spiele (Name und Kennung)
     double check_progress_ = 0;  // 0 bis 1 waehrend des Check-ups
 
     int start_sel_ = 0;

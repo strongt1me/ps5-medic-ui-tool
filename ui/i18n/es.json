@@ -481,5 +481,9 @@
   "checks.delta_less": "{n} menos que antes",
   "checks.delta_same": "Igual que la revisión anterior",
   "checks.delta_first": "Primera revisión guardada",
-  "history.ops_one": "1 paso"
+  "history.ops_one": "1 paso",
+  "title.system_app": "app del sistema",
+  "detail.affects": "Afecta a: {list}",
+  "detail.affects_more": "{list} y {n} más",
+  "games.d.name_unknown": "Nombre no encontrado"
 }
