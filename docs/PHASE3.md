@@ -34,6 +34,8 @@ Die Sandbox – und damit der Lapy/etaHEN-Umweg – gilt nur für echte Titles, 
 
 **Nachtrag (9. Nov. 2026): websrv ist nicht mehr nötig.** Der Big-App-Lader (`hbldr.c`, `elfldr.c`, `pt.c`) steckt jetzt im Launcher `ps5medic-launcher.elf` (Port-9021-Payload, `ps5/launcher_main.cpp`, Quelle des Laders in `third_party/websrv-hbldr/`). Er legt zusätzlich die Kachel an und startet die UI bei Bedarf selbst. Aufbau, Sicherheitsregeln und Konsolentest: `docs/TITLE.md`. `make launch-ui` (websrv) bleibt als Ausweichweg.
 
+**Nachtrag (12. Nov. 2026): auch die Kachel braucht keinen Homebrew-Lader mehr.** Die Kachel ist jetzt ein nativer Starter-Titel (`title/starter.c`, `eboot.bin`), der den Launcher an Port 9021 sendet, statt websrv anzurufen oder den Browser zu öffnen (der frühere Dienst auf Port 9056 entfällt). Zwei Kacheln: `FAKE42008` (legt `ps5medic-launcher.elf` an) und die Ordner-App `FAKE42007` (für ShadowMount+). Alles in `docs/TITLE.md`.
+
 ## VideoOut- und Pad-Anbindung: SDL2
 
 Entscheidung: **SDL2** über [`ps5-payload-dev/SDL`](https://github.com/ps5-payload-dev/SDL) (zlib-Lizenz, selbe Organisation wie das SDK) statt rohe `sceVideoOut*`/`scePad*`-Syscalls von Hand – fertige, getestete VideoOut-Implementierung statt Struktur-Layouts aus der Erinnerung nachzubauen.

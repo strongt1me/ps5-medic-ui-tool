@@ -29,15 +29,17 @@ It runs as a full-screen app directly on the console and is operated with the Du
 ## Requirements
 
 - An already jailbroken PS5 with an ELF loader (port 9021) and FTP (port 2121 here).
-- To use the DualSense the UI needs an app context (the console does not open the controller otherwise, background: [docs/PHASE3.md](docs/PHASE3.md), German). The bundled **launcher** (`ps5medic-launcher.elf`, a port-9021 payload) provides it; **websrv is no longer needed**. Without the launcher only the diagnostic payload (`ps5medic.elf`) runs.
+- To use the DualSense the UI needs an app context (the console does not open the controller otherwise, background: [docs/PHASE3.md](docs/PHASE3.md), German). The **starter** of the tile (a small native title that sends the launcher to the ELF loader) provides it; **neither websrv nor a homebrew loader is needed**. Without the tile only the diagnostic payload (`ps5medic.elf`) runs.
 
 ## Installation
 
 1. Copy the `PS5MEDIC` folder from the release to `/data/homebrew/` via FTP (it contains `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` and the icon).
-2. Send `ps5medic-launcher.elf` to port 9021 (Payload Manager, or from a PC: `make send-launcher PS5_HOST=<PS5-IP>`). It puts the **PS5 Medic** tile on the home screen and starts the UI right away if no app is running.
-3. Afterwards the tile opens the UI. After a console restart send the launcher again (or add it to the Payload Manager autoload list); the tile stays.
+2. Get the tile, in one of two ways:
+   - **Send an ELF:** send `ps5medic-launcher.elf` to port 9021 (Payload Manager, or from a PC: `make send-launcher PS5_HOST=<PS5-IP>`). It puts the **PS5 Medic** tile (`FAKE42008`) on the home screen and starts the UI right away if no app is running.
+   - **Folder app:** copy the `FAKE42007` folder from the release to `/data/homebrew/`; ShadowMount+ creates the tile. Afterwards a press on the tile starts the UI without sending any ELF.
+3. A press on the tile starts the UI. It only needs the console's ELF loader (port 9021); the tile stays after a restart.
 
-The launcher only closes the browser the tile opens and homebrew fake apps; it never closes a running game. Details: [docs/TITLE.md](docs/TITLE.md) (German). The old way through websrv (`make launch-ui`) remains as a fallback.
+The launcher only closes homebrew fake apps (including the tile's starter) and system programs; it never closes a running game. Details: [docs/TITLE.md](docs/TITLE.md) (German). The old way through websrv (`make launch-ui`) remains as a fallback.
 
 ## Controls
 
@@ -68,7 +70,7 @@ For the console you need the [ps5-payload-sdk](https://github.com/ps5-payload-de
 ```bash
 make ps5-ui                         # full-screen UI (ps5medicui.elf)
 make ps5                            # diagnostic payload (ps5medic.elf)
-make send-launcher PS5_HOST=192.168.1.x # send the launcher to port 9021 (tile + UI); make launch-ui = old way through websrv
+make send-launcher PS5_HOST=192.168.1.x # send the launcher to port 9021 (tile FAKE42008 + UI); make title = folder app FAKE42007; make launch-ui = old way through websrv
 make dist                           # release folder and zip under dist/ (local only)
 ```
 

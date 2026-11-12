@@ -1,42 +1,42 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PS5 Medic Launcher (ps5medic-launcher.elf): eine ELF, die man an Port 9021 sendet. Sie braucht weder websrv noch einen
-// Starter-Titel noch ShadowMount+.
+// PS5 Medic Launcher: startet die Vollbild-UI (ps5medicui.elf) mit App-Kontext, ohne websrv und ohne Homebrew-Lader.
 //
-//  1. Kachel anlegen: installiert die Kachel "PS5 Medic" (Titel-ID FAKE42008) ueber sceAppInstUtilAppInstallTitleDir, so wie
-//     websrv seine Kachel "Homebrew Launcher" anlegt. Die Kachel hat keinen eigenen Code, sondern einen deeplinkUri auf
-//     http://127.0.0.1:9056/: ein Druck oeffnet den Browser der Konsole mit dieser Adresse.
-//  2. Dienst: der Launcher bleibt laufen und beantwortet diese Adresse. Kommt die Anfrage, startet er die Vollbild-UI
-//     (ps5medicui.elf) und schliesst dabei den Browser. Die UI bekommt einen App-Kontext (nur damit oeffnet sich der DualSense)
-//     und keine Sandbox. Der Lader dafuer stammt aus websrv (third_party/websrv-hbldr, GPL-3.0-or-later): eine echte System-App
-//     (FAKE00000) wird per sceSystemServiceLaunchApp gestartet und per ptrace gegen die ELF getauscht.
-//  3. Beim ersten Start (ELF gesendet) startet er die UI gleich, wenn gerade keine App im Vordergrund ist.
+// Es gibt ihn in zwei Fassungen aus demselben Quelltext:
+//
+//  * ps5medic-start.elf (ohne MEDIC_TILE_INSTALL): wird vom Starter der Kachel (title/starter.c) an Port 9021 gesendet, sobald die
+//    Kachel "PS5 Medic" geoeffnet wird. Er startet die UI und beendet sich, wenn die UI endet.
+//  * ps5medic-launcher.elf (mit MEDIC_TILE_INSTALL): die ELF, die man von Hand an Port 9021 sendet (make send-launcher). Sie legt
+//    zuerst die Kachel "PS5 Medic" (Titel-ID FAKE42008) an: ein echter nativer Titel, dessen eboot.bin der Starter ist (die Dateien
+//    stecken in dieser ELF), installiert wie im Beispiel install_app des ps5-payload-sdk (eboot unter /system_ex/app, param.json
+//    und Icon unter /user/app, dann sceAppInstUtilAppInstallTitleDir). Danach
+//    startet sie die UI wie die erste Fassung. Die Kachel braucht danach nur noch den ELF-Lader, nichts anderes.
+//
+// UI-Start: Der Lader dafuer stammt aus websrv (third_party/websrv-hbldr, GPL-3.0-or-later, nur der Code, nicht der Dienst): eine
+// echte System-App (FAKE00000) wird per sceSystemServiceLaunchApp gestartet und per ptrace gegen die ELF getauscht. Das gibt der UI
+// einen App-Kontext (nur damit oeffnet sich der DualSense) und keine Sandbox.
 //
 // Sicherheit: Es wird nur geschlossen, was ein System-Programm (NPXS...) oder eine Homebrew-Fake-App (FAKE...) ist; ein Spiel
-// oder eine unbekannte App nie. Der Dienst lauscht nur auf 127.0.0.1.
+// oder eine unbekannte App nie. Der Launcher oeffnet keinen Port und greift nicht ins Netz.
 //
 // Eine zweite Instanz (ELF erneut gesendet) loest die laufende ab (wie bei websrv: gleicher Thread-Name, die alte wird beendet).
 // Alles Wichtige steht in /data/ps5medic/launcher.log.
-#include <arpa/inet.h>
 #include <fcntl.h>
-#include <netinet/in.h>
-#include <poll.h>
 #include <signal.h>
-#include <sys/socket.h>
+#include <sys/mount.h>
 #include <sys/stat.h>
+#include <sys/uio.h>
 #include <sys/sysctl.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
-#include <atomic>
 #include <cctype>
 #include <cerrno>
-#include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include <ps5/kernel.h>
@@ -52,35 +52,34 @@ int sceKernelGetAppInfoByAppId(int app_id, void* info);
 int sceKernelSendNotificationRequest(int device, void* request, size_t size, int blocking);
 }
 
+#ifdef MEDIC_TILE_INSTALL
+// Die Dateien der Kachel (build-title/FAKE42008/, siehe title/build_title.sh), per .incbin in die ELF gebunden.
+#define MEDIC_INCBIN(sym, file)                           \
+    __asm__(".section .rodata\n.balign 16\n.global " #sym \
+            "\n" #sym ":\n.incbin \"" MEDIC_TILE_DIR "/" file "\"\n.global " #sym "_end\n" #sym "_end:\n.previous\n")
+MEDIC_INCBIN(tile_eboot, "eboot.bin");
+MEDIC_INCBIN(tile_libc, "sce_module/libc.prx");
+MEDIC_INCBIN(tile_param, "sce_sys/param.json");
+MEDIC_INCBIN(tile_icon, "sce_sys/icon0.png");
+extern "C" const unsigned char tile_eboot[], tile_eboot_end[], tile_libc[], tile_libc_end[], tile_param[], tile_param_end[], tile_icon[], tile_icon_end[];
+#endif
+
 namespace fs = std::filesystem;
 
 namespace {
 
+#ifdef MEDIC_TILE_INSTALL
 constexpr const char* kTileTitle = "FAKE42008";
 constexpr const char* kTileApp = "/user/app/FAKE42008";
+constexpr const char* kTileSystem = "/system_ex/app/FAKE42008";
+#endif
 constexpr const char* kUiDir = "/data/homebrew/PS5MEDIC";
 constexpr const char* kUiElf = "/data/homebrew/PS5MEDIC/ps5medicui.elf";
-constexpr const char* kUiIcon = "/data/homebrew/PS5MEDIC/sce_sys/icon0.png";
 constexpr const char* kLogPath = "/data/ps5medic/launcher.log";
 constexpr const char* kThreadName = "ps5medic-launch.elf";  // wie bei websrv: damit eine neue Instanz die alte findet
-constexpr int kPort = 9056;
 constexpr std::uint64_t kSystemAuthId = 0x4801000000000013ULL;  // wie websrv (src/ps5/sys.c): Voraussetzung fuer AppInstUtil und LaunchApp
 
-// Die Kachel: ein deeplinkUri auf den Dienst dieses Launchers (nach dem Muster von websrvs param.json).
-constexpr const char* kParamJson = R"JSON({
-    "titleId": "FAKE42008",
-    "deeplinkUri": "http://127.0.0.1:9056/",
-    "localizedParameters": {
-        "defaultLanguage": "en-US",
-        "en-US": { "titleName": "PS5 Medic" },
-        "de-DE": { "titleName": "PS5 Medic" }
-    }
-}
-)JSON";
-
 std::FILE* g_log = nullptr;
-std::atomic<bool> g_launching{false};
-std::atomic<bool> g_quit{false};
 
 void trace(const std::string& line) {
     std::puts(line.c_str());
@@ -199,27 +198,40 @@ std::string title_of_app(int app_id) {
     return {};
 }
 
-// Was geschlossen werden darf, damit die UI starten kann: System-Programme (der Browser, der die Kachel geoeffnet hat) und
-// Homebrew-Fake-Apps. Alles andere (Spiele, unbekannte Titel) nie.
+// Was geschlossen werden darf, damit die UI starten kann: System-Programme und Homebrew-Fake-Apps (darunter der Starter der Kachel).
+// Alles andere (Spiele, unbekannte Titel) nie.
 bool may_close(const std::string& title) { return title.rfind("NPXS", 0) == 0 || title.rfind("FAKE", 0) == 0; }
 
+#ifdef MEDIC_TILE_INSTALL
 // ---- Kachel ------------------------------------------------------------------------------------------------------------------------
-bool read_all(const std::string& path, std::string& out) {
+struct Blob {
+    const char* rel;  // Pfad unterhalb des Titelordners
+    const unsigned char* data;
+    std::size_t size;
+    bool in_system;  // true: unter /system_ex/app/<ID>, false: unter /user/app/<ID>
+};
+
+// Stimmt die Datei schon mit dem Blob ueberein? (Gleiche Groesse, gleicher Inhalt.)
+bool same_content(const std::string& path, const Blob& b) {
     std::FILE* f = std::fopen(path.c_str(), "rb");
     if (!f) return false;
-    out.clear();
-    char buf[1 << 14];
-    std::size_t n;
-    while ((n = std::fread(buf, 1, sizeof buf, f)) > 0) out.append(buf, n);
-    const bool ok = !std::ferror(f);
+    bool same = true;
+    std::size_t done = 0;
+    unsigned char buf[1 << 14];
+    while (same) {
+        const std::size_t n = std::fread(buf, 1, sizeof buf, f);
+        if (n == 0) break;
+        if (done + n > b.size || std::memcmp(buf, b.data + done, n) != 0) same = false;
+        done += n;
+    }
     std::fclose(f);
-    return ok;
+    return same && done == b.size;
 }
 
-bool write_file(const std::string& path, const std::string& data) {
+bool write_blob(const std::string& path, const Blob& b) {
     std::FILE* f = std::fopen(path.c_str(), "wb");
     if (!f) return false;
-    const bool ok = std::fwrite(data.data(), 1, data.size(), f) == data.size();
+    const bool ok = std::fwrite(b.data, 1, b.size, f) == b.size;
     return std::fclose(f) == 0 && ok;
 }
 
@@ -231,40 +243,67 @@ int install_title_dir(const char* title_id, const char* dir) {
     return sceAppInstUtilAppInstallAll(nullptr);
 }
 
-// Legt die Kachel an (oder aktualisiert sie, wenn sich param.json geaendert hat). Nichts wird geloescht.
-std::string ensure_tile() {
-    std::error_code ec;
-    const std::string dir = kTileApp, sys = dir + "/sce_sys";
-    std::string have;
-    const bool installed = fs::exists("/user/appmeta/" + std::string(kTileTitle) + "/param.json", ec) || (read_all(sys + "/param.json", have) && have == kParamJson);
-    if (installed && fs::exists(sys + "/icon0.png", ec)) return std::string("Kachel ") + kTileTitle + ": schon installiert";
+// /system_ex beschreibbar machen (wie hbldr_launch es vor dem Anlegen der System-App FAKE00000 tut).
+bool remount_system_ex() {
+    struct iovec iov[] = {
+        {const_cast<char*>("from"), 5},      {const_cast<char*>("/dev/ssd0.system_ex"), 20},
+        {const_cast<char*>("fspath"), 7},    {const_cast<char*>("/system_ex"), 11},
+        {const_cast<char*>("fstype"), 7},    {const_cast<char*>("exfatfs"), 8},
+        {const_cast<char*>("large"), 6},     {const_cast<char*>("yes"), 4},
+        {const_cast<char*>("timezone"), 9},  {const_cast<char*>("static"), 7},
+        {const_cast<char*>("async"), 6},     {nullptr, 0},
+        {const_cast<char*>("ignoreacl"), 10}, {nullptr, 0},
+    };
+    return nmount(iov, sizeof iov / sizeof iov[0], MNT_UPDATE) == 0;
+}
 
-    fs::create_directories(sys, ec);
-    if (ec) return std::string("Kachel: ") + sys + " nicht anlegbar (" + ec.message() + ")";
-    if (!write_file(sys + "/param.json", kParamJson)) return "Kachel: param.json nicht schreibbar";
-    std::string icon;
-    if (!read_all(kUiIcon, icon) || !write_file(sys + "/icon0.png", icon)) return std::string("Kachel: Icon fehlt (") + kUiIcon + " nicht lesbar; make deploy-ui)";
+// Legt die Kachel an (oder bringt eine aeltere Fassung auf den Stand dieser ELF). So macht es das Beispiel install_app des
+// ps5-payload-sdk: das Programm (eboot.bin, sce_module) liegt unter /system_ex/app/<ID>, die Beschreibung (param.json, Icon) unter
+// /user/app/<ID>/sce_sys, dann sceAppInstUtilAppInstallTitleDir. Ein reiner /user/app-Ordner mit eboot.bin wird nicht als startbare
+// App registriert (sceSystemServiceLaunchApp: 0x80940033, Konsolentest 12. Nov. 2026). Nichts wird geloescht, nur eigene Dateien
+// werden ueberschrieben; /system_ex bekommt nur den Ordner FAKE42008 (wie FAKE00000 beim UI-Start).
+std::string ensure_tile() {
+    const std::string sys = kTileSystem, usr = kTileApp;
+    const Blob blobs[] = {
+        {"/eboot.bin", tile_eboot, static_cast<std::size_t>(tile_eboot_end - tile_eboot), true},
+        {"/sce_module/libc.prx", tile_libc, static_cast<std::size_t>(tile_libc_end - tile_libc), true},
+        {"/sce_sys/param.json", tile_param, static_cast<std::size_t>(tile_param_end - tile_param), true},
+        {"/sce_sys/param.json", tile_param, static_cast<std::size_t>(tile_param_end - tile_param), false},
+        {"/sce_sys/icon0.png", tile_icon, static_cast<std::size_t>(tile_icon_end - tile_icon), false},
+    };
+    auto path_of = [&](const Blob& b) { return (b.in_system ? sys : usr) + b.rel; };
+    bool current = true;
+    for (const Blob& b : blobs)
+        if (current && !same_content(path_of(b), b)) current = false;
+    if (current) return std::string("Kachel ") + kTileTitle + ": schon installiert";
+
+    if (!remount_system_ex()) return std::string("Kachel: /system_ex nicht beschreibbar (errno ") + std::to_string(errno) + ")";
+    std::error_code ec;
+    for (const char* d : {"/sce_sys", "/sce_module"}) {
+        fs::create_directories(sys + d, ec);
+        if (ec) return std::string("Kachel: ") + sys + d + " nicht anlegbar (" + ec.message() + ")";
+    }
+    fs::create_directories(usr + "/sce_sys", ec);
+    if (ec) return std::string("Kachel: ") + usr + "/sce_sys nicht anlegbar (" + ec.message() + ")";
+    for (const Blob& b : blobs) {
+        const std::string path = path_of(b);
+        if (same_content(path, b)) continue;
+        if (!write_blob(path, b)) return std::string("Kachel: ") + path + " nicht schreibbar (errno " + std::to_string(errno) + ")";
+    }
     if (sceAppInstUtilInitialize() != 0) return "Kachel: sceAppInstUtilInitialize fehlgeschlagen";
     const int rc = install_title_dir(kTileTitle, "/user/app/");
     return std::string("Kachel ") + kTileTitle + ": installiert (AppInstallTitleDir rc=" + std::to_string(rc) + ")";
 }
+#endif
 
 // ---- UI starten --------------------------------------------------------------------------------------------------------------------
-// Blockiert bis die UI laeuft (oder es scheitert). Nur ein Start gleichzeitig.
-void launch_ui(const char* why) {
-    if (g_launching.exchange(true)) {
-        trace(std::string("UI-Start (") + why + "): laeuft schon, ignoriert");
-        return;
-    }
-    struct Reset {
-        ~Reset() { g_launching = false; }
-    } reset;
-
+// Blockiert bis die UI laeuft (oder es scheitert). Gibt die Pid der UI zurueck oder -1.
+pid_t launch_ui(const char* why) {
     struct stat st;
     if (::stat(kUiElf, &st) != 0) {
         trace(std::string("UI-Start (") + why + "): " + kUiElf + " fehlt");
         notify("PS5 Medic: ps5medicui.elf fehlt in /data/homebrew/PS5MEDIC/ (make deploy-ui).");
-        return;
+        return -1;
     }
     const int app = sceSystemServiceGetAppIdOfRunningBigApp();
     if (app > 0) {
@@ -272,80 +311,31 @@ void launch_ui(const char* why) {
         if (!may_close(title)) {
             trace("UI-Start (" + std::string(why) + "): App " + std::to_string(app) + " (" + (title.empty() ? "unbekannt" : title) + ") laeuft und wird nicht geschlossen");
             notify("PS5 Medic: Eine App laeuft im Vordergrund. Bitte erst schliessen.");
-            return;
+            return -1;
         }
         trace("UI-Start (" + std::string(why) + "): schliesst " + title + " (app_id " + std::to_string(app) + ")");
     }
-    trace(std::string("UI-Start (") + why + "): hbldr_launch");
-    const int out = ::open("/data/ps5medic/ui.stdout", O_WRONLY | O_CREAT | O_TRUNC, 0644);  // stdout/stderr der UI
-    char* argv[] = {nullptr};
-    char* envp[] = {nullptr};
-    const pid_t pid = hbldr_launch(kUiDir, kUiElf, out >= 0 ? out : 1, argv, envp);
-    if (out >= 0) ::close(out);
-    if (pid < 0) {
+    // Wurde gerade eine App geschlossen (der Starter der Kachel, eine vorige UI), braucht das System einen Moment: ohne Pause und
+    // ohne zweiten Versuch scheitert hbldr_launch dann mit "Broken pipe" (Konsolentest 12. Nov. 2026, Kachel bei laufender UI).
+    if (app > 0) ::sleep(2);
+    pid_t pid = -1;
+    for (int attempt = 1; attempt <= 3 && pid < 0; ++attempt) {
+        trace(std::string("UI-Start (") + why + "): hbldr_launch, Versuch " + std::to_string(attempt));
+        const int out = ::open("/data/ps5medic/ui.stdout", O_WRONLY | O_CREAT | O_TRUNC, 0644);  // stdout/stderr der UI
+        char* argv[] = {nullptr};
+        char* envp[] = {nullptr};
+        pid = hbldr_launch(kUiDir, kUiElf, out >= 0 ? out : 1, argv, envp);
+        if (out >= 0) ::close(out);
+        if (pid >= 0) break;
         trace("UI-Start: hbldr_launch fehlgeschlagen (errno " + std::to_string(errno) + ": " + std::strerror(errno) + ")");
-        notify("PS5 Medic: Die Oberflaeche liess sich nicht starten (Protokoll: /data/ps5medic/launcher.log).");
-        return;
+        ::sleep(3);
     }
-    trace("UI-Start: Prozess " + std::to_string(pid));
-}
-
-// ---- Dienst (127.0.0.1:9056) ------------------------------------------------------------------------------------------------------
-int listen_local() {
-    const int s = ::socket(AF_INET, SOCK_STREAM, 0);
-    if (s < 0) return -1;
-    const int on = 1;
-    ::setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof on);
-    sockaddr_in sa;
-    std::memset(&sa, 0, sizeof sa);
-    sa.sin_len = sizeof sa;
-    sa.sin_family = AF_INET;
-    sa.sin_port = htons(kPort);
-    sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    if (::bind(s, reinterpret_cast<sockaddr*>(&sa), sizeof sa) != 0 || ::listen(s, 8) != 0) {
-        ::close(s);
+    if (pid < 0) {
+        notify("PS5 Medic: Die Oberflaeche liess sich nicht starten (Protokoll: /data/ps5medic/launcher.log).");
         return -1;
     }
-    return s;
-}
-
-void respond(int c, int status, const char* reason, const std::string& body) {
-    const std::string head = "HTTP/1.1 " + std::to_string(status) + " " + reason + "\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: " +
-                             std::to_string(body.size()) + "\r\nConnection: close\r\n\r\n";
-    ::send(c, head.data(), head.size(), MSG_NOSIGNAL);
-    ::send(c, body.data(), body.size(), MSG_NOSIGNAL);
-}
-
-const char* kStartPage = "<!doctype html><html><head><meta charset=\"utf-8\"><title>PS5 Medic</title></head><body style=\"background:#0e1218;color:#e8edf2;font-family:sans-serif;"
-                         "font-size:40px;padding:80px\"><h1>PS5 Medic</h1><p>Die Oberfl&auml;che wird gestartet &hellip;</p></body></html>";
-
-// Eine Anfrage: GET / und GET /launch starten die UI, GET /quit beendet den Dienst, alles andere (z. B. /favicon.ico) ist 404.
-void handle_client(int c) {
-    timeval tv{2, 0};
-    ::setsockopt(c, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
-    char buf[1024] = {0};
-    const ssize_t n = ::recv(c, buf, sizeof buf - 1, 0);
-    if (n <= 0) {
-        ::close(c);
-        return;
-    }
-    const std::string req(buf, static_cast<std::size_t>(n));
-    if (req.compare(0, 4, "QUIT") == 0 || req.compare(0, 10, "GET /quit ") == 0) {
-        respond(c, 200, "OK", "bye\n");
-        ::close(c);
-        trace("Beenden angefordert: eine neuere Instanz uebernimmt");
-        g_quit = true;
-        return;
-    }
-    if (req.compare(0, 6, "GET / ") == 0 || req.compare(0, 12, "GET /launch ") == 0) {
-        respond(c, 200, "OK", kStartPage);
-        ::close(c);
-        trace("Anfrage der Kachel: UI starten");
-        std::thread([] { launch_ui("Kachel"); }).detach();  // nicht im Anfrage-Pfad: das Starten dauert Sekunden
-        return;
-    }
-    respond(c, 404, "Not Found", "nicht gefunden\n");
-    ::close(c);
+    trace("UI-Start: Prozess " + std::to_string(pid));
+    return pid;
 }
 
 }  // namespace
@@ -357,47 +347,41 @@ int main() {
     fs::create_directories("/data/ps5medic", ec);
     const pid_t old_pid = previous_pid_from_log();
     g_log = std::fopen(kLogPath, "w");
-    trace("PS5 Medic Launcher startet (Pid " + std::to_string(::getpid()) + ")");
+    trace(std::string("PS5 Medic Launcher startet (Pid ") + std::to_string(::getpid()) + ")" +
+#ifdef MEDIC_TILE_INSTALL
+          " [ELF mit Kachel]"
+#else
+          " [Start ueber die Kachel]"
+#endif
+    );
 
     replace_previous_instance(old_pid);
     const int uerr = sceUserServiceInitialize(nullptr);
     if (uerr != 0) trace("sceUserServiceInitialize: " + std::to_string(uerr));
     kernel_set_ucred_authid(-1, kSystemAuthId);
 
-    int ctl = listen_local();
-    for (int i = 0; i < 25 && ctl < 0; ++i) {  // bis zu 5 s: die vorige Instanz gibt den Port frei
-        ::usleep(200 * 1000);
-        ctl = listen_local();
-    }
-    if (ctl < 0) {
-        trace("Port 127.0.0.1:" + std::to_string(kPort) + " nicht zu bekommen: Ende");
-        notify("PS5 Medic Launcher: Port 9056 ist belegt, Ende.");
-        return 1;
-    }
-
+#ifdef MEDIC_TILE_INSTALL
     trace(ensure_tile());
+    notify("PS5 Medic: Kachel bereit, die Oberflaeche startet.");
+#endif
 
-    // Erster Start: keine App im Vordergrund -> UI gleich starten, sonst bleibt es bei der Kachel.
-    const int app = sceSystemServiceGetAppIdOfRunningBigApp();
-    if (app <= 0) {
-        trace("Keine App im Vordergrund");
-        notify("PS5 Medic: Kachel angelegt, die Oberflaeche startet.");
-        std::thread([] { launch_ui("ELF gesendet"); }).detach();
-    } else {
-        const std::string title = title_of_app(app);
-        trace("Vordergrund: app_id " + std::to_string(app) + (title.empty() ? "" : " (" + title + ")") + ": UI startet mit der Kachel");
-        notify("PS5 Medic: Kachel angelegt. Die Oberflaeche startet mit der Kachel.");
+    const pid_t ui = launch_ui(
+#ifdef MEDIC_TILE_INSTALL
+        "ELF gesendet"
+#else
+        "Kachel"
+#endif
+    );
+    if (ui < 0) {
+        if (g_log) std::fclose(g_log);
+        ::_exit(1);
     }
-    trace("Dienst laeuft auf 127.0.0.1:" + std::to_string(kPort));
-
-    while (!g_quit) {
-        pollfd pfd{ctl, POLLIN, 0};
-        if (::poll(&pfd, 1, 500) > 0 && (pfd.revents & POLLIN)) {
-            const int c = ::accept(ctl, nullptr, nullptr);
-            if (c >= 0) handle_client(c);
-        }
+    // Bei der UI bleiben, solange sie laeuft (wie websrv, das den gestarteten Prozess ebenfalls begleitet).
+    for (;;) {
+        ::sleep(2);
+        if (::kill(ui, 0) != 0 && errno == ESRCH) break;
     }
-    ::close(ctl);
+    trace("UI beendet, der Launcher endet.");
     if (g_log) std::fclose(g_log);
-    ::_exit(0);  // auch wenn noch ein Start-Thread haengt
+    ::_exit(0);
 }

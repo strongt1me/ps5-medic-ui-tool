@@ -17,7 +17,7 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 - **Sprache:** C++20 (Kern) + C wo nötig (SDK-Schnittstellen).
 - **PS5-Basis:** [PS5_VulkanTemplate](https://github.com/mihawk-99/PS5_VulkanTemplate) (Titel-Generator, UI-Designs, Controller, RADV). Alternative falls Vulkan auf FW 4.03 nicht läuft: SDL2-Software-Rendering wie [Nativehbl](https://github.com/Rufidj/Nativehbl).
 - **SDK:** [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) (bzw. die vom Template gepinnte Version).
-- **Privilegien:** ~~App-Jailbreak über etaHEN-API oder [PS5-Lapy-JB-Daemon](https://github.com/ArkSama/PS5-Lapy-JB-Daemon)~~ – unnötig: Als **Payload** (über elfldr/Payload Manager statt als Sony-Title gestartet) liest die App `/data` und `/mnt/*` ohne jede Rechte-Anhebung; das ist seit Phase 2 auf der Konsole bestätigt (Details: `docs/PHASE3.md`, Abschnitt „Korrektur"). **Ausnahme DualSense:** fürs Pad braucht die UI zusätzlich einen App-Kontext (`app_id`), den elfldr-Payloads nicht haben; sie startet deshalb über **websrvs Big-App-Lader** (`/hbldr`, `make launch-ui`, websrv muss auf der Konsole laufen), siehe `docs/PHASE3.md`, „Nachtrag".
+- **Privilegien:** ~~App-Jailbreak über etaHEN-API oder [PS5-Lapy-JB-Daemon](https://github.com/ArkSama/PS5-Lapy-JB-Daemon)~~ – unnötig: Als **Payload** (über elfldr/Payload Manager statt als Sony-Title gestartet) liest die App `/data` und `/mnt/*` ohne jede Rechte-Anhebung; das ist seit Phase 2 auf der Konsole bestätigt (Details: `docs/PHASE3.md`, Abschnitt „Korrektur"). **Ausnahme DualSense:** fürs Pad braucht die UI zusätzlich einen App-Kontext (`app_id`), den elfldr-Payloads nicht haben; sie startet deshalb über den **Big-App-Lader aus websrv**, der im Launcher steckt (nur der Code, kein websrv nötig). Die Kachel („PS5 Medic", `FAKE42008` per ELF senden oder Ordner-App `FAKE42007` für ShadowMount+) ist ein nativer Starter-Titel, der den Launcher an Port 9021 sendet; gebaut mit **ps5-payload-sdk 0.45** (Marc, 12. Nov. 2026). Siehe `docs/TITLE.md`.
 - **Regeln:** JSON-Wissensdatenbank (`knowledge/rules.json`), kein hartcodiertes Fehlerwissen im C++-Code.
 
 ## Architektur-Leitlinien (wichtig)
@@ -42,7 +42,7 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 - `make test` → Unit- + Regel-Tests gegen alle Fixtures.
 - `make ps5` → baut den PS5-Payload (ELF, über elfldr/Payload Manager gestartet – kein Sony-Title mit PPSA-Ordner).
 - `make deploy` → per FTP (Port 2121) nach `/data/homebrew/PS5MEDIC/`.
-- `make launch-ui` → UI hochladen und über websrv starten; `make dist` → Release-Ordner und Zip unter `dist/`; `medic-cli report <snapshot> --qr` → Bericht am PC.
+- `make send-launcher` → Launcher senden (Kachel + UI); `make title` → Starter-Kacheln `FAKE42007`/`FAKE42008`; `make launch-ui` → Ausweichweg über websrv; `make dist` → Release-Ordner und Zip unter `dist/`; `medic-cli report <snapshot> --qr` → Bericht am PC.
 
 ## Arbeitsweise für Claude Code
 - Erst Phase 0 aus `docs/ROADMAP.md` (Host-Kern + Fixtures), **dann** die PS5-Oberfläche.

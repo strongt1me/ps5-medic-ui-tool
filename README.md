@@ -29,15 +29,17 @@ Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedien
 ## Voraussetzungen
 
 - Eine bereits gejailbreakte PS5 mit ELF-Loader (Port 9021) und FTP (hier Port 2121).
-- Für den Start mit DualSense braucht die UI einen App-Kontext (sonst öffnet die Konsole den Controller nicht, Hintergrund: [docs/PHASE3.md](docs/PHASE3.md)). Den gibt ihr der mitgelieferte **Launcher** (`ps5medic-launcher.elf`, ein Port-9021-Payload); **websrv ist nicht mehr nötig**. Ohne Launcher läuft nur der Diagnose-Payload (`ps5medic.elf`).
+- Für den Start mit DualSense braucht die UI einen App-Kontext (sonst öffnet die Konsole den Controller nicht, Hintergrund: [docs/PHASE3.md](docs/PHASE3.md)). Den gibt ihr der **Starter** der Kachel (ein kleiner nativer Titel, der den Launcher an den ELF-Lader sendet); **weder websrv noch ein Homebrew-Lader ist nötig**. Ohne Kachel läuft nur der Diagnose-Payload (`ps5medic.elf`).
 
 ## Installation
 
 1. Den Ordner `PS5MEDIC` aus dem Release per FTP nach `/data/homebrew/` kopieren (er enthält `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` und das Icon).
-2. `ps5medic-launcher.elf` an Port 9021 senden (Payload Manager, oder vom PC: `make send-launcher PS5_HOST=<PS5-IP>`). Er legt die Kachel **PS5 Medic** auf dem Startbildschirm an und startet die UI gleich, wenn keine App läuft.
-3. Später öffnet die Kachel die UI. Nach einem Neustart der Konsole den Launcher erneut senden (oder in die Autoload-Liste des Payload Managers eintragen); die Kachel bleibt.
+2. Die Kachel bekommen, auf einem von zwei Wegen:
+   - **ELF senden:** `ps5medic-launcher.elf` an Port 9021 senden (Payload Manager, oder vom PC: `make send-launcher PS5_HOST=<PS5-IP>`). Er legt die Kachel **PS5 Medic** (`FAKE42008`) auf dem Startbildschirm an und startet die UI gleich, wenn keine App läuft.
+   - **Ordner-App:** den Ordner `FAKE42007` aus dem Release nach `/data/homebrew/` kopieren; ShadowMount+ legt die Kachel an. Danach startet ein Druck auf die Kachel die UI, ohne dass eine ELF gesendet werden muss.
+3. Ein Druck auf die Kachel startet die UI. Sie braucht nur den ELF-Lader (Port 9021) der Konsole; nach einem Neustart bleibt die Kachel.
 
-Der Launcher schließt nur den Browser, den die Kachel öffnet, und Homebrew-Fake-Apps; ein laufendes Spiel schließt er nie. Einzelheiten: [docs/TITLE.md](docs/TITLE.md). Der alte Weg über websrv (`make launch-ui`) bleibt als Ausweichmöglichkeit.
+Der Launcher schließt nur Homebrew-Fake-Apps (darunter den Starter der Kachel) und System-Programme; ein laufendes Spiel schließt er nie. Einzelheiten: [docs/TITLE.md](docs/TITLE.md). Der alte Weg über websrv (`make launch-ui`) bleibt als Ausweichmöglichkeit.
 
 ## Bedienung
 
@@ -68,7 +70,7 @@ Für die Konsole braucht man das [ps5-payload-sdk](https://github.com/ps5-payloa
 ```bash
 make ps5-ui                         # Vollbild-UI (ps5medicui.elf)
 make ps5                            # Diagnose-Payload (ps5medic.elf)
-make send-launcher PS5_HOST=192.168.1.x # Launcher an Port 9021 senden (Kachel + UI); make launch-ui = alter Weg über websrv
+make send-launcher PS5_HOST=192.168.1.x # Launcher an Port 9021 senden (Kachel FAKE42008 + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
 make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
 ```
 
