@@ -1,0 +1,185 @@
+<div align="center">
+
+<img src="docs/images/splash.jpg" alt="PS5 Medic: diagnóstico del sistema, recuperación, mantenimiento" width="860">
+
+# PS5 Medic
+
+**Chequeo, diagnóstico en lenguaje claro y reparación segura para consolas PS5 con jailbreak, como aplicación a pantalla completa para el televisor con DualSense (o puntero).**
+
+![Versión](https://img.shields.io/badge/Versión-0.4.0--dev-1f6feb)
+![Firmware](https://img.shields.io/badge/FW-4.00%20a%2014.10-2ea44f)
+![Licencia](https://img.shields.io/badge/Licencia-GPL--3.0--or--later-blue)
+![Plataforma](https://img.shields.io/badge/Plataforma-PS5%20Payload-003791)
+![Idiomas](https://img.shields.io/badge/Idiomas-DE%20%C2%B7%20EN%20%C2%B7%20FR%20%C2%B7%20IT%20%C2%B7%20ES-lightgrey)
+
+[Deutsch](README.md) · [English](README.en.md) · [Français](README.fr.md) · [Italiano](README.it.md) · **Español**
+
+<img src="docs/images/es/01_start.png" alt="Pantalla de inicio" width="860">
+
+</div>
+
+**PS5 Medic** revisa en una PS5 con jailbreak el **estado en vivo** de la configuración de Homebrew (firmware, cadena de jailbreak, kstuff, ShadowMount+, payloads, juegos, archivos, configuración), explica las causas conocidas de los fallos **en lenguaje claro** y, cuando es posible hacerlo con seguridad, repara **con copia de seguridad y función de deshacer**. Un solo botón: *Iniciar chequeo*.
+
+> **Firmware:** La aplicación funciona con los firmwares **4.00 a 14.10** (siempre que el jailbreak funcione en ellos). Hasta ahora se ha probado en una PS5 Pro con firmware 12.00 y ShadowMount+ 1.7beta12. Otros firmwares y configuraciones no se han probado; por eso las reglas están formuladas ligadas a la versión y cada una está marcada por separado como *confirmada* o *aún no confirmada*.
+
+## Qué puede hacer
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🩺 Chequeo</h3>
+      Más de 70 reglas sobre la cadena de jailbreak y HEN, ShadowMount+, plugins, almacenamiento, carpetas de juegos, bases de datos, cuentas y el historial de arranques y errores. Cada hallazgo tiene gravedad, explicación en lenguaje claro, prueba (archivo/línea/valor), fuente y una <b>fiabilidad con su motivo</b>. Lo que no se pudo leer figura como <i>sin revisar</i>, nunca como «en orden».
+    </td>
+    <td width="50%" valign="top">
+      <h3>🎮 Por juego</h3>
+      <b>¿Un juego no arranca?</b> La vista «Juegos» reúne todo sobre un título: orígenes (carpeta/imagen), entrada en la base de datos del sistema, firmware requerido y backport, revisión de archivos, errores de la consola, datos guardados, log de ShadowMount+ y los posibles motivos. Si el <b>backport está integrado en el propio juego</b> (la versión del SDK del <code>eboot.bin</code> no supera la del firmware), se reconoce y no se notifica como fallo.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>🛠 Reparar con deshacer</h3>
+      Siete reparaciones reversibles (renombrar una imagen, fijar una clave de ShadowMount+, pasar líneas v1 a las secciones v2, quitar BackPork de la autocarga, mover duplicados, pausa de espera de la autocarga, nombre de archivo con mayúsculas erróneas) y una guía para imágenes anidadas. La vista previa muestra exactamente qué cambia; no ocurre nada sin ✕. Cada cambio queda en el diario y se puede revertir. <b>Nunca se borra</b>, solo se mueve o se renombra.
+    </td>
+    <td valign="top">
+      <h3>🧪 Autotest</h3>
+      Once pruebas de la consola: almacenamiento, temperaturas, bases de datos, payloads e imágenes, prueba de lectura, red local (solo el router), prueba de calor, patrones de memoria, prueba de escritura, botones del mando y patrones de pantalla. Cada prueba dice qué <i>no</i> demuestra.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>📚 Códigos de error</h3>
+      Obra de consulta con 40 mensajes como CE-108262-9: explicación, pasos según Sony, fuente como texto y como código QR. Después de un chequeo, la entrada muestra lo que Medic ve en la consola.
+    </td>
+    <td valign="top">
+      <h3>🕑 Historial y comparación</h3>
+      Cada chequeo se guarda por separado. Los estados antiguos se pueden consultar y comparar entre sí: nuevo, resuelto, sin cambios.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>📄 Informe y actualización de reglas</h3>
+      Informe en Markdown con código QR para el móvil (se eliminan IP/MAC, IDs de cuenta y números de serie). Reglas y códigos de error nuevos por archivo o, solo tras confirmación, desde la dirección propia, <b>solo con una firma Ed25519 válida</b>.
+    </td>
+    <td valign="top">
+      <h3>🌍 Cinco idiomas, mando y puntero</h3>
+      Deutsch, English, Français, Italiano y Español (Ajustes; la elección se guarda). Manejo con el DualSense; además un <b>puntero</b> (stick derecho, R3 o pulsación del touchpad para hacer clic; también se entienden los eventos de ratón) con flecha y mano.
+    </td>
+  </tr>
+</table>
+
+## Imágenes
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/es/03_findings.png" alt="Hallazgos"></td>
+    <td width="50%"><img src="docs/images/es/04_detail_0.png" alt="Hallazgo en detalle"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/es/22_game_detail.png" alt="Vista Por juego"></td>
+    <td><img src="docs/images/es/17_selftest_list.png" alt="Autotest"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/es/10_error_codes.png" alt="Códigos de error"></td>
+    <td><img src="docs/images/es/25_pointer_hand.png" alt="Puntero: mano sobre un mosaico"></td>
+  </tr>
+</table>
+
+## Seguridad
+
+- **Nunca se borra**, solo se mueve o se renombra. Los archivos que se van a cambiar se respaldan antes (`/data/ps5medic/backups/`) y cada cambio queda en el diario (`/data/ps5medic/journal.jsonl`).
+- **Nada se escribe sin ✕**: la reparación y el deshacer solo ocurren tras una confirmación expresa en la vista previa. Otras acciones de escritura: el informe (□), la actualización de reglas (✕ en la oferta) y el idioma elegido en `/data/ps5medic/config.ini`.
+- Las reparaciones solo escriben dentro de una lista blanca (carpetas de ShadowMount+, listas de autocarga, las propias rutas de escaneo, `/data/ps5medic`). Nunca bajo `/system`, `/dev` ni en la flash. Única excepción fuera de las reparaciones: si el launcher se envía como ELF, crea su propio mosaico `FAKE42008`, y para ello su programa se encuentra en `/system_ex/app/FAKE42008` (como con cualquier aplicación creada con un instalador; detalles en [docs/TITLE.md](docs/TITLE.md)).
+- **La red solo se usa para la descarga de reglas**, solo con □ y confirmación, solo hacia la dirección de tu `config.ini`, y no se envía nada salvo una solicitud GET. Aparte hay una prueba de red local en el autotest: solo un intento de conexión al router en el rango de direcciones privado, sin datos, nunca hacia internet.
+- Sin exploits, sin cambios de firmware, sin funciones para obtener, desbloquear o distribuir juegos, claves o firmware. PS5 Medic repara el **entorno**, no los contenidos. Nunca recomienda una actualización del software del sistema.
+
+## Requisitos
+
+- Una PS5 que ya tenga jailbreak, con cargador de ELF (puerto 9021) y FTP (aquí puerto 2121).
+- Para el inicio con DualSense, la interfaz necesita un contexto de aplicación (si no, la consola no abre el mando; trasfondo: [docs/PHASE3.md](docs/PHASE3.md)). Se lo da el **Starter** del mosaico (un pequeño título nativo que envía el launcher al cargador de ELF); **no hace falta ni websrv ni un cargador de Homebrew**. Sin mosaico solo funciona el payload de diagnóstico (`ps5medic.elf`).
+
+## Instalación
+
+1. Copiar la carpeta `PS5MEDIC` de la versión por FTP a `/data/homebrew/` (contiene `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` y el icono).
+2. Obtener el mosaico, por una de dos vías:
+   - **Enviar ELF:** enviar `ps5medic-launcher.elf` al puerto 9021 (Payload Manager, o desde el PC: `make send-launcher PS5_HOST=<PS5-IP>`). Crea el mosaico **PS5 Medic** (`FAKE42008`) en la pantalla de inicio y arranca la interfaz de inmediato si no hay ninguna aplicación en ejecución.
+   - **Aplicación en carpeta:** copiar la carpeta `FAKE42007` de la versión a `/data/homebrew/`; ShadowMount+ crea el mosaico. Después, pulsar el mosaico arranca la interfaz sin necesidad de enviar un ELF.
+3. Pulsar el mosaico arranca la interfaz (primero la pantalla de presentación, luego la pantalla de inicio). Solo necesita el cargador de ELF (puerto 9021) de la consola; tras un reinicio el mosaico se conserva.
+
+El launcher solo cierra aplicaciones falsas de Homebrew (entre ellas el Starter del mosaico) y programas del sistema; nunca cierra un juego en ejecución. Detalles: [docs/TITLE.md](docs/TITLE.md).
+
+## Manejo
+
+| Pantalla | Botones |
+|---|---|
+| Inicio | ↑↓ elegir · ✕ abrir · ◯ salir |
+| Lista de hallazgos | ↑↓ elegir · L1/R1 página · ✕ detalles · △ reparar/guía · □ informe · ◯ atrás |
+| Detalle | ←→ hallazgo anterior/siguiente · △ reparar · □ código de error · ◯ atrás |
+| Vista previa de reparación | ✕ confirmar (escribe) · ◯ cancelar |
+| Juegos | ↑↓ elegir · ✕ abrir · L1/R1 otro juego · ◯ atrás |
+| Historial, autotest, códigos de error | La barra de ayuda inferior muestra los botones |
+| Puntero | El **stick derecho** lo mueve, **R3** o la **pulsación del touchpad** hacen clic (como ✕); un clic en la barra de ayuda pulsa el botón. Sobre las opciones el puntero se convierte en una mano; desaparece en cuanto se usan los botones. Novedad: probado en el PC, aún no probado en la consola. |
+
+## Payload de diagnóstico
+
+`ps5medic.elf` se ejecuta sin interfaz y **solo lee**: escribe `/data/ps5medic/last_check.txt` y exporta el estado como snapshot a `/data/ps5medic/snapshots/`. El snapshot se puede revisar en el PC con `medic-cli check` (carpeta de fixtures, véase abajo).
+
+## Compilar desde el código fuente
+
+Linux o WSL, CMake, un compilador de C++20. El núcleo y las reglas también se ejecutan en el PC contra carpetas de fixtures.
+
+```bash
+make test        # Unit-, Regel-, UI- und Berichts-Tests gegen alle Fixtures
+make host        # medic-cli und die PC-Vorschau der UI
+make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # Bilder der UI am PC (de en fr it es)
+```
+
+Para la consola se necesita el [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versión 0.45** (`PS5_PAYLOAD_SDK`) y SDL2 para la PS5; las instrucciones de compilación están en [docs/PHASE3.md](docs/PHASE3.md) y la compilación del mosaico en [docs/TITLE.md](docs/TITLE.md).
+
+```bash
+make ps5-ui                         # Vollbild-UI (ps5medicui.elf)
+make ps5                            # Diagnose-Payload (ps5medic.elf)
+make send-launcher PS5_HOST=192.168.1.x # Launcher an Port 9021 senden (Kachel FAKE42008 + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
+make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
+```
+
+Herramientas en el PC (`build/medic-cli`):
+
+```bash
+medic-cli check   <snapshot-ordner>            # Befunde
+medic-cli report  <snapshot-ordner> [--qr]     # Bericht, optional QR-Code im Terminal
+medic-cli fix     <snapshot-ordner> <regel-id> # Plan ansehen (mit --apply --yes ausführen, nur an einer Kopie!)
+medic-cli history|undo|export ...
+```
+
+## Traducciones
+
+La interfaz está en `ui/i18n/<idioma>.json`; los textos de conocimiento para francés, italiano y español se incluyen como complemento en `knowledge/l10n/` (reglas, códigos de error, autotests). Si falta una entrada, la aplicación muestra inglés. Los informes y los avisos dinámicos de la vista previa de reparación solo existen en alemán e inglés. `tools/l10n_extract.py` extrae los textos originales para los traductores y `tools/l10n_check.py <idioma>` revisa una traducción (claves, marcadores de posición, números, códigos, rutas).
+
+## Colaborar
+
+**Se buscan probadores** (otros firmwares y configuraciones): [docs/TESTER.md](docs/TESTER.md). Para notificar problemas, usa la plantilla de issue e incluye el informe (□).
+
+Una regla nueva necesita: una entrada en `knowledge/rules.json` con fuente, un fixture positivo y uno negativo en `tests/fixtures/` y `expect.json`. Las pruebas exigen ambos. Los fixtures son **sintéticos**: los nombres reales de archivos y de juegos no van en el repositorio.
+
+## Documentación
+
+| Archivo | Contenido |
+|---|---|
+| `CLAUDE.md` | Punto de entrada para Claude Code: objetivo, stack, límites, forma de trabajar |
+| `docs/SPEC.md` | Funciones, manejo, no-objetivos |
+| `docs/ARCHITECTURE.md` | Módulos, flujo de datos, formato de reglas, seguridad |
+| `docs/RULES.md` | Catálogo de reglas con fuentes, estado y desviaciones |
+| `docs/DIAGNOSE.md` | Ampliación del diagnóstico: revisiones construidas, decisiones D1–D21, plan de construcción |
+| `docs/ROADMAP.md` | Fases 0–5 |
+| `docs/PHASE2.md` a `PHASE5.md` | Consola y snapshot, interfaz y contexto de aplicación, informe y versión, actualización de reglas y comunidad |
+| `docs/TESTER.md` | Colaborar como probador |
+| `docs/TITLE.md` | Mosaico e inicio sin cargador de Homebrew: Starter, launcher, aplicación en carpeta |
+| `knowledge/` | Reglas (`rules.json`), códigos de error (`error_codes.json`), traducciones (`l10n/`) y esquemas JSON |
+
+## Licencia y agradecimientos
+
+PS5 Medic se publica bajo la **GNU General Public License, versión 3 o (a elección) cualquier versión posterior** (GPL-3.0-or-later). El texto de la licencia está en [LICENSE](LICENSE) y cada archivo fuente propio lleva una línea SPDX. Esto vale también para la base de datos de reglas `knowledge/rules.json`. Motivo: el ELF final se enlaza con las bibliotecas de ejecución GPLv3 del ps5-payload-sdk. Los componentes de terceros (MIT, zlib, BSD-2-Clause, DejaVu, stb_image) son compatibles con la GPL-3.0 y figuran con sus licencias en [THIRD_PARTY.md](THIRD_PARTY.md).
+
+El repositorio es **privado**, no hay versión pública (decisión del autor, 8 de nov. de 2026). Quien distribuya un paquete de `make dist` debe ofrecer también, según la GPL, el código fuente correspondiente.
+
+PS5 Medic es un proyecto de la comunidad y no está vinculado a Sony. El uso es bajo la propia responsabilidad.

@@ -7,6 +7,7 @@
 #include "medic/history.hpp"
 
 #include <algorithm>
+#include <iterator>
 #include <cmath>
 
 namespace medic::ui {
@@ -194,9 +195,25 @@ std::string format_ctx(const Strings& S, const ContextLine& l) {
     return s;
 }
 
+// Text in der Sprache der Oberflaeche: de/en stehen in den Daten selbst, fr/it/es in der Ueberlagerung (ui/src/i18n.cpp, Knowledge),
+// Englisch dort, wo ein Eintrag fehlt.
+std::string pick_text(Lang lang, const std::string& de, const std::string& en, const char* section, const std::string& id, const char* field) {
+    if (lang == Lang::De) return de;
+    if (lang == Lang::En) return en;
+    const std::string* t = Knowledge::get(lang).text(section, id, field);
+    return t ? *t : en;
+}
+
+const std::vector<std::string>& pick_list(Lang lang, const std::vector<std::string>& de, const std::vector<std::string>& en, const char* section, const std::string& id,
+                                          const char* field) {
+    if (lang == Lang::De) return de;
+    if (lang == Lang::En) return en;
+    const std::vector<std::string>* t = Knowledge::get(lang).list(section, id, field);
+    return t && t->size() == en.size() ? *t : en;
+}
+
 std::vector<ErrRow> error_rows(const medic::ErrorCode& e, Lang lang, const CodeContext& ctx) {
     const auto& S = Strings::get(lang);
-    const bool de = lang == Lang::De;
     std::vector<ErrRow> rows;
     auto label = [&](const std::string& text, int gap) {
         ErrRow r{text, "", true, kDim, 0, gap};
@@ -209,14 +226,14 @@ std::vector<ErrRow> error_rows(const medic::ErrorCode& e, Lang lang, const CodeC
     };
 
     label(S("detail.explanation"), 0);
-    paragraph(de ? e.text_de : e.text_en, false, kText, "", 0);
+    paragraph(pick_text(lang, e.text_de, e.text_en, "error_codes", e.id, "text"), false, kText, "", 0);
 
     label(S("errors.steps"), 18);
-    const auto& steps = de ? e.steps_de : e.steps_en;
+    const auto& steps = pick_list(lang, e.steps_de, e.steps_en, "error_codes", e.id, "steps");
     if (steps.empty()) paragraph(S("errors.steps_none"), false, kDim, "", 0);
     for (std::size_t i = 0; i < steps.size(); ++i) paragraph(steps[i], false, kText, std::to_string(i + 1) + ".", kStepIndent);
 
-    const auto& notes = de ? e.notes_de : e.notes_en;
+    const auto& notes = pick_list(lang, e.notes_de, e.notes_en, "error_codes", e.id, "notes");
     if (!notes.empty()) {
         label(S("errors.notes"), 18);
         for (const auto& n : notes) paragraph(n, false, kText, "-", kStepIndent);
@@ -302,9 +319,13 @@ Color level_color(const medic::ErrorCode& e) { return e.level == "doc" ? kOk : k
 
 }  // namespace
 
-App::App(IMedicService& svc, Lang lang) : svc_(svc), lang_(lang) { errors_ = svc_.error_codes(); }
+App::App(IMedicService& svc, Lang lang) : svc_(svc), lang_(lang) {
+    errors_ = svc_.error_codes();
+    Lang saved;
+    if (lang_from_code(svc_.language(), saved)) lang_ = saved;  // die in config.ini gespeicherte Sprache hat Vorrang vor dem Standard
+}
 
-std::string App::finding_text(const medic::Finding& f) const { return lang_ == Lang::De ? f.text_de : f.text_en; }
+std::string App::finding_text(const medic::Finding& f) const { return pick_text(lang_, f.text_de, f.text_en, "rules", f.rule_id, "text"); }
 
 std::string App::fix_name(const std::string& id) const {
     const auto& S = Strings::get(lang_);
@@ -554,6 +575,11 @@ void App::begin_fix(int index, Screen origin) {
 }
 
 void App::handle(Button b) {
+    pointer_on_ = false;  // wer Tasten benutzt, braucht den Zeiger nicht (pointer_click holt ihn danach zurueck)
+    if (screen_ == Screen::Splash) {  // jede Taste ueberspringt das Startbild
+        screen_ = Screen::Start;
+        return;
+    }
     switch (screen_) {
         case Screen::Start:
             if (b == Button::Up || b == Button::L1) start_sel_ = std::max(start_sel_ - 1, 0);
@@ -575,6 +601,8 @@ void App::handle(Button b) {
             break;
         case Screen::Running:
             break;  // nicht unterbrechbar (dauert Sekunden)
+        case Screen::Splash:
+            break;  // oben behandelt: jede Taste ueberspringt das Startbild
         case Screen::Findings:
             if (b == Button::Up) move_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, -1);
             else if (b == Button::Down) move_selection(sel_, top_, static_cast<int>(result_.findings.size()), kListVisible, 1);
@@ -705,7 +733,13 @@ void App::handle(Button b) {
         case Screen::Settings:
             if (b == Button::Up || b == Button::L1) settings_sel_ = 0;
             else if (b == Button::Down || b == Button::R1) settings_sel_ = 1;
-            else if (settings_sel_ == 0 && (b == Button::Left || b == Button::Right || b == Button::Cross)) lang_ = lang_ == Lang::De ? Lang::En : Lang::De;
+            else if (settings_sel_ == 0 && (b == Button::Left || b == Button::Right || b == Button::Cross)) {
+                const int n = static_cast<int>(sizeof kAllLangs / sizeof kAllLangs[0]);
+                int i = 0;
+                while (i < n && kAllLangs[i] != lang_) ++i;
+                lang_ = kAllLangs[(i + (b == Button::Left ? n - 1 : 1)) % n];
+                svc_.set_language(lang_code(lang_));
+            }
             else if (settings_sel_ == 1 && b == Button::Cross) open_rules_update();
             else if (b == Button::Circle) screen_ = Screen::Start;
             break;
@@ -823,8 +857,67 @@ void App::handle(Button b) {
     }
 }
 
+void App::show_splash(const Canvas& image) {
+    splash_ = std::make_unique<Canvas>(image.width(), image.height());
+    splash_->copy_from(image);
+    splash_until_ = tick_ + 80;  // etwa 2,7 Sekunden bei rund 30 Bildern/s
+    screen_ = Screen::Splash;
+}
+
+void App::hot(int x, int y, int w, int h, HotKind kind, int index, int press) const { hot_.push_back({x, y, w, h, kind, index, press}); }
+
+bool App::pointer_over_target() const {
+    for (const Hot& h : hot_)
+        if (px_ >= h.x && px_ < h.x + h.w && py_ >= h.y && py_ < h.y + h.h) return true;
+    return false;
+}
+
+void App::pointer_move(int x, int y) {
+    px_ = std::clamp(x, 0, kWidth - 1);
+    py_ = std::clamp(y, 0, kHeight - 1);
+    pointer_on_ = true;
+    pointer_seen_ = tick_;
+}
+
+void App::pointer_click() {
+    pointer_seen_ = tick_;
+    if (screen_ == Screen::Splash) {
+        screen_ = Screen::Start;
+        return;
+    }
+    for (auto it = hot_.rbegin(); it != hot_.rend(); ++it) {  // zuletzt gezeichnet = oben
+        const Hot& h = *it;
+        if (px_ < h.x || px_ >= h.x + h.w || py_ < h.y || py_ >= h.y + h.h) continue;
+        switch (h.kind) {
+            case HotKind::Press: break;
+            case HotKind::Start: start_sel_ = h.index; break;
+            case HotKind::Finding: sel_ = h.index; break;
+            case HotKind::Check: chk_sel_ = h.index; break;
+            case HotKind::History: hist_sel_ = h.index; break;
+            case HotKind::Game: game_sel_ = h.index; break;
+            case HotKind::GameFinding: gd_sel_ = h.index; break;
+            case HotKind::Error: err_sel_ = h.index; break;
+            case HotKind::Settings: settings_sel_ = h.index; break;
+            case HotKind::Language:
+                if (h.index >= 0 && h.index < static_cast<int>(sizeof kAllLangs / sizeof kAllLangs[0])) {
+                    lang_ = kAllLangs[h.index];
+                    svc_.set_language(lang_code(lang_));
+                }
+                return;
+        }
+        if (h.press >= 0) {
+            handle(static_cast<Button>(h.press));
+            pointer_on_ = true;
+            pointer_seen_ = tick_;
+        }
+        return;
+    }
+}
+
 void App::update() {
     ++tick_;
+    if (screen_ == Screen::Splash && tick_ >= splash_until_) screen_ = Screen::Start;
+    if (pointer_on_ && tick_ - pointer_seen_ > 150) pointer_on_ = false;  // etwa 5 Sekunden ohne Bewegung
     if (pending_check_ && running_rendered_) {  // erst ausfuehren, wenn "Pruefe..." sichtbar war
         pending_check_ = false;
         result_ = svc_.run_check();
@@ -858,12 +951,75 @@ void App::update() {
     }
 }
 
+// ---- Zeiger -----------------------------------------------------------------
+
+namespace {
+
+// Gefuelltes Vieleck (gerade-ungerade-Regel), Eckpunkte relativ zu (ox, oy).
+void fill_poly(Canvas& c, const std::vector<std::pair<float, float>>& pts, int ox, int oy, Color col) {
+    float miny = 1e9f, maxy = -1e9f;
+    for (const auto& p : pts) {
+        miny = std::min(miny, p.second);
+        maxy = std::max(maxy, p.second);
+    }
+    for (int y = static_cast<int>(miny); y <= static_cast<int>(maxy); ++y) {
+        const float fy = static_cast<float>(y) + 0.5f;
+        std::vector<float> xs;
+        for (std::size_t i = 0; i < pts.size(); ++i) {
+            const auto& a = pts[i];
+            const auto& b = pts[(i + 1) % pts.size()];
+            if ((a.second <= fy && b.second > fy) || (b.second <= fy && a.second > fy)) xs.push_back(a.first + (fy - a.second) * (b.first - a.first) / (b.second - a.second));
+        }
+        std::sort(xs.begin(), xs.end());
+        for (std::size_t i = 0; i + 1 < xs.size(); i += 2)
+            for (int x = static_cast<int>(xs[i] + 0.5f); x < static_cast<int>(xs[i + 1] + 0.5f); ++x) c.put(ox + x, oy + y, col);
+    }
+}
+
+}  // namespace
+
+void App::draw_pointer(Canvas& c) const {
+    const Color fg = rgb(255, 255, 255), edge = rgb(18, 22, 30);
+    if (pointer_over_target()) {
+        // Hand mit ausgestrecktem Zeigefinger (Spitze des Fingers = Zeigerpunkt), 1,6-fach vergroessert
+        struct Part { int x, y, w, h, r; };
+        const Part parts[] = {{-5, 0, 11, 30, 5},      // Zeigefinger
+                              {7, 12, 10, 22, 5},      // Mittelfinger
+                              {18, 15, 10, 20, 5},     // Ringfinger
+                              {29, 19, 9, 17, 4},      // kleiner Finger
+                              {-20, 26, 10, 19, 5},    // Daumen
+                              {-11, 24, 51, 28, 12}};  // Handflaeche
+        auto k = [](int v) { return v * 16 / 10; };
+        const int ox = px_, oy = py_;
+        for (int d = 0; d < 8; ++d) {
+            static const int dx[8] = {-2, 0, 2, -2, 2, -2, 0, 2}, dy[8] = {-2, -2, -2, 0, 0, 2, 2, 2};
+            for (const Part& p : parts) c.fill_round_rect(ox + k(p.x) + dx[d], oy + k(p.y) + dy[d], k(p.w), k(p.h), k(p.r), edge);
+        }
+        for (const Part& p : parts) c.fill_round_rect(ox + k(p.x), oy + k(p.y), k(p.w), k(p.h), k(p.r), fg);
+        // feine Linien zwischen den Fingern
+        for (int x : {6, 17, 28}) c.fill_rect(ox + k(x), oy + k(30), 1, k(12), rgb(150, 160, 175));
+    } else {
+        const std::vector<std::pair<float, float>> arrow = {{0, 0}, {0, 30}, {7.5f, 23}, {13, 35}, {19, 32.5f}, {13.5f, 21}, {23, 21}};
+        for (int d = 0; d < 8; ++d) {
+            static const int dx[8] = {-2, 0, 2, -2, 2, -2, 0, 2}, dy[8] = {-2, -2, -2, 0, 0, 2, 2, 2};
+            fill_poly(c, arrow, px_ + dx[d], py_ + dy[d], edge);
+        }
+        fill_poly(c, arrow, px_, py_, fg);
+    }
+}
+
 // ---- Darstellung ------------------------------------------------------------
 
 void App::render(Canvas& c) const {
     if (!bg_ || bg_->width() != c.width() || bg_->height() != c.height()) {  // Hintergrund einmal bauen: Verlauf und zwei weiche Lichtflecken
         bg_ = std::make_unique<Canvas>(c.width(), c.height());
         build_background(*bg_);
+    }
+    hot_.clear();
+    if (screen_ == Screen::Splash && splash_) {
+        c.copy_from(*splash_);
+        if (pointer_on_) draw_pointer(c);
+        return;
     }
     c.copy_from(*bg_);
     draw_chrome(c);
@@ -883,6 +1039,7 @@ void App::render(Canvas& c) const {
         case Screen::CheckCompare: draw_compare(c); break;
         case Screen::GameList: draw_gamelist(c); break;
         case Screen::GameDetail: draw_gamedetail(c); break;
+        case Screen::Splash: break;  // unten: das Bild ersetzt alles
         case Screen::Settings: draw_settings(c); break;
         case Screen::Report: draw_report(c); break;
         case Screen::RulesUpdate: draw_rules_update(c); break;
@@ -895,6 +1052,7 @@ void App::render(Canvas& c) const {
             break;
         case Screen::UserTest: draw_usertest(c); break;
     }
+    if (pointer_on_) draw_pointer(c);
 }
 
 void App::open_selftest() {
@@ -963,7 +1121,6 @@ void App::step_selftest() {
 
 void App::draw_selftest(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    const bool de = lang_ == Lang::De;
     auto status_color = [](medic::TestStatus st) {
         switch (st) {
             case medic::TestStatus::Passed: return kOk;
@@ -999,7 +1156,7 @@ void App::draw_selftest(Canvas& c) const {
         const std::size_t n = st_run_.size();
         c.fill_round_rect(M, 230, W - 2 * M, 330, 24, kPanel);
         const std::size_t shown = std::min(st_next_, n ? n - 1 : 0);
-        const std::string name = n ? (de ? st_defs_[st_ids_[shown]].name_de : st_defs_[st_ids_[shown]].name_en) : std::string();
+        const std::string name = n ? pick_text(lang_, st_defs_[st_ids_[shown]].name_de, st_defs_[st_ids_[shown]].name_en, "selftests", st_defs_[st_ids_[shown]].id, "name") : std::string();
         {
             const auto look = test_look(n ? st_defs_[st_ids_[shown]].id : std::string());
             draw_icon_badge(c, look.first, M + 48, 256, 120, look.second);
@@ -1032,7 +1189,7 @@ void App::draw_selftest(Canvas& c) const {
             const auto look = test_look(d.id);
             draw_icon_badge(c, look.first, M + 12, y + 5, 48, look.second);
         }
-        body().draw(c, M + 80, y + 0, de ? d.name_de : d.name_en, kText, W - 2 * M - 480);
+        body().draw(c, M + 80, y + 0, pick_text(lang_, d.name_de, d.name_en, "selftests", d.id, "name"), kText, W - 2 * M - 480);
         std::string sub = S(d.tier == medic::TestTier::Quick ? "selftest.tier_quick" : (d.tier == medic::TestTier::Standard ? "selftest.tier_standard" : (d.tier == medic::TestTier::Thorough ? "selftest.tier_thorough" : "selftest.tier_user"))) + " · " + S.fmt("selftest.est", {{"s", std::to_string(d.est_seconds)}});
         if (r && !r->reason.empty()) sub += " · " + (S.has("selftest.reason." + r->reason) ? S("selftest.reason." + r->reason) : r->reason);
         small().draw(c, M + 80, y + 29, elide(small(), sub, W - 2 * M - 480), kDim);
@@ -1198,7 +1355,17 @@ void App::draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::strin
         }
         c.draw_pad_glyph(g, x + 22, y + 22, 44, col);
         body().draw(c, x + 54, y + (44 - body().line_height()) / 2, label, kText);
-        x += 54 + body().width(label) + 56;
+        const int item_w = 54 + body().width(label);
+        int press = -1;  // Steuerkreuz und Schultertasten gehen nicht per Klick
+        switch (g) {
+            case PadGlyph::Cross: press = static_cast<int>(Button::Cross); break;
+            case PadGlyph::Circle: press = static_cast<int>(Button::Circle); break;
+            case PadGlyph::Square: press = static_cast<int>(Button::Square); break;
+            case PadGlyph::Triangle: press = static_cast<int>(Button::Triangle); break;
+            default: break;
+        }
+        if (press >= 0) hot(x - 12, H - 104, item_w + 24, 72, HotKind::Press, 0, press);
+        x += item_w + 56;
     }
 }
 
@@ -1206,6 +1373,7 @@ void App::draw_start(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     // Grosse Kachel: Check-up starten (Verlauf, Herzschlaglinie als Bild, Stethoskop)
     const bool sel0 = start_sel_ == 0;
+    hot(M, 160, W - 2 * M, 190, HotKind::Start, 0, static_cast<int>(Button::Cross));
     c.fill_round_rect_vgradient(M, 160, W - 2 * M, 190, 28, sel0 ? rgb(88, 170, 255) : rgb(56, 104, 176), sel0 ? rgb(38, 92, 210) : rgb(28, 58, 112));
     c.stroke_polyline(ecg_points(M + 1020, W - 2 * M - 1080, 262, 58, 400, 0), 6, sel0 ? rgb(176, 214, 255) : rgb(96, 136, 196));
     if (sel0) c.stroke_round_rect(M, 160, W - 2 * M, 190, 28, 4, rgb(200, 226, 255));
@@ -1228,6 +1396,7 @@ void App::draw_start(Canvas& c) const {
     for (int i = 0; i < 5; ++i) {
         const int x = M + i * (cw + gap);
         card(c, x, 380, cw, 190, start_sel_ == i + 1);
+        hot(x, 380, cw, 190, HotKind::Start, i + 1, static_cast<int>(Button::Cross));
         draw_icon_badge(c, icons[i], x + 22, 404, 64, tints[i]);
         body().draw(c, x + 98, 404 + (64 - body().line_height()) / 2, S(keys[i][0]), kText, cw - 112);
         int ty = 488;
@@ -1304,7 +1473,7 @@ void App::draw_findings(Canvas& c) const {
         c.fill_round_rect(M, 300, W - 2 * M, 320, 24, kPanel);
         std::string untested_names;
         for (const auto& r : result_.coverage)
-            if (!r.tested) untested_names += (untested_names.empty() ? "" : ", ") + (lang_ == Lang::De ? r.text_de : r.text_en);
+            if (!r.tested) untested_names += (untested_names.empty() ? "" : ", ") + pick_text(lang_, r.text_de, r.text_en, "coverage", r.id, "text");
         if (untested_names.empty()) {
             title().draw(c, M + 60, 372, S("findings.empty"), kOk);
             body().draw(c, M + 60, 460, S("findings.empty_sub"), kDim, W - 2 * M - 120);
@@ -1341,6 +1510,7 @@ void App::draw_findings(Canvas& c) const {
         const auto& f = fs[static_cast<std::size_t>(i)];
         const Color sc = sev_color(f.severity);
         card(c, M, y, cw, ch, i == sel_);
+        hot(M, y, cw, ch, HotKind::Finding, i, static_cast<int>(Button::Cross));
         c.fill_round_rect(M, y + 16, 10, ch - 32, 5, sc);
         c.fill_round_rect(M + 34, y + (ch - 76) / 2, 76, 76, 24, rgba((sc >> 16) & 0xFF, (sc >> 8) & 0xFF, sc & 0xFF, 40));
         draw_icon(c, sev_icon(f.severity), M + 72, y + ch / 2, 54, sc, sc);
@@ -1452,7 +1622,7 @@ void App::draw_detail(Canvas& c) const {
         y += ph + 16;
     }
 
-    const std::string& conf_reason = lang_ == Lang::De ? conf.reason_de : conf.reason_en;
+    const std::string conf_reason = pick_text(lang_, conf.reason_de, conf.reason_en, "rules", f->rule_id, "confidence_reason");
     const int link = linked_error_index();
 
     // Evidenz (mit Begruendung der Verlaesslichkeit bleibt weniger Platz: dann nur drei Zeilen)
@@ -1528,7 +1698,7 @@ void App::draw_fix_preview(Canvas& c) const {
     for (std::size_t i = 0; i < plan_.changes.size(); ++i) {
         const auto& ch = plan_.changes[i];
         const auto& pv = previews_[i];
-        const std::string note = lang_ == Lang::De ? ch.note_de : ch.note_en;
+        const std::string note = lang_ == Lang::De ? ch.note_de : ch.note_en;  // fr/it/es: Englisch (dynamische Texte der Fix-Engine)
         const bool rename = ch.kind == medic::Change::Kind::Rename;
         const auto path_lines = wrap_text(small(), ch.path, cw - 72, 2);
         const auto to_lines = rename ? wrap_text(small(), ch.to, cw - 72, 2) : std::vector<std::string>();
@@ -1574,7 +1744,7 @@ void App::draw_fix_preview(Canvas& c) const {
         small().draw(c, M + 8, y, elide(small(), S("fixprev.warnings") + ": " + plan_.warnings[i], cw - 16), kWarn);
         y += small().line_height() + 6;
     }
-    const std::string& hint = lang_ == Lang::De ? plan_.hint_de : plan_.hint_en;
+    const std::string& hint = lang_ == Lang::De ? plan_.hint_de : plan_.hint_en;  // fr/it/es: Englisch
     if (!hint.empty())
         for (auto& l : wrap_text(small(), hint, cw - 16, 2)) {
             small().draw(c, M + 8, y, l, kText);
@@ -1643,6 +1813,7 @@ void App::draw_history(Canvas& c) const {
     for (int i = hist_top_; i < last; ++i, y += ch + gap) {
         const auto& t = hist_[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == hist_sel_);
+        hot(M, y, cw, ch, HotKind::History, i, -1);  // nur auswaehlen: Rueckgaengig bleibt ein bewusster Druck auf die Hinweisleiste
         const Color sc = t.state == "applied" ? kOk : (t.state == "undone" ? kDim : kWarn);
         c.fill_round_rect(M + 24, y + 18, 60, 60, 18, rgba((sc >> 16) & 0xFF, (sc >> 8) & 0xFF, sc & 0xFF, 40));
         draw_icon(c, t.state == "applied" ? Icon::Ok : (t.state == "undone" ? Icon::Undo : Icon::Warning), M + 54, y + 48, 40, sc, sc);
@@ -1678,6 +1849,7 @@ void App::draw_checklist(Canvas& c) const {
     for (int i = chk_top_; i < last; ++i, y += ch + gap) {
         const auto& e = chk_[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == chk_sel_);
+        hot(M, y, cw, ch, HotKind::Check, i, static_cast<int>(Button::Cross));
         const bool partial = e.untested > 0;
         Icon ic = Icon::Ok;
         Color col = kOk;
@@ -1748,6 +1920,7 @@ void App::draw_gamelist(Canvas& c) const {
     for (int i = game_top_; i < last; ++i, y += ch + gap) {
         const auto& g = games_[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == game_sel_);
+        hot(M, y, cw, ch, HotKind::Game, i, static_cast<int>(Button::Cross));
         const bool has = !g.findings.empty();
         const Icon ic = has ? sev_icon(g.worst) : Icon::Gamepad;
         const Color col = has ? sev_color(g.worst) : kTintSlate;
@@ -1841,7 +2014,7 @@ void App::draw_gamedetail(Canvas& c) const {
     } else {
         const std::string fw = result_.fw.empty() ? "?" : result_.fw;
         if (g.needs_backport) row(S("games.d.fw"), S.fmt("games.d.fw_need", {{"req", g.required_fw}, {"fw", fw}}), kWarn);
-        else if (g.backport == 1) row(S("games.d.fw"), S.fmt("games.d.fw_backport", {{"req", g.required_fw}, {"fw", fw}}), kText);
+        else if (g.backport == 1) row(S("games.d.fw"), S.fmt(g.backport_inline ? "games.d.fw_backport_inline" : "games.d.fw_backport", {{"req", g.required_fw}, {"fw", fw}}), kText);
         else row(S("games.d.fw"), S.fmt("games.d.fw_line", {{"req", g.required_fw}, {"fw", fw}}), kText);
     }
     // Dateien
@@ -1899,6 +2072,7 @@ void App::draw_gamedetail(Canvas& c) const {
             const auto& f = result_.findings[fi];
             const Color sc = sev_color(f.severity);
             card(c, rx, cy, rw, ch, i == gd_sel_);
+            hot(rx, cy, rw, ch, HotKind::GameFinding, i, static_cast<int>(Button::Cross));
             c.fill_round_rect(rx, cy + 14, 8, ch - 28, 4, sc);
             draw_icon(c, sev_icon(f.severity), rx + 44, cy + 36, 40, sc, sc);
             const int tx = rx + 82;
@@ -1952,7 +2126,7 @@ void App::draw_compare(Canvas& c) const {
         } else {
             draw_icon(c, sev_icon(r.f->severity), M + 56, y + 20, 30, sev_color(r.f->severity), sev_color(r.f->severity));
             small().draw(c, M + 92, y + 8, r.text, kText);
-            small().draw(c, M + 560, y + 8, elide(small(), lang_ == Lang::De ? r.f->text_de : r.f->text_en, W - 2 * M - 560 - 80), kDim);
+            small().draw(c, M + 560, y + 8, elide(small(), finding_text(*r.f), W - 2 * M - 560 - 80), kDim);
         }
         y += 50;
     }
@@ -1987,20 +2161,24 @@ void App::draw_settings(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     title_icon(c, Icon::Gear, kTintSlate, S("settings.title"));
     card(c, M, 230, W - 2 * M, 150, settings_sel_ == 0);
+    hot(M, 230, W - 2 * M, 150, HotKind::Settings, 0, -1);
     draw_icon_badge(c, Icon::Globe, M + 36, 266, 78, kTintViolet);
     body().draw(c, M + 144, 262, S("settings.language"), kText);
     small().draw(c, M + 144, 316, S("settings.note"), kDim);
     int x = W - M - 40;
-    for (Lang l : {Lang::En, Lang::De}) {
-        const std::string name = S(l == Lang::De ? "settings.lang_de" : "settings.lang_en");
-        const int w = body().width(name) + 56;
+    for (auto it = std::rbegin(kAllLangs); it != std::rend(kAllLangs); ++it) {  // von rechts nach links: Es, It, Fr, En, De
+        const Lang l = *it;
+        const std::string name = S(std::string("settings.lang_") + lang_code(l));
+        const int w = body().width(name) + 48;
         x -= w;
         const bool on = l == lang_;
         c.fill_round_rect(x, 262, w, 56, 28, on ? kAccent : kLine);
-        body().draw(c, x + 28, 262 + (56 - body().line_height()) / 2, name, on ? rgb(255, 255, 255) : kDim);
-        x -= 16;
+        hot(x, 262, w, 56, HotKind::Language, 4 - static_cast<int>(it - std::rbegin(kAllLangs)), -1);
+        body().draw(c, x + 24, 262 + (56 - body().line_height()) / 2, name, on ? rgb(255, 255, 255) : kDim);
+        x -= 12;
     }
     card(c, M, 410, W - 2 * M, 150, settings_sel_ == 1);
+    hot(M, 410, W - 2 * M, 150, HotKind::Settings, 1, static_cast<int>(Button::Cross));
     draw_icon_badge(c, Icon::Download, M + 36, 446, 78, kTintTeal);
     body().draw(c, M + 144, 442, S("settings.rules_update"), kText);
     small().draw(c, M + 144, 496, S("settings.rules_update_sub"), kDim);
@@ -2154,13 +2332,14 @@ void App::draw_error_codes(Canvas& c) const {
     for (int i = err_top_; i < last; ++i, y += ch + gap) {
         const auto& e = errors_.codes[static_cast<std::size_t>(i)];
         card(c, M, y, cw, ch, i == err_sel_);
+        hot(M, y, cw, ch, HotKind::Error, i, static_cast<int>(Button::Cross));
         const int ty = y + (ch - body().line_height()) / 2;
         draw_icon(c, e.level == "doc" ? Icon::Ok : Icon::Info, M + 52, y + ch / 2, 40, level_color(e), level_color(e));
         body().draw(c, M + 94, ty, e.id, kText);
         const std::string level = S("errors.level." + e.level);
         const int lw = text_right(c, small(), M + cw - 32, y + (ch - small().line_height()) / 2, level, level_color(e));
         const int tx = M + 94 + 250;
-        body().draw(c, tx, ty, elide(body(), lang_ == Lang::De ? e.title_de : e.title_en, M + cw - 32 - lw - 28 - tx), kDim);
+        body().draw(c, tx, ty, elide(body(), pick_text(lang_, e.title_de, e.title_en, "error_codes", e.id, "title"), M + cw - 32 - lw - 28 - tx), kDim);
     }
     if (n > kErrVisible) {  // Scrollleiste
         const int track_h = kErrVisible * (ch + gap) - gap;
@@ -2195,7 +2374,7 @@ void App::draw_error_detail(Canvas& c) const {
         if (reported_error_ == e->id) pos += (pos.empty() ? "" : " · ") + S("errors.in_report");
         text_right(c, small(), W - M, 204, pos, reported_error_ == e->id ? kOk : kDim);
     }
-    body().draw(c, M + 80, 196, elide(body(), lang_ == Lang::De ? e->title_de : e->title_en, cw - 300), kDim);
+    body().draw(c, M + 80, 196, elide(body(), pick_text(lang_, e->title_de, e->title_en, "error_codes", e->id, "title"), cw - 300), kDim);
 
     // Text: Zeilen ab err_scroll_, soweit sie in das Panel passen
     c.fill_round_rect(M, kErrPanelY, cw, kErrPanelH, 20, kPanel);

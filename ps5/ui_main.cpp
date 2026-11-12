@@ -12,6 +12,7 @@
 #include "medic_ui/pad_nav.hpp"
 #include "medic_ui/service.hpp"
 #include "medic_ui/shot_hook.hpp"
+#include "medic_ui/splash.hpp"
 
 #include <SDL2/SDL.h>
 
@@ -205,6 +206,7 @@ const char* screen_name(App::Screen s) {
         case App::Screen::CheckCompare: return "Vergleich";
         case App::Screen::GameList: return "Spiele";
         case App::Screen::GameDetail: return "Spiel";
+        case App::Screen::Splash: return "Startbild";
     }
     return "?";
 }
@@ -231,6 +233,11 @@ int main() {
     const auto http = medic::make_posix_http_client();
     service.set_http_client(http.get());
     App app(service);
+    {  // Startbild (ui/assets/splash.jpg, eingebettet); jede Taste ueberspringt es
+        Canvas splash(App::kWidth, App::kHeight);
+        if (medic::ui::load_splash(splash)) app.show_splash(splash);
+        else trace("Startbild nicht lesbar");
+    }
 
     if (!init_sdl_with_retry()) {
         log_direct_memory_limits();
@@ -258,6 +265,7 @@ int main() {
     int logged_screens = 0;
     PadNav nav;              // Steuerkreuz und linker Stick -> Richtungstasten mit Wiederholung
     int stick_x = 0, stick_y = 0;
+    int rstick_x = 0, rstick_y = 0;  // rechter Stick bewegt den Zeiger
     std::vector<Button> pressed;  // Tasten dieses Durchlaufs, in Reihenfolge
     App::Screen last_screen = app.screen();
     bool first_frame_logged = false;
@@ -283,6 +291,12 @@ int main() {
                 case SDL_CONTROLLERBUTTONDOWN:
                 case SDL_CONTROLLERBUTTONUP: {
                     const bool down = ev.type == SDL_CONTROLLERBUTTONDOWN;
+                    if (down && (ev.cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSTICK || ev.cbutton.button == SDL_CONTROLLER_BUTTON_TOUCHPAD)) {
+                        // Klick des Zeigers (R3 oder Touchpad-Druck); ist der Zeiger gerade verborgen, holt der erste Druck ihn nur zurueck
+                        if (app.pointer_visible()) app.pointer_click();
+                        else app.pointer_move(app.pointer_x(), app.pointer_y());
+                        break;
+                    }
                     const auto b = map_button(ev.cbutton.button);
                     if (down && logged_buttons < 20) {
                         trace("Taste " + std::to_string(ev.cbutton.button) + (b ? "" : " (unbelegt)"));
@@ -295,6 +309,8 @@ int main() {
                 }
                 case SDL_CONTROLLERAXISMOTION:
                     // Nur der linke Stick steuert (wie das Steuerkreuz); Sticks und Trigger der rechten Seite bleiben ohne Wirkung.
+                    if (ev.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTX) rstick_x = ev.caxis.value;
+                    else if (ev.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY) rstick_y = ev.caxis.value;
                     if (ev.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX || ev.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) {
                         if (logged_axes < 10 && std::abs(ev.caxis.value) > PadNav::kOn) {
                             trace("Stick-Achse " + std::to_string(ev.caxis.axis) + ": " + std::to_string(ev.caxis.value));
@@ -304,8 +320,29 @@ int main() {
                         nav.stick(stick_x, stick_y, SDL_GetTicks(), pressed);
                     }
                     break;
+                case SDL_MOUSEMOTION:
+                    app.pointer_move(ev.motion.x, ev.motion.y);
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                    app.pointer_move(ev.button.x, ev.button.y);
+                    if (ev.button.button == SDL_BUTTON_LEFT) app.pointer_click();
+                    else if (ev.button.button == SDL_BUTTON_RIGHT) pressed.push_back(Button::Circle);
+                    break;
+                case SDL_MOUSEWHEEL:
+                    if (ev.wheel.y != 0) pressed.push_back(ev.wheel.y > 0 ? Button::Up : Button::Down);
+                    break;
                 default: break;
             }
+        }
+        {  // rechter Stick: Zeiger bewegen (Totzone, nach oben weich ansteigend; etwa 800 Pixel/s bei vollem Ausschlag)
+            auto speed = [](int v) {
+                const float a = static_cast<float>(std::abs(v)) / 32767.0f;
+                if (a < 0.2f) return 0.0f;
+                const float t = (a - 0.2f) / 0.8f;
+                return (v < 0 ? -1.0f : 1.0f) * (2.0f + t * t * 24.0f);
+            };
+            const float dx = speed(rstick_x), dy = speed(rstick_y);
+            if (dx != 0.0f || dy != 0.0f) app.pointer_move(app.pointer_x() + static_cast<int>(dx), app.pointer_y() + static_cast<int>(dy));
         }
         nav.poll(SDL_GetTicks(), pressed);  // gehaltenes Hoch/Runter wiederholen
         for (const Button b : pressed) app.handle(b);

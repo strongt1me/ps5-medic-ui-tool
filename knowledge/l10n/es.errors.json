@@ -1,0 +1,452 @@
+{
+ "error_codes": {
+  "0x80268001": {
+   "title": "Sin sonido: llamada de audio rechazada (firmware 6 a 9)",
+   "text": "No hay página de Sony para este código; la información viene del README del PS5 Backport Toolkit. Según este, en los firmwares 6 a 9 la llamada sceAudioOut2Set3DLatency rechaza con este código un modo superior a 1, y Wwise (software de audio de los juegos) lo trata como fatal: el juego renuncia al sonido. Si el código aparece en otros casos no está documentado.",
+   "steps": [],
+   "notes": [
+    "El README asigna el síntoma «Sin sonido» en los firmwares 6 a 9 a la regla de reparación «set3-nonfatal». Esta regla modifica los archivos del juego, según el README nunca se recomienda automáticamente y no está probada en 6 a 9. Medic no aplica nada parecido."
+   ]
+  },
+  "0x80551618": {
+   "title": "Falló el registro de trofeos",
+   "text": "No hay página de Sony para este código; la información viene del issue 97 de ShadowMount+, no de Sony. Allí alguien notifica el mensaje «Trophy registration failed (0x80551618)» al iniciar cada juego de PS4 montado como imagen .ffpfsc con ShadowMount+, aunque los juegos arrancan y se pueden jugar. El issue no tiene causa ni solución confirmadas.",
+   "steps": [],
+   "notes": [
+    "Suposición de quien lo notificó (sin confirmar, sin respuestas de desarrolladores en el issue): al iniciar, los archivos de trofeos (como npbind.dat) se buscan en un lugar que encaja con juegos de PS5, no de PS4; además ShadowMount+ no llama al mecanismo del sistema para iniciar una app. Medic no lo confirma."
+   ]
+  },
+  "0x80960005": {
+   "title": "Solicitud de presets del juego rechazada (firmware 4.xx)",
+   "text": "No hay página de Sony para este código; la información viene del README del PS5 Backport Toolkit. Según este, el firmware 4.xx rechaza la solicitud de un juego de sus presets porque la solicitud es 8 bytes mayor de lo que acepta 4.xx. El vínculo entre el código y el tamaño aparece solo en la tabla del README; allí no se da una explicación explícita del código.",
+   "steps": [],
+   "notes": [
+    "El README asigna el error a la regla de reparación «gamepresets-28» del toolkit. Esta regla modifica los archivos del juego; Medic no proporciona juegos ni backports y no aplica nada parecido."
+   ]
+  },
+  "0x809F8032": {
+   "title": "No se pueden abrir los datos guardados (fallo de montaje)",
+   "text": "No hay página de Sony para este código; la información viene del README del PS5 Backport Toolkit. Allí el código aparece en la línea de log «Failed to mount ...»: los datos guardados existen pero no se pueden abrir, a menudo porque un cuelgue anterior los dejó a medio crear. Una causa sospechada para un juego (valor 0 en un montaje de solo lectura) se descartó en una prueba; el README no nombra la causa real.",
+   "steps": [
+    "Si los datos guardados quedaron a medio crear por un cuelgue anterior: bórralos en «Ajustes > Datos guardados» e inténtalo de nuevo (esto borra esos datos guardados: haz antes copia si es posible)."
+   ],
+   "notes": [
+    "La ruta de menú se toma tal como está escrita en el README; cómo nombra Sony exactamente el menú no se indica allí."
+   ]
+  },
+  "CE-100005-6": {
+   "title": "No se puede cargar el juego o la aplicación",
+   "text": "No se puede cargar el juego o la aplicación. Para este código Sony menciona sobre todo borrarlo y reinstalarlo; en juegos en disco se añade limpiar el disco.",
+   "steps": [
+    "En la pantalla de inicio, resalta el juego, pulsa el botón Options y elige «Borrar».",
+    "Para la versión digital, reinstala el juego desde tu biblioteca.",
+    "Para un juego en disco, limpia el disco con un paño suave sin pelusa del centro al borde, vuelve a insertarlo y reinstala el juego.",
+    "Si la consola está en vertical sobre el soporte, la cara con la etiqueta del disco debe mirar a la izquierda al insertarlo."
+   ]
+  },
+  "CE-100006-7": {
+   "title": "No se reconoce la unidad de almacenamiento externa",
+   "text": "La consola no reconoce la unidad de almacenamiento externa conectada. Los pasos de Sony abarcan la conexión USB (sin hub), el formateo como almacenamiento ampliado y un posible problema de la propia unidad.",
+   "steps": [
+    "Desconecta el cable USB y vuelve a conectarlo. Si usas un hub USB, quítalo y conecta la unidad directamente a la consola.",
+    "Si la unidad se usa por primera vez como almacenamiento ampliado, hay que formatearla: «Ajustes > Almacenamiento > Almacenamiento ampliado». Atención: formatear borra todo lo que hay en la unidad.",
+    "Si no puedes transferir todos los datos a la vez, transfiere el contenido elemento por elemento.",
+    "Comprueba si los datos del juego se pueden instalar en almacenamiento ampliado (guía de almacenamiento ampliado de Sony).",
+    "Puede haber un problema con la unidad: prueba con otro dispositivo de almacenamiento."
+   ]
+  },
+  "CE-100008-9": {
+   "title": "Se ha producido un error",
+   "text": "Se ha producido un error general. Sony menciona dos pasos: reiniciar la consola y, si el error ocurre al iniciar una aplicación como un juego, borrar la aplicación y reinstalarla.",
+   "steps": [
+    "Reinicia la consola.",
+    "Si el error ocurre al iniciar una aplicación como un juego, borra la aplicación y reinstálala. Haz antes copia de tus datos guardados."
+   ]
+  },
+  "CE-100009-0": {
+   "title": "Problema con el archivo de actualización",
+   "text": "Hay un problema con el archivo de actualización de una app o juego. Sony indica: hacer antes copia de los datos guardados, borrar y reinstalar la app, reiniciar, cerrar sesión y volver a iniciarla, y si no, esperar 24 horas.",
+   "steps": [
+    "Haz copia de tus datos guardados.",
+    "Borra la app o el juego y reinstálalo.",
+    "Reinicia la consola.",
+    "Elige «Ajustes > Usuarios y cuentas > Otros > Cerrar sesión».",
+    "Inicia sesión de nuevo.",
+    "Si el error se repite, espera 24 horas e inténtalo de nuevo."
+   ]
+  },
+  "CE-100028-1": {
+   "title": "No hay espacio libre suficiente en el SSD",
+   "text": "No hay espacio libre suficiente en el SSD de la consola. Para este código Sony no indica una cantidad concreta de espacio; solo dice que se compruebe el espacio libre para la descarga y que se borre contenido.",
+   "steps": [
+    "Abre «Ajustes > Almacenamiento > Almacenamiento del sistema» y comprueba si hay espacio libre suficiente para la descarga.",
+    "En el almacenamiento de la consola, resalta el contenido, pulsa el botón de selección y elige «Borrar».",
+    "En la pantalla de inicio, resalta el contenido, pulsa el botón Options y elige «Borrar»."
+   ]
+  },
+  "CE-100095-5": {
+   "title": "Problema al iniciar la aplicación",
+   "text": "Hubo un problema al iniciar la aplicación. Para este código Sony solo dice que se borre la aplicación y se reinstale.",
+   "steps": [
+    "Resalta la aplicación, pulsa el botón Options y elige «Borrar».",
+    "Reinstala la aplicación.",
+    "Mantén la consola encendida mientras se ejecuta la instalación."
+   ]
+  },
+  "CE-100096-6": {
+   "title": "Problema al cargar la aplicación",
+   "text": "Ocurrió un error al cargar la aplicación. Para este código Sony menciona un solo paso: reiniciar tras desenchufar el cable de alimentación.",
+   "steps": [
+    "Apaga la consola, desenchufa el cable de alimentación, vuelve a enchufarlo y reinicia la consola."
+   ]
+  },
+  "CE-105733-9": {
+   "title": "Un overlay residual impide iniciar juegos (compilación de prueba de ps5-theme)",
+   "text": "No hay página de Sony para este código (404 en la dirección habitual de Sony), así que el significado viene solo de la comunidad. Según las notas de la versión 1.53 de ps5-theme, un overlay que quedaba en compilaciones de prueba anteriores impedía que arrancara cualquier juego o app y causaba este error.",
+   "steps": [
+    "Actualiza ps5-theme a la versión 1.53 o más reciente; según las notas de la versión, el problema descrito está corregido a partir de esa versión."
+   ],
+   "notes": [
+    "Nota de Medic: el chequeo notifica compilaciones de prueba de ps5-theme entre las versiones 1.30 y 1.53 (regla plugin.ps5theme_old_overlay). El código de error en sí no se puede ver en una instantánea."
+   ]
+  },
+  "CE-105799-1": {
+   "title": "No se puede conectar con el servidor",
+   "text": "La consola no puede alcanzar el servidor de PlayStation. Los pasos de Sony van desde la página de estado, una conexión por cable y reiniciar el router hasta los puertos, una dirección IP estática y un servidor DNS público.",
+   "steps": [
+    "Comprueba en la página de estado de PlayStation si hay una caída de servidor o mantenimiento.",
+    "Reinicia la consola, conéctate a internet con cable si es posible y configura de nuevo los ajustes de red.",
+    "Con Wi-Fi, acerca la consola al router o quita lo que bloquee la conexión entre los dispositivos.",
+    "Apaga el router y el módem, espera al menos 5 minutos y vuélvelos a encender.",
+    "Si es posible, abre estos puertos: TCP 80, 443, 3478, 3479, 3480 y UDP 3478, 3479, 49152 a 65535. Tu proveedor de internet puede ayudarte con esto.",
+    "En los ajustes de red, introduce manualmente una dirección IP estática.",
+    "Cambia temporalmente los ajustes de DNS a un servidor DNS público gratuito. Si nada de esto ayuda, Sony dice que la línea puede estar ocupada temporalmente: inténtalo de nuevo más tarde."
+   ]
+  },
+  "CE-106485-4": {
+   "title": "Puede que no se lean el software del sistema o los datos de la app",
+   "text": "Puede haber un problema al leer el software del sistema o los datos de la aplicación. En juegos de una consola con jailbreak, una causa posible es que el juego exija un firmware demasiado alto, ver los pasos.",
+   "steps": [
+    "Para un juego: probablemente se compiló para una versión de firmware superior a la que ejecuta la consola. Entonces necesita un backport para el firmware en uso para que arranque en esta PS5.",
+    "Como alternativa usa AMPR Emu o AMPR Emu NG: el archivo libSceAmpr.sprx va en la carpeta fakelib/ del juego, el juego se monta con ShadowMount+ y se desactivan las actualizaciones de fakelib en sus ajustes (según el README de AMPR Emu NG)."
+   ],
+   "notes": [
+    "Nota de la escena (no de Sony): cada archivo de juego indica el firmware para el que se compiló, y la consola se niega a iniciar nada más nuevo que ella misma; un backport baja ese requisito. AMPR Emu y AMPR Emu NG son reimplementaciones de la biblioteca del sistema libSceAmpr.sprx en la carpeta del juego. Que este código signifique justo este caso no está documentado.",
+    "Nota de Medic: Medic nunca cambia el firmware y no proporciona juegos ni backports."
+   ]
+  },
+  "CE-106487-6": {
+   "title": "Problema al descargar o instalar contenido",
+   "text": "Hubo un problema al descargar e instalar el contenido. Sony indica: restaurar licencias, borrar la descarga y empezarla de nuevo, y reconstruir la base de datos en modo seguro.",
+   "steps": [
+    "Restaura las licencias: «Ajustes > Usuarios y cuentas > Otros > Restaurar licencias > Restaurar».",
+    "Pulsa el botón PS para abrir el centro de control, resalta la descarga, pulsa el botón Options, elige «Borrar» y empieza la descarga de nuevo.",
+    "Inicia la consola en modo seguro y elige «Borrar caché y reconstruir base de datos > Reconstruir base de datos». Sony no menciona pérdida de datos para esto, pero advierte en general de que algunas opciones del modo seguro pierden datos: haz antes copia de tus datos.",
+    "Si el problema se repite, inténtalo de nuevo más tarde."
+   ],
+   "notes": [
+    "Opciones del modo seguro según Sony: «Reparar almacenamiento de la consola» no borra datos, «Restablecer configuración predeterminada» no borra juegos, apps, capturas de pantalla, videoclips ni datos guardados, «Restablecer PS5» borra todos los datos de usuario. Sobre «Reconstruir base de datos» Sony no dice nada de pérdida de datos."
+   ]
+  },
+  "CE-107098-5": {
+   "title": "Falla el guardado (montaje de datos guardados, firmware 4.xx)",
+   "text": "No hay página de Sony para este código (404 en la dirección habitual de Sony); la información viene del README del PS5 Backport Toolkit. Según este, el código aparece cuando un juego pasa al montaje de datos guardados un valor que el firmware 4.xx rechaza, de modo que falla el guardado. Si el código puede tener otras causas no está documentado.",
+   "steps": [],
+   "notes": [
+    "El README asigna el error a la regla de reparación «savedata-mount» del toolkit (luego «savedata-prepare» y «savedata-dirsearch»). Estas reglas modifican los archivos del juego; Medic no proporciona juegos ni backports y no aplica nada parecido.",
+    "El README nombra el caso solo para el firmware 4.xx."
+   ]
+  },
+  "CE-107520-5": {
+   "title": "El juego pide una versión de firmware superior",
+   "text": "Sony no explica más este código. En juegos de una consola con jailbreak una causa posible es: el juego está compilado para una versión de firmware superior a la que ejecuta la consola. El camino es un backport para el firmware en uso, o AMPR Emu / AMPR Emu NG, ver los pasos.",
+   "steps": [
+    "Para un juego: probablemente se compiló para una versión de firmware superior a la que ejecuta la consola. Entonces necesita un backport para el firmware en uso para que arranque en esta PS5.",
+    "Como alternativa usa AMPR Emu o AMPR Emu NG: el archivo libSceAmpr.sprx va en la carpeta fakelib/ del juego, el juego se monta con ShadowMount+ y se desactivan las actualizaciones de fakelib en sus ajustes (según el README de AMPR Emu NG)."
+   ],
+   "notes": [
+    "Nota de la escena (no de Sony): cada archivo de juego indica el firmware para el que se compiló, y la consola se niega a iniciar nada más nuevo que ella misma; un backport baja ese requisito. AMPR Emu y AMPR Emu NG son reimplementaciones de la biblioteca del sistema libSceAmpr.sprx en la carpeta del juego. Que este código signifique justo este caso no está documentado.",
+    "Nota de Medic: Medic nunca cambia el firmware y no proporciona juegos ni backports."
+   ]
+  },
+  "CE-107527-2": {
+   "title": "Falló la instalación",
+   "text": "Falló la instalación; puede haber un problema con los datos que se instalan. Los pasos de Sony abarcan un reinicio, la conexión de red y borrar y volver a descargar el juego.",
+   "steps": [
+    "Reinicia la consola.",
+    "Conéctate a internet con cable si es posible.",
+    "Abre «Ajustes > Red > Configurar conexión a internet» y configura de nuevo los ajustes de red.",
+    "Con Wi-Fi, acerca la consola al router o quita lo que bloquee la conexión entre los dispositivos.",
+    "Apaga el router, espera al menos 5 minutos y vuelve a encenderlo.",
+    "Revisa «Ajustes > Almacenamiento»: si los datos del juego no se instalaron, borra el juego y vuelve a descargarlo."
+   ]
+  },
+  "CE-107622-8": {
+   "title": "No se pudo iniciar la aplicación",
+   "text": "No se pudo iniciar la aplicación; puede que el archivo de actualización no se aplicara bien al arrancar. Sony indica: reiniciar y volver a iniciar, y si nada mejora, borrar el contenido y reinstalar los datos del juego, porque pueden estar dañados.",
+   "steps": [
+    "Reinicia la consola y vuelve a iniciar la aplicación.",
+    "Si nada mejora, los datos del juego pueden estar dañados: resalta la aplicación, pulsa el botón Options y borra el contenido («Borrar»).",
+    "Reinstala los datos del juego."
+   ]
+  },
+  "CE-107750-0": {
+   "title": "Error al jugar",
+   "text": "Ocurrió un error al jugar. Sony indica una cadena larga: desenchufar el cable de alimentación, actualizar el juego, reinstalar el juego, reconstruir la base de datos en modo seguro y solo como último paso restablecer la consola.",
+   "steps": [
+    "Apaga la consola y desenchufa el cable de alimentación. Espera cinco minutos, vuelve a enchufar el cable y reinicia la consola.",
+    "Comprueba que el juego tenga la última versión.",
+    "Si el error persiste, borra el juego en «Ajustes > Almacenamiento» y reinstálalo.",
+    "Inicia la consola en modo seguro y elige «Borrar caché y reconstruir base de datos > Reconstruir base de datos». Sony no menciona pérdida de datos para esto, pero advierte en general de que algunas opciones del modo seguro pierden datos: haz antes copia de tus datos.",
+    "Si el problema se repite, restablece la consola. Esto borra todos los datos del almacenamiento de la consola: haz antes copia de los datos de la consola.",
+    "Tras la copia, elige «Ajustes > Sistema > Software del sistema > Opciones de restablecimiento > Restablecer la consola».",
+    "Tras el restablecimiento, vuelve a instalar el juego."
+   ],
+   "notes": [
+    "Opciones del modo seguro según Sony: «Reparar almacenamiento de la consola» no borra datos, «Restablecer configuración predeterminada» no borra juegos, apps, capturas de pantalla, videoclips ni datos guardados, «Restablecer PS5» borra todos los datos de usuario. Sobre «Reconstruir base de datos» Sony no dice nada de pérdida de datos."
+   ]
+  },
+  "CE-107857-8": {
+   "title": "No se puede cargar ni actualizar la aplicación",
+   "text": "Ocurrió un error al cargar o actualizar la aplicación. Sony recomienda primero un reinicio, luego actualizar la app y solo después reinstalar y reconstruir la base de datos en modo seguro.",
+   "steps": [
+    "Reinicia la consola.",
+    "Pon la app o el juego afectado en su última versión.",
+    "Si el error se repite tras iniciarla: borra la app o el juego en «Ajustes > Almacenamiento» y reinstálalo.",
+    "Inicia la consola en modo seguro y elige «Borrar caché y reconstruir base de datos > Reconstruir base de datos». Sony no menciona pérdida de datos para esto, pero advierte en general de que algunas opciones del modo seguro pierden datos: haz antes copia de tus datos."
+   ],
+   "notes": [
+    "Opciones del modo seguro según Sony: «Reparar almacenamiento de la consola» no borra datos, «Restablecer configuración predeterminada» no borra juegos, apps, capturas de pantalla, videoclips ni datos guardados, «Restablecer PS5» borra todos los datos de usuario. Sobre «Reconstruir base de datos» Sony no dice nada de pérdida de datos."
+   ]
+  },
+  "CE-107872-5": {
+   "title": "No hay espacio libre suficiente en el almacenamiento de la consola",
+   "text": "No hay espacio libre suficiente en el almacenamiento de la consola, así que no se puede descargar ni copiar nada. Sony recomienda reservar aproximadamente el doble del espacio libre que necesitan los propios datos al instalar.",
+   "steps": [
+    "Comprueba el espacio libre en «Ajustes > Almacenamiento». Una instalación puede necesitar el doble de espacio.",
+    "Si no hay espacio suficiente, valora un almacenamiento ampliado según tus necesidades.",
+    "Si el error ocurre aunque haya espacio libre suficiente: cambia el destino de guardado al almacenamiento de la consola o al almacenamiento ampliado. Si tienes un segundo almacenamiento ampliado, prueba también con ese."
+   ]
+  },
+  "CE-107891-6": {
+   "title": "El contenido no se instala correctamente",
+   "text": "El contenido no se instala correctamente en la consola. Para este código Sony solo dice que se borre el contenido afectado y se reinstale; si no ayuda, que se intente de nuevo más tarde.",
+   "steps": [
+    "Abre «Ajustes > Almacenamiento».",
+    "Elige el almacenamiento donde está guardado el contenido.",
+    "Borra el juego que tiene el error.",
+    "Reinstala el juego.",
+    "Si sigues teniendo problemas, inténtalo de nuevo más tarde."
+   ]
+  },
+  "CE-108255-1": {
+   "title": "Error con el juego o la aplicación",
+   "text": "Ocurrió un error con el juego o la aplicación. Sony da solo un paso para esto: actualizar el juego. Para más ayuda Sony remite a su página de reparaciones.",
+   "steps": [
+    "Pon el juego en su última versión.",
+    "Para más ayuda Sony remite a «Reparaciones de PlayStation»."
+   ]
+  },
+  "CE-108262-9": {
+   "title": "No se pueden leer el software del sistema o los datos de la app",
+   "text": "Ocurrió un error al leer el software del sistema o los datos de la aplicación. Sony indica: reinstalar la app afectada, reconstruir la base de datos en modo seguro y solo como último paso restablecer la consola.",
+   "steps": [
+    "Si el error ocurre tras iniciar un juego o app: bórralo en «Ajustes > Almacenamiento» y reinstálalo.",
+    "Inicia la consola en modo seguro y elige «Borrar caché y reconstruir base de datos > Reconstruir base de datos». Sony no menciona pérdida de datos para esto, pero advierte en general de que algunas opciones del modo seguro pierden datos: haz antes copia (unidad USB o nube).",
+    "Si nada de esto ayuda, restablece la consola («Ajustes > Sistema > Software del sistema > Opciones de restablecimiento > Restablecer la consola»). Esto borra todos los datos del almacenamiento de la consola: solo como último paso y, si es posible, tras una copia.",
+    "Tras el restablecimiento, vuelve a instalar el juego o la app."
+   ],
+   "notes": [
+    "Nota de Medic (informe de la comunidad, no de Sony): con ShadowMount+ 1.7beta9 y 1.7beta10 este error apareció tras horas en marcha (fuga de memoria, corregida en 1.7beta11). El chequeo muestra si la versión instalada está afectada (regla smp.leak_pre_beta11).",
+    "Opciones del modo seguro según Sony: «Reparar almacenamiento de la consola» no borra datos, «Restablecer configuración predeterminada» no borra juegos, apps, capturas de pantalla, videoclips ni datos guardados, «Restablecer PS5» borra todos los datos de usuario. Sobre «Reconstruir base de datos» Sony no dice nada de pérdida de datos."
+   ]
+  },
+  "CE-108889-4": {
+   "title": "El juego pide una versión de firmware superior",
+   "text": "Sony no explica más este código. En juegos de una consola con jailbreak una causa posible es: el juego está compilado para una versión de firmware superior a la que ejecuta la consola. El camino es un backport para el firmware en uso, o AMPR Emu / AMPR Emu NG, ver los pasos.",
+   "steps": [
+    "Para un juego: probablemente se compiló para una versión de firmware superior a la que ejecuta la consola. Entonces necesita un backport para el firmware en uso para que arranque en esta PS5.",
+    "Como alternativa usa AMPR Emu o AMPR Emu NG: el archivo libSceAmpr.sprx va en la carpeta fakelib/ del juego, el juego se monta con ShadowMount+ y se desactivan las actualizaciones de fakelib en sus ajustes (según el README de AMPR Emu NG)."
+   ],
+   "notes": [
+    "Nota de la escena (no de Sony): cada archivo de juego indica el firmware para el que se compiló, y la consola se niega a iniciar nada más nuevo que ella misma; un backport baja ese requisito. AMPR Emu y AMPR Emu NG son reimplementaciones de la biblioteca del sistema libSceAmpr.sprx en la carpeta del juego. Que este código signifique justo este caso no está documentado.",
+    "Nota de Medic: Medic nunca cambia el firmware y no proporciona juegos ni backports."
+   ]
+  },
+  "CE-109245-1": {
+   "title": "No se puede confirmar la información de licencia",
+   "text": "No se puede confirmar la información de licencia del contenido. Los pasos de Sony son reiniciar, iniciar sesión con la cuenta propietaria del contenido y activar Compartir consola y juego sin conexión.",
+   "steps": [
+    "Reinicia la consola.",
+    "Inicia sesión en PSN con la cuenta propietaria del contenido al que intentas acceder.",
+    "Abre «Ajustes > Usuarios y cuentas > Otros > Compartir consola y juego sin conexión» y activa «Compartir consola y juego sin conexión»."
+   ]
+  },
+  "CE-109573-5": {
+   "title": "Error al iniciar el juego",
+   "text": "Ocurrió un error al iniciar el juego. Sony indica: reiniciar, borrar y reinstalar el juego, reconstruir la base de datos en modo seguro.",
+   "steps": [
+    "Reinicia la consola.",
+    "En la biblioteca de juegos, resalta el juego, pulsa el botón Options y elige «Borrar».",
+    "Reinstala el juego.",
+    "Si eso no ayuda, reconstruye la base de datos. Inicia la consola en modo seguro y elige «Borrar caché y reconstruir base de datos > Reconstruir base de datos». Sony no menciona pérdida de datos para esto, pero advierte en general de que algunas opciones del modo seguro pierden datos: haz antes copia de tus datos.",
+    "Inicia el juego."
+   ],
+   "notes": [
+    "Opciones del modo seguro según Sony: «Reparar almacenamiento de la consola» no borra datos, «Restablecer configuración predeterminada» no borra juegos, apps, capturas de pantalla, videoclips ni datos guardados, «Restablecer PS5» borra todos los datos de usuario. Sobre «Reconstruir base de datos» Sony no dice nada de pérdida de datos."
+   ]
+  },
+  "CE-109737-7": {
+   "title": "No se reconoce el dispositivo de almacenamiento USB",
+   "text": "La consola no reconoce el dispositivo de almacenamiento USB. Los pasos de Sony abarcan el ajuste del cable, un hub USB, otro puerto USB, otro dispositivo de almacenamiento y una app durante la cual ocurre el problema.",
+   "steps": [
+    "Desconecta el cable USB y vuelve a conectarlo. Comprueba que esté bien insertado.",
+    "Si usas un hub USB, quítalo y conecta el dispositivo de almacenamiento USB directamente a la consola.",
+    "Prueba con otro puerto USB.",
+    "Comprueba si se reconoce otro dispositivo de almacenamiento USB.",
+    "Si el dispositivo de almacenamiento USB no se reconoce mientras se ejecuta una aplicación concreta, borra la aplicación, reinstálala e inténtalo de nuevo."
+   ]
+  },
+  "CE-117740-0": {
+   "title": "Puede que el juego tenga un error",
+   "text": "Puede que el juego tenga un error. Sony indica: borrar y reinstalar el juego, reconstruir la base de datos en modo seguro y, si no, contactar con el servicio de atención al cliente.",
+   "steps": [
+    "Abre «Ajustes > Almacenamiento» y borra el juego en «Juegos y apps».",
+    "Reinstala el juego.",
+    "Inicia la consola en modo seguro y elige «Borrar caché y reconstruir base de datos > Reconstruir base de datos». Sony no menciona pérdida de datos para esto, pero advierte en general de que algunas opciones del modo seguro pierden datos: haz antes copia de tus datos.",
+    "Si el problema continúa, contacta con el servicio de atención al cliente de PlayStation."
+   ],
+   "notes": [
+    "Opciones del modo seguro según Sony: «Reparar almacenamiento de la consola» no borra datos, «Restablecer configuración predeterminada» no borra juegos, apps, capturas de pantalla, videoclips ni datos guardados, «Restablecer PS5» borra todos los datos de usuario. Sobre «Reconstruir base de datos» Sony no dice nada de pérdida de datos."
+   ]
+  },
+  "CE-118527-4": {
+   "title": "Problema al resolver el nombre de host",
+   "text": "No se pudo resolver el nombre de un servidor a una dirección, posiblemente por la conexión de red. Entre otras cosas, Sony dice que se revisen el DNS primario y secundario si introdujiste direcciones DNS manualmente.",
+   "steps": [
+    "Ejecuta «Ajustes > Red > Estado de la conexión > Probar conexión a internet» y vuelve a conectar si es necesario.",
+    "Apaga el router y el módem, espera al menos 5 minutos y vuélvelos a encender.",
+    "Si fijaste la dirección IP o el DNS manualmente: comprueba que el DNS primario y el secundario sean correctos.",
+    "Pregunta a tu proveedor de internet si hay mantenimiento en curso.",
+    "Espera unos minutos e inténtalo de nuevo, ya que el problema puede ser temporal."
+   ]
+  },
+  "NP-102944-0": {
+   "title": "El juego pide una versión de firmware superior",
+   "text": "Sony no explica más este código. En juegos de una consola con jailbreak una causa posible es: el juego está compilado para una versión de firmware superior a la que ejecuta la consola. El camino es un backport para el firmware en uso, o AMPR Emu / AMPR Emu NG, ver los pasos.",
+   "steps": [
+    "Para un juego: probablemente se compiló para una versión de firmware superior a la que ejecuta la consola. Entonces necesita un backport para el firmware en uso para que arranque en esta PS5.",
+    "Como alternativa usa AMPR Emu o AMPR Emu NG: el archivo libSceAmpr.sprx va en la carpeta fakelib/ del juego, el juego se monta con ShadowMount+ y se desactivan las actualizaciones de fakelib en sus ajustes (según el README de AMPR Emu NG)."
+   ],
+   "notes": [
+    "Nota de la escena (no de Sony): cada archivo de juego indica el firmware para el que se compiló, y la consola se niega a iniciar nada más nuevo que ella misma; un backport baja ese requisito. AMPR Emu y AMPR Emu NG son reimplementaciones de la biblioteca del sistema libSceAmpr.sprx en la carpeta del juego. Que este código signifique justo este caso no está documentado.",
+    "Nota de Medic: Medic nunca cambia el firmware y no proporciona juegos ni backports."
+   ]
+  },
+  "NP-102945-1": {
+   "title": "El juego pide una versión de firmware superior",
+   "text": "Sony no explica más este código. En juegos de una consola con jailbreak una causa posible es: el juego está compilado para una versión de firmware superior a la que ejecuta la consola. El camino es un backport para el firmware en uso, o AMPR Emu / AMPR Emu NG, ver los pasos.",
+   "steps": [
+    "Para un juego: probablemente se compiló para una versión de firmware superior a la que ejecuta la consola. Entonces necesita un backport para el firmware en uso para que arranque en esta PS5.",
+    "Como alternativa usa AMPR Emu o AMPR Emu NG: el archivo libSceAmpr.sprx va en la carpeta fakelib/ del juego, el juego se monta con ShadowMount+ y se desactivan las actualizaciones de fakelib en sus ajustes (según el README de AMPR Emu NG)."
+   ],
+   "notes": [
+    "Nota de la escena (no de Sony): cada archivo de juego indica el firmware para el que se compiló, y la consola se niega a iniciar nada más nuevo que ella misma; un backport baja ese requisito. AMPR Emu y AMPR Emu NG son reimplementaciones de la biblioteca del sistema libSceAmpr.sprx en la carpeta del juego. Que este código signifique justo este caso no está documentado.",
+    "Nota de Medic: Medic nunca cambia el firmware y no proporciona juegos ni backports."
+   ]
+  },
+  "NP-104291-7": {
+   "title": "No se puede confirmar la licencia del contenido (lado del servidor)",
+   "text": "No se puede confirmar la información de licencia del contenido; según Sony, puede que la información del título no se refleje correctamente en el servidor. Sony indica: iniciar sesión con la cuenta propietaria del derecho sobre el contenido, esperar si el título acaba de salir y, si no, contactar con el soporte.",
+   "steps": [
+    "Comprueba que has iniciado sesión con la cuenta propietaria del derecho sobre el contenido.",
+    "Si el error aparece con un título recién lanzado: espera un rato e inténtalo de nuevo.",
+    "Si el problema persiste pasado un tiempo, contacta con el soporte de PlayStation."
+   ]
+  },
+  "NW-102216-2": {
+   "title": "Error al conectar con PlayStation",
+   "text": "Ocurrió un error al conectar con PlayStation. Los pasos de Sony van desde la página de estado, una conexión por cable y reiniciar el router hasta los puertos abiertos.",
+   "steps": [
+    "Comprueba en la página de estado de PlayStation si hay problemas de red.",
+    "Usa una conexión por cable si es posible.",
+    "Con Wi-Fi, acerca la consola al router o quita lo que bloquee la conexión entre los dispositivos.",
+    "Apaga el router, espera al menos 5 minutos y vuelve a encenderlo.",
+    "Si es posible, abre estos puertos: TCP 80, 443, 3478, 3479, 3480 y UDP 3478, 3479, 49152 a 65535. Tu proveedor de internet puede ayudarte con esto."
+   ]
+  },
+  "NW-102261-2": {
+   "title": "No se puede conectar con el servidor",
+   "text": "Ocurrió un error al conectar con PlayStation: la consola no puede alcanzar el servidor. Sony indica la misma cadena que para WV-109145-0: página de estado, reinicio, cable en lugar de Wi-Fi, reiniciar el router, puertos y una dirección IP estática.",
+   "steps": [
+    "Comprueba en la página de estado de PlayStation si hay una caída de servidor o mantenimiento.",
+    "Reinicia la consola, conéctate a internet con un cable LAN si es posible y configura de nuevo los ajustes de red.",
+    "Con Wi-Fi, acerca la consola al router o quita lo que interfiera en la conexión entre los dispositivos.",
+    "Apaga el router y el módem, espera al menos cinco minutos y vuélvelos a encender.",
+    "Si es posible, abre estos puertos: TCP 80, 443, 3478, 3479, 3480 y UDP 3478, 3479, 49152 a 65535. Para ayuda con la apertura de puertos y los ajustes del router, consulta a tu proveedor de internet.",
+    "Fija una dirección IP estática manualmente en los ajustes de red.",
+    "Si nada de esto ayuda, la línea probablemente esté ocupada un tiempo: espera e inténtalo de nuevo más tarde."
+   ],
+   "notes": [
+    "Nota de Medic: si la consola usa un filtro DNS como nanoDNS que bloquea direcciones de Sony, este error es de esperar, sobre todo en aplicaciones del sistema como el navegador o la tienda. No es una afirmación de Sony y el historial de errores por sí solo no lo confirma. El paso de Sony de introducir temporalmente un servidor DNS público no se lista aquí: eludiría un filtro DNS así."
+   ]
+  },
+  "NW-102265-6": {
+   "title": "No se puede conectar con el servidor",
+   "text": "La consola no puede alcanzar el servidor de PlayStation. Los pasos de Sony van desde la página de estado, una conexión por cable y reiniciar el router hasta los puertos, una dirección IP estática y un servidor DNS público.",
+   "steps": [
+    "Comprueba en la página de estado de PlayStation si hay una caída de servidor o mantenimiento.",
+    "Reinicia la consola, conéctate a internet con cable si es posible y configura de nuevo los ajustes de red.",
+    "Con Wi-Fi, acerca la consola al router o quita lo que bloquee la conexión entre los dispositivos.",
+    "Apaga el router y el módem, espera al menos 5 minutos y vuélvelos a encender.",
+    "Si es posible, abre estos puertos: TCP 80, 443, 3478, 3479, 3480 y UDP 3478, 3479, 49152 a 65535. Tu proveedor de internet puede ayudarte con esto.",
+    "En los ajustes de red, introduce manualmente una dirección IP estática.",
+    "Cambia temporalmente los ajustes de DNS a un servidor DNS público gratuito. Si nada de esto ayuda, Sony dice que la línea puede estar ocupada temporalmente: inténtalo de nuevo más tarde."
+   ]
+  },
+  "WS-116328-1": {
+   "title": "El juego pide una versión de firmware superior",
+   "text": "Sony no explica más este código. En juegos de una consola con jailbreak una causa posible es: el juego está compilado para una versión de firmware superior a la que ejecuta la consola. El camino es un backport para el firmware en uso, o AMPR Emu / AMPR Emu NG, ver los pasos.",
+   "steps": [
+    "Para un juego: probablemente se compiló para una versión de firmware superior a la que ejecuta la consola. Entonces necesita un backport para el firmware en uso para que arranque en esta PS5.",
+    "Como alternativa usa AMPR Emu o AMPR Emu NG: el archivo libSceAmpr.sprx va en la carpeta fakelib/ del juego, el juego se monta con ShadowMount+ y se desactivan las actualizaciones de fakelib en sus ajustes (según el README de AMPR Emu NG)."
+   ],
+   "notes": [
+    "Nota de la escena (no de Sony): cada archivo de juego indica el firmware para el que se compiló, y la consola se niega a iniciar nada más nuevo que ella misma; un backport baja ese requisito. AMPR Emu y AMPR Emu NG son reimplementaciones de la biblioteca del sistema libSceAmpr.sprx en la carpeta del juego. Que este código signifique justo este caso no está documentado.",
+    "Nota de Medic: Medic nunca cambia el firmware y no proporciona juegos ni backports."
+   ]
+  },
+  "WV-109145-0": {
+   "title": "No se puede conectar con internet",
+   "text": "Ocurrió un error al conectar con PlayStation: la consola no puede alcanzar internet. Sony indica una cadena de página de estado, reinicio, cable en lugar de Wi-Fi, reiniciar el router, puertos y una dirección IP estática.",
+   "steps": [
+    "Comprueba en la página de estado de PlayStation si hay una caída de servidor o mantenimiento.",
+    "Reinicia la consola, conéctate a internet con un cable LAN si es posible y configura de nuevo los ajustes de red.",
+    "Con Wi-Fi, acerca la consola al router o quita lo que interfiera en la conexión entre los dispositivos.",
+    "Apaga el router y el módem, espera al menos cinco minutos y vuélvelos a encender.",
+    "Si es posible, abre estos puertos: TCP 80, 443, 3478, 3479, 3480 y UDP 3478, 3479, 49152 a 65535. Para ayuda con la apertura de puertos y los ajustes del router, consulta a tu proveedor de internet.",
+    "Fija una dirección IP estática manualmente en los ajustes de red.",
+    "Si nada de esto ayuda, la línea probablemente esté ocupada un tiempo: espera e inténtalo de nuevo más tarde."
+   ],
+   "notes": [
+    "Nota de Medic: si la consola usa un filtro DNS como nanoDNS que bloquea direcciones de Sony, este error es de esperar, sobre todo en aplicaciones del sistema como el navegador o la tienda. No es una afirmación de Sony y el historial de errores por sí solo no lo confirma. El paso de Sony de introducir temporalmente un servidor DNS público no se lista aquí: eludiría un filtro DNS así."
+   ]
+  },
+  "WV-109168-5": {
+   "title": "Error al conectar con PlayStation",
+   "text": "Ocurrió un error al conectar con PlayStation. Sony menciona la página de estado, el reinicio, cable en lugar de Wi-Fi, reiniciar router y módem, desactivar el filtro de puertos del router y una dirección IP estática.",
+   "steps": [
+    "Comprueba en la página de estado de PlayStation si hay una caída de servidor o mantenimiento.",
+    "Reinicia la consola, conéctate a internet con un cable LAN si es posible y configura de nuevo los ajustes de red.",
+    "Con Wi-Fi, coloca la consola lo más cerca posible del router o quita objetos que bloqueen o interfieran en la conexión.",
+    "Apaga el router y el módem, espera al menos cinco minutos y vuélvelos a encender.",
+    "Pregunta a tu proveedor de internet cómo desactivar la función de filtrado de puertos del router.",
+    "Fija una dirección IP estática manualmente en «Ajustes > Red > Ajustes > Configurar conexión a internet».",
+    "Si el problema persiste, inténtalo de nuevo más tarde."
+   ],
+   "notes": [
+    "Nota de Medic: si la consola usa un filtro DNS como nanoDNS que bloquea direcciones de Sony, este error es de esperar, sobre todo en aplicaciones del sistema como el navegador o la tienda. No es una afirmación de Sony y el historial de errores por sí solo no lo confirma. El paso de Sony de introducir temporalmente un servidor DNS público no se lista aquí: eludiría un filtro DNS así."
+   ]
+  }
+ }
+}

@@ -177,6 +177,17 @@ static void new_fact_tests() {
         auto b = facts_of("g1_neg_backport");
         const json* bg = b.get("games.fw");
         CHECK(bg && bg->size() == 1 && (*bg)[0]["backport"] == true && b.get("games.need_backport")->empty(), "G1: ein Ordner backports/<TITLE_ID>/ im Scanpfad zaehlt als Backport");
+        {  // Backport im Spiel selbst: SDK-Version der eboot.bin (Prozessparameter) nicht ueber der Firmware, param.json verlangt mehr
+            auto inl = facts_of("g1_neg_inline");
+            const json* ig = inl.get("games.fw");
+            CHECK(ig && ig->size() == 1 && (*ig)[0]["eboot_sdk"] == "12.00" && (*ig)[0]["backport"] == true && (*ig)[0]["backport_inline"] == true && inl.get("games.need_backport")->empty(),
+                  "G1: eboot.bin mit SDK 12.00 bei verlangter 13.60 auf 12.00 gilt als eingebauter Backport");
+            auto neu = facts_of("g1_pos_ebootnew");
+            const json* ng = neu.get("games.fw");
+            CHECK(ng && ng->size() == 1 && (*ng)[0]["eboot_sdk"] == "13.60" && (*ng)[0]["backport"] == false && neu.get("games.need_backport")->size() == 1,
+                  "G1: eboot.bin mit SDK 13.60 ist kein Backport, der Befund bleibt");
+            CHECK((*facts_of("g1_neg_backport").get("games.fw"))[0]["eboot_sdk"] == "" && (*facts_of("g1_neg_backport").get("games.fw"))[0]["backport_inline"] == false, "G1: ohne lesbare eboot.bin bleibt die SDK-Version leer");
+        }
         CHECK(facts_of("g1_neg_nofw").get("games.need_backport")->empty() && facts_of("g1_neg_nofw").get("games.fw")->size() == 1, "G1: ohne bekannte Firmware kein Befund, die Liste bleibt");
         CHECK(facts_of("g1_neg_badformat").get("games.fw")->empty(), "G1: ungueltige Versionsangaben (zu kurz, keine BCD-Ziffern, Klartext) werden ignoriert");
         CHECK(facts_of("a3_neg").get("games.fw")->empty(), "G1: ohne /user/app leere Liste");

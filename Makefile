@@ -37,7 +37,7 @@ PS5_CORE_SRCS := $(wildcard libmedic/src/*.cpp) third_party/qrcodegen/qrcodegen.
 PS5_C_SRCS := third_party/tweetnacl/tweetnacl.c third_party/sqlite3/sqlite3.c
 # png.cpp und shot_hook.cpp: PNG-Schreiber fuer den Screenshot-Hook der UI (Entwicklung, siehe shot_hook.hpp).
 PS5_UI_SRCS := ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp ui/src/i18n.cpp ui/src/i18n_embedded.cpp \
-               ui/src/icons.cpp ui/src/png.cpp ui/src/shot_hook.cpp ui/src/app.cpp ui/src/local_service.cpp
+               ui/src/icons.cpp ui/src/png.cpp ui/src/shot_hook.cpp ui/src/splash.cpp ui/src/app.cpp ui/src/local_service.cpp
 
 PS5_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) ps5/main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
 PS5_UI_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) $(PS5_UI_SRCS) ps5/ui_main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
@@ -114,6 +114,10 @@ $(PS5_PROBE_ELF): $(PS5_BUILD)/ps5/probe_sensors.o
 $(PS5_UI_ELF): $(PS5_UI_OBJS)
 	@test -d $(PS5_HOMEBREW)/lib || { echo "SDL2 fuer die PS5 fehlt in $(PS5_HOMEBREW) (ps5-payload-sdl2 + ps5-payload-libsamplerate, siehe docs/PHASE3.md)"; exit 1; }
 	$(PS5_CXX) $^ -L$(PS5_HOMEBREW)/lib $(PS5_UI_LIBS) -lkernel_sys -o $@
+
+# Startbild: ui/assets/splash.jpg steckt per .incbin im Objekt (docs/PHASE3.md)
+$(PS5_BUILD)/ui/src/splash.o: private PS5_CXXFLAGS += '-DMEDIC_SPLASH_PATH="$(CURDIR)/ui/assets/splash.jpg"'
+$(PS5_BUILD)/ui/src/splash.o: ui/assets/splash.jpg
 
 $(PS5_BUILD)/ps5/launcher_main.o: private PS5_CXXFLAGS += -Ithird_party/websrv-hbldr
 $(PS5_BUILD)/ps5/launcher_setup.o: private PS5_CXXFLAGS += -Ithird_party/websrv-hbldr -DMEDIC_TILE_INSTALL '-DMEDIC_TILE_DIR="$(TILE_DIR)"'

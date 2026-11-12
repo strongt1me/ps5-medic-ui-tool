@@ -383,5 +383,9 @@
   "games.d.saves_foreign": "{n} mit anderer Konto-ID",
   "games.d.log": "Zuletzt im ShadowMount+-Log",
   "games.d.reasons": "Mögliche Gründe",
-  "games.d.reasons_none": "Keine bekannte Ursache gefunden. Das heißt nicht, dass alles in Ordnung ist: Medic sieht nur, was auf der Konsole Spuren hinterlässt."
+  "games.d.reasons_none": "Keine bekannte Ursache gefunden. Das heißt nicht, dass alles in Ordnung ist: Medic sieht nur, was auf der Konsole Spuren hinterlässt.",
+  "settings.lang_fr": "Français",
+  "settings.lang_it": "Italiano",
+  "settings.lang_es": "Español",
+  "games.d.fw_backport_inline": "{req} (Konsole {fw}), Backport im Spiel eingebaut"
 }

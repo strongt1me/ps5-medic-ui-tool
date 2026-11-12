@@ -98,6 +98,9 @@ public:
     // nur nach ausdruecklicher Bestaetigung auf und danach check_rule_update(). Ohne Netzzugang (PC-Vorschau, Tests) Fehler "no_network".
     virtual std::string rule_update_url() = 0;
     virtual medic::RuleDownloadResult download_rule_update() = 0;
+    // Gespeicherte Sprache der Oberflaeche (config.ini, Schluessel language: de en fr it es); leer = keine. set_language speichert sie.
+    virtual std::string language() { return {}; }
+    virtual void set_language(const std::string& /*code*/) {}
     // Update der Fehlercode-Datei (error_codes.json im Update-Ordner), gleiche Pruefungen und gleicher Ablauf wie beim Regel-Update.
     // Standard: es gibt nie ein Angebot. check schreibt nichts; install und rollback schreiben und werden nur nach ausdruecklicher
     // Bestaetigung (Kreuz) aufgerufen.
@@ -178,6 +181,8 @@ public:
     medic::RuleUpdateResult install_rule_update() override;
     medic::RuleUpdateResult rollback_rule_update() override;
     std::string rule_update_url() override;
+    std::string language() override;
+    void set_language(const std::string& code) override;
     medic::RuleDownloadResult download_rule_update() override;
     const medic::ErrorCodeSet& error_codes() override { return error_codes_; }
     CodeContext code_context(const medic::ErrorCode& code) override;

@@ -1,30 +1,96 @@
+<div align="center">
+
+<img src="docs/images/splash.jpg" alt="PS5 Medic: Systemdiagnose, Wiederherstellung, Wartung" width="860">
+
 # PS5 Medic
 
-*[English version](README.en.md)*
+**Check-up, Klartext-Diagnose und sichere Reparatur für gejailbreakte PS5-Konsolen, als Vollbild-App für den Fernseher mit DualSense (oder Zeiger).**
 
-**PS5 Medic** prüft auf einer gejailbreakten PS5 den **Live-Zustand** des Homebrew-Setups (Firmware, Jailbreak-Kette, kstuff, ShadowMount+, Payloads, Dateien, Konfiguration), erklärt bekannte Fehlerursachen **in Klartext** und repariert – wo das sicher möglich ist – **mit Backup und Rückgängig-Funktion**.
+![Version](https://img.shields.io/badge/Version-0.4.0--dev-1f6feb)
+![Firmware](https://img.shields.io/badge/FW-4.00%20bis%2014.10-2ea44f)
+![Lizenz](https://img.shields.io/badge/Lizenz-GPL--3.0--or--later-blue)
+![Plattform](https://img.shields.io/badge/Plattform-PS5%20Payload-003791)
+![Sprachen](https://img.shields.io/badge/Sprachen-DE%20%C2%B7%20EN%20%C2%B7%20FR%20%C2%B7%20IT%20%C2%B7%20ES-lightgrey)
 
-Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedient. Ein Knopfdruck: *Check-up starten*.
+**Deutsch** · [English](README.en.md) · [Français](README.fr.md) · [Italiano](README.it.md) · [Español](README.es.md)
 
-> Stand: Version 0.4.0-dev. Getestet auf einer PS5 Pro (FW 12.00) mit ShadowMount+ 1.7beta12. Andere Firmwares und Setups sind nicht getestet; die Regeln sind deshalb versionsgebunden formuliert und einzeln als *bestätigt* oder *noch nicht bestätigt* gekennzeichnet.
+<img src="docs/images/de/01_start.png" alt="Startbildschirm" width="860">
+
+</div>
+
+**PS5 Medic** prüft auf einer gejailbreakten PS5 den **Live-Zustand** des Homebrew-Setups (Firmware, Jailbreak-Kette, kstuff, ShadowMount+, Payloads, Spiele, Dateien, Konfiguration), erklärt bekannte Fehlerursachen **in Klartext** und repariert, wo das sicher möglich ist, **mit Backup und Rückgängig-Funktion**. Ein Knopfdruck: *Check-up starten*.
+
+> **Firmware:** Die App läuft auf den Firmwares **4.00 bis 14.10** (soweit der Jailbreak dort läuft). Getestet wurde sie bisher auf einer PS5 Pro mit Firmware 12.00 und ShadowMount+ 1.7beta12. Andere Firmwares und Setups sind nicht getestet; die Regeln sind deshalb versionsgebunden formuliert und einzeln als *bestätigt* oder *noch nicht bestätigt* gekennzeichnet.
 
 ## Was es kann
 
-- **Check-up**: 26 Regeln (Jailbreak-Kette und HEN, ShadowMount+, Plugins und Speicher), Ergebnis als Liste mit Schweregrad, Klartext, Evidenz (Datei/Zeile/Wert) und Quelle. Der Katalog steht in [docs/RULES.md](docs/RULES.md).
-- **Reparieren** (5 Fixes): Image umbenennen (Klammern), ShadowMount+-Einstellung setzen, BackPork aus der Autoload-Liste nehmen, doppelte Kopie derselben TITLE_ID verschieben, Anleitung bei verschachtelten Images. Vorher zeigt die Vorschau genau, was geändert wird.
-- **Rückgängig**: Jede Reparatur steht im Verlauf und lässt sich zurücknehmen.
-- **Bericht**: Taste □ in der Befundliste schreibt einen Markdown-Bericht nach `/data/ps5medic/reports/` und zeigt eine Kurzfassung als **QR-Code** (mit dem Handy scannen, Text kopieren, ins Forum oder in ein Issue einfügen). IP- und MAC-Adressen, Benutzer- und Konto-IDs sowie Seriennummern werden entfernt; Datei- und Ordnernamen bleiben drin, bitte vor dem Teilen prüfen. Fehlerartige Logzeilen, die zu keiner Regel passen, stehen als **Unbekannte Fehlerzeilen** im Bericht: Stoff für neue Regeln.
-- **Regel-Update**: Einstellungen, Regel-Update. Neue `rules.json` (und `error_codes.json`) samt SHA-256-Prüfsumme per FTP oder USB-Kopie auf die Konsole legen **oder** mit □ von der eigenen Adresse herunterladen (`update_url` in `/data/ps5medic/config.ini`; nur mit gültiger Ed25519-Signatur des Autors). PS5 Medic prüft die Datei und installiert sie nach ✕ (mit Backup und Rückgängig).
-- **Fehlercodes**: Start, „Fehlercodes“. Nachschlagewerk zu 36 Meldungen wie CE-108262-9 (Erklärung, Schritte laut Sony, Quelle als Text und QR-Code, Prüfdatum; Codes ohne Sony-Seite sind als Community-Angabe gekennzeichnet; nach einem Check-up zeigt der Eintrag, was Medic an der Konsole sieht). Nur lesen und erklären, es wird nichts verändert. Nennt ein Befund einen Code, springt □ zum Eintrag; △ vermerkt einen Code für den Bericht.
-- Deutsch und Englisch (Einstellungen).
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🩺 Check-up</h3>
+      Über 70 Regeln zu Jailbreak-Kette und HEN, ShadowMount+, Plugins, Speicher, Spielordnern, Datenbanken, Konten und Start- und Fehlerverlauf. Jeder Befund hat Schweregrad, Klartext, Beleg (Datei/Zeile/Wert), Quelle und eine <b>Verlässlichkeit mit Grund</b>. Was nicht gelesen werden konnte, steht als <i>nicht geprüft</i>, nie als „in Ordnung“.
+    </td>
+    <td width="50%" valign="top">
+      <h3>🎮 Pro Spiel</h3>
+      <b>Spiel startet nicht?</b> Die Ansicht „Spiele“ bündelt alles zu einem Titel: Quellen (Ordner/Image), Eintrag in der Systemdatenbank, verlangte Firmware und Backport, Dateiprüfung, Fehler der Konsole, Spielstände, ShadowMount+-Log und die möglichen Gründe. Ist der <b>Backport im Spiel selbst eingebaut</b> (SDK-Version der <code>eboot.bin</code> liegt nicht über der Firmware), wird das erkannt und nicht als Fehler gemeldet.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>🛠 Reparieren mit Undo</h3>
+      Sieben reversible Fixes (Image umbenennen, ShadowMount+-Schlüssel setzen, v1-Zeilen in die v2-Sektionen übertragen, BackPork aus dem Autoload nehmen, Duplikate verschieben, Autoload-Wartezeit, Dateiname mit falscher Schreibung) und eine Anleitung für verschachtelte Images. Die Vorschau zeigt genau, was sich ändert; nichts passiert ohne ✕. Jede Änderung steht im Journal und lässt sich zurücknehmen. <b>Nie löschen</b>, nur verschieben oder umbenennen.
+    </td>
+    <td valign="top">
+      <h3>🧪 Selbsttest</h3>
+      Elf Tests der Konsole: Speicher, Temperaturen, Datenbanken, Payloads und Images, Lesetest, lokales Netz (nur Router), Wärmetest, Speichermuster, Schreibtest, Controller-Tasten und Anzeige-Muster. Jeder Test sagt, was er <i>nicht</i> beweist.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>📚 Fehlercodes</h3>
+      Nachschlagewerk zu 40 Meldungen wie CE-108262-9: Erklärung, Schritte laut Sony, Quelle als Text und QR-Code. Nach einem Check-up zeigt der Eintrag, was Medic an der Konsole sieht.
+    </td>
+    <td valign="top">
+      <h3>🕑 Verlauf und Vergleich</h3>
+      Jeder Check-up wird einzeln gespeichert. Alte Stände lassen sich ansehen und miteinander vergleichen: neu, behoben, unverändert.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>📄 Bericht und Regel-Update</h3>
+      Markdown-Bericht mit QR-Code fürs Handy (IP/MAC, Konto-IDs, Seriennummern werden entfernt). Neue Regeln und Fehlercodes per Datei oder, nur auf Bestätigung, von der eigenen Adresse, <b>nur mit gültiger Ed25519-Signatur</b>.
+    </td>
+    <td valign="top">
+      <h3>🌍 Fünf Sprachen, Controller und Zeiger</h3>
+      Deutsch, English, Français, Italiano und Español (Einstellungen, die Wahl wird gespeichert). Bedienung mit dem DualSense; zusätzlich ein <b>Zeiger</b> (rechter Stick, R3 oder Touchpad-Druck zum Klicken; Maus-Ereignisse werden ebenfalls verstanden) mit Pfeil und Hand.
+    </td>
+  </tr>
+</table>
+
+## Bilder
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/de/03_findings.png" alt="Befunde"></td>
+    <td width="50%"><img src="docs/images/de/04_detail_0.png" alt="Befund im Detail"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/de/22_game_detail.png" alt="Ansicht Pro Spiel"></td>
+    <td><img src="docs/images/de/17_selftest_list.png" alt="Selbsttest"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/de/10_error_codes.png" alt="Fehlercodes"></td>
+    <td><img src="docs/images/de/25_pointer_hand.png" alt="Zeiger: Hand über einer Kachel"></td>
+  </tr>
+</table>
 
 ## Sicherheit
 
 - **Nie löschen**, nur verschieben oder umbenennen. Dateien, die geändert werden, werden vorher gesichert (`/data/ps5medic/backups/`), jede Änderung steht im Journal (`/data/ps5medic/journal.jsonl`).
-- **Kein Schreiben ohne ✕**: Reparatur und Rückgängig passieren erst nach ausdrücklicher Bestätigung auf der Vorschau. Weitere Schreibaktionen: der Bericht (□) und das Regel-Update (✕ auf dem Angebot).
-- Schreibzugriffe nur in einer Whitelist (ShadowMount+-Ordner, Autoload-Listen, die eigenen Scanpfade, `/data/ps5medic`). Nie unter `/system`, `/system_ex` oder `/dev`.
-- **Das Netz wird nur für den Regel-Download benutzt**, nur auf □ und Bestätigung, nur zur Adresse aus deiner `config.ini`, und es wird nichts gesendet außer einer GET-Anfrage. (Der Test, ob der ELF-Loader auf Port 9021 antwortet, geht nur an `127.0.0.1`.)
-- Keine Exploits, keine Firmware-Änderungen, keine Funktionen zum Beschaffen, Entsperren oder Verteilen von Spielen, Keys oder Firmware. PS5 Medic repariert die **Umgebung**, nicht Inhalte.
+- **Kein Schreiben ohne ✕**: Reparatur und Rückgängig passieren erst nach ausdrücklicher Bestätigung auf der Vorschau. Weitere Schreibaktionen: der Bericht (□), das Regel-Update (✕ auf dem Angebot), die gewählte Sprache in `/data/ps5medic/config.ini`.
+- Reparaturen schreiben nur in einer Whitelist (ShadowMount+-Ordner, Autoload-Listen, die eigenen Scanpfade, `/data/ps5medic`). Nie unter `/system`, `/dev` oder im Flash. Einzige Ausnahme außerhalb der Reparaturen: Wird der Launcher per ELF gesendet, legt er seine eigene Kachel `FAKE42008` an, und dafür liegt deren Programm unter `/system_ex/app/FAKE42008` (wie bei jeder per Installer angelegten App; Einzelheiten in [docs/TITLE.md](docs/TITLE.md)).
+- **Das Netz wird nur für den Regel-Download benutzt**, nur auf □ und Bestätigung, nur zur Adresse aus deiner `config.ini`, und es wird nichts gesendet außer einer GET-Anfrage. Daneben gibt es einen lokalen Netztest im Selbsttest: nur ein Verbindungsaufbau zum Router im privaten Adressbereich, ohne Daten, nie ins Internet.
+- Keine Exploits, keine Firmware-Änderungen, keine Funktionen zum Beschaffen, Entsperren oder Verteilen von Spielen, Keys oder Firmware. PS5 Medic repariert die **Umgebung**, nicht Inhalte. Es empfiehlt nie ein Update der Systemsoftware.
 
 ## Voraussetzungen
 
@@ -37,20 +103,21 @@ Läuft als Vollbild-App direkt auf der Konsole und wird mit dem DualSense bedien
 2. Die Kachel bekommen, auf einem von zwei Wegen:
    - **ELF senden:** `ps5medic-launcher.elf` an Port 9021 senden (Payload Manager, oder vom PC: `make send-launcher PS5_HOST=<PS5-IP>`). Er legt die Kachel **PS5 Medic** (`FAKE42008`) auf dem Startbildschirm an und startet die UI gleich, wenn keine App läuft.
    - **Ordner-App:** den Ordner `FAKE42007` aus dem Release nach `/data/homebrew/` kopieren; ShadowMount+ legt die Kachel an. Danach startet ein Druck auf die Kachel die UI, ohne dass eine ELF gesendet werden muss.
-3. Ein Druck auf die Kachel startet die UI. Sie braucht nur den ELF-Lader (Port 9021) der Konsole; nach einem Neustart bleibt die Kachel.
+3. Ein Druck auf die Kachel startet die UI (erst das Startbild, dann der Startbildschirm). Sie braucht nur den ELF-Lader (Port 9021) der Konsole; nach einem Neustart bleibt die Kachel.
 
-Der Launcher schließt nur Homebrew-Fake-Apps (darunter den Starter der Kachel) und System-Programme; ein laufendes Spiel schließt er nie. Einzelheiten: [docs/TITLE.md](docs/TITLE.md). Der alte Weg über websrv (`make launch-ui`) bleibt als Ausweichmöglichkeit.
+Der Launcher schließt nur Homebrew-Fake-Apps (darunter den Starter der Kachel) und System-Programme; ein laufendes Spiel schließt er nie. Einzelheiten: [docs/TITLE.md](docs/TITLE.md).
 
 ## Bedienung
 
 | Bildschirm | Tasten |
 |---|---|
 | Start | ↑↓ wählen · ✕ öffnen · ◯ beenden |
-| Befundliste | ↑↓ wählen · ✕ Details · △ Reparieren/Anleitung · □ Bericht · ◯ zurück |
-| Detail | △ Reparieren · ◯ zurück |
+| Befundliste | ↑↓ wählen · L1/R1 Seite · ✕ Details · △ Reparieren/Anleitung · □ Bericht · ◯ zurück |
+| Detail | ←→ vorheriger/nächster Befund · △ Reparieren · □ Fehlercode · ◯ zurück |
 | Reparatur-Vorschau | ✕ bestätigen (schreibt) · ◯ abbrechen |
-| Verlauf | ↑↓ wählen · ✕ rückgängig (fragt erst nach) · ◯ zurück |
-| Bericht | ◯ zurück |
+| Spiele | ↑↓ wählen · ✕ öffnen · L1/R1 anderes Spiel · ◯ zurück |
+| Verlauf, Selbsttest, Fehlercodes | Hinweisleiste unten zeigt die Tasten |
+| Zeiger | **rechter Stick** bewegt ihn, **R3** oder **Touchpad-Druck** klickt (wie ✕); ein Klick auf die Hinweisleiste drückt die Taste. Über Auswahlen wird der Zeiger zur Hand; er verschwindet, sobald man Tasten benutzt. Neu: am PC getestet, an der Konsole noch nicht erprobt. |
 
 ## Diagnose-Payload
 
@@ -63,9 +130,10 @@ Linux oder WSL, CMake, ein C++20-Compiler. Der Kern und die Regeln laufen auch a
 ```bash
 make test        # Unit-, Regel-, UI- und Berichts-Tests gegen alle Fixtures
 make host        # medic-cli und die PC-Vorschau der UI
+make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # Bilder der UI am PC (de en fr it es)
 ```
 
-Für die Konsole braucht man das [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) (`PS5_PAYLOAD_SDK`) und SDL2 für die PS5; die Bauanleitung dafür steht in [docs/PHASE3.md](docs/PHASE3.md).
+Für die Konsole braucht man das [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **Version 0.45** (`PS5_PAYLOAD_SDK`) und SDL2 für die PS5; die Bauanleitung dafür steht in [docs/PHASE3.md](docs/PHASE3.md), der Bau der Kachel in [docs/TITLE.md](docs/TITLE.md).
 
 ```bash
 make ps5-ui                         # Vollbild-UI (ps5medicui.elf)
@@ -83,6 +151,10 @@ medic-cli fix     <snapshot-ordner> <regel-id> # Plan ansehen (mit --apply --yes
 medic-cli history|undo|export ...
 ```
 
+## Übersetzungen
+
+Die Oberfläche steht in `ui/i18n/<sprache>.json`, die Wissenstexte für Französisch, Italienisch und Spanisch liegen als Ergänzung in `knowledge/l10n/` (Regeln, Fehlercodes, Selbsttests). Fehlt ein Eintrag, zeigt die App Englisch. Berichte und die dynamischen Hinweise der Reparatur-Vorschau gibt es nur auf Deutsch und Englisch. `tools/l10n_extract.py` zieht die Quelltexte für Übersetzer, `tools/l10n_check.py <sprache>` prüft eine Übersetzung (Schlüssel, Platzhalter, Zahlen, Codes, Pfade).
+
 ## Mitmachen
 
 **Tester gesucht** (andere Firmwares und Setups): [docs/TESTER.md](docs/TESTER.md). Probleme melden mit der Issue-Vorlage, den Bericht (□) einfügen.
@@ -96,16 +168,17 @@ Eine neue Regel braucht: einen Eintrag in `knowledge/rules.json` mit Quelle, ein
 | `CLAUDE.md` | Einstieg für Claude Code: Ziel, Stack, Grenzen, Arbeitsweise |
 | `docs/SPEC.md` | Funktionen, Bedienung, Nicht-Ziele |
 | `docs/ARCHITECTURE.md` | Module, Datenfluss, Regel-Format, Sicherheit |
-| `docs/RULES.md` | Regelkatalog (26 Regeln) mit Quellen, Status und Abweichungen |
+| `docs/RULES.md` | Regelkatalog mit Quellen, Status und Abweichungen |
+| `docs/DIAGNOSE.md` | Diagnose-Ausbau: gebaute Prüfungen, Entscheidungen D1–D21, Bauplan |
 | `docs/ROADMAP.md` | Phasen 0–5 |
 | `docs/PHASE2.md` bis `PHASE5.md` | Konsole und Snapshot, Oberfläche und App-Kontext, Bericht und Release, Regel-Update und Community |
 | `docs/TESTER.md` | Mitmachen als Tester |
-| `docs/TITLE.md` | Kachel unter „Medien“ (Starter-Titel) |
-| `knowledge/` | Regeln (`rules.json`), Fehlercodes (`error_codes.json`) und JSON-Schemas |
+| `docs/TITLE.md` | Kachel und Start ohne Homebrew-Lader: Starter, Launcher, Ordner-App |
+| `knowledge/` | Regeln (`rules.json`), Fehlercodes (`error_codes.json`), Übersetzungen (`l10n/`) und JSON-Schemas |
 
 ## Lizenz und Danksagung
 
-PS5 Medic steht unter der **GNU General Public License, Version 3 oder (nach Wahl) jeder späteren** (GPL-3.0-or-later). Der Lizenztext liegt in [LICENSE](LICENSE), jede eigene Quelldatei trägt eine SPDX-Zeile. Das gilt auch für die Regeldatenbank `knowledge/rules.json`. Grund: Der fertige ELF linkt gegen die GPLv3-Laufzeitbibliotheken des ps5-payload-sdk. Die Fremdkomponenten (MIT, zlib, BSD-2-Clause, DejaVu) sind mit der GPL-3.0 vereinbar und stehen mit ihren Lizenzen in [THIRD_PARTY.md](THIRD_PARTY.md).
+PS5 Medic steht unter der **GNU General Public License, Version 3 oder (nach Wahl) jeder späteren** (GPL-3.0-or-later). Der Lizenztext liegt in [LICENSE](LICENSE), jede eigene Quelldatei trägt eine SPDX-Zeile. Das gilt auch für die Regeldatenbank `knowledge/rules.json`. Grund: Der fertige ELF linkt gegen die GPLv3-Laufzeitbibliotheken des ps5-payload-sdk. Die Fremdkomponenten (MIT, zlib, BSD-2-Clause, DejaVu, stb_image) sind mit der GPL-3.0 vereinbar und stehen mit ihren Lizenzen in [THIRD_PARTY.md](THIRD_PARTY.md).
 
 Das Repository ist **privat**, es gibt kein öffentliches Release (Entscheidung des Autors, 8. Nov. 2026). Wer ein Paket aus `make dist` weitergibt, muss nach der GPL auch den Quelltext dazu anbieten.
 

@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <map>
@@ -623,11 +624,78 @@ std::string decode_param_fw(const json& param, const char* key) {
     return buf;
 }
 
+// SDK-Version aus den Prozessparametern einer (fake-signierten) SELF-eboot.bin, wie PS5 Cooling & System Center sie liest
+// (an drei Spielen der Test-Konsole gemessen): Kopf 4F 15 3D 1D oder 54 14 F5 EE, ab 0x18 die Zahl der Eintraege n (je 32 Byte ab 0x20),
+// danach der ELF-Kopf mit den Programmkoepfen. PT_SCE_PROCPARAM (0x61000001) liegt in einem LOAD-Segment; die Datei-Position steht im
+// Eintrag dieses Segments. Der Block beginnt mit seiner Groesse und "ORBI"; das u32 bei +0x14 ist die SDK-Version
+// (0x04000033 = 4.00, 0x10000040 = 10.00). Zwei kleine Lesezugriffe, nie die ganze Datei (manche sind ueber 200 MB). 0 = nicht lesbar.
+std::uint32_t rd_le(const std::string& b, std::size_t off, int n) {
+    std::uint64_t v = 0;
+    for (int i = n - 1; i >= 0; --i) v = (v << 8) | static_cast<unsigned char>(b[off + static_cast<std::size_t>(i)]);
+    return static_cast<std::uint32_t>(v);
+}
+std::uint64_t rd_le64(const std::string& b, std::size_t off) {
+    return static_cast<std::uint64_t>(rd_le(b, off, 4)) | (static_cast<std::uint64_t>(rd_le(b, off + 4, 4)) << 32);
+}
+
+std::uint32_t eboot_sdk_raw(const IFileSystem& fs, const std::string& path) {
+    std::string h;
+    if (!fs.read_range(path, 0, 4096, h) || h.size() < 0x100) return 0;
+    if (h.compare(0, 4, "\x4f\x15\x3d\x1d") != 0 && h.compare(0, 4, "\x54\x14\xf5\xee") != 0) return 0;
+    const std::uint32_t cnt = rd_le(h, 0x18, 2);
+    const std::size_t elf = 0x20 + static_cast<std::size_t>(cnt) * 0x20;
+    if (cnt == 0 || cnt > 64 || elf + 64 > h.size() || h.compare(elf, 4, "\x7f" "ELF") != 0) return 0;
+    const std::uint64_t phoff = rd_le64(h, elf + 32);
+    const std::uint32_t phent = rd_le(h, elf + 54, 2), phnum = rd_le(h, elf + 56, 2);
+    if (phent != 56 || phnum == 0 || phnum > 64 || phoff > h.size() || elf + phoff + static_cast<std::uint64_t>(phnum) * 56 > h.size()) return 0;
+    const std::size_t ph = elf + static_cast<std::size_t>(phoff);
+    std::uint64_t pp = UINT64_MAX;
+    for (std::uint32_t i = 0; i < phnum; ++i)
+        if (rd_le(h, ph + i * 56, 4) == 0x61000001u) {
+            pp = rd_le64(h, ph + i * 56 + 8);
+            break;
+        }
+    if (pp == UINT64_MAX) return 0;
+    for (std::uint32_t i = 0; i < phnum; ++i) {
+        const std::size_t p = ph + i * 56;
+        const std::uint64_t off = rd_le64(h, p + 8), fsz = rd_le64(h, p + 32);
+        if (rd_le(h, p, 4) != 1 || pp < off || pp - off + 0x18 > fsz) continue;
+        for (std::uint32_t e = 0; e < cnt; ++e) {
+            const std::size_t en = 0x20 + e * 0x20;
+            const std::uint64_t props = rd_le64(h, en);
+            if (((props >> 20) & 0xFFFF) != i || (props & 0x10000)) continue;
+            if (props & 0xA) return 0;  // verschluesselt oder komprimiert
+            const std::uint64_t eoff = rd_le64(h, en + 8), efsz = rd_le64(h, en + 16), rel = pp - off;
+            std::string b;
+            if (rel + 0x18 <= efsz && fs.read_range(path, eoff + rel, 0x18, b) && b.size() == 0x18 && b.compare(8, 4, "ORBI") == 0) return rd_le(b, 0x14, 4);
+            return 0;
+        }
+        return 0;
+    }
+    return 0;
+}
+
+// "0x10000040" -> "10.00": die oberen zwei Bytes, je zwei Dezimalziffern in Hex (wie bei sdkVersion der param.json). Leer, wenn es nicht passt.
+std::string sdk_raw_to_fw(std::uint32_t v) {
+    if (v == 0) return {};
+    int parts[2];
+    for (int k = 0; k < 2; ++k) {
+        const unsigned byte = (v >> (24 - 8 * k)) & 0xff;
+        if ((byte >> 4) > 9 || (byte & 0xf) > 9) return {};
+        parts[k] = static_cast<int>((byte >> 4) * 10 + (byte & 0xf));
+    }
+    if (parts[0] == 0) return {};
+    char buf[16];
+    std::snprintf(buf, sizeof buf, "%d.%02d", parts[0], parts[1]);
+    return buf;
+}
+
 }  // namespace
 
 // games.fw[]: PS5-Titel (PPSA...) unter /user/app mit der Firmware, die ihre param.json verlangt (SM+ legt dort je gemountetem Spiel
 // einen Ordner mit sce_sys/param.json an). games.need_backport[]: davon die Titel, die eine neuere Firmware verlangen, als die Konsole hat,
-// und fuer die es keinen Backport-Ordner <Scanpfad>/backports/<TITLE_ID>/ gibt. Nur lesen.
+// und fuer die es weder einen Backport-Ordner <Scanpfad>/backports/<TITLE_ID>/ gibt noch einen im Spiel eingebauten Backport (SDK-Version der
+// eboot.bin nicht ueber der Firmware, games.fw[].backport_inline). Nur lesen.
 void collect_game_firmware(const Platform& p, Facts& f) {
     const IFileSystem& fs = p.fs();
     const std::string fw = p.sys().firmware();
@@ -636,6 +704,13 @@ void collect_game_firmware(const Platform& p, Facts& f) {
         for (const auto& e : *r)
             if (e.is_string()) roots.push_back(e.get<std::string>());
     for (const auto& d : default_scan_paths()) roots.push_back(d);
+
+    // Ordner je Titel aus ShadowMount+ (smp.titles): dort liegt die eboot.bin; Images sind nicht lesbar (dann bleibt es unbekannt).
+    std::map<std::string, std::vector<std::string>> folders;
+    if (const json* t = f.get("smp.titles"); t && t->is_array())
+        for (const auto& e : *t)
+            if (e.is_object() && e.contains("titleid") && e["titleid"].is_string() && e.contains("path") && e["path"].is_string())
+                folders[e["titleid"].get<std::string>()].push_back(e["path"].get<std::string>());
 
     static const std::regex id_re("^PPSA[0-9]{5}$");
     json games = json::array(), need = json::array();
@@ -653,7 +728,22 @@ void collect_game_firmware(const Platform& p, Facts& f) {
                 backport = true;
                 break;
             }
-        games.push_back({{"titleid", app.name}, {"name", app_title_name(param, app.name)}, {"required_fw", required}, {"sdk_fw", decode_param_fw(param, "sdkVersion")}, {"backport", backport}});
+        // Backport im Spiel selbst (Marc, 12. Nov. 2026: zwei Spiele verlangen 13.60 und laufen auf 12.00): Ein Backport-Werkzeug setzt die
+        // SDK-Version in den Prozessparametern der eboot.bin herunter, param.json behaelt die alte Angabe. Liegt die SDK-Version der eboot.bin
+        // nicht ueber der Firmware der Konsole, obwohl param.json mehr verlangt, ist das Spiel angepasst. Nur wenn die eboot.bin lesbar ist.
+        std::string eboot_sdk;
+        if (const auto it = folders.find(app.name); it != folders.end())
+            for (const auto& dir : it->second) {
+                eboot_sdk = sdk_raw_to_fw(eboot_sdk_raw(fs, join_path(dir, "eboot.bin")));
+                if (!eboot_sdk.empty()) break;
+            }
+        bool backport_inline = false;
+        if (!backport && !fw.empty() && !eboot_sdk.empty() && compare_versions(required, fw) > 0 && compare_versions(eboot_sdk, fw) <= 0) {
+            backport = true;
+            backport_inline = true;
+        }
+        games.push_back({{"titleid", app.name}, {"name", app_title_name(param, app.name)}, {"required_fw", required}, {"sdk_fw", decode_param_fw(param, "sdkVersion")},
+                         {"eboot_sdk", eboot_sdk}, {"backport", backport}, {"backport_inline", backport_inline}});
         if (!fw.empty() && !backport && compare_versions(required, fw) > 0)
             need.push_back({{"titleid", app.name}, {"required_fw", required}, {"desc", app.name + ": " + required}});
     }

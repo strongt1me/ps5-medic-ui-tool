@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.35",
+  "db_version": "2026.11.36",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -1172,8 +1172,8 @@
         ]
       },
       "text": {
-        "de": "Für diese Spiele verlangt die param.json eine höhere Firmware-Version, als die Konsole hat (Evidenz: Titel und verlangte Version), und in den Scanpfaden liegt kein Backport-Ordner backports/<TITLE_ID>/. Die Konsole startet laut Backport-Toolkit nichts, was für eine höhere Firmware-Version gebaut ist: Das Spiel braucht einen Backport für die genutzte Firmware oder AMPR Emu bzw. AMPR Emu NG. Dass solche Spiele nicht starten, ist an dieser Konsole noch nicht bestätigt.",
-        "en": "For these games the param.json demands a higher firmware version than the console has (evidence: title and required version), and the scan paths contain no backport folder backports/<TITLE_ID>/. According to the backport toolkit the console refuses to start anything built for a higher firmware version: the game needs a backport for the firmware in use, or AMPR Emu / AMPR Emu NG. That such games fail to start is not yet confirmed on this console."
+        "de": "Für diese Spiele verlangt die param.json eine höhere Firmware-Version, als die Konsole hat (Evidenz: Titel und verlangte Version), und in den Scanpfaden liegt kein Backport-Ordner backports/<TITLE_ID>/. Die Konsole startet laut Backport-Toolkit nichts, was für eine höhere Firmware-Version gebaut ist: Das Spiel braucht einen Backport für die genutzte Firmware oder AMPR Emu bzw. AMPR Emu NG. Dass solche Spiele nicht starten, ist an dieser Konsole noch nicht bestätigt. Ausgenommen sind Spiele, bei denen der Backport im Spiel selbst steckt: Liegt die SDK-Version in der eboot.bin des Spielordners nicht über der Firmware der Konsole, gilt das Spiel als angepasst. Bei einem Image kann Medic die eboot.bin nicht lesen; steckt der Backport dort im Spiel, ist dieser Befund gegenstandslos.",
+        "en": "For these games the param.json demands a higher firmware version than the console has (evidence: title and required version), and the scan paths contain no backport folder backports/<TITLE_ID>/. According to the backport toolkit the console refuses to start anything built for a higher firmware version: the game needs a backport for the firmware in use, or AMPR Emu / AMPR Emu NG. That such games fail to start is not yet confirmed on this console. Games with the backport built into the game itself are excluded: if the SDK version in the eboot.bin of the game folder is not above the console's firmware, the game counts as adapted. For an image Medic cannot read the eboot.bin; if the backport is built into the game there, this finding does not apply."
       },
       "evidence": "games.need_backport[].desc",
       "fix": null,

@@ -54,9 +54,11 @@ add_library(medic_ui STATIC
   ui/src/icons.cpp
   ui/src/png.cpp
   ui/src/shot_hook.cpp
+  ui/src/splash.cpp
   ui/src/app.cpp
   ui/src/local_service.cpp)
-target_include_directories(medic_ui PUBLIC ui/include PRIVATE ui/src)
+target_include_directories(medic_ui PUBLIC ui/include PRIVATE ui/src third_party)
+set_source_files_properties(ui/src/splash.cpp PROPERTIES COMPILE_DEFINITIONS "MEDIC_SPLASH_PATH=\"${CMAKE_SOURCE_DIR}/ui/assets/splash.jpg\"" OBJECT_DEPENDS ${CMAKE_SOURCE_DIR}/ui/assets/splash.jpg)
 target_link_libraries(medic_ui PUBLIC medic)
 target_compile_options(medic_ui PRIVATE -Wall -Wextra)
 

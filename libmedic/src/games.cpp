@@ -50,6 +50,7 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
             g->required_fw = str_of(e, "required_fw");
             g->sdk_fw = str_of(e, "sdk_fw");
             if (!console_fw.empty() && e.contains("backport") && e["backport"].is_boolean()) g->backport = e["backport"].get<bool>() ? 1 : 0;
+            if (e.contains("backport_inline") && e["backport_inline"].is_boolean()) g->backport_inline = e["backport_inline"].get<bool>();
         }
     if (const json* a = arr_of(facts, "games.need_backport"))
         for (const auto& e : *a)

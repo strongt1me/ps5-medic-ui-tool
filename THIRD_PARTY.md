@@ -14,6 +14,12 @@ Nicht im Repo, nur zum Bauen benötigt: [ps5-payload-sdk](https://github.com/ps5
 
 Kachel-Starter (`title/`): `title/title.ld` und `title/symbols.map` stammen aus [ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) (GPL-3.0-or-later, BlackBearReloaded; der Kopf der Datei nennt das). `make title` nutzt dessen Werkzeug `ps5-native-tool` und kopiert den signierten Laufzeit-Shim `libc.prx` aus einem lokalen Checkout; beides liegt nicht im Repo, und der Titel ist nicht Teil von `make dist` (siehe `docs/TITLE.md`).
 
+Im Repo (`third_party/stb/`): `stb_image.h` (Sean Barrett, stb_image 2.30, MIT oder Public Domain, Lizenztext in `third_party/stb/LICENSE`, Stand der Quelle in `UPSTREAM`), nur JPEG und PNG aus dem Speicher; entschlüsselt das Startbild (`ui/src/splash.cpp`). Die Kopie stammt aus dem Quelltext von PS5 Cooling & System Center (tvapp, GPL-3.0-or-later, unverändert).
+
+Übersetzungen: Die französischen, italienischen und spanischen Texte in `ui/i18n/` und `knowledge/l10n/` sind eigene Übersetzungen der deutschen und englischen Texte dieses Projekts (GPL-3.0-or-later).
+
+Startbild: `ui/assets/splash.jpg` ist ein vom Autor bereitgestelltes Bild für die App.
+
 Im Repo (`third_party/websrv-hbldr/`): `hbldr.c/.h`, `elfldr.c/.h` und `pt.c/.h` aus [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv), `src/ps5/` (Copyright John Törnblom, GPL-3.0-or-later, Lizenztext im Ordner; Stand der Quelle: Commit b9c9f88, 10. Okt. 2026). Das ist der Big-App-Lader, mit dem `ps5medic-launcher.elf` die UI mit App-Kontext startet (eine System-App wird per ptrace gegen die ELF getauscht). **Geändert** (nur `hbldr.c`): die Include-Zeilen und ein Zeitlimit von 20 s für `kevent()`, die Änderungen stehen im Kopf der Datei; `compat.h` ist eine eigene Hilfsdatei. Der Launcher selbst (`ps5/launcher_main.cpp`) ist eigener Code nach dem Muster von websrvs `src/ps5/sys.c` (Kachel per `sceAppInstUtilAppInstallTitleDir`). websrv selbst ist nicht mehr nötig; der Launcher-Eintrag `ps5/homebrew/homebrew.js` ist eine eigene, kleine Datei für Nutzer, die websrv ohnehin haben.
 
 Nicht im Repo, nur für `make ps5-ui` benötigt (Build-Schritte: `docs/PHASE3.md`):

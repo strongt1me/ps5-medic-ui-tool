@@ -8,7 +8,7 @@ PS5 Medic ist bisher auf **einer** Konsole getestet (PS5 Pro, FW 12.00). Die Reg
 
 | Was | Warum |
 |---|---|
-| **Firmware 7.x bis 13.60**, auch die dazwischen | Regeln sind versionsgebunden (z. B. A1 ab 13.60, B3 nur 13.60, B4 nur 9.00); ob sie auf anderen Firmwares passen oder falsch feuern, weiß bisher niemand. |
+| **Firmware 4.00 bis 14.10** (die App soll dort laufen), auch die dazwischen | Regeln sind versionsgebunden (z. B. A1 ab 13.60, B3 nur 13.60, B4 nur 9.00); ob sie auf anderen Firmwares passen oder falsch feuern, weiß bisher niemand. |
 | **Andere Jailbreak-Ketten**: etaHEN, kstuff-lite, Payload Manager, BD-JB, WebKit-Autoloader | Die Prozessnamen und Startzeiten unterscheiden sich (Regeln A1–A4). |
 | **Verschiedene ShadowMount+-Versionen** | Config-Format und Log-Zeilen ändern sich von Version zu Version. |
 | **Konsolen mit echten Problemen** | Jeder Fall, den PS5 Medic nicht erkennt, ist eine mögliche neue Regel. Besonders wertvoll: die „Unbekannten Fehlerzeilen" im Bericht. |
@@ -18,7 +18,7 @@ Ein Tester braucht nichts zu reparieren. Ein Check-up und der Bericht genügen.
 ## So geht's
 
 1. Release herunterladen und den Ordner `PS5MEDIC` nach `/data/homebrew/` kopieren (siehe README).
-2. `ps5medic-launcher.elf` an Port 9021 senden (legt die Kachel **PS5 Medic** an und startet die UI). Später die Kachel öffnen; nach einem Neustart den Launcher erneut senden.
+2. Die Kachel bekommen: entweder `ps5medic-launcher.elf` an Port 9021 senden (legt die Kachel **PS5 Medic** an und startet die UI) oder den Ordner `FAKE42007` nach `/data/homebrew/` kopieren (ShadowMount+ legt die Kachel an). Später genügt ein Druck auf die Kachel; sie braucht nur den ELF-Lader (Port 9021).
 3. **✕** auf „Check-up starten".
 4. **□** in der Befundliste: legt den Bericht ab und zeigt den QR-Code. Die Datei liegt unter `/data/ps5medic/reports/`.
 5. Bericht in ein Issue einfügen (Vorlage: *Problem melden*). Er ist anonymisiert. **Lies ihn vorher durch**: Datei- und Ordnernamen (auch Spielnamen) stehen drin.
@@ -67,4 +67,4 @@ Die Prüfsumme schützt vor beschädigten oder abgeschnittenen Kopien. Sie schü
 
 ## English summary
 
-PS5 Medic has only been tested on one console (PS5 Pro, FW 12.00). Testers on other firmwares (7.x to 13.60), other jailbreak chains and ShadowMount+ versions are needed. Install the release (copy `PS5MEDIC` to `/data/homebrew/`), start `websrv`, open the **PS5 Medic** tile, run the check-up (✕), press □ and paste the anonymized report into an issue (template: *Report a problem*). Read it first: file and folder names are still in it. Nothing is ever sent by PS5 Medic. Rule updates are files you copy to `/data/ps5medic/knowledge/update/` together with a `rules.json.sha256`, or, if the author gives you an address, a download you trigger yourself (`update_url=http://...` in `/data/ps5medic/config.ini`, □ in the rule update screen); downloads are only accepted with a valid Ed25519 signature. The settings screen verifies and installs them (backup first, roll-back with △).
+PS5 Medic has only been tested on one console (PS5 Pro, FW 12.00). Testers on other firmwares (4.00 to 14.10), other jailbreak chains and ShadowMount+ versions are needed. Install the release (copy `PS5MEDIC` to `/data/homebrew/`), start `websrv`, open the **PS5 Medic** tile, run the check-up (✕), press □ and paste the anonymized report into an issue (template: *Report a problem*). Read it first: file and folder names are still in it. Nothing is ever sent by PS5 Medic. Rule updates are files you copy to `/data/ps5medic/knowledge/update/` together with a `rules.json.sha256`, or, if the author gives you an address, a download you trigger yourself (`update_url=http://...` in `/data/ps5medic/config.ini`, □ in the rule update screen); downloads are only accepted with a valid Ed25519 signature. The settings screen verifies and installs them (backup first, roll-back with △).

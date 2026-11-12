@@ -246,6 +246,10 @@ medic::RuleUpdateResult LocalService::rollback_codes_update() {
 
 std::string LocalService::rule_update_url() { return medic::configured_update_url(p_.fs()); }
 
+std::string LocalService::language() { return medic::configured_value(p_.fs(), "language"); }
+
+void LocalService::set_language(const std::string& code) { medic::set_config_value(p_, "language", code); }
+
 medic::RuleDownloadResult LocalService::download_rule_update() {
     if (!http_) {
         medic::RuleDownloadResult r;

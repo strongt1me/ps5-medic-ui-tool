@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// medic-ui-preview <snapshot-ordner> <ausgabe-ordner> [--lang de|en] [--rules datei] [--scale N]
+// medic-ui-preview <snapshot-ordner> <ausgabe-ordner> [--lang de|en|fr|it|es] [--rules datei] [--scale N]
 // Spielt einen festen Tastenablauf gegen einen Snapshot ab und schreibt jeden Bildschirm als PNG.
 // Die Plattform ist nur lesend: Reparaturen werden angezeigt, aber nie ausgefuehrt. Die Fehlercodes kommen aus knowledge/error_codes.json.
 #include "medic_ui/app.hpp"
+#include "medic_ui/splash.hpp"
 #include "medic_ui/icons.hpp"
 #include "medic_ui/png.hpp"
 
@@ -42,7 +43,7 @@ int write_icon_sheet(const std::string& path) {
 int main(int argc, char** argv) {
     if (argc == 3 && std::string(argv[1]) == "--icons") return write_icon_sheet(argv[2]);
     if (argc < 3) {
-        std::cerr << "Aufruf: medic-ui-preview <snapshot-ordner> <ausgabe-ordner> [--lang de|en] [--rules datei] [--scale N]\n";
+        std::cerr << "Aufruf: medic-ui-preview <snapshot-ordner> <ausgabe-ordner> [--lang de|en|fr|it|es] [--rules datei] [--scale N]\n";
         return 2;
     }
     std::string rules_path = MEDIC_DEFAULT_RULES;
@@ -50,8 +51,12 @@ int main(int argc, char** argv) {
     int scale = 1;
     for (int i = 3; i < argc; ++i) {
         const std::string a = argv[i];
-        if (a == "--lang" && i + 1 < argc) lang = std::string(argv[++i]) == "en" ? Lang::En : Lang::De;
-        else if (a == "--rules" && i + 1 < argc) rules_path = argv[++i];
+        if (a == "--lang" && i + 1 < argc) {
+            if (!lang_from_code(argv[++i], lang)) {
+                std::cerr << "Unbekannte Sprache (de|en|fr|it|es)\n";
+                return 2;
+            }
+        } else if (a == "--rules" && i + 1 < argc) rules_path = argv[++i];
         else if (a == "--scale" && i + 1 < argc) scale = std::max(1, std::atoi(argv[++i]));
         else {
             std::cerr << "Unbekannte Option: " << a << "\n";
@@ -187,6 +192,26 @@ int main(int argc, char** argv) {
             png("22_game_detail.png");
             ga.handle(Button::Cross);
             png("23_game_finding.png");
+        }
+        {  // Startbild und Zeiger (Pfeil und Hand)
+            App sp(svc, lang);
+            Canvas img(App::kWidth, App::kHeight);
+            if (load_splash(img)) {
+                sp.show_splash(img);
+                sp.render(canvas);
+                if (!write_png((out / "00_splash.png").string(), canvas, scale)) throw std::runtime_error("PNG nicht schreibbar: 00_splash.png");
+                ++shots;
+            }
+            App pg(svc, lang);
+            auto png = [&](const char* name) {
+                pg.render(canvas);
+                if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
+                ++shots;
+            };
+            pg.pointer_move(1180, 760);
+            png("24_pointer_arrow.png");
+            pg.pointer_move(560, 470);  // ueber der Kachel "Einstellungen"
+            png("25_pointer_hand.png");
         }
         std::cout << shots << " Bilder in " << out.string() << "\n";
     } catch (const std::exception& e) {

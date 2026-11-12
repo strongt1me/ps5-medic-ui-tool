@@ -21,6 +21,15 @@ const std::vector<std::regex>& patterns() {
             std::regex(R"((system\s*software|systemsoftware|firmware)[^.\n]{0,80}(aktualisier|update|upgrade))", flags),  // Systemsoftware ... aktualisieren
             std::regex(R"((aktualisier|update|upgrade)[^.\n]{0,80}(system\s*software|systemsoftware|firmware))", flags),  // update the system software
             std::regex(R"((neueste|neuste|latest|newest)\s+(system\s*software|systemsoftware|firmware))", flags),         // neueste Systemsoftware
+            // Franzoesisch: "mise a jour / mettre a jour / actualiser ... micrologiciel / firmware / logiciel systeme" (und umgekehrt)
+            std::regex(R"((mise\s+(?:\xc3\xa0|a)\s+jour|mettre\s+(?:\xc3\xa0|a)\s+jour|actualis\w*)[^.\n]{0,80}(micrologiciel|firmware|logiciel\s+syst))", flags),
+            std::regex(R"((micrologiciel|firmware|logiciel\s+syst)[^.\n]{0,80}(mise\s+(?:\xc3\xa0|a)\s+jour|mettre\s+(?:\xc3\xa0|a)\s+jour|actualis\w*))", flags),
+            // Italienisch: "aggiornare / aggiornamento ... firmware / software di sistema" (und umgekehrt)
+            std::regex(R"((aggiorn\w*)[^.\n]{0,80}(firmware|software\s+di\s+sistema))", flags),
+            std::regex(R"((firmware|software\s+di\s+sistema)[^.\n]{0,80}(aggiorn\w*))", flags),
+            // Spanisch: "actualizar / actualizacion ... firmware / software del sistema" (und umgekehrt)
+            std::regex(R"((actualiz\w*)[^.\n]{0,80}(firmware|software\s+del\s+sistema))", flags),
+            std::regex(R"((firmware|software\s+del\s+sistema)[^.\n]{0,80}(actualiz\w*))", flags),
         };
     }();
     return p;

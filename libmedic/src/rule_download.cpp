@@ -32,7 +32,7 @@ std::string dir_file(const char* name) { return std::string(kRulesUpdateDir) + "
 
 }  // namespace
 
-std::string configured_update_url(const IFileSystem& fs) {
+std::string configured_value(const IFileSystem& fs, const std::string& key) {
     std::string text;
     if (!fs.read_file(kConfigPath, text)) return {};
     std::istringstream in(text);
@@ -42,9 +42,34 @@ std::string configured_update_url(const IFileSystem& fs) {
         if (line.empty() || line[0] == '#' || line[0] == ';') continue;
         const auto eq = line.find('=');
         if (eq == std::string::npos) continue;
-        if (trim(line.substr(0, eq)) == "update_url") value = trim(line.substr(eq + 1));  // die letzte Zeile gilt
+        if (trim(line.substr(0, eq)) == key) value = trim(line.substr(eq + 1));  // die letzte Zeile gilt
     }
     return value;
+}
+
+std::string configured_update_url(const IFileSystem& fs) { return configured_value(fs, "update_url"); }
+
+bool set_config_value(Platform& p, const std::string& key, const std::string& value) {
+    IFileSystemRW* rw = p.fs_rw();
+    if (!rw || key.empty() || key.find_first_of("=\r\n") != std::string::npos || value.find_first_of("\r\n") != std::string::npos) return false;
+    std::string text;
+    p.fs().read_file(kConfigPath, text);
+    std::istringstream in(text);
+    std::string line, out;
+    bool done = false;
+    while (std::getline(in, line)) {
+        const std::string t = trim(line);
+        const auto eq = t.find('=');
+        if (!t.empty() && t[0] != '#' && t[0] != ';' && eq != std::string::npos && trim(t.substr(0, eq)) == key) {
+            if (!done) out += key + "=" + value + "\n";  // die erste Zeile ersetzen, weitere Zeilen mit demselben Schluessel entfallen
+            done = true;
+            continue;
+        }
+        out += line + "\n";
+    }
+    if (!done) out += key + "=" + value + "\n";
+    rw->make_dirs("/data/ps5medic");
+    return rw->write_file(kConfigPath, out);
 }
 
 RuleDownloadResult download_rule_update(Platform& p, IHttpClient& http, const std::string& base_url, const std::string& timestamp) {

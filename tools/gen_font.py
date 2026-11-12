@@ -5,7 +5,7 @@
 DejaVu steht unter einer freizuegigen Lizenz (Bitstream Vera + Public Domain), siehe THIRD_PARTY.md.
 Aufruf (WSL, Pillow noetig):  python3 tools/gen_font.py
 Die erzeugte Datei wird eingecheckt; zur Laufzeit ist weder Pillow noch eine TTF-Datei noetig.
-Zeichensatz: ASCII, Latin-1 und alle Zeichen aus knowledge/rules.json und ui/i18n/*.json.
+Zeichensatz: ASCII, Latin-1 und alle Zeichen aus knowledge/rules.json, knowledge/l10n/*.json und ui/i18n/*.json.
 """
 import pathlib
 import sys
@@ -25,10 +25,13 @@ FONTS = [
 def wanted(kind):
     base = set(range(32, 127))
     extra = {ord(c) for c in "ÄÖÜäöüß…–„“”‘’·"}
+    extra |= set(range(0xC0, 0x100)) | {0xA1, 0xBF, 0xAB, 0xBB}  # Akzentbuchstaben und ¡ ¿ « » fuer Franzoesisch, Italienisch, Spanisch (auch in der Titelschrift)
     if kind == "basic":
         return sorted(base | extra)
     used = set()
-    for p in [ROOT / "knowledge/rules.json", ROOT / "ui/i18n/de.json", ROOT / "ui/i18n/en.json"]:
+    for p in [ROOT / "knowledge/rules.json", ROOT / "ui/i18n/de.json", ROOT / "ui/i18n/en.json", ROOT / "ui/i18n/fr.json", ROOT / "ui/i18n/it.json", ROOT / "ui/i18n/es.json",
+              ROOT / "knowledge/l10n/fr.json", ROOT / "knowledge/l10n/it.json", ROOT / "knowledge/l10n/es.json", ROOT / "knowledge/l10n/fr.errors.json",
+              ROOT / "knowledge/l10n/it.errors.json", ROOT / "knowledge/l10n/es.errors.json"]:
         used |= {ord(c) for c in p.read_text(encoding="utf-8")}
     used = {c for c in used if c >= 32 and c != 127 and not (0x80 <= c < 0xA0)}
     return sorted(base | set(range(160, 256)) | extra | used)

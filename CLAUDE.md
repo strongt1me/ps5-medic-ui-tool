@@ -8,6 +8,7 @@ Diese Datei ist der Einstieg für Claude Code. Lies sie zuerst, danach `docs/SPE
 Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomimlrxd), der Logs am PC analysiert und bewusst nichts repariert. PS5 Medic läuft **auf der Konsole**, liest den echten Zustand statt nur Logs und **behebt** Probleme. Wir dürfen dessen `knowledge_base.json` (MIT) als Startpunkt übernehmen – mit Namensnennung.
 
 ## Entwickler & Umgebung
+- **Sprachen der App (Marc, 12. Nov. 2026):** Deutsch, Englisch, Französisch, Italienisch, Spanisch (`ui/i18n/`, `knowledge/l10n/`). Die App läuft auf den Firmwares **4.00 bis 14.10** (README und App-Info); getestet ist nur FW 12.00.
 - Entwickler: Marc (GitHub: strongt1me). Kommuniziere auf Deutsch, kurz und knapp.
 - Host: Windows mit **WSL** (Toolchain läuft in WSL), Editor VS Code.
 - Test-Konsole: PS5 auf **FW 4.03**, „Unified JB“ über itsPLK WebKit-Autoloader, **kstuff-lite 1.10 beta**, **Payload Manager**, **ShadowMount+**. FTP auf Port **2121**. Port 9021 lauscht nach dem Unified JB **nicht** mehr.

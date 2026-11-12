@@ -59,6 +59,14 @@ void text_policy_tests() {
                           "Sony empfiehlt Updates für Systemsoftware und App."})
         CHECK(!find_system_update_advice(s).empty(), std::string("Textregel erkennt: ") + s);
 
+    // Dieselbe Regel in Franzoesisch, Italienisch und Spanisch
+    for (const char* s : {"Mettre à jour le micrologiciel de la console.", "Faire une mise à jour du firmware.", "Actualiser le logiciel système.",
+                          "Aggiorna il firmware della console.", "Un aggiornamento del software di sistema risolve il problema.", "Il firmware va aggiornato.",
+                          "Actualiza el firmware de la consola.", "Una actualización del software del sistema lo arregla.", "El firmware se debe actualizar."})
+        CHECK(!find_system_update_advice(s).empty(), std::string("Textregel erkennt (fr/it/es): ") + s);
+    for (const char* s : {"Mettre à jour le jeu.", "Firmware requis : 13.60", "Aggiornare ShadowMount+.", "Firmware richiesto: 13.60", "Actualizar ShadowMount+.", "Firmware requerido: 13.60"})
+        CHECK(find_system_update_advice(s).empty(), std::string("Textregel erlaubt (fr/it/es): ") + s + " -> " + find_system_update_advice(s));
+
     // Erlaubt: andere Updates, der Menuepfad zum Zuruecksetzen, Firmware als reine Angabe
     for (const char* s : {"Das Spiel aktualisieren.", "ShadowMount+ aktualisieren.", "ps5-theme auf Version 1.53 oder neuer aktualisieren.",
                           "Hilft nichts davon, die Konsole zurücksetzen („Settings > System > System Software > Reset Options > Reset Your Console“). Danach das Spiel neu installieren.",
@@ -93,7 +101,9 @@ void text_policy_tests() {
 
     // Was die App ausliefert: Wissensdateien und UI-Texte duerfen nichts nennen
     const std::string root = MEDIC_SOURCE_DIR;
-    for (const char* f : {"/knowledge/rules.json", "/knowledge/error_codes.json", "/ui/i18n/de.json", "/ui/i18n/en.json"}) {
+    for (const char* f : {"/knowledge/rules.json", "/knowledge/error_codes.json", "/ui/i18n/de.json", "/ui/i18n/en.json", "/ui/i18n/fr.json", "/ui/i18n/it.json", "/ui/i18n/es.json",
+                          "/knowledge/l10n/fr.json", "/knowledge/l10n/it.json", "/knowledge/l10n/es.json", "/knowledge/l10n/fr.errors.json", "/knowledge/l10n/it.errors.json",
+                          "/knowledge/l10n/es.errors.json"}) {
         const json j = json::parse(slurp(root + f), nullptr, false);
         CHECK(!j.is_discarded(), std::string("lesbar: ") + f);
         if (j.is_discarded()) continue;

@@ -23,6 +23,11 @@ constexpr std::size_t kMaxSigBytes = 4096;
 
 // Wert von `update_url` aus config.ini (Zeilen "schluessel=wert", '#' und ';' leiten Kommentare ein). Leer, wenn nichts steht.
 std::string configured_update_url(const IFileSystem& fs);
+// Beliebiger Wert aus config.ini (die letzte Zeile mit dem Schluessel gilt; leer, wenn es ihn nicht gibt).
+std::string configured_value(const IFileSystem& fs, const std::string& key);
+// Setzt (oder ergaenzt) eine Zeile "schluessel=wert" in config.ini und laesst alle anderen Zeilen stehen; false ohne Schreibzugriff oder bei Fehler.
+// Fuer die eigenen Einstellungen der App (z. B. die Sprache), keine Reparatur.
+bool set_config_value(Platform& p, const std::string& key, const std::string& value);
 
 struct RuleDownloadResult {
     bool ok = false;

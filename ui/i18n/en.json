@@ -383,5 +383,9 @@
   "games.d.saves_foreign": "{n} with a different account ID",
   "games.d.log": "Latest in the ShadowMount+ log",
   "games.d.reasons": "Possible reasons",
-  "games.d.reasons_none": "No known cause found. That does not mean everything is fine: Medic only sees what leaves traces on the console."
+  "games.d.reasons_none": "No known cause found. That does not mean everything is fine: Medic only sees what leaves traces on the console.",
+  "settings.lang_fr": "Français",
+  "settings.lang_it": "Italiano",
+  "settings.lang_es": "Español",
+  "games.d.fw_backport_inline": "{req} (console {fw}), backport built into the game"
 }

@@ -86,6 +86,33 @@ std::string redact_secrets(const std::string& text) {
 // Ersatz fuer eine exportierte ELF-Datei, der beim Pruefen am PC dasselbe Ergebnis liefert wie das Original auf der Konsole:
 // "ok" -> minimaler gueltiger Kopf (keine Programm-Header); sonst die ersten Bytes des Originals (falsche Kennung, zu klein,
 // oder Programm-Header jenseits des Dateiendes).
+// Ersatz-eboot.bin mit derselben SDK-Version in den Prozessparametern (Aufbau wie ihn collectors.cpp liest: SELF-Kopf, zwei Eintraege,
+// ELF-Kopf mit PT_LOAD und PT_SCE_PROCPARAM, Block "ORBI"). Enthaelt sonst nichts. Leer, wenn die Version nicht passt.
+std::string stub_eboot_with_sdk(const std::string& fw) {
+    int major = 0, minor = 0;
+    if (std::sscanf(fw.c_str(), "%d.%d", &major, &minor) != 2 || major < 1 || major > 99 || minor < 0 || minor > 99) return {};
+    std::string b(0x1200, '\0');
+    auto put = [&b](std::size_t off, std::uint64_t v, int n) {
+        for (int i = 0; i < n; ++i) b[off + static_cast<std::size_t>(i)] = static_cast<char>((v >> (8 * i)) & 0xff);
+    };
+    b.replace(0, 4, "\x4f\x15\x3d\x1d");
+    put(0x18, 2, 2);
+    put(0x20, 0x10000, 8); put(0x28, 0x1100, 8); put(0x30, 0x20, 8); put(0x38, 0x20, 8);   // Pruefblock
+    put(0x40, 0, 8);       put(0x48, 0x1000, 8); put(0x50, 0x100, 8); put(0x58, 0x100, 8);  // Daten des Segments 0
+    const std::size_t elf = 0x60, ph = elf + 64;
+    b.replace(elf, 4, "\x7f" "ELF");
+    put(elf + 32, 64, 8);
+    put(elf + 54, 56, 2);
+    put(elf + 56, 2, 2);
+    put(ph, 1, 4);               put(ph + 8, 0x1000, 8);       put(ph + 32, 0x100, 8);    // PT_LOAD
+    put(ph + 56, 0x61000001u, 4); put(ph + 56 + 8, 0x1010, 8);  put(ph + 56 + 32, 0x40, 8);  // PT_SCE_PROCPARAM
+    put(0x1010, 0x40, 8);
+    b.replace(0x1010 + 8, 4, "ORBI");
+    const std::uint32_t sdk = (static_cast<std::uint32_t>((major / 10) << 4 | (major % 10)) << 24) | (static_cast<std::uint32_t>((minor / 10) << 4 | (minor % 10)) << 16) | 0x40u;
+    put(0x1010 + 0x14, sdk, 4);
+    return b;
+}
+
 std::string elf_stub(const std::string& state, const std::string& real_head) {
     if (state != "ok") return real_head;
     std::string h(64, '\0');
@@ -383,6 +410,24 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
                 if (const std::string sdk = encode(e["sdk_fw"].get<std::string>()); !sdk.empty()) param["sdkVersion"] = sdk;
             ex.write("/user/app/" + e["titleid"].get<std::string>() + "/sce_sys/param.json", param.dump());
         }
+        // Eingebauter Backport (games.fw[].eboot_sdk): Ersatz-eboot.bin mit derselben SDK-Version im Ordner der Quelle (smp.titles)
+        const auto* t = facts.get("smp.titles");
+        const auto* im = facts.get("smp.images");
+        std::set<std::string> image_paths;
+        if (im && im->is_array())
+            for (const auto& i : *im)
+                if (i.is_object() && i.contains("path") && i["path"].is_string()) image_paths.insert(i["path"].get<std::string>());
+        if (t && t->is_array())
+            for (const auto& e : *g) {
+                if (!e.is_object() || !e.contains("titleid") || !e["titleid"].is_string() || !e.contains("eboot_sdk") || !e["eboot_sdk"].is_string()) continue;
+                const std::string stub = stub_eboot_with_sdk(e["eboot_sdk"].get<std::string>());
+                if (stub.empty()) continue;
+                for (const auto& x : *t)
+                    if (x.is_object() && x.contains("titleid") && x["titleid"] == e["titleid"] && x.contains("path") && x["path"].is_string() && !image_paths.count(x["path"].get<std::string>())) {
+                        ex.write(join_path(x["path"].get<std::string>(), "eboot.bin"), stub);
+                        break;
+                    }
+            }
     }
 
     // Link-Dateien von ShadowMount+ (Pfad des Images bzw. Ordners je Titel): damit entsteht der Duplikat-Befund (Ordner und Image

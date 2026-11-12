@@ -1,0 +1,369 @@
+{
+ "rules": {
+  "hen.etahen_with_kstufflite_latest_fw": {
+   "text": "etaHEN y kstuff-lite se ejecutan a la vez. En el firmware de jailbreak más reciente se recomienda kstuff-lite sin etaHEN; se notificó la combinación con kernel panics. Orden: jailbreak, kstuff-lite, ShadowMount+."
+  },
+  "hen.etahen_double_load": {
+   "text": "Hay varios procesos de etaHEN en ejecución. No cargues etaHEN sobre una copia en marcha; reinicia primero la consola y haz el jailbreak de nuevo."
+  },
+  "smp.kstuff_min_version": {
+   "text": "ShadowMount+ requiere kstuff-lite 1.07 o más reciente."
+  },
+  "smp.parentheses_in_pfs_name": {
+   "text": "El nombre de una imagen .ffpfs/.ffpfsc contiene paréntesis. En versiones antiguas (notificado con 1.6test15 en FW 6.02) esto causó un kernel panic durante el escaneo; el desarrollador dice que se corrigió hace tiempo y no se pudo reproducir con versiones nuevas (1.7beta4, FW 12.00). Renombrarla sin paréntesis es inofensivo de todos modos y te protege si se ejecuta una versión antigua."
+  },
+  "smp.autotoggle_crash_1360": {
+   "text": "Esta combinación (FW 13.60, ShadowMount+ 1.7beta3, kstuff-lite 1.11, kstuff_game_auto_toggle=1) se notificó con cierres repetidos de juegos. Solución provisional: poner kstuff_game_auto_toggle=0 (kstuff sigue cargado). Haz antes una copia de config.ini."
+  },
+  "smp.fw900_kstuff_fork": {
+   "text": "En FW 9.00, según se informa, los volcados no arrancan con la compilación de kstuff-lite de EchoStretch («can't launch the game or app»). Los usuarios indican que el fork de kstuff de Drakmor lo soluciona."
+  },
+  "smp.backpork_conflict": {
+   "text": "BackPork se ejecuta junto con la función fakelib de ShadowMount+. Entran en conflicto: desactiva BackPork."
+  },
+  "smp.image_extra_folder": {
+   "text": "El juego está en una carpeta adicional dentro de la imagen (/<FOLDER>/sce_sys/param.json en lugar de /sce_sys/param.json). Los archivos del juego deben estar en la raíz de la imagen. Reconstruye la imagen sin la carpeta adicional."
+  },
+  "smp.ffpfsc_direct_files": {
+   "text": "El contenedor .ffpfsc contiene archivos del juego directamente. Un .ffpfsc es solo un contenedor para una imagen interna (.exfat o pfs_image.dat) y no debe tener archivos del juego en su raíz."
+  },
+  "smp.duplicate_titleid": {
+   "text": "El mismo TITLE_ID existe en más de un origen (p. ej. una carpeta de juego y una imagen del mismo juego). ShadowMount+ usa solo uno y muestra el mensaje «Duplicate - ignored» en cada inicio: aparta las copias sobrantes; el origen que usa ShadowMount+ se queda."
+  },
+  "smp.custom_scanpath_hides_defaults": {
+   "text": "Hay rutas de escaneo personalizadas. Por eso ya no se escanean las rutas predeterminadas: ShadowMount+ no encontrará estos juegos. Añade la ruta a la lista o mueve los juegos a una ruta escaneada."
+  },
+  "smp.scan_depth": {
+   "text": "Estos juegos están a más profundidad que la configurada en el escaneo y no se encuentran. Aumenta scan_depth (p. ej. 2) o coloca las carpetas en un nivel menos profundo."
+  },
+  "smp.source_not_stable": {
+   "text": "debug.log notifica repetidamente «source not stable yet» para el mismo origen: la copia sigue en curso, o stability_wait_seconds no se ajusta al origen. Espera a que termine la copia o revisa el valor."
+  },
+  "smp.exfat_cluster": {
+   "text": "Esta imagen .exfat usa clústeres menores de 64 KB, lo que la ralentiza. Reconstruye la imagen con clústeres de 64 KB (p. ej. mkfs.exfat -c 64K)."
+  },
+  "savedata.foreign_account": {
+   "text": "Estos datos guardados se crearon con un ID de cuenta distinto del que está activo ahora (ACCOUNT_ID en los metadatos de savedata_prospero_meta; el ID actual está en las memorias de datos guardados que el sistema recrea en cada inicio de juego). Los datos guardados pertenecen a la cuenta que los creó. Ocurre, por ejemplo, cuando el ID de cuenta cambió al repetir la activación sin conexión (así en la consola de prueba; una guía de la comunidad para PS4 aconseja hacer la activación una sola vez y copiar antes los datos guardados). Con otra cuenta la consola notifica «No se pueden cargar los datos guardados porque están dañados» (entrada «Datos dañados») en cada carga y guardado, porque el juego sigue accediendo a los mismos datos. La lista de los ajustes sigue mostrando esos datos con normalidad. Esto no demuestra que los archivos estén dañados. Salida: volver a usar la cuenta que creó los datos (mismo ID de cuenta). Medic no cambia ni la cuenta ni los datos guardados. Se pueden crear datos nuevos con la cuenta actual; los antiguos quedan intactos en savedata_prospero. No borres los datos antiguos antes de saber si se volverá a usar la cuenta antigua, y antes de cualquier cambio del ID de cuenta copia las carpetas savedata_prospero y savedata_prospero_meta y /system_data/savedata_prospero por FTP.",
+   "confidence_reason": "Que los ID de cuenta difieren se lee de los archivos (ACCOUNT_ID en los metadatos). Que justo esto provoca el mensaje de «datos dañados» se observó en la consola de prueba con tres juegos, pero aún no está confirmado restaurando el ID de cuenta antiguo; Sony no lo documenta."
+  },
+  "errors.recurring_title": {
+   "text": "El historial de errores del software del sistema (/system_data/priv/error/history) contiene varias veces el mismo código de error CE para el mismo título. Un título que sigue notificando el mismo error no arranca ni funciona de forma fiable; a menudo va acompañado del mensaje «Se ha producido un error en este juego o aplicación». Abajo se listan código, título, número y último día. Qué significa el código y qué dicen Sony o la comunidad está en «Códigos de error». En títulos de carpetas o imágenes en una consola con jailbreak, pueden ser causa las carpetas backport, los ajustes de FakeLib y los archivos que faltan; el historial por sí solo no dice cuál se aplica.",
+   "confidence_reason": "Se lee el historial de errores. Que los códigos repetidos apunten a un título que no funciona bien es una deducción; el umbral (más de dos entradas) es provisional y no está calibrado, y el historial no nombra la causa."
+  },
+  "errors.recurring_system_app": {
+   "text": "Una aplicación del sistema (título NPXS...) notificó varias veces el mismo código de error CE en el historial de errores. Suelen ser errores de conexión o de servidor, por ejemplo cuando los servidores de Sony no son accesibles por un filtro DNS (p. ej. nanoDNS) o un problema de red. Medic no puede distinguirlo solo con el historial; por sí solo no apunta a hardware defectuoso. El código se puede consultar en «Códigos de error».",
+   "confidence_reason": "Se lee el historial de errores. No se puede decidir con el historial si detrás hay red, filtro DNS u otra cosa; el umbral (más de dos entradas) es provisional."
+  },
+  "sys.unclean_boot": {
+   "text": "El historial de arranques de la consola (/system_data/priv/vshlog) muestra al menos tres reinicios en los últimos 14 días que no van precedidos de un apagado registrado. Todo reinicio normal aparece en el historial como «Shutdown for reboot». Si falta, la sesión terminó sin apagado correcto; encaja con un cuelgue, un reinicio por watchdog o un corte de corriente. La causa no se puede determinar solo con el historial. En una consola con jailbreak son posibles errores de payloads, una unidad desconectada en marcha, sobrecalentamiento y una alimentación inestable. Revisa en este orden: temperaturas (ver las notas), unidades y sus cables, payloads iniciados más recientemente, y la toma de corriente o regleta. Abajo se listan las horas.",
+   "confidence_reason": "Que no hay apagado registrado antes de un arranque se ve en el historial de arranques (observado en la consola de prueba: un reinicio normal escribe «Shutdown for reboot»). El umbral de tres casos en 14 días es provisional, y el historial no nombra la causa."
+  },
+  "sys.unclean_boot_history": {
+   "text": "El historial de arranques de la consola (/system_data/priv/vshlog) contiene reinicios que no van precedidos de un apagado registrado (por ejemplo tras un corte de corriente, un cuelgue o un apagado forzado). En los últimos 14 días hubo como máximo dos, lo cual no es llamativo. Si estos reinicios se acumulan, Medic lo notifica como aviso.",
+   "confidence_reason": "Se lee el historial de arranques. Los reinicios sueltos sin apagado no son llamativos (pérdida de corriente, apagado forzado); el aviso solo muestra el recuento."
+  },
+  "db.header_invalid": {
+   "text": "La cabecera de una base de datos del software del sistema no es válida (sin firma SQLite, tamaño de página imposible o valores de cabecera erróneos). El software del sistema usa estas bases de datos para apps, licencias, datos guardados, descargas y notificaciones; un archivo dañado puede causar iconos que faltan, errores de instalación o mensajes de «base de datos dañada». Primero reinicia la consola con normalidad y revisa de nuevo, porque una escritura interrumpida suele limpiarse la siguiente vez que se abre el archivo. Si el hallazgo persiste, el archivo está dañado. Sony ofrece «Reconstruir base de datos» en modo seguro. No se ha comprobado si eso cambia entradas de títulos montados por ShadowMount+: anota antes qué títulos están instalados y haz copia de los datos guardados. Medic no modifica bases de datos.",
+   "confidence_reason": "Se lee la cabecera y se comprueba con el formato de archivo SQLite. Las consecuencias para la consola (iconos que faltan, mensajes de error) son experiencia, no una relación documentada."
+  },
+  "db.truncated": {
+   "text": "Una base de datos del software del sistema es más pequeña de lo que indica su cabecera (archivo truncado). Ocurre cuando una escritura se interrumpió por un cuelgue, un corte de corriente o almacenamiento lleno. Procede como con una cabecera de base de datos no válida: reinicia la consola con normalidad y revisa de nuevo; si el hallazgo persiste, el archivo está dañado (el modo seguro «Reconstruir base de datos» es la vía de Sony; efecto sobre títulos montados por ShadowMount+ sin comprobar). Medic no modifica bases de datos.",
+   "confidence_reason": "Se leen tamaño de archivo y cabecera y se comprueban con el formato de archivo SQLite. No se puede descartar un hallazgo mientras la consola está escribiendo en ese momento; por eso, revisa de nuevo."
+  },
+  "db.journal_pending": {
+   "text": "Junto a una base de datos del software del sistema hay un journal con una transacción abierta (firma d9 d5 05 f9 20 a1 63 d7). Es normal mientras la consola escribe, y queda cuando una escritura se interrumpió; SQLite revierte la transacción la siguiente vez que se abre la base de datos. Si el hallazgo persiste tras un reinicio normal, apunta a una sesión interrumpida (ver el hallazgo sobre reinicios sin apagado).",
+   "confidence_reason": "Se lee el journal. Un journal abierto es habitual durante las escrituras normales de la consola; solo si permanece tras un reinicio es un indicio."
+  },
+  "db.integrity_failed": {
+   "text": "La revisión de una base de datos del software del sistema encontró errores (SQLite integrity_check sobre una copia en memoria; el archivo real nunca se abre ni se modifica). Cabecera y tamaño están bien, pero el contenido no: hay páginas o entradas dañadas. Puede causar iconos que faltan, errores de instalación o mensajes como «base de datos dañada». Primero reinicia la consola con normalidad y revisa de nuevo, porque la revisión solo puede juzgar archivos que no cambian mientras se ejecuta. Si el hallazgo persiste, el archivo está dañado. Sony ofrece «Reconstruir base de datos» en modo seguro. No se ha comprobado si eso cambia entradas de títulos montados por ShadowMount+: anota antes qué títulos están instalados y haz copia de los datos guardados. Medic no modifica bases de datos.",
+   "confidence_reason": "SQLite integrity_check es la revisión documentada. Medic solo revisa archivos que no cambian entre dos lecturas (si no, el área se lista como «sin revisar»). Las consecuencias para títulos e iconos son experiencia, no documentadas."
+  },
+  "game.il2cpp_case": {
+   "text": "En una carpeta de juego el archivo se llama Il2cppUserAssemblies.prx en lugar de Il2CppUserAssemblies.prx (juego de Unity, carpeta Media/Modules). En el SSD interno y en imágenes UFS el sistema de archivos distingue mayúsculas y minúsculas: el juego no encuentra el archivo y se cierra justo tras arrancar (SIGSEGV en eboot.bin, dirección 0x0). En unidades exFAT la diferencia pasa inadvertida. El desarrollador de ShadowMount+ aconseja renombrarlo o construir la imagen como exFAT. La reparación renombra el archivo; incluye entrada en el diario y deshacer.",
+   "confidence_reason": "Se lee la grafía distinta y se mide el tipo de sistema de archivos. Que por eso el juego se cierre se basa en el informe del desarrollador de ShadowMount+ (issue 159, original leído) y no se reprodujo en la consola de prueba."
+  },
+  "game.il2cpp_case_latent": {
+   "text": "En una carpeta de juego en una unidad exFAT o FAT el archivo se llama Il2cppUserAssemblies.prx en lugar de Il2CppUserAssemblies.prx (juego de Unity, carpeta Media/Modules). Allí la diferencia pasa inadvertida y el juego arranca. En cuanto la carpeta se copia al SSD interno o se empaqueta en una imagen UFS, el sistema de archivos distingue mayúsculas y minúsculas: el juego no encuentra el archivo y se cierra justo tras arrancar. Renombra el archivo a Il2CppUserAssemblies.prx en el PC antes de moverlo. Aquí no hay reparación automática.",
+   "confidence_reason": "Se lee la grafía. El efecto solo se da tras mover a un sistema de archivos que distingue mayúsculas y se deduce del informe, no se observó."
+  },
+  "smp.debug_off": {
+   "text": "debug=0: sin el log de depuración no es posible ningún diagnóstico. Pon debug=1 mientras buscas fallos."
+  },
+  "smp.register_failed": {
+   "text": "Falló el registro de un juego. Primero quita el icono del lanzador y registra de nuevo; como último recurso borra los datos del juego (aviso: se pierden los datos guardados). El código de error está en la línea «[REG] FAIL: 0x...» (0x80F50005 se notificó para un solo título, causa desconocida)."
+  },
+  "smp.image_sector_autotune": {
+   "text": "ShadowMount+ ajustó automáticamente el tamaño de sector de una imagen (desde 1.7beta12 el valor está en profiles.ini bajo [image:FILE], antes en autotune.ini; en el log: '[CFG] image sector autotuned'). Simplemente inicia el juego de nuevo."
+  },
+  "hen.jb_too_early": {
+   "text": "El primer proceso de la cadena de jailbreak (loader, etaHEN, kstuff o ShadowMount+) arrancó menos de 60 segundos después del encendido. Un consejo de la comunidad para kstuff-lite dice que hay que esperar aproximadamente un minuto tras el encendido antes del jailbreak, porque aún hay procesos en segundo plano. Es un consejo, no una causa confirmada de fallos."
+  },
+  "payload.port_9021_closed": {
+   "text": "El puerto 9021 no acepta conexiones y no se ejecutan ni elfldr ni etaHEN: no hay ningún cargador de ELF activo, así que no se pueden enviar payloads a la consola. Reinicia el cargador mediante tu autoloader o el jailbreak (depende del autoloader que uses).",
+   "confidence_reason": "Que el puerto no responde está medido. Si eso es un fallo depende de la vía de jailbreak: tras el Unified JB el puerto 9021 deja de escuchar a propósito según las notas del proyecto, y los payloads llegan de otra forma."
+  },
+  "plugin.ps5theme_old_overlay": {
+   "text": "Hay instalada una compilación de prueba de ps5-theme (una versión entre las publicaciones 1.30 y 1.53). Según las notas de la versión 1.53, un overlay que quedaba en esas primeras compilaciones de prueba podía impedir que arrancara cualquier juego o app (error CE-105733-9). Actualiza a ps5-theme 1.53 o más reciente.",
+   "confidence_reason": "Se lee la versión instalada. El efecto se basa en las notas de la versión 1.53 del autor y no se reprodujo en esta consola; el límite «entre 1.30 y 1.53» es una suposición."
+  },
+  "storage.oversized_reservation": {
+   "text": "Una app homebrew reserva varios GB de almacenamiento (param.json: downloadDataSize) aunque sus archivos suman menos de 1 GB. Un ejemplo conocido fue CD Player antes de la versión 1.1.2 (16 GiB en lugar de 256 MiB). Copiar la versión nueva sobre la antigua no reduce la reserva: quita la app en los ajustes de almacenamiento de la PS5 e instala de nuevo la versión actual (pueden perderse ajustes y carátula).",
+   "confidence_reason": "Se leen la reserva y los tamaños de archivo. El caso conocido (CD Player antes de 1.1.2) viene de la página del autor; que toda reserva de este tipo desperdicie espacio no está demostrado."
+  },
+  "game.needs_backport": {
+   "text": "Para estos juegos el param.json exige una versión de firmware superior a la de la consola (pruebas: título y versión requerida), y las rutas de escaneo no contienen ninguna carpeta backport backports/<TITLE_ID>/. Según el backport toolkit, la consola se niega a iniciar nada compilado para una versión de firmware superior: el juego necesita un backport para el firmware en uso, o AMPR Emu / AMPR Emu NG. Que estos juegos no arranquen aún no está confirmado en esta consola. Quedan excluidos los juegos con el backport integrado en el propio juego: si la versión del SDK en el eboot.bin de la carpeta del juego no supera el firmware de la consola, el juego se considera adaptado. En una imagen Medic no puede leer el eboot.bin; si el backport está integrado en el juego, este hallazgo no procede.",
+   "confidence_reason": "La versión requerida está en el param.json (leído) y se compara con la versión de la consola. Que por eso estos juegos no arranquen lo afirma el backport toolkit, pero no está confirmado en esta consola."
+  },
+  "smp.shellcore_hook_lost": {
+   "text": "ShadowMount+ perdió su hook de registro en ShellCore (notificado tras el modo reposo o un cambio de juego): los juegos nuevos se montan pero no se pueden registrar. Solución notificada: enviar de nuevo el payload de ShadowMount+. Desde 1.7beta5 ShadowMount+ restaura el hook por sí mismo antes de registrar; si la línea sigue apareciendo, notifícalo junto con debug.log."
+  },
+  "smp.shellcore_hooks_failed": {
+   "text": "ShadowMount+ no pudo instalar sus hooks en ShellCore al arrancar. Se notificó en varios firmwares (11.60, 12.70) con 1.7beta3 y 1.7alpha12; la causa no está confirmada. El desarrollador preguntó por un arranque limpio, y quien lo notificó dijo que no pasaba siempre. Prueba: reinicia la consola, carga después el jailbreak, kstuff-lite y por último ShadowMount+, y usa una versión más reciente (desde 1.7beta6 mejora la fiabilidad de los hooks)."
+  },
+  "smp.image_cache_full": {
+   "text": "ShadowMount+ revirtió un montaje porque su caché de imágenes estaba llena (en el caso notificado con 64 entradas y más de 100 imágenes en la unidad). Mantén menos orígenes en la ruta de escaneo y quita o mueve las imágenes duplicadas. No borres a mano la caché interna."
+  },
+  "smp.api_not_responding": {
+   "text": "ShadowMount+ notificó al arrancar que su API HTTP está lista, pero el puerto ya no acepta conexiones. Se notificó que este listener puede morir en silencio mientras el resto de ShadowMount+ sigue funcionando (issue 152, 1.7-beta5fix1, ya cerrado). Los programas que usan la API (interfaz web, Orbit Store) no pueden entonces alcanzar ShadowMount+; el escaneo y el montaje suelen seguir funcionando. Remedio probable: enviar de nuevo el payload de ShadowMount+ (deducción del informe, sin confirmar)."
+  },
+  "storage.low_space_data": {
+   "text": "Queda libre menos del 5 % de /data. Pueden fallar montajes, logs, copias de seguridad e instalaciones. Libera espacio: revisa archivos homebrew que ya no necesites y copias antiguas en /data/ps5medic/backups.",
+   "confidence_reason": "El espacio libre está medido. El umbral del 5 % es una suposición nuestra; no está calibrado a partir de qué punto fallan montajes o instalaciones."
+  },
+  "smp.config_rejected": {
+   "text": "ShadowMount+ 1.7beta12 rechaza toda la configuración si una sola línea no es válida: al arrancar el payload termina (el mensaje aparece solo en la consola, no en el log); un cambio en ejecución mantiene el estado anterior y los valores nuevos no surten efecto. Corrige las líneas listadas (booleanos como on/off o 1/0, profundidad de escaneo 1 o 2, números dentro del rango permitido) o quítalas de config.ini; haz antes una copia del archivo."
+  },
+  "smp.v1_keys_in_v2": {
+   "text": "El config.ini (formato v2) contiene líneas en el antiguo formato plano, p. ej. scan_depth=2. ShadowMount+ 1.7beta12 lee en un archivo v2 solo las claves de sección e ignora en silencio estas líneas, así que el ajuste no surte efecto (por ejemplo, no encontrará juegos en el segundo nivel). Pasa cuando otra herramienta o una guía antigua añade líneas planas. La reparación mueve las líneas con equivalente conocido a la sección correcta (scan_depth a [scan] depth, fakelib_default_mode a [fakelib] default_mode, scanpath a [scan] path, etc.); incluye copia de seguridad y deshacer."
+  },
+  "smp.v1_config_restored": {
+   "text": "El config.ini está en el formato antiguo (v1) aunque ShadowMount+ ya lo convirtió a v2 (existe config-v1-backup/ready.ini). ShadowMount+ 1.7beta12 se niega entonces a arrancar para que los archivos convertidos no se sobrescriban con los antiguos; el mensaje aparece solo en la consola. Pasa cuando se copió de vuelta un config.ini antiguo (de una copia de seguridad o de una herramienta del PC). Restaura el archivo v2 (p. ej. de la copia de Medic en /data/ps5medic/backups) o convierte el archivo a v2."
+  },
+  "smp.retry_limit": {
+   "text": "ShadowMount+ se rindió con un título o imagen tras varios intentos fallidos (2 por título, 3 por imagen) y lo omite hasta que se reinicie el payload. La causa está en las líneas del log anteriores (p. ej. 'attach failed', 'nmount ... failed', '[REG] FAIL'). Corrige la causa y luego envía de nuevo ShadowMount+ (o reinicia los intentos con la API: POST /api/v1/scan con {\"reset_attempts\":true})."
+  },
+  "smp.kstuff_wait": {
+   "text": "ShadowMount+ espera a kstuff y no inicia ningún servicio hasta entonces (ni escaneo ni montajes). kstuff no está cargado o aún no está listo. Carga kstuff-lite (antes de ShadowMount+ en la lista de autocarga, o después con una pausa) y comprueba que la versión coincide con el firmware."
+  },
+  "smp.scanner_root_denied": {
+   "text": "ShadowMount+ no pudo vigilar una ruta de escaneo (permiso denegado) y detuvo su escáner: ya no se detectan juegos nuevos. Hasta 1.7beta11 bastaba una ruta de escaneo predeterminada ilegible para eso (notificado: /data/etaHEN/games). Corregido en 1.7beta12: actualiza ShadowMount+. Si no, revisa los permisos de la carpeta indicada o define solo tus propias rutas de escaneo ([scan] path)."
+  },
+  "smp.launch_busy": {
+   "text": "Los juegos ya no arrancan: ShadowMount+ notifica repetidamente 'launch mount unavailable - status=16 (Device busy)'. Tras un cambio de juego fallido, un título quedó reservado y todo inicio gestionado falló (notificado hasta 1.7beta11, corregido en 1.7beta12). Inicia una vez el título fallido sin un juego en ejecución o envía de nuevo ShadowMount+; actualiza ShadowMount+."
+  },
+  "smp.fakelib_handoff_stuck": {
+   "text": "Un proceso terminado bloquea la cola de limpieza de fakelib: después los juegos con backport arrancan sin su fakelib y se cierran. Solo lo soluciona reiniciar la consola. Corregido en ShadowMount+ 1.7beta12."
+  },
+  "smp.backport_overlay_denied": {
+   "text": "No se pudo montar el overlay del backport (fakelib) ('Operation not permitted'). Afecta a backports en unidades USB (exFAT), donde el montaje no está permitido. Según el desarrollador ayuda esto: copiar los archivos del backport en la carpeta del juego, usar una imagen .exfat o usar el almacenamiento interno."
+  },
+  "smp.leak_pre_beta11": {
+   "text": "Esta versión de ShadowMount+ (1.7beta9 o 1.7beta10) pierde memoria en cada escaneo (notificado: unos 5 a 8 MB por minuto). Tras horas esto causa tirones, cierres o el error CE-108262-9. Corregido en 1.7beta11: actualiza ShadowMount+. Como solución provisional aumenta el intervalo de escaneo en config.ini ([scan] interval_seconds = 3600, surte efecto al instante)."
+  },
+  "smp.usb_game_closed_on_rest": {
+   "text": "Al entrar en modo reposo ShadowMount+ cerró un juego que se ejecutaba desde una unidad USB (a propósito: una unidad desconectada alteraría si no el sistema). Se puede perder el progreso sin guardar: cierra el juego antes del modo reposo. Hasta 1.7beta11 esto afectaba por error también a juegos en M.2 (/mnt/ext1); corregido en 1.7beta12."
+  },
+  "autoload.elfldr_without_delay": {
+   "text": "En la lista de autocarga el cargador (elfldr) va seguido directamente de la entrada siguiente. Un cargador recién iniciado acepta conexiones solo tras unos segundos: la entrada siguiente falla entonces ('Loader connection failed - 0 bytes sent') y falta tras cada arranque. Entre elfldr y el siguiente payload debe haber una pausa (!4000 = cuatro segundos). La reparación la inserta; incluye copia de seguridad y deshacer."
+  },
+  "autoload.entry_missing": {
+   "text": "La lista de autocarga contiene una entrada para la que no hay archivo de payload (o el nombre solo difiere en mayúsculas o minúsculas; los nombres distinguen mayúsculas). Al arrancar, el cargador notifica 'Payload not found' / 'Not found' y omite la entrada: el payload falta tras cada reinicio. Corrige la entrada o instala de nuevo el payload."
+  },
+  "autoload.entry_duplicate": {
+   "text": "Una entrada aparece varias veces en la lista de autocarga y se envía cada vez (los cargadores no eliminan duplicados). Quita las líneas duplicadas."
+  },
+  "pldmgr.autoload_syntax": {
+   "text": "La lista de autocarga del Payload Manager tiene un formato no válido. El Payload Manager la comprueba de forma estricta: un solo error (archivo de más de 4095 bytes, línea de más de 511 caracteres, pausa no válida '!...', coma en una línea) invalida toda la secuencia y no se inicia nada en absoluto. Corrige la línea indicada."
+  },
+  "pldmgr.autoload_disabled": {
+   "text": "El Payload Manager tiene entradas en su lista de autocarga, pero la autocarga está desactivada (AUTOLOAD_ENABLED=0). La lista no se procesa al arrancar; los payloads hay que cargarlos a mano. Activa la autocarga en los ajustes del Payload Manager si no es lo que quieres."
+  },
+  "payload.elf_invalid": {
+   "text": "Al menos un archivo ELF es inservible: demasiado pequeño, sin firma ELF (a menudo una página de error HTML guardada) o cortado al final (transferencia interrumpida). El cargador rechaza esos archivos y el payload no arranca. Transfiere el archivo de nuevo (FTP en modo binario) o descárgalo otra vez; aparta antes el archivo roto."
+  },
+  "nanodns.log_problem": {
+   "text": "El log de nanoDNS contiene errores: no alcanza sus servidores DNS ascendentes (entonces falla toda resolución de nombres y las apps y el Payload Manager parecen 'sin conexión'), no puede abrir el puerto 53 o notifica líneas no válidas en nanodns.ini. Revisa los servidores ascendentes en nanodns.ini (p. ej. la dirección del router como primera entrada) y envía de nuevo nanoDNS. Del log solo se cuenta; los dominios que contiene nunca llegan al informe."
+  },
+  "hen.etahen_crashed": {
+   "text": "etaHEN notifica un cuelgue de su servicio principal ('main etaHEN has crashed'). Después ya no están disponibles la Toolbox ni los plugins. Reinicia la consola y carga de nuevo la cadena de jailbreak; si se repite, quita los plugins añadidos recientemente."
+  },
+  "hen.etahen_game_rest_kill": {
+   "text": "En la configuración de etaHEN está activado 'Game_rest_kill' (o 'Util_rest_kill'): etaHEN cierra el juego o la aplicación abiertos cuando la consola entra en modo reposo. Es un ajuste, no un fallo. Explica «juego desaparecido tras el modo reposo» y el progreso sin guardar perdido."
+  },
+  "storage.usb_mounted_ro": {
+   "text": "Una unidad conectada está montada en solo lectura. Copiar, mover y reparar (p. ej. orígenes duplicados) no funciona allí. Causas posibles: un interruptor de protección contra escritura, un error del sistema de archivos o una unidad que falla. Revisa y repara la unidad en un PC (chkdsk o fsck) y vuelve a conectarla.",
+   "confidence_reason": "Que la unidad está montada en solo lectura se mide en la entrada de montaje. Medic no puede saber por qué; las causas indicadas son posibilidades habituales, no demostradas."
+  },
+  "smp.image_mount_0x60": {
+   "text": "ShadowMount+ no puede montar una imagen: 'nmount rdonly failed: error_code=0x00000060' (mensaje 'Image mount failed: 0x00000060'). La imagen se adjuntó, pero no se puede abrir el sistema de archivos que contiene. Una causa posible es una imagen mal construida: un error de MkPFS 0.0.6 producía imágenes dañadas que pasaban la verificación de la propia herramienta; según su autor, con más frecuencia al convertir una carpeta directamente, con menos frecuencia vía carpeta > .exfat > .ffpfsc. Reconstruye la imagen con la versión actual de MkPFS (primero como .exfat). A un segundo usuario las imágenes construidas así tampoco le sirvieron, así que la causa no está del todo aclarada. Tras tres intentos fallidos ShadowMount+ omite la imagen hasta el siguiente inicio (ver el hallazgo sobre rendirse).",
+   "confidence_reason": "El código está en la línea del log. La causa (una imagen mal construida) viene del informe citado del autor de MkPFS sobre la versión 0.0.6; a un segundo usuario las imágenes .exfat tampoco le sirvieron, y no se reprodujo en la consola de prueba."
+  },
+  "smp.register_console_db": {
+   "text": "ShadowMount+ no pudo registrar un juego o app: 'Register failed: ... code=0x80A30008'. El desarrollador de ShadowMount+ ve la causa en la base de datos de la consola y aconseja recrearla mediante el modo seguro (la función «Reconstruir base de datos» de Sony). Quien lo notificó no dijo si ayudó. No se ha comprobado si cambia entradas de títulos montados por ShadowMount+: anota antes qué títulos están instalados y haz copia de los datos guardados. Mira primero el hallazgo sobre las bases de datos del software del sistema (si existe) y reinicia la consola con normalidad una vez. Medic no modifica bases de datos.",
+   "confidence_reason": "El código está en la línea del log. Que sea un problema de la base de datos de la consola es una sola frase del desarrollador en el issue 156; no está confirmado que recrearla ayudara, y no se reprodujo en la consola de prueba."
+  },
+  "pldmgr.loose_elfs": {
+   "text": "Hay archivos ELF sueltos en la carpeta /data/pldmgr/payloads (pruebas). Desde la versión 0.6 (layout 2) el Payload Manager solo conoce payloads del repositorio, de la importación por USB y de subidas en su interfaz web (carpeta local/<name>/). Los archivos soltados sin más antes funcionaban solo por casualidad mediante un escaneo recursivo laxo y nunca se admitieron según el desarrollador: no aparecen en la interfaz y no se cargan automáticamente. Solución: sube los payloads en la interfaz web del Payload Manager o impórtalos desde USB. Medic no modifica esta carpeta.",
+   "confidence_reason": "Se leen los archivos y el layout (payloads/.layout = 2). «Nunca admitidos» es una afirmación del desarrollador (issue 135); que justo estos archivos no se reconozcan se deduce del layout y de esa afirmación, no se observó con un archivo en la consola de prueba."
+  },
+  "sys.temp_above_usual": {
+   "text": "La consola está claramente más caliente que en tus chequeos anteriores: CPU o SoC están más de 12 °C por encima de la mediana de los últimos chequeos (al menos cinco). Se compara con tus propias mediciones, no es un límite fijo. Un juego en marcha, una habitación cálida o una ventilación restringida son motivos posibles; si sigue así en varios chequeos en reposo, mantén libres las rejillas y limpia la consola si el problema persiste. El hallazgo solo cuenta como confirmado tras dos chequeos seguidos.",
+   "confidence_reason": "Se leen la temperatura actual y la mediana de tus propias mediciones anteriores. El umbral de 12 °C es una suposición nuestra, y las mediciones anteriores pueden haberse hecho con otra carga o en otro entorno."
+  },
+  "smp.image_truncated": {
+   "text": "Una imagen .exfat es más pequeña que el sistema de archivos que describe su cabecera (VolumeLength en el sector de arranque): la copia está incompleta, faltan los últimos datos. Causas habituales son una copia interrumpida, una unidad llena o un sistema de archivos con límite de tamaño (p. ej. FAT32 con máx. 4 GiB por archivo). Los juegos que tocan las zonas que faltan no arrancan o se cierran. Copia la imagen de nuevo (mejor a una unidad exFAT) y compara el tamaño con el origen. Medic no modifica la imagen.",
+   "confidence_reason": "Se leen el tamaño del archivo y VolumeLength; la longitud del sistema de archivos está definida en la especificación de exFAT. Que por eso un juego se cierre se deduce y no se observó en la consola de prueba."
+  },
+  "smp.image_empty": {
+   "text": "Una imagen (.exfat, .ffpfs o .ffpfsc) es menor de 512 bytes, así que está vacía o es solo un resto tras una interrupción: no puede contener un sistema de archivos y no se puede montar. Copia o construye la imagen de nuevo; el archivo vacío se puede quitar sin riesgo si es solo un resto (Medic no lo borra).",
+   "confidence_reason": "Se lee el tamaño; un sistema de archivos con seguridad no cabe en menos de 512 bytes. No se observó en la consola de prueba cómo trata ShadowMount+ esos archivos."
+  },
+  "game.eboot_invalid": {
+   "text": "El eboot.bin de una carpeta de juego es inservible: es menor de 64 bytes o un archivo de texto plano (p. ej. una página de error guardada en lugar del archivo). Un eboot.bin válido empieza como ELF o SELF. El juego no puede arrancar así; la carpeta probablemente viene de una descarga o copia fallida. Copia el archivo de nuevo desde el origen. Medic solo comprueba el comienzo del archivo y no descifra ni lee nada más allá.",
+   "confidence_reason": "Se leen el tamaño y los primeros bytes. Que por eso el juego no arranque se deduce del formato de archivo, pero no se observó en la consola de prueba; los formatos desconocidos que no son texto no se notifican a propósito."
+  },
+  "selftest.failed": {
+   "text": "Un autotest falló en la última ejecución (pruebas: test y motivo). En una prueba de lectura («read_error», «short_read») hubo un error al leer un archivo existente: la causa puede ser la unidad, el cable, el puerto o el propio archivo. Repite la prueba una vez; si sigue igual, revisa la unidad en otro puerto o en un PC y copia el archivo de nuevo. Para una prueba de base de datos, mira los hallazgos sobre las bases de datos. En un error de cálculo o de memoria («compute_mismatch», «mem_mismatch») el hardware devolvió un resultado distinto del esperado bajo carga o en la memoria de trabajo: señal seria de un problema de hardware (CPU, memoria, alimentación o refrigeración). Haz antes copia de los datos guardados y repite la prueba otro día. Un autotest superado solo significa «nada llamó la atención», nunca «en buen estado».",
+   "confidence_reason": "El resultado viene de una ejecución de esta app en esta consola y se lee. De ello no se puede determinar la causa de un error de lectura; las posibilidades indicadas son habituales, no demostradas."
+  },
+  "selftest.interrupted": {
+   "text": "El último autotest (iniciado, pruebas) no terminó correctamente: el marcador «en ejecución» sigue en /data/ps5medic/selftest. Encaja con un cuelgue, un reinicio o un corte de corriente durante la prueba, pero también puede significar que la consola se apagó con el interruptor o el botón de encendido. Indicio de problemas con la unidad, la memoria o la alimentación, no una prueba. Ejecuta el autotest de nuevo; así se restablece el marcador.",
+   "confidence_reason": "Se lee el marcador. Interpretarlo como un cuelgue es una deducción: un apagado deliberado o un programa que terminó sin cierre correcto también lo dejan."
+  },
+  "selftest.write_failed": {
+   "text": "Algo salió mal en la prueba de escritura del autotest (pruebas: motivo): o no se pudo escribir el archivo de prueba en /data/ps5medic/selftest («write_error»), o no se pudo releer («read_error»), o los datos releídos diferían de los escritos («verify_mismatch»). Es una señal seria de un problema con el almacenamiento o el sistema de archivos. Primero haz copia de todos los datos guardados y datos importantes (copia por FTP) y luego repite la prueba otro día. Si sigue igual, se sospecha del hardware o del sistema de archivos; Medic no cambia nada en el almacenamiento. Un solo fallo también puede ser una coincidencia (p. ej. almacenamiento lleno durante la prueba).",
+   "confidence_reason": "El resultado se mide en esta consola (se comparan datos escritos y releídos). La relectura puede venir en parte de una caché, nunca se puede descartar del todo un fallo de la propia prueba, y de ello no se puede determinar la causa."
+  },
+  "selftest.thermal": {
+   "text": "En la prueba de calor del autotest la consola llamó la atención bajo una carga corta de CPU (pruebas: motivo): alcanzó el límite de 85 °C o subió demasiado rápido («ceiling», «rise_rate»; entonces se detuvo la prueba), se enfrió despacio tras la carga («slow_cooldown») o el rendimiento de cálculo cayó más de un 10 % bajo carga («throughput_drop», posible throttling). Causas posibles son una ventilación restringida, polvo, una habitación cálida o un problema de refrigeración o de pasta térmica. Mantén libres las rejillas, no empotres la consola y repite la prueba en una habitación fresca; si sigue igual, haz limpiar la consola. Los umbrales son suposiciones nuestras, Sony no indica ninguno.",
+   "confidence_reason": "Se miden temperaturas y rendimiento de cálculo. Los umbrales (85 °C, 15 °C en cinco intervalos de medición, caída del 10 % del rendimiento) son suposiciones nuestras, sin una línea base de esta consola, y el entorno influye mucho en el resultado."
+  },
+  "selftest.net_local": {
+   "text": "En la prueba de red del autotest llamó la atención el enlace entre consola y router (pruebas: motivo): o al menos el 20 % de los intentos de conexión quedó sin respuesta («packet_loss») o el router respondió en promedio solo tras más de 100 ms («slow_gateway»). En tu propia red ambas cosas son inusuales y apuntan a mala recepción o interferencias en Wi-Fi, o a un cable defectuoso, un puerto defectuoso o un router sobrecargado en una conexión por cable. Acércate al router, usa un cable LAN, reinicia el router y repite la prueba. Solo se midió el camino hasta el router, no internet. Los umbrales son suposiciones nuestras.",
+   "confidence_reason": "Se miden tiempo de respuesta y pérdida, pero con pocos intentos (20) y un solo puerto del router. Los umbrales son suposiciones nuestras, y el router puede responder a propósito despacio o nada a los intentos de conexión."
+  },
+  "sys.temp_high": {
+   "text": "La consola está muy caliente ahora mismo (CPU o SoC por encima de 85 °C). Bajo carga no es raro; en reposo apunta a mala ventilación o polvo: mantén libres las rejillas, no empotres la consola y límpiala si el problema persiste. En ShadowMount+ se puede fijar una temperatura objetivo del ventilador más baja ([fan] target_temperature, de 50 a 91 °C; el valor predeterminado de la consola es 91 °C según el desarrollador). El umbral es una suposición nuestra; Sony no indica ningún límite, y esto es una instantánea.",
+   "confidence_reason": "La temperatura se lee de la consola, pero es solo una instantánea. El umbral de 85 °C es una suposición nuestra; Sony no indica ningún límite."
+  },
+  "storage.scanpath_drive_missing": {
+   "text": "Una ruta de escaneo personalizada de config.ini está en una unidad (/mnt/usbN o /mnt/extN) que no está conectada: los juegos de allí no se encuentran. Si [library] remove_missing está activado, ShadowMount+ quita los registros tras el retraso configurado (por defecto: desactivado). Vuelve a conectar la unidad (sin hub USB, otro puerto) o quita la ruta de escaneo."
+  },
+  "kstuff.shellui_patch_failed": {
+   "text": "kstuff notifica en el log del kernel que no pudo poner el hook de trofeos en la interfaz del shell (SceShellUI) («patch_shellui failed», pruebas). En ese caso los usuarios indican que los trofeos no aparecen como aviso ni en la lista; al arrancar el hook funciona primero, y tras cambiar entre apps kstuff reintenta y a veces falla varias veces. Ningún responsable ha contestado, la causa está abierta. Sin trofeos los juegos siguen funcionando. Reiniciar la consola con el jailbreak puesto de nuevo puede lograr que el hook funcione en el siguiente arranque.",
+   "confidence_reason": "La línea está en el log del kernel (leído). Que por eso falten trofeos viene de informes sobre la versión 1.11 en FW 13.x (issues 95 y 106, el autor del 95 no está seguro de la causa); no verificado en esta consola (FW 12.00, kstuff-lite 1.10)."
+  },
+  "appdb.orphan_entry": {
+   "text": "La base de datos del software del sistema (app.db) lista un título cuya carpeta en /user/app o /system_ex/app falta (pruebas: ID de título). Es un icono sin juego: no se puede iniciar y permanece en la biblioteca hasta que se quite la entrada. Causas habituales son una unidad desconectada o apagada desde la que ShadowMount+ había montado el título, una desinstalación interrumpida o carpetas borradas a mano. Primero comprueba si la unidad está conectada y si ShadowMount+ vuelve a encontrar el título; si no, borra el icono en la biblioteca de juegos con el menú de opciones. Medic no modifica la base de datos.",
+   "confidence_reason": "Se leen la entrada y la carpeta que falta. Las causas indicadas son posibilidades habituales, no demostradas; en la consola de prueba todas las entradas coincidían con las carpetas."
+  },
+  "appdb.unregistered_folder": {
+   "text": "En /user/app hay una carpeta de título (PPSA/CUSA) que la base de datos del software del sistema no conoce (pruebas). El juego entonces no aparece en la biblioteca. En un título montado por ShadowMount+ suele significar que el registro falla o sigue en curso (ver los hallazgos sobre «Register failed»); en el resto de una desinstalación la carpeta es un resto. Medic no cambia nada aquí.",
+   "confidence_reason": "Se leen la carpeta y las entradas de la base de datos. De ello no se puede saber por qué falta la entrada; mientras ShadowMount+ registra, el hallazgo puede aparecer brevemente."
+  }
+ },
+ "coverage": {
+  "processes": {
+   "text": "Procesos en ejecución"
+  },
+  "storage": {
+   "text": "Espacio libre de las unidades"
+  },
+  "jailbreak_timing": {
+   "text": "Hora de inicio de la cadena de jailbreak"
+  },
+  "temperatures": {
+   "text": "Temperaturas"
+  },
+  "shadowmount": {
+   "text": "ShadowMount+ (ajustes y log)"
+  },
+  "game_firmware": {
+   "text": "Firmware requerido por los juegos"
+  },
+  "boot_log": {
+   "text": "Historial de arranques"
+  },
+  "error_history": {
+   "text": "Historial de errores"
+  },
+  "savedata_account": {
+   "text": "Cuenta de los datos guardados"
+  },
+  "databases_header": {
+   "text": "Bases de datos (cabecera y tamaño)"
+  },
+  "databases_content": {
+   "text": "Bases de datos (contenido)"
+  },
+  "klog": {
+   "text": "Log del kernel (acumulado desde la última lectura)"
+  },
+  "app_registry": {
+   "text": "Registro de títulos (app.db, solo ID de título y ruta)"
+  }
+ },
+ "metrics": {
+  "cpu_temp": {
+   "text": "Temperatura de la CPU"
+  },
+  "soc_temp": {
+   "text": "Temperatura del SoC"
+  },
+  "data_free_pct": {
+   "text": "Espacio libre en /data"
+  },
+  "unclean_boots_14d": {
+   "text": "Reinicios sin apagado (14 días)"
+  },
+  "error_entries": {
+   "text": "Entradas en el historial de errores"
+  }
+ },
+ "selftests": {
+  "sw.storage.mounts": {
+   "name": "Almacenamiento en /data",
+   "proves_not": "estado del hardware, desgaste"
+  },
+  "hw.sensors.plausible": {
+   "name": "Sensores de temperatura",
+   "proves_not": "rendimiento de refrigeración, ventilador, comportamiento bajo carga"
+  },
+  "sw.db.headers": {
+   "name": "Bases de datos del software del sistema (cabecera y tamaño)",
+   "proves_not": "contenido de las bases de datos (ver la revisión de bases de datos)"
+  },
+  "sw.files.sanity": {
+   "name": "Payloads, imágenes y eboot.bin (cabecera)",
+   "proves_not": "contenido de los archivos, descifrado, si un juego arranca"
+  },
+  "hw.storage.read_throughput": {
+   "name": "Prueba de lectura de una imagen",
+   "proves_not": "velocidad de escritura, desgaste, zonas no leídas; varias ejecuciones pueden leer de la caché"
+  },
+  "sw.net.local": {
+   "name": "Red local (tiempo de respuesta del router)",
+   "proves_not": "internet, velocidad de descarga, intensidad de la señal Wi-Fi, otros dispositivos; solo el enlace entre consola y router, sin enviar datos"
+  },
+  "hw.thermal.short_soak": {
+   "name": "Prueba de calor (carga corta de CPU)",
+   "proves_not": "calor de GPU/memoria, la refrigeración estándar mientras funciona un controlador de ventilador (mantiene la consola fría), la causa (polvo, pasta térmica); en una habitación fresca los problemas quedan ocultos"
+  },
+  "hw.mem.userland_pattern": {
+   "name": "Prueba de patrones de memoria (128 MiB de memoria de trabajo)",
+   "proves_not": "toda la GDDR6, accesos de la GPU, ECC; solo la memoria que recibe un proceso"
+  },
+  "hw.storage.write_verify": {
+   "name": "Prueba de escritura (un archivo de prueba, 256 MiB)",
+   "proves_not": "vida útil restante, desgaste, velocidad más allá de la caché de escritura; la relectura puede venir de la caché"
+  },
+  "hw.pad.buttons": {
+   "name": "Botones del mando (prueba del usuario)",
+   "proves_not": "sticks, gatillos, drift, calidad de radio, capacidad de la batería; solo si llega cada botón"
+  },
+  "hw.display.pattern": {
+   "name": "Patrones de pantalla (prueba del usuario)",
+   "proves_not": "panel, puerto HDMI y cable en detalle, nitidez; el juicio es del usuario (por defecto: «no sé»)"
+  }
+ }
+}
