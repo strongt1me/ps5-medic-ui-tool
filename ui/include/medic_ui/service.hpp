@@ -32,6 +32,7 @@ struct CheckResult {
     bool incomplete = false;                      // keine Regeln geladen oder ein Collector ist ausgefallen: kein "keine Befunde" in Gruen
     std::vector<std::string> resolved;            // Regeln, die die letzte Pruefung noch meldete und die jetzt fehlen
     std::vector<medic::MetricChange> metrics;     // Messwerte mit Veraenderung seit der letzten Pruefung
+    bool history_saved = true;                    // Verlauf und Einzelpruefung konnten geschrieben werden (sonst fehlt diese Pruefung im Verlauf)
 };
 
 // Ein Schritt eines laufenden Selbsttests (siehe selftest.hpp, TestSession).
@@ -101,7 +102,7 @@ public:
     virtual medic::RuleDownloadResult download_rule_update() = 0;
     // Gespeicherte Sprache der Oberflaeche (config.ini, Schluessel language: de en fr it es); leer = keine. set_language speichert sie.
     virtual std::string language() { return {}; }
-    virtual void set_language(const std::string& /*code*/) {}
+    virtual bool set_language(const std::string& /*code*/) { return true; }
     // Update der Fehlercode-Datei (error_codes.json im Update-Ordner), gleiche Pruefungen und gleicher Ablauf wie beim Regel-Update.
     // Standard: es gibt nie ein Angebot. check schreibt nichts; install und rollback schreiben und werden nur nach ausdruecklicher
     // Bestaetigung (Kreuz) aufgerufen.
@@ -187,7 +188,7 @@ public:
     medic::RuleUpdateResult rollback_rule_update() override;
     std::string rule_update_url() override;
     std::string language() override;
-    void set_language(const std::string& code) override;
+    bool set_language(const std::string& code) override;
     medic::RuleDownloadResult download_rule_update() override;
     const medic::ErrorCodeSet& error_codes() override { return error_codes_; }
     CodeContext code_context(const medic::ErrorCode& code) override;

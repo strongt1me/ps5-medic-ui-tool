@@ -48,10 +48,19 @@ Bewusst nicht geändert:
 - Unlesbare `eboot.bin` eines Spiels ohne Backport-Ordner bleibt ein Befund „braucht Backport" (vorsichtig, ein Hinweis zum Nachprüfen); ein leerer Prozess-Snapshot (sysctl-Fehler) wird nicht gesondert behandelt, weil Regeln mit leerem Array ohnehin nicht feuern und Negativ-Regeln dafür Fixtures nutzen.
 - Die UI-Verifikation nach einer Reparatur (`Verify::Fixed`) prüft die Vollständigkeit des Check-ups nicht (bräuchte einen eigenen Text in fünf Sprachen).
 
-Weiterhin offen:
-- Rückgabewerte in `LocalService` (`append_history`, `save_check`, `set_language`, `reload_rules`) und `selftest.cpp` (Budget) werden ignoriert.
-- Aktive `rules.json` wird beim Laden nicht auf ihre Signatur geprüft (Signatur nur bei Installation).
-- Snapshot-Export: Ordner-/Dateinamen, `param.json`, Prozessliste unmaskiert (D12 sagt anderes).
+## Dritte Runde (12. Nov. 2026): Rückgabewerte, Selbsttest-Budget, Export-Maskierung, Host-Tests grün (4685 Prüfungen)
+Behoben:
+- `LocalService::run_checkup`: scheitert `append_history` oder `save_check`, steht `CheckResult.history_saved = false`; die Startseite zeigt dann statt der Regelversion „Der Verlauf konnte nicht gespeichert werden" (Schlüssel `start.history_failed`, fünf Sprachen). Vorher fehlte die Prüfung stillschweigend im Verlauf.
+- Regel- und Fehlercode-Update (`install_*`, `rollback_*`): kann die neue Datei nicht geladen werden, bleibt das Ergebnis `ok`, aber `error = "reload_failed"`; die Update-Seite zeigt „gilt erst nach Neustart" (`update.reload_failed`). Vorher galten stillschweigend noch die alten Regeln.
+- `set_language` liefert `bool`; die UI ignoriert das bewusst (die Sprache gilt dann für die laufende Sitzung).
+- Selbsttest „Schreibtest" (`hw.storage.write_verify`): die Tagesmarke im Budget wird **vor** dem ersten Schreiben gesetzt. Lässt sich die Budgetdatei nicht schreiben, startet der Test nicht (`budget_unwritable`, übersprungen). Wird nichts geschrieben (sofortiger Abbruch/Fehler), wird die Marke wieder zurückgenommen; bricht die Konsole mitten im Test ab, läuft er am selben Tag nicht erneut.
+- Snapshot-Export (D12): `redact_secrets` maskiert jetzt auch MAC-Adressen (`**:**:**:**:**:**`) und IPv4 (`x.x.x.x`, außer Loopback und `0.`; Versionsnummern und Firmware-Strings wie `12.00.00.00` bleiben) und Schlüssel mit `account`, `serial`, `email`, `psnid`. Gespiegelte `param.json`: `titleName`- und Konto-/Seriennummer-Felder werden `***`, `titleId` und Firmware-Felder bleiben; nicht lesbares JSON wird gar nicht kopiert. Tests für alles.
+
+Bewusst nicht geändert:
+- Signaturprüfung der aktiven `rules.json` beim Laden: nach der Installation liegt keine `.sig` mehr neben der Datei (sie wandert in `rules_update/done/`), und Datei-Updates (SHA-256) sowie von Hand kopierte Regeln haben gar keine. Eine Prüfung beim Laden würde diese gültigen Wege brechen. Die Datei liegt im eigenen Ordner `/data/ps5medic/knowledge/`; wer dort schreiben kann (FTP), hat ohnehin volle Kontrolle. Geschützt ist der Transportweg (Signatur Pflicht beim Netz-Download), und das Laden prüft Form, Regex-Güte und Textrichtlinie.
+- Ordner- und Dateinamen im Export-Spiegel bleiben, weil die Diagnose am PC genau diese Namen auswertet (Payloads, Spielordner, Backport-Ordner); wer den Export weitergibt, sollte ihn vorher ansehen. Prozessnamen bleiben aus demselben Grund.
+
+Weiterhin offen: nichts aus den drei Prüfrunden, was sich ohne Konsole beheben ließe; offen bleibt, was in „Offen, braucht die Konsole“ steht, sowie die zweite und dritte Runde auf der Konsole (zweite ist seit dem Check-up am 12. Nov. dort geprüft: Start, Check-up und Beenden ohne Fehler im Log, Reparatur nicht).
 
 ## Firmware 4.00 bis 14.10
 Belegt: Das SDK 0.45 deckt alle 48 Firmwares von 4.00 bis 14.10 im Startcode ab; alle 292 Importe von `ps5medicui.elf` und die der Payloads sind in 33 entschlüsselten Firmware-Dumps (4.00 bis 12.70) vorhanden; Pfad-Zeichenketten (`priv/vshlog`, `priv/mms/app.db` …) in der SceShellCore aller geprüften Firmwares. Nicht belegt: Verhalten auf jeder Firmware außer 12.00, Layouts (`kinfo_proc`, App-Info), Firmwares ohne Dump (4.02, 5.00, 7.00, 8.00, 9.20, 10.00, 11.20, 12.40, 12.60, 13.x, 14.x). FW 5.02 meldet über `kernel_get_fw_version()` 5.10.

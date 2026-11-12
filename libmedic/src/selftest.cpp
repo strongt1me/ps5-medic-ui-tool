@@ -676,11 +676,18 @@ public:
                 }
                 budget_total_ = b.value("total_bytes", std::uint64_t{0});
                 budget_runs_ = b.value("runs", 0);
+                prior_date_ = b.value("last_date", std::string());
                 if (budget_total_ + 2 * size_ > kWriteBudgetBytes) {
                     finish(TestStatus::Skipped, "budget_used");
                     return;
                 }
             }
+        }
+        // Tagesmarke VOR dem ersten Schreiben setzen: laesst sich das Budget nicht schreiben, laeuft der Test gar nicht (sonst waere die
+        // Tagesgrenze wirkungslos), und bricht die Konsole mitten im Test ab, laeuft er am selben Tag nicht noch einmal.
+        if (!write_budget(today_, budget_runs_, budget_total_)) {
+            finish(TestStatus::Skipped, "budget_unwritable");
+            return;
         }
         blocks_ = size_ / kWriteBlock;
     }
@@ -733,16 +740,21 @@ private:
         if (write_secs_ > 0 && written_ >= (64u << 20)) result_.measurements.push_back({"write_mb_per_s", static_cast<double>(written_) / 1e6 / write_secs_, "MB/s"});
         result_.measurements.push_back({"seconds", secs, "s"});
         // Budget fortschreiben, sobald wirklich geschrieben wurde (auch bei Abbruch oder Fehler: so wiederholt kein Lauf ungebremst)
-        if (written_ > 0)
-            p_.fs_rw()->write_file(kSelftestBudgetPath, json({{"last_date", today_}, {"runs", budget_runs_ + 1}, {"total_bytes", budget_total_ + written_}}).dump() + "\n");
+        // Ist nichts geschrieben worden (sofort abgebrochen), wird die Tagesmarke vom Anfang wieder zurueckgenommen.
+        if (written_ > 0) write_budget(today_, budget_runs_ + 1, budget_total_ + written_);
+        else write_budget(prior_date_, budget_runs_, budget_total_);
         finish(st, reason);
+    }
+
+    bool write_budget(const std::string& date, int runs, std::uint64_t total) {
+        return p_.fs_rw()->write_file(kSelftestBudgetPath, json({{"last_date", date}, {"runs", runs}, {"total_bytes", total}}).dump() + "\n");
     }
 
     Platform& p_;
     std::uint64_t size_, blocks_ = 0, index_ = 0, written_ = 0, budget_total_ = 0, bad_blocks_ = 0;
     int budget_runs_ = 0, phase_ = 0;
     double write_secs_ = 0, first_bad_ = -1;
-    std::string today_;
+    std::string today_, prior_date_;
 };
 
 // ---- Standardtest: lokales Netz (nur das Gateway) -------------------------------------------------------------------------------------

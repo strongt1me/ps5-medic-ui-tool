@@ -769,7 +769,7 @@ void App::handle(Button b) {
                 int i = 0;
                 while (i < n && kAllLangs[i] != lang_) ++i;
                 lang_ = kAllLangs[(i + (b == Button::Left ? n - 1 : 1)) % n];
-                svc_.set_language(lang_code(lang_));
+                (void)svc_.set_language(lang_code(lang_));  // scheitert das Speichern, gilt die Sprache nur fuer diese Sitzung
             }
             else if (settings_sel_ == 1 && b == Button::Cross) open_rules_update();
             else if (b == Button::Circle) screen_ = Screen::Start;
@@ -1359,7 +1359,8 @@ void App::draw_start(Canvas& c) const {
         if (const int untested = static_cast<int>(std::count_if(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; })))
             small().draw(c, tx, 740, S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), kDim);
     }
-    if (has_result_ && !result_.rules_version.empty()) small().draw(c, tx, 784, S.fmt("start.rules", {{"v", result_.rules_version}}), kDim);
+    if (has_result_ && !result_.history_saved) small().draw(c, tx, 784, S("start.history_failed"), kWarn, tw);  // der seltene Fehlerfall ersetzt die Regelversion
+    else if (has_result_ && !result_.rules_version.empty()) small().draw(c, tx, 784, S.fmt("start.rules", {{"v", result_.rules_version}}), kDim);
 
     draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}, {PadGlyph::Circle, S("common.quit")}});
 }
@@ -2189,6 +2190,7 @@ void App::draw_rules_update(Canvas& c) const {
                 if (update_result_.ok) {
                     paragraph(body(), S.fmt(update_was_rollback_ ? "update.rolled_back" : "update.installed", {{"v", update_result_.new_version}}), kOk, 2);
                     paragraph(small(), S("update.next"), kDim, 2);
+                    if (update_result_.error == "reload_failed") paragraph(small(), S("update.reload_failed"), kWarn, 3);
                     if (!update_result_.backup_path.empty()) paragraph(small(), S.fmt("update.backup_path", {{"path", update_result_.backup_path}}), kDim, 3);
                 } else {
                     paragraph(body(), S("update.failed"), kWarn, 2);
@@ -2199,6 +2201,7 @@ void App::draw_rules_update(Canvas& c) const {
                 if (codes_result_.ok) {
                     paragraph(body(), S.fmt(update_was_rollback_ ? "update.codes_rolled_back" : "update.codes_installed", {{"v", codes_result_.new_version}}), kOk, 2);
                     if (!codes_result_.backup_path.empty()) paragraph(small(), S.fmt("update.backup_path", {{"path", codes_result_.backup_path}}), kDim, 3);
+                    if (codes_result_.error == "reload_failed") paragraph(small(), S("update.reload_failed"), kWarn, 3);
                 } else {
                     paragraph(body(), S("update.codes_failed"), kWarn, 2);
                     paragraph(small(), reason_text(codes_result_.error), kDim, 4);

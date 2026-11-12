@@ -88,7 +88,7 @@ CheckResult LocalService::run_check() {
                                     }),
                      r.resolved.end());
     r.metrics = medic::metric_changes(rules_, metrics, hist);
-    medic::append_history(p_, medic::make_history_run(now, rules_.db_version, r.fw, r.findings, metrics));
+    bool saved = medic::append_history(p_, medic::make_history_run(now, rules_.db_version, r.fw, r.findings, metrics));
     {  // jeder Check-up als eigene Datei, damit man ihn spaeter einzeln ansehen und vergleichen kann
         medic::StoredCheck sc;
         sc.ts = now;
@@ -99,8 +99,9 @@ CheckResult LocalService::run_check() {
         sc.coverage = r.coverage;
         sc.resolved = r.resolved;
         sc.metrics = r.metrics;
-        medic::save_check(p_, sc);
+        saved = medic::save_check(p_, sc) && saved;
     }
+    r.history_saved = saved;
     last_findings_ = r.findings;
     last_resolved_ = r.resolved;
     last_metrics_ = r.metrics;
@@ -167,7 +168,7 @@ medic::RuleUpdateResult LocalService::install_rule_update() {
     medic::RuleUpdateResult r = medic::install_rule_update(p_, rules_.db_version, clock_(), keys_ ? &*keys_ : nullptr);
     if (r.ok) {
         rules_before_install_ = before;
-        reload_rules();
+        if (!reload_rules()) r.error = "reload_failed";  // installiert, gilt aber erst nach einem Neustart
     }
     return r;
 }
@@ -175,7 +176,9 @@ medic::RuleUpdateResult LocalService::install_rule_update() {
 medic::RuleUpdateResult LocalService::rollback_rule_update() {
     medic::RuleUpdateResult r = medic::rollback_rule_update(p_, clock_());
     if (!r.ok) return r;
-    if (!r.backup_path.empty()) reload_rules();                     // die bisherige Datei ist wieder aktiv
+    if (!r.backup_path.empty()) {                                   // die bisherige Datei ist wieder aktiv
+        if (!reload_rules()) r.error = "reload_failed";
+    }
     else if (rules_before_install_) rules_ = *rules_before_install_;  // es galten die mitgelieferten Regeln
     return r;
 }
@@ -273,7 +276,7 @@ medic::RuleUpdateResult LocalService::install_codes_update() {
     medic::RuleUpdateResult r = medic::install_rule_update(p_, error_codes_.db_version, clock_(), keys_ ? &*keys_ : nullptr, medic::KnowledgeKind::ErrorCodes);
     if (r.ok) {
         codes_before_install_ = before;
-        reload_error_codes();
+        if (!reload_error_codes()) r.error = "reload_failed";
     }
     return r;
 }
@@ -281,7 +284,9 @@ medic::RuleUpdateResult LocalService::install_codes_update() {
 medic::RuleUpdateResult LocalService::rollback_codes_update() {
     medic::RuleUpdateResult r = medic::rollback_rule_update(p_, clock_(), medic::KnowledgeKind::ErrorCodes);
     if (!r.ok) return r;
-    if (!r.backup_path.empty()) reload_error_codes();                      // die bisherige Datei ist wieder aktiv
+    if (!r.backup_path.empty()) {                                          // die bisherige Datei ist wieder aktiv
+        if (!reload_error_codes()) r.error = "reload_failed";
+    }
     else if (codes_before_install_) error_codes_ = *codes_before_install_;  // es galt die mitgelieferte Datei
     return r;
 }
@@ -290,7 +295,7 @@ std::string LocalService::rule_update_url() { return medic::configured_update_ur
 
 std::string LocalService::language() { return medic::configured_value(p_.fs(), "language"); }
 
-void LocalService::set_language(const std::string& code) { medic::set_config_value(p_, "language", code); }
+bool LocalService::set_language(const std::string& code) { return medic::set_config_value(p_, "language", code); }
 
 medic::RuleDownloadResult LocalService::download_rule_update() {
     if (!http_) {

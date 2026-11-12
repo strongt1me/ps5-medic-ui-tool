@@ -13,6 +13,7 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <regex>
 #include <map>
 #include <set>
@@ -59,6 +60,56 @@ std::string lower_str(std::string s) {
 
 // Schluessel mit Zugangsdaten (SM+ speichert SMB-Passwoerter im Klartext in config.ini, profiles.ini, config-v1-backup/) werden
 // vor dem Export geschwaerzt: ein Snapshot wird zum Teilen gedacht.
+bool is_hex(char c) { return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }
+bool is_digit(char c) { return c >= '0' && c <= '9'; }
+
+// MAC-Adressen (xx:xx:xx:xx:xx:xx) und IPv4-Adressen im Text unkenntlich machen (D12). Loopback und 0.x bleiben, weil sie nichts verraten.
+std::string mask_addresses(const std::string& line) {
+    std::string out;
+    std::size_t i = 0;
+    const std::size_t n = line.size();
+    auto word_before = [&](std::size_t at) { return at > 0 && (std::isalnum(static_cast<unsigned char>(line[at - 1])) || line[at - 1] == '.'); };
+    while (i < n) {
+        // MAC: 6 Paare, getrennt durch ':' oder '-'
+        if (i + 17 <= n && is_hex(line[i]) && !word_before(i)) {
+            bool mac = true;
+            for (std::size_t k = 0; k < 17 && mac; ++k)
+                mac = (k % 3 == 2) ? (line[i + k] == ':' || line[i + k] == '-') : is_hex(line[i + k]);
+            if (mac && (i + 17 == n || !std::isalnum(static_cast<unsigned char>(line[i + 17])))) {
+                out += "**:**:**:**:**:**";
+                i += 17;
+                continue;
+            }
+        }
+        // IPv4: vier Zahlen 0..255 ohne fuehrende Null, durch Punkte getrennt
+        if (is_digit(line[i]) && !word_before(i)) {
+            std::size_t j = i;
+            int parts = 0, first = -1;
+            bool ok = true;
+            while (parts < 4 && ok) {
+                std::size_t d = j;
+                int v = 0;
+                while (d < n && is_digit(line[d]) && d - j < 3) v = v * 10 + (line[d++] - '0');
+                if (d == j || v > 255 || (line[j] == '0' && d - j > 1)) { ok = false; break; }
+                if (parts == 0) first = v;
+                ++parts;
+                j = d;
+                if (parts < 4) {
+                    if (j < n && line[j] == '.') ++j;
+                    else ok = false;
+                }
+            }
+            if (ok && parts == 4 && (j == n || (!std::isalnum(static_cast<unsigned char>(line[j])) && line[j] != '.')) && first != 127 && first != 0) {
+                out += "x.x.x.x";
+                i = j;
+                continue;
+            }
+        }
+        out += line[i++];
+    }
+    return out;
+}
+
 std::string redact_secrets(const std::string& text) {
     std::string out;
     std::size_t pos = 0;
@@ -70,7 +121,7 @@ std::string redact_secrets(const std::string& text) {
         const bool comment = first != std::string::npos && (line[first] == '#' || line[first] == ';');
         if (eq != std::string::npos && !comment) {
             const std::string key = lower_str(line.substr(0, eq));
-            for (const char* secret : {"password", "passwd", "secret", "token", "pass", "pwd", "username", "login", "credential", "auth"})
+            for (const char* secret : {"password", "passwd", "secret", "token", "pass", "pwd", "username", "login", "credential", "auth", "account", "serial", "email", "psnid"})
                 if (key.find(secret) != std::string::npos) {
                     const bool cr = !line.empty() && line.back() == '\r';
                     line = line.substr(0, eq + 1) + " ***" + (cr ? "\r" : "");
@@ -85,11 +136,35 @@ std::string redact_secrets(const std::string& text) {
             const std::size_t amp = line.rfind('@', stop);
             if (amp != std::string::npos && amp >= start && amp < stop) line.replace(start, amp - start, "***");
         }
-        out += line;
+        out += mask_addresses(line);
         if (nl != std::string::npos) out += '\n';
         pos = nl == std::string::npos ? text.size() : nl + 1;
     }
     return out;
+}
+
+// param.json eines Spielordners: Titelname(n), Konto- und Seriennummern-Felder maskieren; die Pruefung braucht titleId und die Firmware-Felder.
+// Nicht lesbares JSON wird gar nicht kopiert (leer ist sicherer als roh).
+bool mask_param_json(const std::string& text, std::string& out) {
+    json j = json::parse(text, nullptr, false);
+    if (!j.is_object()) return false;
+    std::function<void(json&)> walk = [&](json& v) {
+        if (v.is_object()) {
+            for (auto it = v.begin(); it != v.end(); ++it) {
+                const std::string key = lower_str(it.key());
+                if (it.value().is_string() && (key.find("titlename") != std::string::npos || key.find("account") != std::string::npos || key.find("serial") != std::string::npos ||
+                                               key.find("email") != std::string::npos || key.find("psnid") != std::string::npos))
+                    it.value() = "***";
+                else
+                    walk(it.value());
+            }
+        } else if (v.is_array()) {
+            for (auto& e : v) walk(e);
+        }
+    };
+    walk(j);
+    out = j.dump();
+    return true;
 }
 
 // Ersatz fuer eine exportierte ELF-Datei, der beim Pruefen am PC dasselbe Ergebnis liefert wie das Original auf der Konsole:
@@ -260,7 +335,8 @@ public:
                 const std::string param = join_path(path, "sce_sys/param.json");
                 if (fs_.exists(param)) {  // Spielordner: nur param.json
                     std::string text;
-                    if (fs_.read_file(param, text) && text.size() <= (64u << 10)) write(param, text);
+                    std::string masked;
+                    if (fs_.read_file(param, text) && text.size() <= (64u << 10) && mask_param_json(text, masked)) write(param, masked);
                     else mkdir(join_path(path, "sce_sys"));
                 } else if (level < kMaxLevel) {
                     mirror(path, level + 1);

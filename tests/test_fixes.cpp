@@ -801,7 +801,7 @@ void stack_tests() {
         const std::string cfg = slurp(dest / "fs/data/shadowmount/config.ini"), prof = slurp(dest / "fs/data/shadowmount/profiles.ini");
         CHECK(cfg.find("geheim123") == std::string::npos && cfg.find("auch") == std::string::npos && prof.find("s3") == std::string::npos, "Export: Passwoerter geschwaerzt");
         CHECK(cfg.find("password = ***") != std::string::npos || cfg.find("password=***") != std::string::npos || cfg.find("password= ***") != std::string::npos, "Export: Schluessel bleibt, Wert ist ***");
-        CHECK(cfg.find("host = 192.0.2.1") != std::string::npos && cfg.find("# password = kommentar") != std::string::npos, "Export: uebrige Zeilen und Kommentare unveraendert");
+        CHECK(cfg.find("host = x.x.x.x") != std::string::npos && cfg.find("192.0.2.1") == std::string::npos && cfg.find("# password = kommentar") != std::string::npos, "Export: IP-Adresse maskiert, uebrige Zeilen und Kommentare unveraendert");
     }
     // Ein Symlink als Zwischenordner fuehrt Schreiben nicht aus den erlaubten Ordnern hinaus (ab der dritten Pfadstufe)
     {
@@ -831,8 +831,39 @@ void stack_tests() {
         CHECK(er.ok, "Export Zugangsdaten 2: ok (" + er.error + ")");
         const std::string cfg = slurp(dest / "fs/data/shadowmount/config.ini"), log = slurp(dest / "fs/data/shadowmount/debug.log");
         CHECK(cfg.find("alice") == std::string::npos && cfg.find("p1") == std::string::npos && cfg.find("l1") == std::string::npos, "Export: Benutzername, pwd und login geschwaerzt");
-        CHECK(log.find("bob") == std::string::npos && log.find("topsecret") == std::string::npos && log.find("smb://***@192.0.2.5/share ok") != std::string::npos, "Export: smb-Adresse im Log ohne Benutzer und Passwort");
+        CHECK(log.find("bob") == std::string::npos && log.find("topsecret") == std::string::npos && log.find("smb://***@x.x.x.x/share ok") != std::string::npos, "Export: smb-Adresse im Log ohne Benutzer, Passwort und IP");
         CHECK(log.find("zweite Zeile ohne Adresse") != std::string::npos && log.find("http://example.invalid/pfad@x") != std::string::npos, "Export: Zeilen ohne Zugangsdaten bleiben");
+    }
+    // MAC, IPv4 und Konto-Felder im Export maskiert; Loopback, Versionsnummern und Firmware-Strings bleiben
+    {
+        TempCopy tmp("smp2_neg_same_names");
+        auto p = make_snapshot_platform(tmp.dir.string(), true);
+        p->fs_rw()->write_file("/data/shadowmount/config.ini", "[config]\nversion = 2\nmac = aa:bb:cc:dd:ee:01\nAccountId = 1234567890\nserial_no = S9\n");
+        p->fs_rw()->write_file("/data/shadowmount/debug.log", "link 00-11-22-33-44-55 up, ip 10.1.2.3 gw 192.168.1.1\nlokal 127.0.0.1 und 0.0.0.0 bleiben\nSM+ 1.7.0 fw 12.00.00.00 ver 1.2.3.4x\n");
+        const fs::path dest = tmp.dir / "export";
+        ExportResult er = export_snapshot(*p, collect_all(*p), dest.string(), "20261108T160000Z");
+        CHECK(er.ok, "Export Adressen: ok (" + er.error + ")");
+        const std::string cfg = slurp(dest / "fs/data/shadowmount/config.ini"), log = slurp(dest / "fs/data/shadowmount/debug.log");
+        CHECK(cfg.find("1234567890") == std::string::npos && cfg.find("S9") == std::string::npos && cfg.find("aa:bb") == std::string::npos, "Export: Konto-ID, Seriennummer und MAC im Config geschwaerzt");
+        CHECK(log.find("00-11-22") == std::string::npos && log.find("10.1.2.3") == std::string::npos && log.find("192.168.1.1") == std::string::npos && log.find("**:**:**:**:**:** up, ip x.x.x.x gw x.x.x.x") != std::string::npos,
+              "Export: MAC und IPv4 im Log maskiert");
+        CHECK(log.find("127.0.0.1 und 0.0.0.0 bleiben") != std::string::npos && log.find("SM+ 1.7.0 fw 12.00.00.00 ver 1.2.3.4x") != std::string::npos, "Export: Loopback, Versionen und Firmware-Strings bleiben");
+    }
+    // param.json eines Spielordners: Titelname und Konto-Felder maskiert, titleId und Firmware-Felder bleiben; kaputtes JSON wird nicht roh kopiert
+    {
+        TempCopy tmp("smp2_neg_same_names");
+        auto p = make_snapshot_platform(tmp.dir.string(), true);
+        CHECK(p->fs_rw()->make_dirs("/data/homebrew/PPSA99001/sce_sys") && p->fs_rw()->make_dirs("/data/homebrew/PPSA99002/sce_sys"), "param-Test: Ordner angelegt");
+        CHECK(p->fs_rw()->write_file("/data/homebrew/PPSA99001/sce_sys/param.json",
+                                     R"({"titleId":"PPSA99001","requiredSystemSoftwareVersion":"0x0900000000000000","localizedParameters":{"defaultLanguage":"en-US","en-US":{"titleName":"Geheimes Spiel"}},"accountId":"abc"})"),
+              "param-Test: param.json geschrieben");
+        CHECK(p->fs_rw()->write_file("/data/homebrew/PPSA99002/sce_sys/param.json", "{kaputt Geheimtitel"), "param-Test: kaputte param.json geschrieben");
+        const fs::path dest = tmp.dir / "export";
+        ExportResult er = export_snapshot(*p, collect_all(*p), dest.string(), "20261108T160000Z");
+        CHECK(er.ok, "Export param.json: ok (" + er.error + ")");
+        const std::string good = slurp(dest / "fs/data/homebrew/PPSA99001/sce_sys/param.json"), bad = slurp(dest / "fs/data/homebrew/PPSA99002/sce_sys/param.json");
+        CHECK(good.find("Geheimes Spiel") == std::string::npos && good.find("abc") == std::string::npos && good.find("PPSA99001") != std::string::npos && good.find("0x0900000000000000") != std::string::npos, "Export: param.json ohne Titelname und Konto, mit titleId und Firmware");
+        CHECK(bad.find("Geheimtitel") == std::string::npos, "Export: kaputte param.json wird nicht roh kopiert");
     }
     // Quarantaene der Duplikate: ".duplicates" wird von SM+ nicht gescannt (Punkt-Namen), "_duplicates" schon
     {

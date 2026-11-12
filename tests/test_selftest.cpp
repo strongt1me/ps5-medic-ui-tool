@@ -73,9 +73,10 @@ struct ScriptedSys final : ISystemInfo {
 struct ScriptedRw final : IFileSystemRW {
     IFileSystemRW* inner = nullptr;
     bool fail_write = false;
+    bool fail_write_file = false;  // write_file scheitert (Budgetdatei)
     std::uint64_t corrupt_offset = ~0ull;  // Block, in dem ein Byte verfaelscht wird
     int write_calls = 0;
-    bool write_file(const std::string& p, const std::string& c) override { return inner->write_file(p, c); }
+    bool write_file(const std::string& p, const std::string& c) override { return fail_write_file ? false : inner->write_file(p, c); }
     bool rename(const std::string& a, const std::string& b) override { return inner->rename(a, b); }
     bool make_dirs(const std::string& p) override { return inner->make_dirs(p); }
     bool remove_empty_dir(const std::string& p) override { return inner->remove_empty_dir(p); }
@@ -342,7 +343,18 @@ void selftest_tests() {
         ScriptedPlatform spe(make_snapshot_platform(e.dir.string(), true), true);
         spe.rw_.fail_write = true;
         auto werr = run("hw.storage.write_verify", mount, spe, ctx);
-        CHECK(werr.status == TestStatus::Failed && werr.reason == "write_error" && !fs::exists(e.real(kSelftestBudgetPath)), "Schreibtest: Schreibfehler = failed, ohne Budgeteintrag (nichts geschrieben)");
+        {
+            // nichts geschrieben: die Tagesmarke vom Testbeginn wird zurueckgenommen, es ist kein Budget verbraucht
+            const std::string bt = fs::exists(e.real(kSelftestBudgetPath)) ? slurp(e.real(kSelftestBudgetPath)) : std::string("{}");
+            const json bj = json::parse(bt, nullptr, false);
+            CHECK(werr.status == TestStatus::Failed && werr.reason == "write_error" && bj.is_object() && bj.value("last_date", std::string()) != "20261111" && bj.value("total_bytes", std::uint64_t{0}) == 0,
+                  "Schreibtest: Schreibfehler = failed, kein Budget verbraucht und keine Tagesmarke (nichts geschrieben)");
+        }
+        Sandbox nb;
+        ScriptedPlatform spnb(make_snapshot_platform(nb.dir.string(), true), true);
+        spnb.rw_.fail_write_file = true;
+        auto nbr = run("hw.storage.write_verify", mount, spnb, ctx);
+        CHECK(nbr.status == TestStatus::Skipped && nbr.reason == "budget_unwritable" && spnb.rw_.write_calls == 0, "Schreibtest: Budget nicht schreibbar = skipped (budget_unwritable), es wird nichts geschrieben");
         Sandbox a;
         ScriptedPlatform spa(make_snapshot_platform(a.dir.string(), true), true);
         int n = 0;
