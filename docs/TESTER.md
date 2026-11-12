@@ -18,6 +18,7 @@ Ein Tester braucht nichts zu reparieren. Ein Check-up und der Bericht genügen.
 ## So geht's
 
 1. Release herunterladen und die beiden Ordner `PS5MEDIC` und `FAKE42007` per FTP nach `/data/homebrew/` kopieren (siehe README).
+   Oder ohne FTP: `ps5medic-launcher.elf` aus dem Release an den ELF-Lader (Port 9021) senden, er schreibt beide Ordner selbst.
 2. ShadowMount+ legt innerhalb von Sekunden die Kachel **PS5 Medic** unter „Medien“ an. Ein Druck darauf startet die App; sie sendet beim Start ihren Dienst (`ps5medicservice.elf`) selbst an den ELF-Lader, der dafür laufen muss (Port 9021). Weder websrv noch ein Launcher ist nötig.
 3. **✕** auf „Check-up starten".
 4. **□** in der Befundliste: legt den Bericht ab und zeigt den QR-Code. Die Datei liegt unter `/data/ps5medic/reports/`.
