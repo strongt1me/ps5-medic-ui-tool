@@ -13,5 +13,7 @@ bool decode_image(const unsigned char* data, std::size_t size, Canvas& out);
 
 // Das eingebettete Startbild (1920x1080) in `out` (muss 1920x1080 sein). false, wenn keins eingebettet ist oder es sich nicht lesen laesst.
 bool load_splash(Canvas& out);
+// Das eingebettete Hintergrundbild (ui/assets/background.jpg, 1920x1080) in `out` (muss 1920x1080 sein). false, wenn keins eingebettet ist.
+bool load_background(Canvas& out);
 
 }  // namespace medic::ui

@@ -35,6 +35,8 @@ public:
 
     // Startbild: wird einige Sekunden gezeigt (jede Taste ueberspringt es), danach der Startbildschirm.
     void show_splash(const Canvas& image);
+    // Hintergrundbild fuer alle Bildschirme (wird abgedunkelt, damit Text lesbar bleibt); ohne Bild gilt der einfache Verlauf.
+    void set_background(const Canvas& image);
 
     Screen screen() const { return screen_; }
     Lang lang() const { return lang_; }
@@ -115,6 +117,7 @@ private:
     mutable std::unique_ptr<Canvas> bg_;  // Hintergrund (Verlauf, Lichtflecken), einmal gezeichnet
     Lang lang_;
     std::unique_ptr<Canvas> splash_;
+    std::unique_ptr<Canvas> bgimage_;
     int splash_until_ = 0;
     Screen screen_ = Screen::Start;
     int tick_ = 0;

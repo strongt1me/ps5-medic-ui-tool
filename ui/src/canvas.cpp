@@ -151,7 +151,7 @@ void Canvas::draw_pad_glyph(PadGlyph g, int cx, int cy, int size, Color c) {
         float ax, ay, bx, by;
     };
     const float s = static_cast<float>(size), fx = static_cast<float>(cx), fy = static_cast<float>(cy);
-    const float half = std::max(1.4f, 0.075f * s);  // halbe Strichstaerke
+    float half = std::max(1.4f, 0.075f * s);  // halbe Strichstaerke
     std::vector<Seg> segs;
     bool circle = false;
     switch (g) {
@@ -183,11 +183,43 @@ void Canvas::draw_pad_glyph(PadGlyph g, int cx, int cy, int size, Color c) {
                     {fx + 0.14f * s, fy - k, fx + 0.34f * s, fy}, {fx + 0.34f * s, fy, fx + 0.14f * s, fy + k}};
             break;
         }
-        case PadGlyph::Shoulders: {  // "L R": die beiden Schultertasten
-            const float h = 0.26f * s, lx = fx - 0.40f * s, lw = 0.26f * s, rx = fx + 0.14f * s, rw = 0.26f * s;
-            segs = {{lx, fy - h, lx, fy + h}, {lx, fy + h, lx + lw, fy + h},                                          // L
-                    {rx, fy - h, rx, fy + h}, {rx, fy - h, rx + rw, fy - h}, {rx + rw, fy - h, rx + rw, fy},          // R: Stamm, Bogen oben
-                    {rx + rw, fy, rx, fy}, {rx + 0.08f * s, fy, rx + rw, fy + h}};                                   // R: Bogen unten, Bein
+        case PadGlyph::Shoulders: {  // zwei Tasten-Plaettchen mit "L" und "R" (wie die Schultertasten des Controllers), feinere Striche als die Formen
+            half = std::max(1.2f, 0.045f * s);
+            auto line = [&](float ax, float ay, float bx, float by) { segs.push_back({ax, ay, bx, by}); };
+            auto arc = [&](float acx, float acy, float r, float a0, float a1) {  // Winkel in Grad, 0 = rechts, 90 = unten
+                const int n = 7;
+                float px = acx + r * std::cos(a0 * 3.14159265f / 180.0f), py = acy + r * std::sin(a0 * 3.14159265f / 180.0f);
+                for (int i = 1; i <= n; ++i) {
+                    const float a = (a0 + (a1 - a0) * static_cast<float>(i) / static_cast<float>(n)) * 3.14159265f / 180.0f;
+                    const float qx = acx + r * std::cos(a), qy = acy + r * std::sin(a);
+                    line(px, py, qx, qy);
+                    px = qx;
+                    py = qy;
+                }
+            };
+            auto pill = [&](float x0, float x1) {  // abgerundetes Rechteck
+                const float y0 = fy - 0.30f * s, y1 = fy + 0.30f * s, r = 0.13f * s;
+                line(x0 + r, y0, x1 - r, y0);
+                line(x1, y0 + r, x1, y1 - r);
+                line(x1 - r, y1, x0 + r, y1);
+                line(x0, y1 - r, x0, y0 + r);
+                arc(x1 - r, y0 + r, r, 270, 360);
+                arc(x1 - r, y1 - r, r, 0, 90);
+                arc(x0 + r, y1 - r, r, 90, 180);
+                arc(x0 + r, y0 + r, r, 180, 270);
+            };
+            const float pl0 = fx - 0.52f * s, pl1 = fx - 0.13f * s, pr0 = fx + 0.13f * s, pr1 = fx + 0.52f * s;  // deutliche Luecke zwischen den Plaettchen
+            pill(pl0, pl1);
+            pill(pr0, pr1);
+            const float lh = 0.15f * s, lw = 0.09f * s;  // halbe Buchstabenhoehe, halbe Buchstabenbreite
+            const float lcx = (pl0 + pl1) / 2.0f, rcx = (pr0 + pr1) / 2.0f;
+            line(lcx - lw, fy - lh, lcx - lw, fy + lh);  // L
+            line(lcx - lw, fy + lh, lcx + lw, fy + lh);
+            line(rcx - lw, fy - lh, rcx - lw, fy + lh);  // R: Stamm, Bogen, Bein
+            line(rcx - lw, fy - lh, rcx + lw * 0.2f, fy - lh);
+            arc(rcx + lw * 0.2f, fy - lh + lh * 0.5f, lh * 0.5f, 270, 450);
+            line(rcx + lw * 0.2f, fy, rcx - lw, fy);
+            line(rcx - lw * 0.1f, fy, rcx + lw, fy + lh);
             break;
         }
     }

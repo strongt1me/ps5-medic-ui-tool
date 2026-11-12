@@ -233,6 +233,11 @@ int main() {
     const auto http = medic::make_posix_http_client();
     service.set_http_client(http.get());
     App app(service);
+    {  // Hintergrundbild fuer alle Bildschirme (ui/assets/background.jpg, eingebettet)
+        Canvas background(App::kWidth, App::kHeight);
+        if (medic::ui::load_background(background)) app.set_background(background);
+        else trace("Hintergrundbild nicht lesbar");
+    }
     {  // Startbild (ui/assets/splash.jpg, eingebettet); jede Taste ueberspringt es
         Canvas splash(App::kWidth, App::kHeight);
         if (medic::ui::load_splash(splash)) app.show_splash(splash);

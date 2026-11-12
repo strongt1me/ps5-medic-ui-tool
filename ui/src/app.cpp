@@ -139,7 +139,7 @@ std::vector<std::pair<float, float>> ecg_points(float x0, float width, float bas
 }
 
 // Hintergrund: senkrechter Verlauf mit zwei weichen Lichtflecken, mit Raster-Dithering, damit es keine sichtbaren Stufen gibt (8 Bit je Farbe)
-void build_background(Canvas& bg) {
+void build_background(Canvas& bg, const Canvas* image) {
     static const int bayer[4][4] = {{0, 8, 2, 10}, {12, 4, 14, 6}, {3, 11, 1, 9}, {15, 7, 13, 5}};
     struct Glow {
         float cx, cy, r, cr, cg, cb, a;
@@ -159,6 +159,26 @@ void build_background(Canvas& bg) {
                 col[0] += (g.cr - col[0]) * f;
                 col[1] += (g.cg - col[1]) * f;
                 col[2] += (g.cb - col[2]) * f;
+            }
+            if (image) {
+                // Bild unter den einfachen Verlauf mischen: insgesamt abgedunkelt, am oberen Rand (Titelzeile) und links noch etwas mehr, damit
+                // Titel, Beschriftungen und Karten lesbar bleiben; die hellen Kanten der Konsole links werden so zu einem Schimmer.
+                const Color px = image->at(x, y);
+                const float ix = static_cast<float>((px >> 16) & 0xFF), iy = static_cast<float>((px >> 8) & 0xFF), iz = static_cast<float>(px & 0xFF);
+                const float fx = static_cast<float>(x) / static_cast<float>(w - 1);
+                float mix = 0.62f;
+                mix *= 1.0f - 0.45f * std::clamp(1.0f - fx * 2.2f, 0.0f, 1.0f);        // links (Konsole) zurueckhaltender
+                mix *= 1.0f - 0.60f * std::clamp(1.0f - static_cast<float>(y) / 300.0f, 0.0f, 1.0f);  // oben (Titelzeile, Kopf der Listen)
+                mix *= 1.0f - 0.35f * std::clamp((static_cast<float>(y) - static_cast<float>(h - 140)) / 140.0f, 0.0f, 1.0f);  // unten (Hinweisleiste)
+                {  // das Wappen mit dem Kreuz (oben in der Mitte) liegt sonst hinter Titelzeilen und Listenkoepfen
+                    const float ex = (static_cast<float>(x) - 962.0f) / 360.0f, ey = (static_cast<float>(y) - 215.0f) / 250.0f;
+                    const float t = std::clamp(1.0f - std::sqrt(ex * ex + ey * ey), 0.0f, 1.0f);
+                    mix *= 1.0f - 0.80f * t;
+                }
+                const float dim = 0.60f;
+                col[0] += (ix * dim - col[0]) * mix;
+                col[1] += (iy * dim - col[1]) * mix;
+                col[2] += (iz * dim - col[2]) * mix;
             }
             const float d = static_cast<float>(bayer[y & 3][x & 3]) / 16.0f;  // 0 .. 0.94
             auto q = [&](float v) { return static_cast<unsigned>(std::clamp(v + d, 0.0f, 255.0f)); };
@@ -866,6 +886,12 @@ void App::handle(Button b) {
     }
 }
 
+void App::set_background(const Canvas& image) {
+    bgimage_ = std::make_unique<Canvas>(image.width(), image.height());
+    bgimage_->copy_from(image);
+    bg_.reset();  // wird beim naechsten Zeichnen neu gebaut
+}
+
 void App::show_splash(const Canvas& image) {
     splash_ = std::make_unique<Canvas>(image.width(), image.height());
     splash_->copy_from(image);
@@ -914,7 +940,7 @@ void App::update() {
 void App::render(Canvas& c) const {
     if (!bg_ || bg_->width() != c.width() || bg_->height() != c.height()) {  // Hintergrund einmal bauen: Verlauf und zwei weiche Lichtflecken
         bg_ = std::make_unique<Canvas>(c.width(), c.height());
-        build_background(*bg_);
+        build_background(*bg_, bgimage_ && bgimage_->width() == c.width() && bgimage_->height() == c.height() ? bgimage_.get() : nullptr);
     }
     if (screen_ == Screen::Splash && splash_) {
         c.copy_from(*splash_);

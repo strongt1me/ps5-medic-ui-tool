@@ -119,8 +119,8 @@ $(PS5_UI_ELF): $(PS5_UI_OBJS)
 	$(PS5_CXX) $^ -L$(PS5_HOMEBREW)/lib $(PS5_UI_LIBS) -lkernel_sys -o $@
 
 # Startbild: ui/assets/splash.jpg steckt per .incbin im Objekt (docs/PHASE3.md)
-$(PS5_BUILD)/ui/src/splash.o: private PS5_CXXFLAGS += '-DMEDIC_SPLASH_PATH="$(CURDIR)/ui/assets/splash.jpg"'
-$(PS5_BUILD)/ui/src/splash.o: ui/assets/splash.jpg
+$(PS5_BUILD)/ui/src/splash.o: private PS5_CXXFLAGS += '-DMEDIC_SPLASH_PATH="$(CURDIR)/ui/assets/splash.jpg"' '-DMEDIC_BACKGROUND_PATH="$(CURDIR)/ui/assets/background.jpg"'
+$(PS5_BUILD)/ui/src/splash.o: ui/assets/splash.jpg ui/assets/background.jpg
 
 $(PS5_BUILD)/ps5/launcher_main.o: private PS5_CXXFLAGS += -Ithird_party/websrv-hbldr
 $(PS5_BUILD)/ps5/launcher_setup.o: private PS5_CXXFLAGS += -Ithird_party/websrv-hbldr -DMEDIC_TILE_INSTALL '-DMEDIC_TILE_DIR="$(TILE_DIR)"'

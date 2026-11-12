@@ -69,6 +69,9 @@ int main(int argc, char** argv) {
         svc.set_error_codes(medic::load_error_codes_from_file(MEDIC_DEFAULT_ERROR_CODES));
         App app(svc, lang);
         Canvas canvas(App::kWidth, App::kHeight);
+        Canvas backdrop(App::kWidth, App::kHeight);
+        const bool has_backdrop = load_background(backdrop);
+        if (has_backdrop) app.set_background(backdrop);
         const std::filesystem::path out = argv[2];
         std::filesystem::create_directories(out);
         int shots = 0;
@@ -154,6 +157,7 @@ int main(int argc, char** argv) {
         shot("16_error_code_storage_live");
         {  // Selbsttest: Liste, Hinweis, Lauf der Schnelltests, Ergebnis (frische Anwendung, die Vorschau-Plattform ist nur lesend)
             App st(svc, lang);
+            if (has_backdrop) st.set_background(backdrop);
             auto png = [&](const char* name) {
                 st.render(canvas);
                 if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
@@ -177,6 +181,7 @@ int main(int argc, char** argv) {
         }
         {  // Pro Spiel: Liste, Einzelansicht, Befund aus der Einzelansicht
             App ga(svc, lang);
+            if (has_backdrop) ga.set_background(backdrop);
             auto png = [&](const char* name) {
                 ga.render(canvas);
                 if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
@@ -195,6 +200,7 @@ int main(int argc, char** argv) {
         }
         {  // Startbild
             App sp(svc, lang);
+            if (has_backdrop) sp.set_background(backdrop);
             Canvas img(App::kWidth, App::kHeight);
             if (load_splash(img)) {
                 sp.show_splash(img);

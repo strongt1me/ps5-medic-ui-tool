@@ -13,6 +13,12 @@
 #define STBI_NO_THREAD_LOCALS 1
 #include "stb/stb_image.h"
 
+
+#ifdef MEDIC_BACKGROUND_PATH
+__asm__(".section .rodata\n.balign 16\n.global medic_background_jpg\nmedic_background_jpg:\n.incbin \"" MEDIC_BACKGROUND_PATH "\"\n.global medic_background_jpg_end\nmedic_background_jpg_end:\n.previous\n");
+extern "C" const unsigned char medic_background_jpg[], medic_background_jpg_end[];
+#endif
+
 #ifdef MEDIC_SPLASH_PATH
 // Das Bild steckt per .incbin in der Programmdatei (Pfad vom Build gesetzt).
 __asm__(".section .rodata\n.balign 16\n.global medic_splash_jpg\nmedic_splash_jpg:\n.incbin \"" MEDIC_SPLASH_PATH "\"\n.global medic_splash_jpg_end\nmedic_splash_jpg_end:\n.previous\n");
@@ -42,6 +48,15 @@ bool decode_image(const unsigned char* data, std::size_t size, Canvas& out) {
 bool load_splash(Canvas& out) {
 #ifdef MEDIC_SPLASH_PATH
     return decode_image(medic_splash_jpg, static_cast<std::size_t>(medic_splash_jpg_end - medic_splash_jpg), out);
+#else
+    (void)out;
+    return false;
+#endif
+}
+
+bool load_background(Canvas& out) {
+#ifdef MEDIC_BACKGROUND_PATH
+    return decode_image(medic_background_jpg, static_cast<std::size_t>(medic_background_jpg_end - medic_background_jpg), out);
 #else
     (void)out;
     return false;
