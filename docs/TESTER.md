@@ -17,17 +17,17 @@ Ein Tester braucht nichts zu reparieren. Ein Check-up und der Bericht genügen.
 
 ## So geht's
 
-1. Release herunterladen und den Ordner `PS5MEDIC` nach `/data/homebrew/` kopieren (siehe README).
-2. Die Kachel bekommen: entweder `ps5medic-launcher.elf` an Port 9021 senden (legt die Kachel **PS5 Medic** an und startet die UI) oder den Ordner `FAKE42007` nach `/data/homebrew/` kopieren (ShadowMount+ legt die Kachel an). Später genügt ein Druck auf die Kachel; sie braucht nur den ELF-Lader (Port 9021).
+1. Release herunterladen und die beiden Ordner `PS5MEDIC` und `FAKE42007` per FTP nach `/data/homebrew/` kopieren (siehe README).
+2. ShadowMount+ legt innerhalb von Sekunden die Kachel **PS5 Medic** unter „Medien“ an. Ein Druck darauf startet die App; sie sendet beim Start ihren Dienst (`ps5medicservice.elf`) selbst an den ELF-Lader, der dafür laufen muss (Port 9021). Weder websrv noch ein Launcher ist nötig.
 3. **✕** auf „Check-up starten".
 4. **□** in der Befundliste: legt den Bericht ab und zeigt den QR-Code. Die Datei liegt unter `/data/ps5medic/reports/`.
 5. Bericht in ein Issue einfügen (Vorlage: *Problem melden*). Er ist anonymisiert. **Lies ihn vorher durch**: Datei- und Ordnernamen (auch Spielnamen) stehen drin.
 
 Auch wenn **keine Befunde** kommen, hilft der Bericht: Er zeigt, dass eine Firmware und ein Setup sauber durchgelaufen sind.
 
-### Wenn der Launcher nicht geht
+### Wenn die Kachel nicht startet
 
-Dann läuft nur der Diagnose-Payload `ps5medic.elf` (per Payload Manager oder Port 9021). Er ist **nur lesend** und schreibt `/data/ps5medic/last_check.txt` sowie einen Snapshot nach `/data/ps5medic/snapshots/<Zeit>/`. Beides lässt sich per FTP holen.
+Prüfe, ob der ELF-Lader (Port 9021) läuft und beide Ordner vollständig in `/data/homebrew/` liegen. Notfalls lässt sich nur der Diagnose-Payload `ps5medic.elf` starten (per Payload Manager oder an Port 9021). Er ist **nur lesend** und schreibt `/data/ps5medic/last_check.txt` sowie einen Snapshot nach `/data/ps5medic/snapshots/<Zeit>/`. Beides lässt sich per FTP holen.
 
 ## Datenschutz
 
@@ -67,4 +67,4 @@ Die Prüfsumme schützt vor beschädigten oder abgeschnittenen Kopien. Sie schü
 
 ## English summary
 
-PS5 Medic has only been tested on one console (PS5 Pro, FW 12.00). Testers on other firmwares (4.00 to 14.10), other jailbreak chains and ShadowMount+ versions are needed. Install the release (copy `PS5MEDIC` to `/data/homebrew/`), start `websrv`, open the **PS5 Medic** tile, run the check-up (✕), press □ and paste the anonymized report into an issue (template: *Report a problem*). Read it first: file and folder names are still in it. Nothing is ever sent by PS5 Medic. Rule updates are files you copy to `/data/ps5medic/knowledge/update/` together with a `rules.json.sha256`, or, if the author gives you an address, a download you trigger yourself (`update_url=http://...` in `/data/ps5medic/config.ini`, □ in the rule update screen); downloads are only accepted with a valid Ed25519 signature. The settings screen verifies and installs them (backup first, roll-back with △).
+PS5 Medic has only been tested on one console (PS5 Pro, FW 12.00). Testers on other firmwares (4.00 to 14.10), other jailbreak chains and ShadowMount+ versions are needed. Install the release (copy `PS5MEDIC` and `FAKE42007` to `/data/homebrew/`, with the ELF loader on port 9021 running), open the **PS5 Medic** tile, run the check-up (✕), press □ and paste the anonymized report into an issue (template: *Report a problem*). Read it first: file and folder names are still in it. Nothing is ever sent by PS5 Medic. Rule updates are files you copy to `/data/ps5medic/knowledge/update/` together with a `rules.json.sha256`, or, if the author gives you an address, a download you trigger yourself (`update_url=http://...` in `/data/ps5medic/config.ini`, □ in the rule update screen); downloads are only accepted with a valid Ed25519 signature. The settings screen verifies and installs them (backup first, roll-back with △).

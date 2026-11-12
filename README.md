@@ -52,7 +52,7 @@
     </td>
     <td valign="top">
       <h3>🕑 Verlauf und Vergleich</h3>
-      Jeder Check-up wird einzeln gespeichert. Alte Stände lassen sich ansehen und miteinander vergleichen: neu, behoben, unverändert.
+      Jeder Check-up wird einzeln gespeichert. Der aktuellste steht oben, frühere lassen sich aufklappen. Alte Stände lassen sich ansehen und miteinander vergleichen: neu, behoben, unverändert.
     </td>
   </tr>
   <tr>
@@ -80,7 +80,7 @@
   </tr>
   <tr>
     <td><img src="docs/images/de/10_error_codes.png" alt="Fehlercodes"></td>
-    <td></td>
+    <td><img src="docs/images/de/30b_check_list_open.png" alt="Verlauf der Check-ups"></td>
   </tr>
 </table>
 
@@ -88,24 +88,22 @@
 
 - **Nie löschen**, nur verschieben oder umbenennen. Dateien, die geändert werden, werden vorher gesichert (`/data/ps5medic/backups/`), jede Änderung steht im Journal (`/data/ps5medic/journal.jsonl`).
 - **Kein Schreiben ohne ✕**: Reparatur und Rückgängig passieren erst nach ausdrücklicher Bestätigung auf der Vorschau. Weitere Schreibaktionen: der Bericht (□), das Regel-Update (✕ auf dem Angebot), die gewählte Sprache in `/data/ps5medic/config.ini`.
-- Reparaturen schreiben nur in einer Whitelist (ShadowMount+-Ordner, Autoload-Listen, die eigenen Scanpfade, `/data/ps5medic`). Nie unter `/system`, `/system_ex`, `/dev` oder im Flash. Wird der Launcher per ELF gesendet, legt er nur seinen eigenen Ordner `/data/homebrew/FAKE42007` an (wie jede andere App); die Kachel erzeugt ShadowMount+.
+- Reparaturen schreiben nur in einer Whitelist (ShadowMount+-Ordner, Autoload-Listen, die eigenen Scanpfade, `/data/ps5medic`). Nie unter `/system`, `/system_ex`, `/dev` oder im Flash. Die Kachel ist ein Ordner, den du selbst nach `/data/homebrew/` kopierst; ShadowMount+ erzeugt sie, PS5 Medic legt sie nicht an.
 - **Das Netz wird nur für den Regel-Download benutzt**, nur auf □ und Bestätigung, nur zur Adresse aus deiner `config.ini`, und es wird nichts gesendet außer einer GET-Anfrage. Daneben gibt es einen lokalen Netztest im Selbsttest: nur ein Verbindungsaufbau zum Router im privaten Adressbereich, ohne Daten, nie ins Internet.
 - Keine Exploits, keine Firmware-Änderungen, keine Funktionen zum Beschaffen, Entsperren oder Verteilen von Spielen, Keys oder Firmware. PS5 Medic repariert die **Umgebung**, nicht Inhalte. Es empfiehlt nie ein Update der Systemsoftware.
 
 ## Voraussetzungen
 
 - Eine bereits gejailbreakte PS5 mit ELF-Loader (Port 9021) und FTP (hier Port 2121).
-- Für den Start mit DualSense braucht die UI einen App-Kontext (sonst öffnet die Konsole den Controller nicht, Hintergrund: [docs/PHASE3.md](docs/PHASE3.md)). Den gibt ihr der **Starter** der Kachel (ein kleiner nativer Titel, der den Launcher an den ELF-Lader sendet); **weder websrv noch ein Homebrew-Lader ist nötig**. Ohne Kachel läuft nur der Diagnose-Payload (`ps5medic.elf`).
+- Die Oberfläche besteht aus zwei Teilen: der **Kachel** (eine native App, die nur anzeigt und den DualSense liest, deshalb führt die PS-Taste ganz normal zum Homescreen) und dem **Dienst** `ps5medicservice.elf`, der die Konsole liest und das Bild zeichnet. Die App sendet den Dienst beim Start selbst an den ELF-Lader (Port 9021); **weder websrv noch ein Homebrew-Lader ist nötig**. Ohne Kachel läuft nur der Diagnose-Payload (`ps5medic.elf`).
 
 ## Installation
 
-1. Den Ordner `PS5MEDIC` aus dem Release per FTP nach `/data/homebrew/` kopieren (er enthält `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` und das Icon).
-2. Die Kachel bekommen, auf einem von zwei Wegen:
-   - **ELF senden:** `ps5medic-launcher.elf` an Port 9021 senden (Payload Manager, oder vom PC: `make send-launcher PS5_HOST=<PS5-IP>`). Er legt den Ordner `/data/homebrew/FAKE42007` an, ShadowMount+ installiert daraus die Kachel **PS5 Medic** unter „Medien“, und er startet die UI gleich, wenn keine App läuft.
-   - **Ordner-App:** den Ordner `FAKE42007` aus dem Release nach `/data/homebrew/` kopieren; ShadowMount+ legt die Kachel an. Danach startet ein Druck auf die Kachel die UI, ohne dass eine ELF gesendet werden muss.
-3. Ein Druck auf die Kachel startet die UI (erst das Startbild, dann der Startbildschirm). Sie braucht nur den ELF-Lader (Port 9021) der Konsole; nach einem Neustart bleibt die Kachel.
+1. Die beiden Ordner aus dem Release per FTP nach `/data/homebrew/` kopieren: `PS5MEDIC` (Dienst `ps5medicservice.elf`, Diagnose-Payload `ps5medic.elf`, `rules.json`, `error_codes.json`, Icon) und `FAKE42007` (die native App).
+2. ShadowMount+ legt innerhalb von Sekunden die Kachel **PS5 Medic** unter „Medien“ an.
+3. Ein Druck auf die Kachel startet die App (erst das Startbild, dann der Startbildschirm). Beim Start sendet sie den Dienst an den ELF-Lader (Port 9021), der laufen muss; ein Neustart der Konsole ändert daran nichts, die Kachel bleibt. ◯ auf dem Startbildschirm beendet App und Dienst.
 
-Der Launcher schließt nur Homebrew-Fake-Apps (darunter den Starter der Kachel) und System-Programme; ein laufendes Spiel schließt er nie. Einzelheiten: [docs/TITLE.md](docs/TITLE.md).
+Die Kachel `FAKE42007` ersetzt die früheren Wege (Launcher, websrv, Kacheln `FAKE42008` und `FAKE42009`). Stehen noch alte Kacheln da, lassen sie sich in den Speichereinstellungen der PS5 entfernen. Einzelheiten zur App: [docs/NATIVE.md](docs/NATIVE.md).
 
 ## Bedienung
 
@@ -132,12 +130,13 @@ make host        # medic-cli und die PC-Vorschau der UI
 make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # Bilder der UI am PC (de en fr it es)
 ```
 
-Für die Konsole braucht man das [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **Version 0.45** (`PS5_PAYLOAD_SDK`) und SDL2 für die PS5; die Bauanleitung dafür steht in [docs/PHASE3.md](docs/PHASE3.md), der Bau der Kachel in [docs/TITLE.md](docs/TITLE.md).
+Für die Konsole braucht man das [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **Version 0.45** (`PS5_PAYLOAD_SDK`) und SDL2 für die PS5 (nur für die PC-freie Ausweich-UI); die Bauanleitung dafür steht in [docs/PHASE3.md](docs/PHASE3.md), Aufbau und Bau der nativen App in [docs/NATIVE.md](docs/NATIVE.md).
 
 ```bash
-make ps5-ui                         # Vollbild-UI (ps5medicui.elf)
+make native-ui                      # native App (build-native/FAKE42007)
+make ps5-service                    # Dienst (ps5medicservice.elf)
 make ps5                            # Diagnose-Payload (ps5medic.elf)
-make send-launcher PS5_HOST=192.168.1.x # Launcher an Port 9021 senden (legt den Ordner FAKE42007 an + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
+make deploy-native PS5_HOST=192.168.1.x # App und Dienst per FTP nach /data/homebrew (die App muss dafür ganz geschlossen sein)
 make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
 ```
 
@@ -173,7 +172,8 @@ Eine neue Regel braucht: einen Eintrag in `knowledge/rules.json` mit Quelle, ein
 | `docs/PHASE2.md` bis `PHASE5.md` | Konsole und Snapshot, Oberfläche und App-Kontext, Bericht und Release, Regel-Update und Community |
 | `docs/TESTER.md` | Mitmachen als Tester |
 | `docs/COMMUNITY.md` | Berichte einsenden, wie daraus neue Regeln und Regel-Updates werden |
-| `docs/TITLE.md` | Kachel und Start ohne Homebrew-Lader: Starter, Launcher, Ordner-App |
+| `docs/NATIVE.md` | Die Oberfläche als native App: Kachel, Dienst, Protokoll, Stand |
+| `docs/TITLE.md` | Älterer Weg (Starter, Launcher, websrv), nur noch als Ausweichweg |
 | `knowledge/` | Regeln (`rules.json`), Fehlercodes (`error_codes.json`), Übersetzungen (`l10n/`) und JSON-Schemas |
 
 ## Lizenz und Danksagung

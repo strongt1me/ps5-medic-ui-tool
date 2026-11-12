@@ -52,7 +52,7 @@
     </td>
     <td valign="top">
       <h3>🕑 Cronologia e confronto</h3>
-      Ogni check-up viene salvato singolarmente. Gli stati precedenti si possono consultare e confrontare tra loro: nuovo, risolto, invariato.
+      Ogni check-up viene salvato singolarmente. Il più recente è in alto, quelli precedenti si possono espandere. Gli stati precedenti si possono consultare e confrontare tra loro: nuovo, risolto, invariato.
     </td>
   </tr>
   <tr>
@@ -80,7 +80,7 @@
   </tr>
   <tr>
     <td><img src="docs/images/it/10_error_codes.png" alt="Codici di errore"></td>
-    <td></td>
+    <td><img src="docs/images/it/30b_check_list_open.png" alt="Cronologia dei check-up"></td>
   </tr>
 </table>
 
@@ -88,24 +88,22 @@
 
 - **Mai eliminare**, solo spostare o rinominare. I file che vengono modificati sono prima salvati in backup (`/data/ps5medic/backups/`); ogni modifica è registrata nel journal (`/data/ps5medic/journal.jsonl`).
 - **Nessuna scrittura senza ✕**: riparazione e annullamento avvengono solo dopo conferma esplicita nell'anteprima. Altre azioni di scrittura: il rapporto (□), l'aggiornamento delle regole (✕ sulla proposta), la lingua scelta in `/data/ps5medic/config.ini`.
-- Le riparazioni scrivono solo in una whitelist (cartelle di ShadowMount+, elenchi di autoload, i propri percorsi di scansione, `/data/ps5medic`). Mai sotto `/system`, `/system_ex`, `/dev` o nella flash. Se il launcher viene inviato come ELF, crea soltanto la propria cartella `/data/homebrew/FAKE42007` (come ogni altra app); il riquadro lo crea ShadowMount+.
+- Le riparazioni scrivono solo in una whitelist (cartelle di ShadowMount+, elenchi di autoload, i propri percorsi di scansione, `/data/ps5medic`). Mai sotto `/system`, `/system_ex`, `/dev` o nella flash. Il riquadro è una cartella che copi tu stesso in `/data/homebrew/`; lo crea ShadowMount+, non PS5 Medic.
 - **La rete viene usata solo per il download delle regole**, solo su □ e conferma, solo verso l'indirizzo del tuo `config.ini`, e non viene inviato nulla oltre a una richiesta GET. Inoltre nell'autotest c'è un test della rete locale: solo una connessione al router nell'intervallo di indirizzi privato, senza dati, mai verso Internet.
 - Nessun exploit, nessuna modifica del firmware, nessuna funzione per procurarsi, sbloccare o distribuire giochi, chiavi o firmware. PS5 Medic ripara l'**ambiente**, non i contenuti. Non consiglia mai un aggiornamento del software di sistema.
 
 ## Requisiti
 
 - Una PS5 già con jailbreak, con ELF loader (porta 9021) e FTP (qui porta 2121).
-- Per l'avvio con il DualSense l'interfaccia ha bisogno di un contesto app (altrimenti la console non apre il controller; background: [docs/PHASE3.md](docs/PHASE3.md)). Glielo dà lo **starter** del riquadro (un piccolo titolo nativo che invia il launcher all'ELF loader); **non servono né websrv né un loader Homebrew**. Senza riquadro funziona solo il payload di diagnosi (`ps5medic.elf`).
+- L'interfaccia ha due parti: il **riquadro** (un'app nativa che si limita a mostrare e a leggere il DualSense, quindi il tasto PS riporta normalmente alla schermata iniziale della console) e il **servizio** `ps5medicservice.elf`, che legge la console e disegna l'immagine. L'app invia da sé il servizio all'ELF loader (porta 9021) all'avvio; **non servono né websrv né un loader Homebrew**. Senza riquadro funziona solo il payload di diagnosi (`ps5medic.elf`).
 
 ## Installazione
 
-1. Copiare la cartella `PS5MEDIC` della release via FTP in `/data/homebrew/` (contiene `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` e l'icona).
-2. Ottenere il riquadro, in uno dei due modi:
-   - **Inviare l'ELF:** inviare `ps5medic-launcher.elf` alla porta 9021 (Payload Manager, oppure dal PC: `make send-launcher PS5_HOST=<PS5-IP>`). Crea la cartella `/data/homebrew/FAKE42007`, ShadowMount+ ne installa il riquadro **PS5 Medic** sotto «Media» e avvia subito l'interfaccia se non è in esecuzione alcuna app.
-   - **App-cartella:** copiare la cartella `FAKE42007` della release in `/data/homebrew/`; ShadowMount+ crea il riquadro. Dopodiché una pressione sul riquadro avvia l'interfaccia, senza dover inviare un ELF.
-3. Una pressione sul riquadro avvia l'interfaccia (prima la schermata di avvio, poi la schermata iniziale). Serve solo l'ELF loader (porta 9021) della console; dopo un riavvio il riquadro resta.
+1. Copiare le due cartelle della release via FTP in `/data/homebrew/`: `PS5MEDIC` (servizio `ps5medicservice.elf`, payload di diagnosi `ps5medic.elf`, `rules.json`, `error_codes.json`, icona) e `FAKE42007` (l'app nativa).
+2. ShadowMount+ crea in pochi secondi il riquadro **PS5 Medic** sotto «Media».
+3. Una pressione sul riquadro avvia l'app (prima la schermata di avvio, poi la schermata iniziale). All'avvio invia il servizio all'ELF loader (porta 9021), che deve essere attivo; un riavvio della console non cambia nulla, il riquadro resta. ◯ nella schermata iniziale chiude app e servizio.
 
-Il launcher chiude solo le app Homebrew false (tra cui lo starter del riquadro) e i programmi di sistema; non chiude mai un gioco in esecuzione. Dettagli: [docs/TITLE.md](docs/TITLE.md).
+Il riquadro `FAKE42007` sostituisce i metodi precedenti (launcher, websrv, riquadri `FAKE42008` e `FAKE42009`). Se ci sono ancora vecchi riquadri, si possono rimuovere nelle impostazioni di archiviazione della PS5. Dettagli sull'app: [docs/NATIVE.md](docs/NATIVE.md).
 
 ## Uso
 
@@ -132,12 +130,13 @@ make host        # medic-cli und die PC-Vorschau der UI
 make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # Bilder der UI am PC (de en fr it es)
 ```
 
-Per la console servono il [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versione 0.45** (`PS5_PAYLOAD_SDK`) e SDL2 per la PS5; le istruzioni di compilazione si trovano in [docs/PHASE3.md](docs/PHASE3.md), la compilazione del riquadro in [docs/TITLE.md](docs/TITLE.md).
+Per la console servono il [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versione 0.45** (`PS5_PAYLOAD_SDK`) e SDL2 per la PS5 (solo per l'interfaccia di riserva); le istruzioni di compilazione si trovano in [docs/PHASE3.md](docs/PHASE3.md), struttura e compilazione dell'app nativa in [docs/NATIVE.md](docs/NATIVE.md).
 
 ```bash
-make ps5-ui                         # Vollbild-UI (ps5medicui.elf)
-make ps5                            # Diagnose-Payload (ps5medic.elf)
-make send-launcher PS5_HOST=192.168.1.x # Inviare il launcher alla porta 9021 (crea la cartella FAKE42007 + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
+make native-ui                      # app nativa (build-native/FAKE42007)
+make ps5-service                    # servizio (ps5medicservice.elf)
+make ps5                            # payload di diagnosi (ps5medic.elf)
+make deploy-native PS5_HOST=192.168.1.x # app e servizio in /data/homebrew via FTP (l'app deve essere chiusa)
 make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
 ```
 
@@ -173,7 +172,8 @@ Una nuova regola richiede: una voce in `knowledge/rules.json` con fonte, una fix
 | `docs/PHASE2.md` fino a `PHASE5.md` | Console e snapshot, interfaccia e contesto app, rapporto e release, aggiornamento delle regole e community |
 | `docs/TESTER.md` | Partecipare come tester |
 | `docs/COMMUNITY.md` | Inviare rapporti; come diventano nuove regole e aggiornamenti delle regole |
-| `docs/TITLE.md` | Riquadro e avvio senza loader Homebrew: starter, launcher, app-cartella |
+| `docs/NATIVE.md` | L'interfaccia come app nativa: riquadro, servizio, protocollo, stato |
+| `docs/TITLE.md` | Metodo precedente (starter, launcher, websrv), mantenuto solo come soluzione di riserva |
 | `knowledge/` | Regole (`rules.json`), codici di errore (`error_codes.json`), traduzioni (`l10n/`) e schemi JSON |
 
 ## Licenza e ringraziamenti

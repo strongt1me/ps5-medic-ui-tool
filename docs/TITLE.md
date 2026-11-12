@@ -1,5 +1,7 @@
 # Kachel und Start ohne Homebrew-Lader: Starter und Launcher
 
+> **Älterer Weg (Stand 12. Nov. 2026):** Die Kachel `FAKE42007` ist jetzt die native App ([docs/NATIVE.md](NATIVE.md)); das Release enthält Starter, Launcher und SDL-UI nicht mehr. Dieses Dokument beschreibt den früheren Weg, der als Ausweichweg im Repository bleibt.
+
 Stand 12. Nov. 2026. PS5 Medic ist eine **Ordner-App in `/data/homebrew/FAKE42007`**, wie alle anderen Apps und Spiele. ShadowMount+ erkennt den Ordner und legt die Kachel **PS5 Medic** unter „Medien“ an. Weder websrv noch ein Homebrew-Lader noch ein Browser sind nötig. Der Starter in der Ordner-App ist ein winziger nativer Titel (`eboot.bin`), so wie bei den Kacheln von „PS5 Cooling & System Center“: Er sendet den Starter-Launcher an den ELF-Lader (Port 9021), der Launcher startet die Vollbild-UI mit App-Kontext (nur damit öffnet sich der DualSense, siehe `docs/PHASE3.md`).
 
 | Weg | Wie |

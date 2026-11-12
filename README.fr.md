@@ -52,7 +52,7 @@
     </td>
     <td valign="top">
       <h3>🕑 Historique et comparaison</h3>
-      Chaque diagnostic est enregistré séparément. Les anciens états peuvent être consultés et comparés entre eux : nouveau, corrigé, inchangé.
+      Chaque diagnostic est enregistré séparément. Le plus récent s'affiche en haut, les précédents peuvent être déroulés. Les anciens états peuvent être consultés et comparés entre eux : nouveau, corrigé, inchangé.
     </td>
   </tr>
   <tr>
@@ -80,7 +80,7 @@
   </tr>
   <tr>
     <td><img src="docs/images/fr/10_error_codes.png" alt="Codes d'erreur"></td>
-    <td></td>
+    <td><img src="docs/images/fr/30b_check_list_open.png" alt="Historique des diagnostics"></td>
   </tr>
 </table>
 
@@ -88,24 +88,22 @@
 
 - **Jamais de suppression**, uniquement déplacer ou renommer. Les fichiers qui sont modifiés sont sauvegardés au préalable (`/data/ps5medic/backups/`), chaque modification est inscrite au journal (`/data/ps5medic/journal.jsonl`).
 - **Aucune écriture sans ✕** : la réparation et l'annulation n'ont lieu qu'après une confirmation explicite sur l'aperçu. Autres actions d'écriture : le rapport (□), la mise à jour des règles (✕ sur la proposition), la langue choisie dans `/data/ps5medic/config.ini`.
-- Les réparations n'écrivent que dans une liste d'autorisation (dossiers de ShadowMount+, listes d'Autoload, ses propres chemins d'analyse, `/data/ps5medic`). Jamais sous `/system`, `/system_ex`, `/dev` ni dans la mémoire flash. Lorsque le Launcher est envoyé sous forme d'ELF, il crée uniquement son propre dossier `/data/homebrew/FAKE42007` (comme toute autre application) ; la tuile est créée par ShadowMount+.
+- Les réparations n'écrivent que dans une liste d'autorisation (dossiers de ShadowMount+, listes d'Autoload, ses propres chemins d'analyse, `/data/ps5medic`). Jamais sous `/system`, `/system_ex`, `/dev` ni dans la mémoire flash. La tuile est un dossier que vous copiez vous-même dans `/data/homebrew/` ; c'est ShadowMount+ qui la crée, pas PS5 Medic.
 - **Le réseau n'est utilisé que pour le téléchargement des règles**, uniquement sur □ et après confirmation, uniquement vers l'adresse de votre `config.ini`, et rien n'est envoyé hormis une requête GET. En outre, l'autotest comporte un test de réseau local : uniquement l'établissement d'une connexion vers le routeur, dans la plage d'adresses privées, sans données, jamais vers Internet.
 - Aucun exploit, aucune modification du firmware, aucune fonction pour se procurer, déverrouiller ou distribuer des jeux, des clés ou des firmwares. PS5 Medic répare l'**environnement**, pas les contenus. Il ne recommande jamais d'installer une nouvelle version du logiciel système.
 
 ## Prérequis
 
 - Une PS5 déjà jailbreakée avec un chargeur d'ELF (port 9021) et FTP (ici port 2121).
-- Pour le démarrage avec la DualSense, l'interface a besoin d'un contexte d'application (sinon la console n'ouvre pas la manette ; contexte : [docs/PHASE3.md](docs/PHASE3.md)). C'est le **Starter** de la tuile (un petit titre natif qui envoie le Launcher au chargeur d'ELF) qui le lui fournit ; **ni websrv ni un chargeur Homebrew n'est nécessaire**. Sans la tuile, seul le payload de diagnostic (`ps5medic.elf`) fonctionne.
+- L'interface se compose de deux parties : la **tuile** (une application native qui se contente d'afficher et de lire la DualSense, si bien que la touche PS ramène normalement à l'écran d'accueil) et le **service** `ps5medicservice.elf`, qui lit la console et dessine l'image. L'application envoie elle-même le service au chargeur d'ELF (port 9021) au démarrage ; **ni websrv ni un chargeur Homebrew n'est nécessaire**. Sans la tuile, seul le payload de diagnostic (`ps5medic.elf`) fonctionne.
 
 ## Installation
 
-1. Copier le dossier `PS5MEDIC` de la release par FTP vers `/data/homebrew/` (il contient `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` et l'icône).
-2. Obtenir la tuile, de l'une de ces deux façons :
-   - **Envoyer l'ELF :** envoyer `ps5medic-launcher.elf` au port 9021 (Payload Manager, ou depuis le PC : `make send-launcher PS5_HOST=<PS5-IP>`). Il crée le dossier `/data/homebrew/FAKE42007`, ShadowMount+ en installe la tuile **PS5 Medic** sous « Médias », et il lance aussitôt l'interface si aucune application n'est en cours.
-   - **Application-dossier :** copier le dossier `FAKE42007` de la release vers `/data/homebrew/` ; ShadowMount+ crée la tuile. Ensuite, une pression sur la tuile lance l'interface sans qu'il soit nécessaire d'envoyer un ELF.
-3. Une pression sur la tuile lance l'interface (d'abord l'écran de démarrage, puis l'écran d'accueil). Elle n'a besoin que du chargeur d'ELF (port 9021) de la console ; la tuile reste après un redémarrage.
+1. Copier les deux dossiers de la release par FTP vers `/data/homebrew/` : `PS5MEDIC` (service `ps5medicservice.elf`, payload de diagnostic `ps5medic.elf`, `rules.json`, `error_codes.json`, icône) et `FAKE42007` (l'application native).
+2. ShadowMount+ crée en quelques secondes la tuile **PS5 Medic** sous « Médias ».
+3. Une pression sur la tuile lance l'application (d'abord l'écran de démarrage, puis l'écran d'accueil). Au démarrage, elle envoie le service au chargeur d'ELF (port 9021), qui doit fonctionner ; un redémarrage de la console n'y change rien, la tuile reste. ◯ sur l'écran d'accueil ferme l'application et le service.
 
-Le Launcher ne ferme que les fausses applications Homebrew (dont le Starter de la tuile) et les programmes système ; il ne ferme jamais un jeu en cours. Détails : [docs/TITLE.md](docs/TITLE.md).
+La tuile `FAKE42007` remplace les anciennes méthodes (Launcher, websrv, tuiles `FAKE42008` et `FAKE42009`). S'il reste d'anciennes tuiles, elles peuvent être supprimées dans les paramètres de stockage de la PS5. Détails sur l'application : [docs/NATIVE.md](docs/NATIVE.md).
 
 ## Utilisation
 
@@ -132,12 +130,13 @@ make host        # medic-cli und die PC-Vorschau der UI
 make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # Bilder der UI am PC (de en fr it es)
 ```
 
-Pour la console, il faut le [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **version 0.45** (`PS5_PAYLOAD_SDK`) et SDL2 pour la PS5 ; la procédure de compilation correspondante se trouve dans [docs/PHASE3.md](docs/PHASE3.md), la compilation de la tuile dans [docs/TITLE.md](docs/TITLE.md).
+Pour la console, il faut le [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **version 0.45** (`PS5_PAYLOAD_SDK`) et SDL2 pour la PS5 (uniquement pour l'interface de secours) ; la procédure de compilation correspondante se trouve dans [docs/PHASE3.md](docs/PHASE3.md), la structure et la compilation de l'application native dans [docs/NATIVE.md](docs/NATIVE.md).
 
 ```bash
-make ps5-ui                         # Vollbild-UI (ps5medicui.elf)
-make ps5                            # Diagnose-Payload (ps5medic.elf)
-make send-launcher PS5_HOST=192.168.1.x # Envoyer le Launcher au port 9021 (crée le dossier FAKE42007 + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
+make native-ui                      # application native (build-native/FAKE42007)
+make ps5-service                    # service (ps5medicservice.elf)
+make ps5                            # payload de diagnostic (ps5medic.elf)
+make deploy-native PS5_HOST=192.168.1.x # application et service vers /data/homebrew par FTP (l'application doit être fermée)
 make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
 ```
 
@@ -173,7 +172,8 @@ Une nouvelle règle requiert : une entrée dans `knowledge/rules.json` avec une 
 | `docs/PHASE2.md` à `PHASE5.md` | Console et snapshot, interface et contexte d'application, rapport et release, mise à jour des règles et communauté |
 | `docs/TESTER.md` | Participer en tant que testeur |
 | `docs/COMMUNITY.md` | Envoyer des rapports ; comment ils deviennent de nouvelles règles et des mises à jour des règles |
-| `docs/TITLE.md` | Tuile et démarrage sans chargeur Homebrew : Starter, Launcher, application-dossier |
+| `docs/NATIVE.md` | L'interface comme application native : tuile, service, protocole, état |
+| `docs/TITLE.md` | Ancienne méthode (Starter, Launcher, websrv), conservée uniquement comme solution de secours |
 | `knowledge/` | Règles (`rules.json`), codes d'erreur (`error_codes.json`), traductions (`l10n/`) et schémas JSON |
 
 ## Licence et remerciements

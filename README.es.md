@@ -52,7 +52,7 @@
     </td>
     <td valign="top">
       <h3>🕑 Historial y comparación</h3>
-      Cada chequeo se guarda por separado. Los estados antiguos se pueden consultar y comparar entre sí: nuevo, resuelto, sin cambios.
+      Cada chequeo se guarda por separado. El más reciente aparece arriba y los anteriores se pueden desplegar. Los estados antiguos se pueden consultar y comparar entre sí: nuevo, resuelto, sin cambios.
     </td>
   </tr>
   <tr>
@@ -80,7 +80,7 @@
   </tr>
   <tr>
     <td><img src="docs/images/es/10_error_codes.png" alt="Códigos de error"></td>
-    <td></td>
+    <td><img src="docs/images/es/30b_check_list_open.png" alt="Historial de chequeos"></td>
   </tr>
 </table>
 
@@ -88,24 +88,22 @@
 
 - **Nunca se borra**, solo se mueve o se renombra. Los archivos que se van a cambiar se respaldan antes (`/data/ps5medic/backups/`) y cada cambio queda en el diario (`/data/ps5medic/journal.jsonl`).
 - **Nada se escribe sin ✕**: la reparación y el deshacer solo ocurren tras una confirmación expresa en la vista previa. Otras acciones de escritura: el informe (□), la actualización de reglas (✕ en la oferta) y el idioma elegido en `/data/ps5medic/config.ini`.
-- Las reparaciones solo escriben dentro de una lista blanca (carpetas de ShadowMount+, listas de autocarga, las propias rutas de escaneo, `/data/ps5medic`). Nunca bajo `/system`, `/system_ex`, `/dev` ni en la flash. Si el launcher se envía como ELF, solo crea su propia carpeta `/data/homebrew/FAKE42007` (como cualquier otra aplicación); el mosaico lo crea ShadowMount+.
+- Las reparaciones solo escriben dentro de una lista blanca (carpetas de ShadowMount+, listas de autocarga, las propias rutas de escaneo, `/data/ps5medic`). Nunca bajo `/system`, `/system_ex`, `/dev` ni en la flash. El mosaico es una carpeta que copias tú mismo a `/data/homebrew/`; lo crea ShadowMount+, no PS5 Medic.
 - **La red solo se usa para la descarga de reglas**, solo con □ y confirmación, solo hacia la dirección de tu `config.ini`, y no se envía nada salvo una solicitud GET. Aparte hay una prueba de red local en el autotest: solo un intento de conexión al router en el rango de direcciones privado, sin datos, nunca hacia internet.
 - Sin exploits, sin cambios de firmware, sin funciones para obtener, desbloquear o distribuir juegos, claves o firmware. PS5 Medic repara el **entorno**, no los contenidos. Nunca recomienda una actualización del software del sistema.
 
 ## Requisitos
 
 - Una PS5 que ya tenga jailbreak, con cargador de ELF (puerto 9021) y FTP (aquí puerto 2121).
-- Para el inicio con DualSense, la interfaz necesita un contexto de aplicación (si no, la consola no abre el mando; trasfondo: [docs/PHASE3.md](docs/PHASE3.md)). Se lo da el **Starter** del mosaico (un pequeño título nativo que envía el launcher al cargador de ELF); **no hace falta ni websrv ni un cargador de Homebrew**. Sin mosaico solo funciona el payload de diagnóstico (`ps5medic.elf`).
+- La interfaz consta de dos partes: el **mosaico** (una aplicación nativa que solo muestra y lee el DualSense, por lo que el botón PS vuelve con normalidad a la pantalla de inicio) y el **servicio** `ps5medicservice.elf`, que lee la consola y dibuja la imagen. La aplicación envía ella misma el servicio al cargador de ELF (puerto 9021) al arrancar; **no hace falta ni websrv ni un cargador de Homebrew**. Sin mosaico solo funciona el payload de diagnóstico (`ps5medic.elf`).
 
 ## Instalación
 
-1. Copiar la carpeta `PS5MEDIC` de la versión por FTP a `/data/homebrew/` (contiene `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` y el icono).
-2. Obtener el mosaico, por una de dos vías:
-   - **Enviar ELF:** enviar `ps5medic-launcher.elf` al puerto 9021 (Payload Manager, o desde el PC: `make send-launcher PS5_HOST=<PS5-IP>`). Crea la carpeta `/data/homebrew/FAKE42007`, ShadowMount+ instala con ella el mosaico **PS5 Medic** en «Medios» y arranca la interfaz de inmediato si no hay ninguna aplicación en ejecución.
-   - **Aplicación en carpeta:** copiar la carpeta `FAKE42007` de la versión a `/data/homebrew/`; ShadowMount+ crea el mosaico. Después, pulsar el mosaico arranca la interfaz sin necesidad de enviar un ELF.
-3. Pulsar el mosaico arranca la interfaz (primero la pantalla de presentación, luego la pantalla de inicio). Solo necesita el cargador de ELF (puerto 9021) de la consola; tras un reinicio el mosaico se conserva.
+1. Copiar las dos carpetas de la versión por FTP a `/data/homebrew/`: `PS5MEDIC` (servicio `ps5medicservice.elf`, payload de diagnóstico `ps5medic.elf`, `rules.json`, `error_codes.json`, icono) y `FAKE42007` (la aplicación nativa).
+2. ShadowMount+ crea en unos segundos el mosaico **PS5 Medic** en «Medios».
+3. Pulsar el mosaico arranca la aplicación (primero la pantalla de presentación, luego la pantalla de inicio). Al arrancar envía el servicio al cargador de ELF (puerto 9021), que debe estar activo; reiniciar la consola no cambia nada, el mosaico se conserva. ◯ en la pantalla de inicio cierra la aplicación y el servicio.
 
-El launcher solo cierra aplicaciones falsas de Homebrew (entre ellas el Starter del mosaico) y programas del sistema; nunca cierra un juego en ejecución. Detalles: [docs/TITLE.md](docs/TITLE.md).
+El mosaico `FAKE42007` sustituye a las vías anteriores (launcher, websrv, mosaicos `FAKE42008` y `FAKE42009`). Si aún quedan mosaicos antiguos, se pueden eliminar en los ajustes de almacenamiento de la PS5. Detalles de la aplicación: [docs/NATIVE.md](docs/NATIVE.md).
 
 ## Manejo
 
@@ -132,12 +130,13 @@ make host        # medic-cli und die PC-Vorschau der UI
 make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # Bilder der UI am PC (de en fr it es)
 ```
 
-Para la consola se necesita el [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versión 0.45** (`PS5_PAYLOAD_SDK`) y SDL2 para la PS5; las instrucciones de compilación están en [docs/PHASE3.md](docs/PHASE3.md) y la compilación del mosaico en [docs/TITLE.md](docs/TITLE.md).
+Para la consola se necesita el [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versión 0.45** (`PS5_PAYLOAD_SDK`) y SDL2 para la PS5 (solo para la interfaz de reserva); las instrucciones de compilación están en [docs/PHASE3.md](docs/PHASE3.md), y la estructura y compilación de la aplicación nativa en [docs/NATIVE.md](docs/NATIVE.md).
 
 ```bash
-make ps5-ui                         # Vollbild-UI (ps5medicui.elf)
-make ps5                            # Diagnose-Payload (ps5medic.elf)
-make send-launcher PS5_HOST=192.168.1.x # Enviar el launcher al puerto 9021 (crea la carpeta FAKE42007 + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
+make native-ui                      # aplicación nativa (build-native/FAKE42007)
+make ps5-service                    # servicio (ps5medicservice.elf)
+make ps5                            # payload de diagnóstico (ps5medic.elf)
+make deploy-native PS5_HOST=192.168.1.x # aplicación y servicio a /data/homebrew por FTP (la aplicación debe estar cerrada)
 make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
 ```
 
@@ -173,7 +172,8 @@ Una regla nueva necesita: una entrada en `knowledge/rules.json` con fuente, un f
 | `docs/PHASE2.md` a `PHASE5.md` | Consola y snapshot, interfaz y contexto de aplicación, informe y versión, actualización de reglas y comunidad |
 | `docs/TESTER.md` | Colaborar como probador |
 | `docs/COMMUNITY.md` | Enviar informes; cómo se convierten en reglas nuevas y actualizaciones de reglas |
-| `docs/TITLE.md` | Mosaico e inicio sin cargador de Homebrew: Starter, launcher, aplicación en carpeta |
+| `docs/NATIVE.md` | La interfaz como aplicación nativa: mosaico, servicio, protocolo, estado |
+| `docs/TITLE.md` | Vía anterior (Starter, launcher, websrv), solo como solución de reserva |
 | `knowledge/` | Reglas (`rules.json`), códigos de error (`error_codes.json`), traducciones (`l10n/`) y esquemas JSON |
 
 ## Licencia y agradecimientos

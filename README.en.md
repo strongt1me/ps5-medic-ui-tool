@@ -52,7 +52,7 @@
     </td>
     <td valign="top">
       <h3>🕑 History and comparison</h3>
-      Every check-up is saved individually. Old states can be viewed and compared with each other: new, fixed, unchanged.
+      Every check-up is saved individually. The latest is shown at the top, earlier ones can be expanded. Old states can be viewed and compared with each other: new, fixed, unchanged.
     </td>
   </tr>
   <tr>
@@ -80,7 +80,7 @@
   </tr>
   <tr>
     <td><img src="docs/images/en/10_error_codes.png" alt="Error codes"></td>
-    <td></td>
+    <td><img src="docs/images/en/30b_check_list_open.png" alt="Check-up history"></td>
   </tr>
 </table>
 
@@ -88,24 +88,22 @@
 
 - **Never deletes**, only moves or renames. Files that are changed are backed up beforehand (`/data/ps5medic/backups/`), and every change is recorded in the journal (`/data/ps5medic/journal.jsonl`).
 - **No writing without ✕**: repair and undo happen only after explicit confirmation on the preview. Other write actions: the report (□), the rule update (✕ on the offer), the selected language in `/data/ps5medic/config.ini`.
-- Repairs write only within a whitelist (ShadowMount+ folder, autoload lists, the app's own scan paths, `/data/ps5medic`). Never under `/system`, `/system_ex`, `/dev` or in flash. If the launcher is sent as an ELF, it only creates its own folder `/data/homebrew/FAKE42007` (like any other app); ShadowMount+ creates the tile.
+- Repairs write only within a whitelist (ShadowMount+ folder, autoload lists, the app's own scan paths, `/data/ps5medic`). Never under `/system`, `/system_ex`, `/dev` or in flash. The tile is a folder that you copy to `/data/homebrew/` yourself; ShadowMount+ creates the tile, PS5 Medic does not.
 - **The network is used only for the rule download**, only on □ and confirmation, only to the address from your `config.ini`, and nothing is sent except a GET request. In addition there is a local network test in the self-test: only a connection set-up to the router in the private address range, without data, never to the internet.
 - No exploits, no firmware changes, no functions for obtaining, unlocking or distributing games, keys or firmware. PS5 Medic repairs the **environment**, not content. It never recommends a system software update.
 
 ## Requirements
 
 - An already jailbroken PS5 with an ELF loader (port 9021) and FTP (port 2121 here).
-- To start with the DualSense, the UI needs an app context (otherwise the console does not open the controller; background: [docs/PHASE3.md](docs/PHASE3.md)). The tile's **starter** (a small native title that sends the launcher to the ELF loader) provides it; **neither websrv nor a Homebrew loader is needed**. Without the tile, only the diagnostic payload (`ps5medic.elf`) runs.
+- The interface has two parts: the **tile** (a native app that only displays and reads the DualSense, so the PS button simply returns to the home screen) and the **service** `ps5medicservice.elf`, which reads the console and draws the picture. The app sends the service to the ELF loader (port 9021) itself on start; **neither websrv nor a Homebrew loader is needed**. Without the tile, only the diagnostic payload (`ps5medic.elf`) runs.
 
 ## Installation
 
-1. Copy the `PS5MEDIC` folder from the release to `/data/homebrew/` via FTP (it contains `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` and the icon).
-2. Get the tile, in one of two ways:
-   - **Send an ELF:** send `ps5medic-launcher.elf` to port 9021 (Payload Manager, or from the PC: `make send-launcher PS5_HOST=<PS5-IP>`). It creates the folder `/data/homebrew/FAKE42007`, ShadowMount+ installs the **PS5 Medic** tile under "Media" from it, and it starts the UI right away if no app is running.
-   - **Folder app:** copy the `FAKE42007` folder from the release to `/data/homebrew/`; ShadowMount+ creates the tile. After that, pressing the tile starts the UI without an ELF having to be sent.
-3. Pressing the tile starts the UI (first the splash screen, then the start screen). It needs only the console's ELF loader (port 9021); the tile remains after a restart.
+1. Copy the two folders from the release to `/data/homebrew/` via FTP: `PS5MEDIC` (service `ps5medicservice.elf`, diagnostic payload `ps5medic.elf`, `rules.json`, `error_codes.json`, icon) and `FAKE42007` (the native app).
+2. ShadowMount+ creates the **PS5 Medic** tile under "Media" within seconds.
+3. Pressing the tile starts the app (first the splash screen, then the start screen). On start it sends the service to the ELF loader (port 9021), which must be running; a restart of the console changes nothing, the tile remains. ◯ on the start screen ends the app and the service.
 
-The launcher closes only Homebrew fake apps (including the tile's starter) and system programs; it never closes a running game. Details: [docs/TITLE.md](docs/TITLE.md).
+The `FAKE42007` tile replaces the earlier ways (launcher, websrv, tiles `FAKE42008` and `FAKE42009`). If old tiles are still there, they can be removed in the PS5 storage settings. Details about the app: [docs/NATIVE.md](docs/NATIVE.md).
 
 ## Controls
 
@@ -132,12 +130,13 @@ make host        # medic-cli and the PC preview of the UI
 make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # UI images on the PC (de en fr it es)
 ```
 
-For the console you need the [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **version 0.45** (`PS5_PAYLOAD_SDK`) and SDL2 for the PS5; the build instructions for it are in [docs/PHASE3.md](docs/PHASE3.md), the build of the tile in [docs/TITLE.md](docs/TITLE.md).
+For the console you need the [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **version 0.45** (`PS5_PAYLOAD_SDK`) and SDL2 for the PS5 (only for the fallback UI); the build instructions for it are in [docs/PHASE3.md](docs/PHASE3.md), the structure and build of the native app in [docs/NATIVE.md](docs/NATIVE.md).
 
 ```bash
-make ps5-ui                         # Full-screen UI (ps5medicui.elf)
-make ps5                            # Diagnostic payload (ps5medic.elf)
-make send-launcher PS5_HOST=192.168.1.x # Send the launcher to port 9021 (creates the FAKE42007 folder + UI); make title = folder app FAKE42007; make launch-ui = old way via websrv
+make native-ui                      # native app (build-native/FAKE42007)
+make ps5-service                    # service (ps5medicservice.elf)
+make ps5                            # diagnostic payload (ps5medic.elf)
+make deploy-native PS5_HOST=192.168.1.x # app and service to /data/homebrew via FTP (the app must be fully closed)
 make dist                           # Release folder and zip under dist/ (local only)
 ```
 
@@ -173,7 +172,8 @@ A new rule needs: an entry in `knowledge/rules.json` with a source, a positive a
 | `docs/PHASE2.md` to `PHASE5.md` | Console and snapshot, interface and app context, report and release, rule update and community |
 | `docs/TESTER.md` | Taking part as a tester |
 | `docs/COMMUNITY.md` | Sending reports, and how they become new rules and rule updates |
-| `docs/TITLE.md` | Tile and start without a Homebrew loader: starter, launcher, folder app |
+| `docs/NATIVE.md` | The interface as a native app: tile, service, protocol, status |
+| `docs/TITLE.md` | Older way (starter, launcher, websrv), only kept as a fallback |
 | `knowledge/` | Rules (`rules.json`), error codes (`error_codes.json`), translations (`l10n/`) and JSON schemas |
 
 ## License and acknowledgements
