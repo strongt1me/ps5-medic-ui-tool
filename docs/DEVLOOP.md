@@ -10,7 +10,7 @@ Der **Screenshot-Hook** der UI (`ui/include/medic_ui/shot_hook.hpp`, `ui/src/sho
 
 ```json
 "medic": {
-  "title_id": "FAKE42008",
+  "title_id": "FAKE42007",
   "request": "/data/ps5medic/devloop-shot",
   "folder": "/data/ps5medic/screenshots"
 }

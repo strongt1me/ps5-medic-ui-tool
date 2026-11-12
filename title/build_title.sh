@@ -11,9 +11,8 @@
 #   PS5_NATIVE_TOOL  Standard ~/lmms-ps5/boilerplate/build/host/ps5-native-tool   aus ps5-native-app-boilerplate
 #   PS5_LIBC_PRX     Standard ~/bfapp/dist/PPSA77505/sce_module/libc.prx          signierter Laufzeit-Shim des Boilerplates
 #   clang-18
-# Ergebnis, zwei fertige Titelordner mit demselben eboot.bin (nur Titel-ID und Name in param.json unterscheiden sich):
-#   build-title/FAKE42007/  Ordner-App fuer /data/homebrew (ShadowMount+ legt die Kachel an), `make deploy-title`
-#   build-title/FAKE42008/  Dateien der Kachel, die der Launcher (ps5medic-launcher.elf) per ELF-Senden selbst installiert
+# Ergebnis: build-title/FAKE42007/ - die fertige Ordner-App fuer /data/homebrew (ShadowMount+ legt die Kachel an), `make deploy-title`.
+#   Dieselben Dateien stecken in ps5medic-launcher.elf, das den Ordner beim Senden selbst anlegt.
 set -euo pipefail
 
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -107,7 +106,7 @@ cat <<JSON
 JSON
 }
 
-for entry in FAKE42007:42007 FAKE42008:42008; do
+for entry in FAKE42007:42007; do
     id=${entry%%:*}; concept=${entry##*:}
     OUT=$REPO/build-title/$id
     mkdir -p "$OUT/sce_sys" "$OUT/sce_module"

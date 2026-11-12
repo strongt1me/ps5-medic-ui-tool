@@ -34,7 +34,7 @@ Die Sandbox – und damit der Lapy/etaHEN-Umweg – gilt nur für echte Titles, 
 
 **Nachtrag (9. Nov. 2026): websrv ist nicht mehr nötig.** Der Big-App-Lader (`hbldr.c`, `elfldr.c`, `pt.c`) steckt jetzt im Launcher `ps5medic-launcher.elf` (Port-9021-Payload, `ps5/launcher_main.cpp`, Quelle des Laders in `third_party/websrv-hbldr/`). Er legt zusätzlich die Kachel an und startet die UI bei Bedarf selbst. Aufbau, Sicherheitsregeln und Konsolentest: `docs/TITLE.md`. `make launch-ui` (websrv) bleibt als Ausweichweg.
 
-**Nachtrag (12. Nov. 2026): auch die Kachel braucht keinen Homebrew-Lader mehr.** Die Kachel ist jetzt ein nativer Starter-Titel (`title/starter.c`, `eboot.bin`), der den Launcher an Port 9021 sendet, statt websrv anzurufen oder den Browser zu öffnen (der frühere Dienst auf Port 9056 entfällt). Zwei Kacheln: `FAKE42008` (legt `ps5medic-launcher.elf` an) und die Ordner-App `FAKE42007` (für ShadowMount+). Alles in `docs/TITLE.md`.
+**Nachtrag (12. Nov. 2026): auch die Kachel braucht keinen Homebrew-Lader mehr.** Die Kachel ist jetzt ein nativer Starter-Titel (`title/starter.c`, `eboot.bin`), der den Launcher an Port 9021 sendet, statt websrv anzurufen oder den Browser zu öffnen (der frühere Dienst auf Port 9056 entfällt). Es gibt eine Ordner-App `FAKE42007` unter `/data/homebrew/` (ShadowMount+ legt die Kachel an); `ps5medic-launcher.elf` legt den Ordner beim Senden selbst an. Alles in `docs/TITLE.md`.
 
 **Nachtrag (12. Nov. 2026): Startbild, Zeiger, drei weitere Sprachen.**
 - *Startbild:* `ui/assets/splash.jpg` (1920×1080, JPEG) steckt per `.incbin` in der Programmdatei (`ui/src/splash.cpp`, Entschlüsselung mit stb_image, nur JPEG/PNG, `third_party/stb/`). `App::show_splash` zeigt es etwa 2,7 s; jede Taste und jeder Klick überspringt es.

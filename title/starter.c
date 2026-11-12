@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /*
- * PS5 Medic als Kachel unter "Medien" (FAKE42007 als Ordner-App fuer ShadowMount+, FAKE42008 vom Launcher angelegt).
+ * PS5 Medic als Kachel unter "Medien" (FAKE42007, Ordner-App fuer ShadowMount+).
  *
  * Der Starter ist ein winziger nativer PS5-Titel und braucht weder websrv noch einen Homebrew-Lader. Er tut nur eines: Er sendet
  * den Starter-Launcher (payload.elf, steckt per .incbin in dieser eboot.bin) an den ELF-Lader des Jailbreaks (127.0.0.1:9021),

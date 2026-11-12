@@ -1440,7 +1440,7 @@ void error_codes_flow_tests() {
         CHECK(a.screen() == App::Screen::ErrorCodes && svc.error_loads >= 1, "Fehlercodes: Start, dreimal Runter, Kreuz oeffnet die Liste");
         press(a, {Button::Circle});
         CHECK(a.screen() == App::Screen::Start, "Fehlercodes: Kreis zurueck zum Start");
-        press(a, {Button::Up, Button::Right, Button::Cross});  // von Fehlercodes (3) hoch zu den Einstellungen (2), Rechts zurueck
+        press(a, {Button::Left, Button::Right, Button::Cross});  // von Fehlercodes (3) links zu den Einstellungen (2), Rechts zurueck
         CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes: Rechts von den Einstellungen waehlt Fehlercodes");
         press(a, {Button::Circle, Button::Left, Button::Cross});
         CHECK(a.screen() == App::Screen::Settings, "Fehlercodes: Links geht zurueck zu den Einstellungen");
@@ -2987,6 +2987,28 @@ void games_tests() {
     }
 }
 
+void start_nav_tests() {
+    // Steuerkreuz auf dem Startbildschirm: Hoch von jeder kleinen Kachel fuehrt gleich zur grossen (Check-up), Runter zur ersten kleinen Kachel
+    {
+        FakeService fk;
+        App app(fk);
+        press(app, {Button::Down, Button::Down, Button::Down, Button::Up, Button::Cross});  // Kachel 3 (Fehlercodes), dann hoch, Kreuz
+        CHECK(app.screen() == App::Screen::Running, "Start: Hoch von einer kleinen Kachel erreicht den Check-up");
+    }
+    {
+        FakeService fk;
+        App app(fk);
+        press(app, {Button::Down, Button::Down, Button::Down, Button::Up, Button::Down, Button::Cross});
+        CHECK(app.screen() == App::Screen::CheckList, "Start: Runter aus dem Check-up waehlt die erste kleine Kachel (Verlauf)");
+    }
+    {
+        FakeService fk;
+        App app(fk);
+        press(app, {Button::Down, Button::Cross});  // erste Kachel nach Runter: Verlauf
+        CHECK(app.screen() != App::Screen::Running, "Start: Runter aus dem Check-up waehlt eine kleine Kachel");
+    }
+}
+
 void pointer_tests() {
     // Startbild: jede Taste, jeder Klick und der Ablauf der Zeit fuehren zum Startbildschirm
     {
@@ -3126,6 +3148,7 @@ void ui_tests() {
     selftest_ui_tests();
     checks_archive_tests();
     games_tests();
+    start_nav_tests();
     pointer_tests();
     icon_tests();
     shot_hook_tests();

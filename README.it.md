@@ -88,7 +88,7 @@
 
 - **Mai eliminare**, solo spostare o rinominare. I file che vengono modificati sono prima salvati in backup (`/data/ps5medic/backups/`); ogni modifica è registrata nel journal (`/data/ps5medic/journal.jsonl`).
 - **Nessuna scrittura senza ✕**: riparazione e annullamento avvengono solo dopo conferma esplicita nell'anteprima. Altre azioni di scrittura: il rapporto (□), l'aggiornamento delle regole (✕ sulla proposta), la lingua scelta in `/data/ps5medic/config.ini`.
-- Le riparazioni scrivono solo in una whitelist (cartelle di ShadowMount+, elenchi di autoload, i propri percorsi di scansione, `/data/ps5medic`). Mai sotto `/system`, `/dev` o nella flash. Unica eccezione al di fuori delle riparazioni: se il launcher viene inviato come ELF, crea il proprio riquadro `FAKE42008`, e per questo il suo programma si trova in `/system_ex/app/FAKE42008` (come per ogni app creata con un installer; dettagli in [docs/TITLE.md](docs/TITLE.md)).
+- Le riparazioni scrivono solo in una whitelist (cartelle di ShadowMount+, elenchi di autoload, i propri percorsi di scansione, `/data/ps5medic`). Mai sotto `/system`, `/system_ex`, `/dev` o nella flash. Se il launcher viene inviato come ELF, crea soltanto la propria cartella `/data/homebrew/FAKE42007` (come ogni altra app); il riquadro lo crea ShadowMount+.
 - **La rete viene usata solo per il download delle regole**, solo su □ e conferma, solo verso l'indirizzo del tuo `config.ini`, e non viene inviato nulla oltre a una richiesta GET. Inoltre nell'autotest c'è un test della rete locale: solo una connessione al router nell'intervallo di indirizzi privato, senza dati, mai verso Internet.
 - Nessun exploit, nessuna modifica del firmware, nessuna funzione per procurarsi, sbloccare o distribuire giochi, chiavi o firmware. PS5 Medic ripara l'**ambiente**, non i contenuti. Non consiglia mai un aggiornamento del software di sistema.
 
@@ -101,7 +101,7 @@
 
 1. Copiare la cartella `PS5MEDIC` della release via FTP in `/data/homebrew/` (contiene `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` e l'icona).
 2. Ottenere il riquadro, in uno dei due modi:
-   - **Inviare l'ELF:** inviare `ps5medic-launcher.elf` alla porta 9021 (Payload Manager, oppure dal PC: `make send-launcher PS5_HOST=<PS5-IP>`). Crea il riquadro **PS5 Medic** (`FAKE42008`) nella schermata iniziale e avvia subito l'interfaccia se non è in esecuzione alcuna app.
+   - **Inviare l'ELF:** inviare `ps5medic-launcher.elf` alla porta 9021 (Payload Manager, oppure dal PC: `make send-launcher PS5_HOST=<PS5-IP>`). Crea la cartella `/data/homebrew/FAKE42007`, ShadowMount+ ne installa il riquadro **PS5 Medic** sotto «Media» e avvia subito l'interfaccia se non è in esecuzione alcuna app.
    - **App-cartella:** copiare la cartella `FAKE42007` della release in `/data/homebrew/`; ShadowMount+ crea il riquadro. Dopodiché una pressione sul riquadro avvia l'interfaccia, senza dover inviare un ELF.
 3. Una pressione sul riquadro avvia l'interfaccia (prima la schermata di avvio, poi la schermata iniziale). Serve solo l'ELF loader (porta 9021) della console; dopo un riavvio il riquadro resta.
 
@@ -138,7 +138,7 @@ Per la console servono il [ps5-payload-sdk](https://github.com/ps5-payload-dev/s
 ```bash
 make ps5-ui                         # Vollbild-UI (ps5medicui.elf)
 make ps5                            # Diagnose-Payload (ps5medic.elf)
-make send-launcher PS5_HOST=192.168.1.x # Launcher an Port 9021 senden (Kachel FAKE42008 + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
+make send-launcher PS5_HOST=192.168.1.x # Inviare il launcher alla porta 9021 (crea la cartella FAKE42007 + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
 make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
 ```
 

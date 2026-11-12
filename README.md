@@ -88,7 +88,7 @@
 
 - **Nie löschen**, nur verschieben oder umbenennen. Dateien, die geändert werden, werden vorher gesichert (`/data/ps5medic/backups/`), jede Änderung steht im Journal (`/data/ps5medic/journal.jsonl`).
 - **Kein Schreiben ohne ✕**: Reparatur und Rückgängig passieren erst nach ausdrücklicher Bestätigung auf der Vorschau. Weitere Schreibaktionen: der Bericht (□), das Regel-Update (✕ auf dem Angebot), die gewählte Sprache in `/data/ps5medic/config.ini`.
-- Reparaturen schreiben nur in einer Whitelist (ShadowMount+-Ordner, Autoload-Listen, die eigenen Scanpfade, `/data/ps5medic`). Nie unter `/system`, `/dev` oder im Flash. Einzige Ausnahme außerhalb der Reparaturen: Wird der Launcher per ELF gesendet, legt er seine eigene Kachel `FAKE42008` an, und dafür liegt deren Programm unter `/system_ex/app/FAKE42008` (wie bei jeder per Installer angelegten App; Einzelheiten in [docs/TITLE.md](docs/TITLE.md)).
+- Reparaturen schreiben nur in einer Whitelist (ShadowMount+-Ordner, Autoload-Listen, die eigenen Scanpfade, `/data/ps5medic`). Nie unter `/system`, `/system_ex`, `/dev` oder im Flash. Wird der Launcher per ELF gesendet, legt er nur seinen eigenen Ordner `/data/homebrew/FAKE42007` an (wie jede andere App); die Kachel erzeugt ShadowMount+.
 - **Das Netz wird nur für den Regel-Download benutzt**, nur auf □ und Bestätigung, nur zur Adresse aus deiner `config.ini`, und es wird nichts gesendet außer einer GET-Anfrage. Daneben gibt es einen lokalen Netztest im Selbsttest: nur ein Verbindungsaufbau zum Router im privaten Adressbereich, ohne Daten, nie ins Internet.
 - Keine Exploits, keine Firmware-Änderungen, keine Funktionen zum Beschaffen, Entsperren oder Verteilen von Spielen, Keys oder Firmware. PS5 Medic repariert die **Umgebung**, nicht Inhalte. Es empfiehlt nie ein Update der Systemsoftware.
 
@@ -101,7 +101,7 @@
 
 1. Den Ordner `PS5MEDIC` aus dem Release per FTP nach `/data/homebrew/` kopieren (er enthält `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` und das Icon).
 2. Die Kachel bekommen, auf einem von zwei Wegen:
-   - **ELF senden:** `ps5medic-launcher.elf` an Port 9021 senden (Payload Manager, oder vom PC: `make send-launcher PS5_HOST=<PS5-IP>`). Er legt die Kachel **PS5 Medic** (`FAKE42008`) auf dem Startbildschirm an und startet die UI gleich, wenn keine App läuft.
+   - **ELF senden:** `ps5medic-launcher.elf` an Port 9021 senden (Payload Manager, oder vom PC: `make send-launcher PS5_HOST=<PS5-IP>`). Er legt den Ordner `/data/homebrew/FAKE42007` an, ShadowMount+ installiert daraus die Kachel **PS5 Medic** unter „Medien“, und er startet die UI gleich, wenn keine App läuft.
    - **Ordner-App:** den Ordner `FAKE42007` aus dem Release nach `/data/homebrew/` kopieren; ShadowMount+ legt die Kachel an. Danach startet ein Druck auf die Kachel die UI, ohne dass eine ELF gesendet werden muss.
 3. Ein Druck auf die Kachel startet die UI (erst das Startbild, dann der Startbildschirm). Sie braucht nur den ELF-Lader (Port 9021) der Konsole; nach einem Neustart bleibt die Kachel.
 
@@ -138,7 +138,7 @@ Für die Konsole braucht man das [ps5-payload-sdk](https://github.com/ps5-payloa
 ```bash
 make ps5-ui                         # Vollbild-UI (ps5medicui.elf)
 make ps5                            # Diagnose-Payload (ps5medic.elf)
-make send-launcher PS5_HOST=192.168.1.x # Launcher an Port 9021 senden (Kachel FAKE42008 + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
+make send-launcher PS5_HOST=192.168.1.x # Launcher an Port 9021 senden (legt den Ordner FAKE42007 an + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
 make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
 ```
 

@@ -88,7 +88,7 @@
 
 - **Never deletes**, only moves or renames. Files that are changed are backed up beforehand (`/data/ps5medic/backups/`), and every change is recorded in the journal (`/data/ps5medic/journal.jsonl`).
 - **No writing without ✕**: repair and undo happen only after explicit confirmation on the preview. Other write actions: the report (□), the rule update (✕ on the offer), the selected language in `/data/ps5medic/config.ini`.
-- Repairs write only within a whitelist (ShadowMount+ folder, autoload lists, the app's own scan paths, `/data/ps5medic`). Never under `/system`, `/dev` or in flash. The only exception outside the repairs: if the launcher is sent as an ELF, it creates its own tile `FAKE42008`, and for that its program is placed under `/system_ex/app/FAKE42008` (as with any app created by an installer; details in [docs/TITLE.md](docs/TITLE.md)).
+- Repairs write only within a whitelist (ShadowMount+ folder, autoload lists, the app's own scan paths, `/data/ps5medic`). Never under `/system`, `/system_ex`, `/dev` or in flash. If the launcher is sent as an ELF, it only creates its own folder `/data/homebrew/FAKE42007` (like any other app); ShadowMount+ creates the tile.
 - **The network is used only for the rule download**, only on □ and confirmation, only to the address from your `config.ini`, and nothing is sent except a GET request. In addition there is a local network test in the self-test: only a connection set-up to the router in the private address range, without data, never to the internet.
 - No exploits, no firmware changes, no functions for obtaining, unlocking or distributing games, keys or firmware. PS5 Medic repairs the **environment**, not content. It never recommends a system software update.
 
@@ -101,7 +101,7 @@
 
 1. Copy the `PS5MEDIC` folder from the release to `/data/homebrew/` via FTP (it contains `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` and the icon).
 2. Get the tile, in one of two ways:
-   - **Send an ELF:** send `ps5medic-launcher.elf` to port 9021 (Payload Manager, or from the PC: `make send-launcher PS5_HOST=<PS5-IP>`). It creates the **PS5 Medic** tile (`FAKE42008`) on the home screen and starts the UI right away if no app is running.
+   - **Send an ELF:** send `ps5medic-launcher.elf` to port 9021 (Payload Manager, or from the PC: `make send-launcher PS5_HOST=<PS5-IP>`). It creates the folder `/data/homebrew/FAKE42007`, ShadowMount+ installs the **PS5 Medic** tile under "Media" from it, and it starts the UI right away if no app is running.
    - **Folder app:** copy the `FAKE42007` folder from the release to `/data/homebrew/`; ShadowMount+ creates the tile. After that, pressing the tile starts the UI without an ELF having to be sent.
 3. Pressing the tile starts the UI (first the splash screen, then the start screen). It needs only the console's ELF loader (port 9021); the tile remains after a restart.
 
@@ -138,7 +138,7 @@ For the console you need the [ps5-payload-sdk](https://github.com/ps5-payload-de
 ```bash
 make ps5-ui                         # Full-screen UI (ps5medicui.elf)
 make ps5                            # Diagnostic payload (ps5medic.elf)
-make send-launcher PS5_HOST=192.168.1.x # Send the launcher to port 9021 (tile FAKE42008 + UI); make title = folder app FAKE42007; make launch-ui = old way via websrv
+make send-launcher PS5_HOST=192.168.1.x # Send the launcher to port 9021 (creates the FAKE42007 folder + UI); make title = folder app FAKE42007; make launch-ui = old way via websrv
 make dist                           # Release folder and zip under dist/ (local only)
 ```
 

@@ -88,7 +88,7 @@
 
 - **Jamais de suppression**, uniquement déplacer ou renommer. Les fichiers qui sont modifiés sont sauvegardés au préalable (`/data/ps5medic/backups/`), chaque modification est inscrite au journal (`/data/ps5medic/journal.jsonl`).
 - **Aucune écriture sans ✕** : la réparation et l'annulation n'ont lieu qu'après une confirmation explicite sur l'aperçu. Autres actions d'écriture : le rapport (□), la mise à jour des règles (✕ sur la proposition), la langue choisie dans `/data/ps5medic/config.ini`.
-- Les réparations n'écrivent que dans une liste d'autorisation (dossiers de ShadowMount+, listes d'Autoload, ses propres chemins d'analyse, `/data/ps5medic`). Jamais sous `/system`, `/dev` ni dans la mémoire flash. Seule exception en dehors des réparations : lorsque le Launcher est envoyé sous forme d'ELF, il crée sa propre tuile `FAKE42008`, et son programme se trouve pour cela sous `/system_ex/app/FAKE42008` (comme pour toute application installée par un installeur ; détails dans [docs/TITLE.md](docs/TITLE.md)).
+- Les réparations n'écrivent que dans une liste d'autorisation (dossiers de ShadowMount+, listes d'Autoload, ses propres chemins d'analyse, `/data/ps5medic`). Jamais sous `/system`, `/system_ex`, `/dev` ni dans la mémoire flash. Lorsque le Launcher est envoyé sous forme d'ELF, il crée uniquement son propre dossier `/data/homebrew/FAKE42007` (comme toute autre application) ; la tuile est créée par ShadowMount+.
 - **Le réseau n'est utilisé que pour le téléchargement des règles**, uniquement sur □ et après confirmation, uniquement vers l'adresse de votre `config.ini`, et rien n'est envoyé hormis une requête GET. En outre, l'autotest comporte un test de réseau local : uniquement l'établissement d'une connexion vers le routeur, dans la plage d'adresses privées, sans données, jamais vers Internet.
 - Aucun exploit, aucune modification du firmware, aucune fonction pour se procurer, déverrouiller ou distribuer des jeux, des clés ou des firmwares. PS5 Medic répare l'**environnement**, pas les contenus. Il ne recommande jamais d'installer une nouvelle version du logiciel système.
 
@@ -101,7 +101,7 @@
 
 1. Copier le dossier `PS5MEDIC` de la release par FTP vers `/data/homebrew/` (il contient `ps5medicui.elf`, `ps5medic-launcher.elf`, `ps5medic.elf`, `rules.json`, `error_codes.json`, `homebrew.js` et l'icône).
 2. Obtenir la tuile, de l'une de ces deux façons :
-   - **Envoyer l'ELF :** envoyer `ps5medic-launcher.elf` au port 9021 (Payload Manager, ou depuis le PC : `make send-launcher PS5_HOST=<PS5-IP>`). Il crée la tuile **PS5 Medic** (`FAKE42008`) sur l'écran d'accueil et lance aussitôt l'interface si aucune application n'est en cours.
+   - **Envoyer l'ELF :** envoyer `ps5medic-launcher.elf` au port 9021 (Payload Manager, ou depuis le PC : `make send-launcher PS5_HOST=<PS5-IP>`). Il crée le dossier `/data/homebrew/FAKE42007`, ShadowMount+ en installe la tuile **PS5 Medic** sous « Médias », et il lance aussitôt l'interface si aucune application n'est en cours.
    - **Application-dossier :** copier le dossier `FAKE42007` de la release vers `/data/homebrew/` ; ShadowMount+ crée la tuile. Ensuite, une pression sur la tuile lance l'interface sans qu'il soit nécessaire d'envoyer un ELF.
 3. Une pression sur la tuile lance l'interface (d'abord l'écran de démarrage, puis l'écran d'accueil). Elle n'a besoin que du chargeur d'ELF (port 9021) de la console ; la tuile reste après un redémarrage.
 
@@ -138,7 +138,7 @@ Pour la console, il faut le [ps5-payload-sdk](https://github.com/ps5-payload-dev
 ```bash
 make ps5-ui                         # Vollbild-UI (ps5medicui.elf)
 make ps5                            # Diagnose-Payload (ps5medic.elf)
-make send-launcher PS5_HOST=192.168.1.x # Launcher an Port 9021 senden (Kachel FAKE42008 + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
+make send-launcher PS5_HOST=192.168.1.x # Envoyer le Launcher au port 9021 (crée le dossier FAKE42007 + UI); make title = Ordner-App FAKE42007; make launch-ui = alter Weg über websrv
 make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
 ```
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Entwicklungswerkzeug (kein Teil des Produkts): startet einen Titel wie ein Druck auf seine Kachel, damit der Weg Kachel ->
 // Starter -> Launcher -> UI ohne Fernseher und Controller pruefbar ist. Titel-ID in /data/ps5medic/launch_title.txt
-// (Standard FAKE42008); Ergebnis in /data/ps5medic/launch_title.log. Senden: nc <ip> 9021 < build-ps5/ps5medic-launch-title.elf
+// (Standard FAKE42007); Ergebnis in /data/ps5medic/launch_title.log. Senden: nc <ip> 9021 < build-ps5/ps5medic-launch-title.elf
 #include <unistd.h>
 
 #include <cstdint>
@@ -25,7 +25,7 @@ int sceSystemServiceLaunchApp(const char* title_id, char** argv, app_launch_ctx_
 
 int main() {
     std::FILE* log = std::fopen("/data/ps5medic/launch_title.log", "w");
-    char title[32] = "FAKE42008";
+    char title[32] = "FAKE42007";
     if (std::FILE* f = std::fopen("/data/ps5medic/launch_title.txt", "r")) {
         char line[32] = {0};
         if (std::fgets(line, sizeof line, f) && std::strlen(line) >= 9) {
