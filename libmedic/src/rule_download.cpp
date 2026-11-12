@@ -79,7 +79,7 @@ RuleDownloadResult download_rule_update(Platform& p, IHttpClient& http, const st
         return r;
     }
     HttpUrl parsed;
-    if (!parse_http_url(base_url, parsed, r.error)) return r;  // bad_url oder https_unsupported
+    if (!parse_url(base_url, parsed, r.error, http.supports_https())) return r;  // bad_url oder https_unsupported
     if (!p.fs_rw()) {
         r.error = "no_write";
         return r;

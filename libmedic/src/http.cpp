@@ -13,19 +13,22 @@ bool host_char_ok(unsigned char c) { return std::isalnum(c) || c == '.' || c == 
 
 }  // namespace
 
-bool parse_http_url(const std::string& url, HttpUrl& out, std::string& error) {
+bool parse_http_url(const std::string& url, HttpUrl& out, std::string& error) { return parse_url(url, out, error, false); }
+
+bool parse_url(const std::string& url, HttpUrl& out, std::string& error, bool allow_https) {
     error.clear();
     std::string lower_prefix = url.substr(0, 8);
     std::transform(lower_prefix.begin(), lower_prefix.end(), lower_prefix.begin(), [](unsigned char c) { return std::tolower(c); });
-    if (lower_prefix == "https://") {
+    const bool https = lower_prefix == "https://";
+    if (https && !allow_https) {
         error = "https_unsupported";
         return false;
     }
-    if (lower_prefix.substr(0, 7) != "http://") {
+    if (!https && lower_prefix.substr(0, 7) != "http://") {
         error = "bad_url";
         return false;
     }
-    std::string rest = url.substr(7);
+    std::string rest = url.substr(https ? 8 : 7);
     if (const auto hash = rest.find('#'); hash != std::string::npos) rest.erase(hash);
     std::string hostport = rest, path = "/";
     if (const auto slash = rest.find('/'); slash != std::string::npos) {
@@ -38,7 +41,7 @@ bool parse_http_url(const std::string& url, HttpUrl& out, std::string& error) {
             return false;
         }
     std::string host = hostport;
-    int port = 80;
+    int port = https ? 443 : 80;
     if (const auto colon = hostport.rfind(':'); colon != std::string::npos) {
         host = hostport.substr(0, colon);
         const std::string ps = hostport.substr(colon + 1);
@@ -58,6 +61,7 @@ bool parse_http_url(const std::string& url, HttpUrl& out, std::string& error) {
         return false;
     }
     out.host = host;
+    out.https = https;
     out.port = port;
     out.path = path;
     return true;

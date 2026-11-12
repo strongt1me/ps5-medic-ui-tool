@@ -36,7 +36,7 @@ PS5_CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Ilibmedic/include -Ithird_party -I
 PS5_CORE_SRCS := $(wildcard libmedic/src/*.cpp) third_party/qrcodegen/qrcodegen.cpp ps5/ps5_platform.cpp
 PS5_C_SRCS := third_party/tweetnacl/tweetnacl.c third_party/sqlite3/sqlite3.c
 # png.cpp und shot_hook.cpp: PNG-Schreiber fuer den Screenshot-Hook der UI (Entwicklung, siehe shot_hook.hpp).
-PS5_UI_SRCS := ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp ui/src/i18n.cpp ui/src/i18n_embedded.cpp \
+PS5_UI_SRCS := ps5/ps5_http.cpp ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp ui/src/i18n.cpp ui/src/i18n_embedded.cpp \
                ui/src/icons.cpp ui/src/png.cpp ui/src/shot_hook.cpp ui/src/splash.cpp ui/src/app.cpp ui/src/local_service.cpp
 
 PS5_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) ps5/main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
@@ -59,9 +59,9 @@ PS5_START_OBJS := $(PS5_BUILD)/ps5/launcher_main.o $(PS5_LAUNCHER_C_OBJS)
 PS5_LAUNCHER_OBJS := $(PS5_BUILD)/ps5/launcher_setup.o $(PS5_LAUNCHER_C_OBJS)
 TILE_DIR := build-title/FAKE42007
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
-               -lSceKeyboard -lSceImeDialog
+               -lSceKeyboard -lSceImeDialog -lSceNet -lSceSsl -lSceHttp2
 
-.PHONY: host test clean ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
+.PHONY: host test clean ps5-https-probe ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
 
 # UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
 SNAP ?=
@@ -132,6 +132,12 @@ $(PS5_START_ELF): $(PS5_START_OBJS)
 # Der Starter der Kachel (nativer Titel, eboot.bin) traegt ps5medic-start.elf; build-title/FAKE42007 enthaelt die fertige Ordner-App.
 $(TILE_DIR)/eboot.bin: $(PS5_START_ELF) title/starter.c title/build_title.sh title/title.ld title/symbols.map ps5/homebrew/sce_sys/icon0.png
 	bash title/build_title.sh $(PS5_START_ELF)
+
+# Entwicklungswerkzeug: https-Abruf ueber den PS5-Client pruefen (ps5/https_probe.cpp), Ergebnis /data/ps5medic/https_probe.log
+PS5_HTTPSPROBE_ELF := $(PS5_BUILD)/ps5medic-https-probe.elf
+ps5-https-probe: $(PS5_HTTPSPROBE_ELF)
+$(PS5_HTTPSPROBE_ELF): $(PS5_BUILD)/ps5/https_probe.o $(PS5_BUILD)/ps5/ps5_http.o $(PS5_BUILD)/libmedic/src/http.o $(PS5_BUILD)/libmedic/src/posix_http.o
+	$(PS5_CXX) $^ -lkernel_sys -lSceNet -lSceSsl -lSceHttp2 -o $@
 
 # Entwicklungswerkzeug: startet einen Titel wie ein Druck auf die Kachel (ps5/launch_title.cpp), siehe docs/TITLE.md
 PS5_LAUNCHTITLE_ELF := $(PS5_BUILD)/ps5medic-launch-title.elf
