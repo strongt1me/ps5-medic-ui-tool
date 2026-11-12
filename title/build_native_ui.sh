@@ -42,11 +42,8 @@ cxx=("$CLANG" "${common[@]}" -std=c++20 -fno-exceptions -fno-rtti
 
 sources=(
     ps5/native_ui_main.cpp ps5/native_shim.cpp ps5/native_runtime.cpp
-    ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp ui/src/i18n.cpp ui/src/i18n_embedded.cpp ui/src/icons.cpp
-    ui/src/splash.cpp ui/src/app.cpp
+    ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp
 )
-# Teile des Kerns, die die UI braucht (Browser-Teile ohne Dateizugriff: Diff, QR, Spiele, Selbsttest-Liste usw.)
-sources+=(libmedic/src/diff.cpp libmedic/src/qr.cpp ps5/native_qrcodegen.cpp libmedic/src/finding.cpp libmedic/src/checks.cpp ${MEDIC_NATIVE_CORE:-})
 objs=()
 for s in "${sources[@]}"; do
     o=$B/$(echo "$s" | tr '/' '_').o

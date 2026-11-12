@@ -50,6 +50,9 @@ PS5_PROBE_ELF := $(PS5_BUILD)/ps5medic-probe.elf
 PS5_SELFTEST_ELF := $(PS5_BUILD)/ps5medic-selftest.elf
 PS5_SELFTEST_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) ps5/selftest_run.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
 PS5_UI_ELF := $(PS5_BUILD)/ps5medicui.elf
+# Dienst fuer die native UI-App (docs/NATIVE.md): zeichnet die UI, liest die Konsole, die App zeigt nur an (Port 9060)
+PS5_SERVICE_ELF := $(PS5_BUILD)/ps5medicservice.elf
+PS5_SERVICE_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) $(PS5_UI_SRCS) ps5/service_main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
 # Launcher ohne websrv und ohne Homebrew-Lader (docs/TITLE.md). Der Lader (hbldr/elfldr/pt) stammt aus websrv, siehe third_party/websrv-hbldr/.
 #   ps5medic-start.elf     startet nur die UI; steckt im Starter der Kachel (title/starter.c)
 #   ps5medic-launcher.elf  dasselbe, legt aber vorher den Kachel-Ordner /data/homebrew/FAKE42007 an (Dateien aus build-title/FAKE42007); das ist die ELF zum Senden
@@ -63,7 +66,7 @@ TILE_DIR := build-title/FAKE42007
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
 
-.PHONY: host test clean ps5-image-probe ps5-update-probe ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
+.PHONY: ps5-service host test clean ps5-image-probe ps5-update-probe ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
 
 # UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
 SNAP ?=
@@ -118,6 +121,12 @@ $(PS5_UI_ELF): $(PS5_UI_OBJS)
 	@test -d $(PS5_HOMEBREW)/lib || { echo "SDL2 fuer die PS5 fehlt in $(PS5_HOMEBREW) (ps5-payload-sdl2 + ps5-payload-libsamplerate, siehe docs/PHASE3.md)"; exit 1; }
 	$(PS5_CXX) $^ -L$(PS5_HOMEBREW)/lib $(PS5_UI_LIBS) -lkernel_sys -o $@
 
+$(PS5_SERVICE_ELF): $(PS5_SERVICE_OBJS)
+	@mkdir -p $(dir $@)
+	$(PS5_CXX) $^ -lkernel_sys -o $@
+
+ps5-service: $(PS5_SERVICE_ELF)
+
 # Startbild: ui/assets/splash.jpg steckt per .incbin im Objekt (docs/PHASE3.md)
 $(PS5_BUILD)/ui/src/splash.o: private PS5_CXXFLAGS += '-DMEDIC_SPLASH_PATH="$(CURDIR)/ui/assets/splash.jpg"' '-DMEDIC_BACKGROUND_PATH="$(CURDIR)/ui/assets/background.jpg"'
 $(PS5_BUILD)/ui/src/splash.o: ui/assets/splash.jpg ui/assets/background.jpg
@@ -157,7 +166,7 @@ $(PS5_LAUNCHTITLE_ELF): $(PS5_BUILD)/ps5/launch_title.o
 $(PS5_LAUNCHER_ELF): $(PS5_LAUNCHER_OBJS)
 	$(PS5_CXX) $^ -lkernel_sys -lSceSystemService -lSceUserService -o $@
 
--include $(PS5_OBJS:.o=.d) $(PS5_UI_OBJS:.o=.d) $(PS5_START_OBJS:.o=.d) $(PS5_BUILD)/ps5/launcher_setup.d
+-include $(PS5_OBJS:.o=.d) $(PS5_UI_OBJS:.o=.d) $(PS5_SERVICE_OBJS:.o=.d) $(PS5_START_OBJS:.o=.d) $(PS5_BUILD)/ps5/launcher_setup.d
 
 # Launcher an elfldr (Port 9021) senden. Danach: Kachel "PS5 Medic" (FAKE42007) erscheint, sobald ShadowMount+ den Ordner sieht, die UI startet. Protokoll: /data/ps5medic/launcher.log
 send-launcher: $(PS5_LAUNCHER_ELF)
@@ -227,9 +236,10 @@ NATIVE_ID := FAKE42009
 native-ui:
 	bash title/build_native_ui.sh $(NATIVE_ID)
 
-deploy-native: native-ui
+deploy-native: native-ui $(PS5_SERVICE_ELF)
 	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (FTP-Server auf Port $(PS5_FTP_PORT) muss laufen)"; exit 1; }
 	for f in eboot.bin sce_module/libc.prx sce_sys/icon0.png sce_sys/param.json; do 	    curl --fail --ftp-create-dirs -T build-native/$(NATIVE_ID)/$$f ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/$(NATIVE_ID)/$$f || exit 1; 	done
+	curl --fail --ftp-create-dirs -T $(PS5_SERVICE_ELF) ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/ps5medicservice.elf
 	@echo "Hochgeladen. ShadowMount+ legt die Kachel \"PS5 Medic (nativ)\" unter Medien an."
 
 # Signierte Regeln fuer den Download (nur am PC; der Privatschluessel liegt ausserhalb des Repositorys).

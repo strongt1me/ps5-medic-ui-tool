@@ -4,11 +4,13 @@
 **Warum:** Die UI läuft bisher als geliehene Big App `FAKE00000` (der Lader von websrv steckt sie in die Hülle der PSNow-App). In dieser Hülle führt die PS-Taste nicht zum Homescreen (nur ein Ton, siehe `docs/AUDIT.md`). Eine native App mit eigenem Titel verhält sich wie jede andere App.
 
 ## Entwurf
-Zwei Teile, weil eine sandboxed App `/data` und `/mnt` nicht lesen darf:
-1. **UI-App** (`ps5/native_ui_main.cpp`, eigener Titel, Ordner-App in `/data/homebrew`): Bild über VideoOut, Pad über ScePad, ohne SDL, ohne Rechte-Anhebung.
-2. **Dienst-Payload** (später, auf Basis von `ps5medic.elf`): liest die Konsole, führt Check-up und Reparaturen aus und antwortet der UI über einen Socket auf `127.0.0.1`. Die UI schickt ihn beim Start über Port 9021 an den ELF-Lader, falls er nicht läuft.
+Zwei Teile, weil eine sandboxed App `/mnt` und die Systemordner nicht lesen darf:
+1. **UI-App** (`ps5/native_ui_main.cpp`, eigener Titel, Ordner-App in `/data/homebrew`): zeigt nur an. Bild über VideoOut (gekachelter Bildspeicher), Pad über ScePad, ohne SDL und ohne Rechte-Anhebung. Sie hält die Bilder des Dienstes in einem Puffer und schickt den Pad-Zustand zurück.
+2. **Dienst-Payload** (`ps5/service_main.cpp`, `make ps5-service`, `ps5medicservice.elf`): läuft über den ELF-Lader mit vollen Rechten, zeichnet die **ganze Oberfläche** (derselbe `App` + `LocalService` wie die SDL-UI, deshalb Prüfungen, Reparaturen, Undo, Regel-Update unverändert) und schickt nur die geänderten Bildstreifen (8 Zeilen Raster) auf `127.0.0.1:9060`.
 
-Die UI spricht nur über `IMedicService` (`ui/include/medic_ui/service.hpp`); der Dienst-Anschluss wird ein `RemoteService`. Die bisherigen `LocalService` und die SDL-UI bleiben als Ausweichweg erhalten, bis die native App alles kann.
+Protokoll: `ps5/service_protocol.hpp` (Typ, Länge, Nutzlast; `H` Hallo, `B` Streifen, `P` Bild fertig, `Q` Ende; App → Dienst `S` Pad-Zustand, `X` beenden). Die App startet den Dienst bei Bedarf selbst: sie liest `/data/homebrew/PS5MEDIC/ps5medicservice.elf` und sendet ihn an Port 9021. Der Dienst endet mit der Oberfläche (Kreis auf dem Start), nach 120 s ohne App oder auf `X` einer neueren Instanz.
+
+Entscheidung (12. Nov. 2026): Statt jeden `IMedicService`-Aufruf (über 30, viele Strukturen) zu übertragen, wird nur Bild und Eingabe übertragen. Das spart den größten Teil der Arbeit und hält die Logik an einer Stelle. Die SDL-UI (`ps5medicui.elf`) und `LocalService` bleiben als Ausweichweg erhalten.
 
 ## Bau
 `make native-ui` (Skript `title/build_native_ui.sh`) baut `build-native/FAKE42009/`, `make deploy-native PS5_HOST=<ip>` legt es per FTP nach `/data/homebrew/FAKE42009` (ShadowMount+ legt die Kachel „PS5 Medic (nativ)" an). Grundlage: `ps5-native-tool`, `libc.prx` und die kleine C++-Laufzeit aus ps5-native-app-boilerplate, SDK 0.45.
@@ -20,8 +22,8 @@ Einschränkungen der Umgebung, die den Code prägen:
 
 ## Stand
 - **Meilenstein 1 (12. Nov. 2026 auf der Konsole bestätigt, FW 12.00):** Bild, Pad und **PS-Taste führt zum Homescreen** (in der geliehenen Big App `FAKE00000` ging sie nicht). Funde beim Test: (1) der App-Heap ist klein, große Blöcke gehen deshalb über eigene Speicherseiten (`ps5/native_runtime.cpp`); (2) der Bildspeicher ist gekachelt (`ps5/native_tilemap.inc`, aus dem SDL-Treiber); (3) beim Beenden mit der PS-Taste läuft die App im Hintergrund weiter, ihre Dateien bleiben bis zum Schließen gesperrt (FTP 550). Ursprünglicher Plan: UI mit Platzhalter-Dienst (`StubService`, meldet „Prüfung unvollständig"): Bild, Pad, Startbild, Hintergrund. Geprüft wurde: startet die App, zeigt sie das Bild, reagiert das Pad, **führt die PS-Taste zum Homescreen**, beendet Kreis die App.
-- Meilenstein 2: Dienst-Payload mit Protokoll (JSON-Zeilen über localhost) für alle `IMedicService`-Aufrufe.
-- Meilenstein 3: `RemoteService` in der UI, Ersetzen des Starters `FAKE42007`.
+- **Meilenstein 2 (12. Nov. 2026, UI erscheint auf der Konsole):** Dienst-Payload und Anzeige-App laufen; die App startet den Dienst selbst. Offen: Pad-Steuerung und Check-up mit echten Befunden bestätigen.
+- Meilenstein 3: Die native App ersetzt den Starter `FAKE42007` (gleiche Kachel, Titel-ID und Start über die Kachel), Aufräumen der Testkachel `FAKE42009`.
 
 ## Offene Risiken
 - Die Importe der App (libc, `libScePad`, `libSceVideoOut`, `libSceUserService`) sind auf FW 12.00 bestätigt; auf anderen Firmwares ungeprüft, ein fehlender Import beendet die App vor `main()` ohne Meldung.

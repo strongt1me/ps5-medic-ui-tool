@@ -6,3 +6,4 @@ build-title/
 # Signierschluessel gehoeren nie ins Repository
 *.key
 rules-signing*
+build-native/
