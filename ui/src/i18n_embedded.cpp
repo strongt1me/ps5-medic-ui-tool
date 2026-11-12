@@ -496,11 +496,11 @@ R"JSON(  "rule.title.appdb.orphan_entry": "Datenbank kennt ein Spiel ohne Ordner
   "title.system_app": "Systemanwendung",
   "detail.affects": "Betrifft: {list}",
   "detail.affects_more": "{list} und {n} weitere",
-  "games.d.name_unknown": "Name nicht ermittelt",
   "games.d.name_gone": "Nicht auf der Konsole gefunden",
   "checks.earlier": "Frühere Check-ups ({n})",
   "checks.expand": "Aufklappen",
-  "checks.collapse": "Zuklappen"
+  "checks.collapse": "Zuklappen",
+  "title.unknown_game": "Unbekanntes Spiel"
 }
 )JSON";
 
@@ -995,11 +995,11 @@ R"JSON(  "games.d.log": "Latest in the ShadowMount+ log",
   "title.system_app": "system app",
   "detail.affects": "Affects: {list}",
   "detail.affects_more": "{list} and {n} more",
-  "games.d.name_unknown": "Name not found",
   "games.d.name_gone": "Not found on the console",
   "checks.earlier": "Earlier check-ups ({n})",
   "checks.expand": "Show",
-  "checks.collapse": "Hide"
+  "checks.collapse": "Hide",
+  "title.unknown_game": "Unknown game"
 }
 )JSON";
 
@@ -1495,11 +1495,11 @@ R"JSON(  "rule.title.appdb.orphan_entry": "La base connaît un jeu sans dossier"
   "title.system_app": "app système",
   "detail.affects": "Concerne : {list}",
   "detail.affects_more": "{list} et {n} autres",
-  "games.d.name_unknown": "Nom introuvable",
   "games.d.name_gone": "Introuvable sur la console",
   "checks.earlier": "Check-ups précédents ({n})",
   "checks.expand": "Afficher",
-  "checks.collapse": "Masquer"
+  "checks.collapse": "Masquer",
+  "title.unknown_game": "Jeu inconnu"
 }
 )JSON";
 
@@ -1994,11 +1994,11 @@ R"JSON("games.d.fw": "Firmware richiesto",
 "title.system_app": "app di sistema",
 "detail.affects": "Riguarda: {list}",
 "detail.affects_more": "{list} e altri {n}",
-"games.d.name_unknown": "Nome non trovato",
 "games.d.name_gone": "Non trovato sulla console",
 "checks.earlier": "Check-up precedenti ({n})",
 "checks.expand": "Mostra",
-"checks.collapse": "Nascondi"
+"checks.collapse": "Nascondi",
+"title.unknown_game": "Gioco sconosciuto"
 }
 )JSON";
 
@@ -2493,11 +2493,11 @@ R"JSON(  "games.d.oversized": "Reserva de espacio excesiva",
   "title.system_app": "app del sistema",
   "detail.affects": "Afecta a: {list}",
   "detail.affects_more": "{list} y {n} más",
-  "games.d.name_unknown": "Nombre no encontrado",
   "games.d.name_gone": "No encontrado en la consola",
   "checks.earlier": "Chequeos anteriores ({n})",
   "checks.expand": "Mostrar",
-  "checks.collapse": "Ocultar"
+  "checks.collapse": "Ocultar",
+  "title.unknown_game": "Juego desconocido"
 }
 )JSON";
 

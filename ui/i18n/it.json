@@ -485,9 +485,9 @@
 "title.system_app": "app di sistema",
 "detail.affects": "Riguarda: {list}",
 "detail.affects_more": "{list} e altri {n}",
-"games.d.name_unknown": "Nome non trovato",
 "games.d.name_gone": "Non trovato sulla console",
 "checks.earlier": "Check-up precedenti ({n})",
 "checks.expand": "Mostra",
-"checks.collapse": "Nascondi"
+"checks.collapse": "Nascondi",
+"title.unknown_game": "Gioco sconosciuto"
 }

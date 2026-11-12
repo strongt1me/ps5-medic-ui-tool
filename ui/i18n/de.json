@@ -485,9 +485,9 @@
   "title.system_app": "Systemanwendung",
   "detail.affects": "Betrifft: {list}",
   "detail.affects_more": "{list} und {n} weitere",
-  "games.d.name_unknown": "Name nicht ermittelt",
   "games.d.name_gone": "Nicht auf der Konsole gefunden",
   "checks.earlier": "Frühere Check-ups ({n})",
   "checks.expand": "Aufklappen",
-  "checks.collapse": "Zuklappen"
+  "checks.collapse": "Zuklappen",
+  "title.unknown_game": "Unbekanntes Spiel"
 }

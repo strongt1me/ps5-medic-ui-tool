@@ -50,6 +50,14 @@ bool is_hint_fix(const std::string& id) { return id.size() > 5 && id.compare(id.
 bool undoable(const std::string& state) { return state == "applied" || state == "incomplete"; }
 
 // "20261108T120000Z" -> "2026-11-08 12:00 UTC"
+// Anzeigename eines Titels: der Name aus den Metadaten, sonst eine Beschreibung statt der nackten Kennung (Spiel bzw. Systemanwendung).
+template <class Str>
+std::string game_label(const Str& S, const medic::GameInfo& g) {
+    if (!g.name.empty() && g.name != g.titleid) return g.name;
+    const std::string pre = g.titleid.substr(0, 4);
+    return S(pre == "PPSA" || pre == "CUSA" || pre == "FAKE" ? "title.unknown_game" : "title.system_app");
+}
+
 std::string pretty_ts(const std::string& ts) {
     if (ts.size() >= 15 && ts[8] == 'T')
         return ts.substr(0, 4) + "-" + ts.substr(4, 2) + "-" + ts.substr(6, 2) + " " + ts.substr(9, 2) + ":" + ts.substr(11, 2) + " UTC";
@@ -382,7 +390,7 @@ void App::refresh_game_names() {
     finding_games_.assign(result_.findings.size(), {});
     for (const auto& g : svc_.games()) {
         if (!g.name.empty() && g.name != g.titleid) title_names_[g.titleid] = g.name;
-        const std::string label = g.name.empty() || g.name == g.titleid ? g.titleid : g.name + " (" + g.titleid + ")";
+        const std::string label = game_label(Strings::get(lang_), g) + " (" + g.titleid + ")";
         for (const std::size_t idx : g.findings)
             if (idx < finding_games_.size()) finding_games_[idx].push_back(label);
     }
@@ -2007,13 +2015,13 @@ void App::draw_gamelist(Canvas& c) const {
         const Icon ic = has ? sev_icon(g.worst) : Icon::Gamepad;
         const Color col = has ? sev_color(g.worst) : kTintSlate;
         draw_icon_badge(c, ic, M + 18, y + 10, 56, col);
-        body().draw(c, M + 94, y + 6, elide(body(), g.name.empty() ? g.titleid : g.name, cw - 640), kText);
+        body().draw(c, M + 94, y + 6, elide(body(), game_label(S, g), cw - 640), kText);
         std::string kind = S("games.kind_none");
         if (!g.sources.empty()) {
             const auto it = std::find_if(g.sources.begin(), g.sources.end(), [](const medic::GameSource& s2) { return s2.active; });
             kind = S((it != g.sources.end() ? it->kind : g.sources.front().kind) == "image" ? "games.kind_image" : "games.kind_folder");
         }
-        small().draw(c, M + 94, y + 42, elide(small(), (g.name.empty() ? std::string() : g.titleid + "  ·  ") + kind, cw - 640), kDim);
+        small().draw(c, M + 94, y + 42, elide(small(), g.titleid + "  ·  " + kind, cw - 640), kDim);
         int x = M + cw - 32;
         if (!has) {
             text_right(c, small(), x, y + 24, S("games.no_trace"), kDim);
@@ -2057,15 +2065,15 @@ void App::draw_gamedetail(Canvas& c) const {
     {
         // Name des Spiels gross, die Titel-Kennung als Marke daneben; ohne bekannten Namen steht die Kennung gross und darunter ein Hinweis
         const bool named = !g.name.empty() && g.name != g.titleid;
-        const std::string head = elide(title(), named ? g.name : g.titleid, W - 2 * M - 420 - (named ? small().width(g.titleid) + 80 : 0));
+        const std::string head = elide(title(), game_label(S, g), W - 2 * M - 420 - small().width(g.titleid) - 80);
         title_icon(c, Icon::Gamepad, kTintPink, head);
-        if (named) {
+        {
             const int cx = M + 88 + title().width(head) + 24, cw2 = small().width(g.titleid) + 36;
             c.fill_round_rect(cx, 146, cw2, 40, 20, kPanelHi);
             small().draw(c, cx + 18, 151, g.titleid, kText);
         }
         text_right(c, small(), W - M, 148, S.fmt("games.pos", {{"i", std::to_string(game_sel_ + 1)}, {"n", std::to_string(total)}}), kDim);
-        small().draw(c, M + 4, 196, (named ? std::string() : S(g.titleid.compare(0, 4, "NPXS") == 0 ? "title.system_app" : (g.installed != 1 && g.sources.empty() ? "games.d.name_gone" : "games.d.name_unknown")) + "  ·  ") + S.fmt("games.console_fw", {{"fw", result_.fw.empty() ? "?" : result_.fw}}), kDim);
+        small().draw(c, M + 4, 196, (!named && g.installed != 1 && g.sources.empty() && g.titleid.compare(0, 4, "NPXS") != 0 ? S("games.d.name_gone") + "  ·  " : std::string()) + S.fmt("games.console_fw", {{"fw", result_.fw.empty() ? "?" : result_.fw}}), kDim);
     }
 
     // Links: der Zustand des Spiels als Liste mit Statussymbol. Gruen = in Ordnung, Orange/Rot = Problem, Grau = nicht bekannt.

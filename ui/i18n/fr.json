@@ -485,9 +485,9 @@
   "title.system_app": "app système",
   "detail.affects": "Concerne : {list}",
   "detail.affects_more": "{list} et {n} autres",
-  "games.d.name_unknown": "Nom introuvable",
   "games.d.name_gone": "Introuvable sur la console",
   "checks.earlier": "Check-ups précédents ({n})",
   "checks.expand": "Afficher",
-  "checks.collapse": "Masquer"
+  "checks.collapse": "Masquer",
+  "title.unknown_game": "Jeu inconnu"
 }

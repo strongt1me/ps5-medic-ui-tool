@@ -2,6 +2,7 @@
 // Tests der UI: Canvas, Schrift/Umbruch, Texte, PNG, Bildschirmablauf (mit Fake-Dienst) und eine Ende-zu-Ende-Reparatur
 // ueber LocalService gegen eine Fixture-Kopie.
 #include "check.hpp"
+#include "medic/collectors.hpp"
 #include "medic/error_codes.hpp"
 #include "medic/history.hpp"
 #include "medic_ui/app.hpp"
@@ -3034,6 +3035,33 @@ void games_tests() {
                                          {{"titleid", "PPSA00005"}, {"path", "/data/homebrew/PPSA00005"}, {"root", "/data/homebrew"}, {"level", 1}, {"dup_count", 1}, {"active", false}}}));
         const auto src = collect_game_infos(s, {});
         CHECK(src.size() == 2 && src[0].name == "Quellname" && src[1].name.empty(), "Spiele: Name aus dem Quellordner, sonst leer");
+        // Namen aus den Metadaten der Konsole: appmeta, Systemanwendungen (auch mit BOM), PS4-param.sfo; ein Name, der nur die Kennung wiederholt, zaehlt nicht
+        {
+            TempCopy tmp("b8_pos");
+            auto put = [&](const std::string& rel, const std::string& content) {
+                const auto path = tmp.dir / "fs" / rel;
+                fs::create_directories(path.parent_path());
+                std::ofstream(path, std::ios::binary) << content;
+            };
+            const auto pj = [](const std::string& n) { return "{\"localizedParameters\":{\"defaultLanguage\":\"en-US\",\"en-US\":{\"titleName\":\"" + n + "\"}}}"; };
+            put("user/appmeta/PPSA00009/param.json", pj("Metaname"));
+            put("system_ex/app/NPXS40074/sce_sys/param.json", "\xEF\xBB\xBF" + pj("Remote Play"));
+            put("system_ex/app/NPXS40099/sce_sys/param.json", pj("NPXS40099"));
+            put("user/app/FMGR88888/sce_sys/param.json", pj("Dateimanager"));
+            std::string sfo("\0PSF", 4);
+            sfo += std::string("\x01\x01\x00\x00", 4);
+            auto u32 = [](std::uint32_t v) { return std::string(reinterpret_cast<const char*>(&v), 4); };
+            sfo += u32(20 + 16) + u32(20 + 16 + 6) + u32(1);  // Schluesseltabelle, Datentabelle, 1 Eintrag
+            sfo += std::string("\x00\x00\x04\x02", 4) + u32(5) + u32(5) + u32(0);  // key_off 0, fmt utf8, len 5, max 5, data_off 0
+            sfo += std::string("TITLE\0", 6) + std::string("Alt\0\0", 5);
+            put("system_data/priv/appmeta/CUSA00007/param.sfo", sfo);
+            put("user/appmeta/CUSA00007/icon0.png", "x");
+            auto pl = make_snapshot_platform(tmp.dir.string(), false);
+            const Facts nf = collect_all(*pl);
+            const json* nm = nf.get("titles.names");
+            CHECK(nm && nm->is_object() && (*nm)["PPSA00009"] == "Metaname" && (*nm)["NPXS40074"] == "Remote Play" && (*nm)["FMGR88888"] == "Dateimanager", "Namen: appmeta, Systemanwendung mit BOM, /user/app");
+            CHECK(nm && !nm->contains("NPXS40099") && (*nm)["CUSA00007"] == "Alt", "Namen: Kennung als Name zaehlt nicht, PS4-param.sfo wird gelesen");
+        }
     }
 
     // Oberflaeche mit dem echten Kern gegen eine Fixture mit Spielen (synthetisch)

@@ -485,9 +485,9 @@
   "title.system_app": "system app",
   "detail.affects": "Affects: {list}",
   "detail.affects_more": "{list} and {n} more",
-  "games.d.name_unknown": "Name not found",
   "games.d.name_gone": "Not found on the console",
   "checks.earlier": "Earlier check-ups ({n})",
   "checks.expand": "Show",
-  "checks.collapse": "Hide"
+  "checks.collapse": "Hide",
+  "title.unknown_game": "Unknown game"
 }

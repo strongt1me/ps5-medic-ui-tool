@@ -812,24 +812,35 @@ std::string sfo_title(const std::string& d) {
 }
 }  // namespace
 
-// titles.names: Anzeigenamen je Titel-Kennung aus den Metadaten der Konsole, auch fuer nicht eingehaengte Titel: /user/appmeta/<ID>/param.json
-// (PS5, und Homebrew mit param.json) und /system_data/priv/appmeta/<ID>/param.sfo (PS4). Nur lesen, nur Namen (D17).
+// titles.names: Anzeigenamen je Titel-Kennung aus den Metadaten der Konsole, auch fuer nicht eingehaengte Titel und Systemanwendungen:
+// /user/appmeta/<ID>/param.json, /user/app/<ID>/sce_sys/param.json, /system_ex/app/<ID>/sce_sys/param.json, /system/vsh/app/<ID>/sce_sys/param.json
+// und /system_data/priv/appmeta/<ID>/param.sfo (PS4). Alle Kennungen aus vier Grossbuchstaben und fuenf Ziffern. Nur lesen, nur Namen (D17).
 void collect_title_names(const Platform& p, Facts& f) {
     const IFileSystem& fs = p.fs();
-    static const std::regex id_re("^(PPSA|CUSA)[0-9]{5}$");
+    static const std::regex id_re("^[A-Z]{4}[0-9]{5}$");
     json names = json::object();
-    std::size_t n = 0;
-    for (const auto& e : fs.list_dir("/user/appmeta")) {
-        if (!e.is_dir || !std::regex_match(e.name, id_re) || ++n > 600) continue;
-        std::string name, text;
-        if (fs.read_file(join_path(join_path("/user/appmeta", e.name), "param.json"), text) && text.size() <= (256u << 10)) {
-            const json j = json::parse(text, nullptr, false);
-            if (j.is_object()) name = app_title_name(j, std::string());
+    std::size_t reads = 0;
+    auto param_name = [&](const std::string& path, const std::string& id) {
+        std::string text;
+        if (++reads > 1200 || !fs.read_file(path, text) || text.size() > (256u << 10)) return std::string();
+        if (text.compare(0, 3, "\xEF\xBB\xBF") == 0) text.erase(0, 3);  // UTF-8-BOM
+        const json j = json::parse(text, nullptr, false);
+        std::string name = j.is_object() ? app_title_name(j, std::string()) : std::string();
+        return name == id ? std::string() : name;  // ein Name, der nur die Kennung wiederholt, ist keiner
+    };
+    // Reihenfolge = Rang: was zuerst einen Namen liefert, gilt
+    const std::pair<const char*, const char*> roots[] = {{"/user/appmeta", ""}, {"/user/app", "sce_sys/"}, {"/system_ex/app", "sce_sys/"}, {"/system/vsh/app", "sce_sys/"}};
+    for (const auto& [root, sub] : roots)
+        for (const auto& e : fs.list_dir(root)) {
+            if (!e.is_dir || !std::regex_match(e.name, id_re) || names.contains(e.name)) continue;
+            const std::string name = param_name(join_path(join_path(root, e.name), std::string(sub) + "param.json"), e.name);
+            if (!name.empty()) names[e.name] = name;
         }
-        if (name.empty() && e.name.compare(0, 4, "CUSA") == 0 &&
-            fs.read_file(join_path(join_path("/system_data/priv/appmeta", e.name), "param.sfo"), text) && text.size() <= (64u << 10))
-            name = sfo_title(text);
-        if (!name.empty()) names[e.name] = name;
+    for (const auto& e : fs.list_dir("/user/appmeta")) {  // PS4-Titel: Name aus der param.sfo
+        std::string text;
+        if (!e.is_dir || e.name.compare(0, 4, "CUSA") != 0 || !std::regex_match(e.name, id_re) || names.contains(e.name) || ++reads > 1200) continue;
+        if (fs.read_file(join_path(join_path("/system_data/priv/appmeta", e.name), "param.sfo"), text) && text.size() <= (64u << 10))
+            if (const std::string name = sfo_title(text); !name.empty()) names[e.name] = name;
     }
     f.set("titles.names", std::move(names));
 }
