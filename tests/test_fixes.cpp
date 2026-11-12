@@ -803,6 +803,20 @@ void stack_tests() {
         CHECK(cfg.find("password = ***") != std::string::npos || cfg.find("password=***") != std::string::npos || cfg.find("password= ***") != std::string::npos, "Export: Schluessel bleibt, Wert ist ***");
         CHECK(cfg.find("host = 192.0.2.1") != std::string::npos && cfg.find("# password = kommentar") != std::string::npos, "Export: uebrige Zeilen und Kommentare unveraendert");
     }
+    // Weitere Zugangsdaten: Benutzername, Kurzformen, Adressen mit Benutzer:Passwort im Log
+    {
+        TempCopy tmp("smp2_neg_same_names");
+        auto p = make_snapshot_platform(tmp.dir.string(), true);
+        p->fs_rw()->write_file("/data/shadowmount/config.ini", "[smb:nas]\nusername = alice\npwd = p1\nLogin=l1\n");
+        p->fs_rw()->write_file("/data/shadowmount/debug.log", "mount smb://bob:topsecret@192.0.2.5/share ok\nzweite Zeile ohne Adresse\nhttp://example.invalid/pfad@x\n");
+        const fs::path dest = tmp.dir / "export";
+        ExportResult er = export_snapshot(*p, collect_all(*p), dest.string(), "20261108T160000Z");
+        CHECK(er.ok, "Export Zugangsdaten 2: ok (" + er.error + ")");
+        const std::string cfg = slurp(dest / "fs/data/shadowmount/config.ini"), log = slurp(dest / "fs/data/shadowmount/debug.log");
+        CHECK(cfg.find("alice") == std::string::npos && cfg.find("p1") == std::string::npos && cfg.find("l1") == std::string::npos, "Export: Benutzername, pwd und login geschwaerzt");
+        CHECK(log.find("bob") == std::string::npos && log.find("topsecret") == std::string::npos && log.find("smb://***@192.0.2.5/share ok") != std::string::npos, "Export: smb-Adresse im Log ohne Benutzer und Passwort");
+        CHECK(log.find("zweite Zeile ohne Adresse") != std::string::npos && log.find("http://example.invalid/pfad@x") != std::string::npos, "Export: Zeilen ohne Zugangsdaten bleiben");
+    }
     // Quarantaene der Duplikate: ".duplicates" wird von SM+ nicht gescannt (Punkt-Namen), "_duplicates" schon
     {
         TempCopy tmp("b8_pos");

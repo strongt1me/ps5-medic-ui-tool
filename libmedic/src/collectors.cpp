@@ -711,7 +711,10 @@ std::string sdk_raw_to_fw(std::uint32_t v) {
 // eboot.bin nicht ueber der Firmware, games.fw[].backport_inline). Nur lesen.
 void collect_game_firmware(const Platform& p, Facts& f) {
     const IFileSystem& fs = p.fs();
-    const std::string fw = p.sys().firmware();
+    // Ein nicht lesbarer Rohwert ("0x00000000" u. ae., siehe format_ps5_fw) ist keine Version: dann gilt die Firmware als unbekannt und kein
+    // Spiel wird fuer "braucht Backport" gehalten (Audit 12. Nov. 2026)
+    std::string fw = p.sys().firmware();
+    if (fw.compare(0, 2, "0x") == 0) fw.clear();
     std::vector<std::string> roots;
     if (const json* r = f.get("smp.scan_roots"); r && r->is_array())
         for (const auto& e : *r)
@@ -810,15 +813,24 @@ void collect_smp_api(const Platform& p, Facts& f) {
     if (const json* lines = f.get("smp.log.lines"); lines && lines->is_array())
         for (const auto& l : *lines)
             if (l.is_string()) tail.push_back(l.get<std::string>());
-    std::smatch m;
-    if (!latest_in(tail, m)) {
-        std::string head;
-        if (!p.fs().read_range(join_path(kSmpDir, "debug.log"), 0, 16384, head)) return;
-        const auto head_lines = split_lines(head);
-        if (!latest_in(head_lines, m)) return;
+    // Die Treffergruppen werden sofort in eigene Strings kopiert: ein smatch zeigt in die durchsuchte Zeile, und die Zeilen der zweiten Suche
+    // (head_lines) leben nur in diesem Block (Sanitizer-Fund, 12. Nov. 2026: Use-after-free).
+    std::string bind, port_text;
+    {
+        std::smatch m;
+        if (latest_in(tail, m)) {
+            bind = m[1].str();
+            port_text = m[2].str();
+        } else {
+            std::string head;
+            if (!p.fs().read_range(join_path(kSmpDir, "debug.log"), 0, 16384, head)) return;
+            const auto head_lines = split_lines(head);
+            if (!latest_in(head_lines, m)) return;
+            bind = m[1].str();
+            port_text = m[2].str();
+        }
     }
-    const std::string bind = m[1].str();
-    const long port = std::strtol(m[2].str().c_str(), nullptr, 10);
+    const long port = std::strtol(port_text.c_str(), nullptr, 10);
     if (port < 1 || port > 65535) return;
     f.set("smp.api.bind", bind);
     f.set("smp.api.port", std::to_string(port));
@@ -1577,28 +1589,45 @@ void collect_app_registry(const Platform& p, Facts& f) {
 
 Facts collect_all(const Platform& p) {
     Facts f;
-    collect_firmware(p, f);
-    collect_components(p, f);
-    collect_processes(p, f);
-    collect_system(p, f);
-    collect_storage(p, f);
-    collect_shadowmount(p, f);
-    collect_plugins(p, f);
-    collect_apps(p, f);
-    collect_game_firmware(p, f);
-    collect_autoload(p, f);
-    collect_payload_files(p, f);
-    collect_helpers(p, f);
-    collect_savedata(p, f);
-    collect_system_logs(p, f);
-    collect_databases(p, f);
-    collect_game_files(p, f);
-    collect_baseline(p, f);
-    collect_selftest(p, f);
-    collect_fan_controller(p, f);
-    collect_klog(p, f);
-    collect_app_registry(p, f);
-    if (const std::string gw = p.sys().default_gateway(); !gw.empty()) f.set("net.gateway", gw);  // fuer den lokalen Netztest des Selbsttests
+    json failed = json::array();
+    // Jeder Collector einzeln: ein Fehler (z. B. beschaedigtes JSON in einer von Hand bearbeiteten Datei) beendet nicht den ganzen Check-up,
+    // sondern wird als collector.failed vermerkt; die uebrigen Fakten bleiben gueltig (Audit 12. Nov. 2026)
+    auto run = [&](const char* name, auto&& fn) {
+        try {
+            fn();
+        } catch (const std::exception& e) {
+            failed.push_back({{"name", name}, {"error", e.what()}});
+        } catch (...) {
+            failed.push_back({{"name", name}, {"error", "unbekannt"}});
+        }
+    };
+#define MEDIC_RUN(fn) run(#fn, [&] { fn(p, f); })
+    MEDIC_RUN(collect_firmware);
+    MEDIC_RUN(collect_components);
+    MEDIC_RUN(collect_processes);
+    MEDIC_RUN(collect_system);
+    MEDIC_RUN(collect_storage);
+    MEDIC_RUN(collect_shadowmount);
+    MEDIC_RUN(collect_plugins);
+    MEDIC_RUN(collect_apps);
+    MEDIC_RUN(collect_game_firmware);
+    MEDIC_RUN(collect_autoload);
+    MEDIC_RUN(collect_payload_files);
+    MEDIC_RUN(collect_helpers);
+    MEDIC_RUN(collect_savedata);
+    MEDIC_RUN(collect_system_logs);
+    MEDIC_RUN(collect_databases);
+    MEDIC_RUN(collect_game_files);
+    MEDIC_RUN(collect_baseline);
+    MEDIC_RUN(collect_selftest);
+    MEDIC_RUN(collect_fan_controller);
+    MEDIC_RUN(collect_klog);
+    MEDIC_RUN(collect_app_registry);
+#undef MEDIC_RUN
+    run("net.gateway", [&] {
+        if (const std::string gw = p.sys().default_gateway(); !gw.empty()) f.set("net.gateway", gw);  // fuer den lokalen Netztest des Selbsttests
+    });
+    f.set("collector.failed", std::move(failed));
     return f;
 }
 

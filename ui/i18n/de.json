@@ -38,6 +38,7 @@
   "findings.empty": "Alles in Ordnung",
   "findings.empty_sub": "Es wurden keine bekannten Probleme gefunden.",
   "start.last_clean_partial": "Keine bekannten Probleme in den geprüften Bereichen.",
+  "start.last_incomplete": "Prüfung unvollständig: Regeln fehlen oder ein Prüfbereich ist ausgefallen. Das ist keine Entwarnung.",
   "start.not_tested": "Nicht geprüft: {n} Bereiche (Liste im Bericht)",
   "findings.empty_partial": "Keine Befunde",
   "findings.empty_partial_sub": "In den geprüften Bereichen wurde nichts gefunden. Das heißt nicht, dass alles in Ordnung ist: Nicht geprüft wurden {list}.",

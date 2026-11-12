@@ -19,6 +19,10 @@ along with this program; see the file COPYING. If not, see
 #include <unistd.h>
 
 
+/* PS5 Medic (12. Nov. 2026): optionale Pruefung direkt vor dem Schliessen der laufenden Big App. Liefert sie 0, wird die App nicht
+   geschlossen und hbldr_launch scheitert mit errno EBUSY (die App kann sich zwischen der Pruefung des Aufrufers und dem Kill geaendert haben). */
+extern int (*hbldr_kill_guard)(int app_id);
+
 pid_t hbldr_launch(const char* cwd, const char* path, int stdio, char** argv,
 		   char** envp);
 

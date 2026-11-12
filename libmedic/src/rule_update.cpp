@@ -106,7 +106,8 @@ std::string installed_high_water(const IFileSystem& fs, const Spec& s) {
 
 bool append_log(Platform& p, const json& rec) {
     std::string text;
-    p.fs().read_file(kRulesUpdateLog, text);
+    // Ein vorhandenes, aber nicht lesbares Protokoll nie durch eine Zeile ersetzen: es haelt den Rollback-Stand und den Rollback-Schutz
+    if (!p.fs().read_file(kRulesUpdateLog, text) && p.fs().exists(kRulesUpdateLog)) return false;
     if (!text.empty() && text.back() != '\n') text += '\n';
     text += rec.dump() + "\n";
     return p.fs_rw()->write_file(kRulesUpdateLog, text);

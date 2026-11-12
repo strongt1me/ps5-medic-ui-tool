@@ -144,7 +144,11 @@ bool read_journal(const IFileSystem& fs, std::vector<json>& out, std::string& er
     out.clear();
     err.clear();
     std::string text;
-    if (!fs.read_file(kJournalPath, text)) return true;  // noch kein Journal
+    if (!fs.read_file(kJournalPath, text)) {
+        if (!fs.exists(kJournalPath)) return true;  // noch kein Journal
+        err = "Journal vorhanden, aber nicht lesbar";  // nicht als "leer" ausgeben: Backups koennen existieren
+        return false;
+    }
     std::istringstream in(text);
     std::string line;
     int skipped = 0;
@@ -439,6 +443,8 @@ ApplyResult apply_impl(const FixPlan& plan, Platform& p, const PathPolicy& polic
         } else {
             std::string old;
             const bool existed = p.fs().read_file(c.path, old);
+            // Vorhanden, aber nicht lesbar: kein Backup moeglich, also nicht ueberschreiben (sonst waere die Datei ohne Undo verloren)
+            if (!existed && p.fs().exists(c.path)) return abort_all("Datei nicht lesbar, kein Backup moeglich: " + c.path);
             const std::string backup = existed ? join_path(join_path(kBackupRoot, txn), c.path.substr(1)) : std::string();
             rec["backup"] = backup;
             rec["existed"] = existed;

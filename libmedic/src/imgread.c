@@ -607,6 +607,12 @@ exf_open(bs_t *b) {
   x->root      = rd32(h + 96);
   if(h[108] < 9 || h[108] > 12 || x->clu_shift > 25 || x->clusters == 0 || x->heap_off >= b->size ||
      x->fat_off >= b->size || x->root < 2 || x->root >= x->clusters + 2) { free(x); return NULL; }
+  /* the cluster count in the head must not promise more than the image holds: a FAT chain in a circle is walked at most
+     `clusters` steps per read, so a head claiming 2^32 clusters would keep the check-up busy for minutes */
+  { uint64_t fit = (b->size - x->heap_off) >> x->clu_shift;
+    if(fit == 0) { free(x); return NULL; }
+    if(x->clusters > fit) x->clusters = (uint32_t)fit;
+    if(x->root >= x->clusters + 2) { free(x); return NULL; } }
   x->f.kind = "exfat";
   x->f.pread = exf_pread;
   x->f.list = exf_list;

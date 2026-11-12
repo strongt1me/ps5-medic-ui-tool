@@ -38,6 +38,7 @@
   "findings.empty": "Tout va bien",
   "findings.empty_sub": "Aucun problème connu n'a été trouvé.",
   "start.last_clean_partial": "Aucun problème connu dans les zones vérifiées.",
+  "start.last_incomplete": "Contrôle incomplet : règles absentes ou zone de contrôle en échec. Ce n'est pas un feu vert.",
   "start.not_tested": "Non vérifié : {n} zones (liste dans le rapport)",
   "findings.empty_partial": "Aucun résultat",
   "findings.empty_partial_sub": "Rien trouvé dans les zones vérifiées. Cela ne veut pas dire que tout va bien : non vérifié : {list}.",

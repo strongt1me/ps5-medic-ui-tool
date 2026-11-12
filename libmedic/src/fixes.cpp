@@ -141,6 +141,10 @@ void plan_set_key(FixPlan& plan, const Finding& f, const Facts& facts, const IFi
 
     std::string old_text;
     const bool existed = fs.read_file(file, old_text);
+    if (!existed && fs.exists(file)) {  // vorhanden, aber nicht lesbar: nicht als "neu" behandeln
+        plan.warnings.push_back("Datei nicht lesbar: " + file);
+        return;
+    }
     std::string text = old_text;
     for (const auto& v : values) text = add_mode ? ini_add_value(text, t, v) : ini_set_value(text, t, v);
     if (existed && text == old_text) {

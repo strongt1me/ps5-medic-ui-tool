@@ -119,34 +119,19 @@ std::vector<pid_t> find_pids(const char* name) {
     return pids;
 }
 
-// Die erste Zeile des vorigen Protokolls nennt die Pid der vorigen Instanz ("... (Pid 195)"): auch eine, die noch keinen
-// Thread-Namen trug (aelterer Stand) und haengt, laesst sich so ablosen. Nur wenn der Name "payload.elf" lautet (elfldr
-// benennt jeden Payload so), damit nie ein anderer Prozess getroffen wird.
-pid_t previous_pid_from_log() {
-    std::FILE* f = std::fopen(kLogPath, "r");
-    if (!f) return -1;
-    char line[160] = {0};
-    const bool ok = std::fgets(line, sizeof line, f) != nullptr;
-    std::fclose(f);
-    if (!ok) return -1;
-    const char* p = std::strstr(line, "(Pid ");
-    return p ? static_cast<pid_t>(std::atoi(p + 5)) : -1;
-}
-
-void replace_previous_instance(pid_t from_log) {
+// Die Pid aus dem Protokoll der vorigen Sitzung wird nicht mehr herangezogen (Audit 12. Nov. 2026): elfldr benennt jeden Payload "payload.elf",
+// und nach einem Neustart kann dieselbe Pid zu kstuff, ShadowMount+ oder dem Luefterregler gehoeren. Beendet wird nur, was den
+// eigenen Thread-Namen traegt.
+void replace_previous_instance() {
     syscall(SYS_thr_set_name, -1, kThreadName);
     for (int round = 0; round < 5; ++round) {
         std::vector<pid_t> pids = find_pids(kThreadName);
-        if (from_log > 0 && from_log != ::getpid())
-            for (pid_t p : find_pids("payload.elf"))
-                if (p == from_log) pids.push_back(p);
         if (pids.empty()) return;
         for (pid_t p : pids) {
             trace("Vorige Instanz (Pid " + std::to_string(p) + ") wird beendet");
             ::kill(p, SIGKILL);
         }
         ::sleep(1);
-        from_log = -1;
     }
 }
 
@@ -197,6 +182,17 @@ std::string title_of_app(int app_id) {
 // Was geschlossen werden darf, damit die UI starten kann: System-Programme und Homebrew-Fake-Apps (darunter der Starter der Kachel).
 // Alles andere (Spiele, unbekannte Titel) nie.
 bool may_close(const std::string& title) { return title.rfind("NPXS", 0) == 0 || title.rfind("FAKE", 0) == 0; }
+
+// Pruefung direkt vor dem Schliessen in hbldr_launch (hbldr_kill_guard): zwischen der ersten Pruefung und dem Kill liegen Sekunden, in denen
+// der Nutzer ein Spiel gestartet haben kann. Das Spiel wird dann nie beendet.
+extern "C" int medic_kill_guard(int app_id) {
+    const std::string title = title_of_app(app_id);
+    if (!may_close(title)) {
+        trace("Abbruch: App " + std::to_string(app_id) + " (" + (title.empty() ? "unbekannt" : title) + ") darf nicht geschlossen werden");
+        return 0;
+    }
+    return 1;
+}
 
 #ifdef MEDIC_TILE_INSTALL
 // ---- Kachel ------------------------------------------------------------------------------------------------------------------------
@@ -282,6 +278,7 @@ pid_t launch_ui(const char* why) {
     // Wurde gerade eine App geschlossen (der Starter der Kachel, eine vorige UI), braucht das System einen Moment: ohne Pause und
     // ohne zweiten Versuch scheitert hbldr_launch dann mit "Broken pipe" (Konsolentest 12. Nov. 2026, Kachel bei laufender UI).
     if (app > 0) ::sleep(2);
+    hbldr_kill_guard = medic_kill_guard;
     pid_t pid = -1;
     for (int attempt = 1; attempt <= 3 && pid < 0; ++attempt) {
         trace(std::string("UI-Start (") + why + "): hbldr_launch, Versuch " + std::to_string(attempt));
@@ -309,7 +306,6 @@ int main() {
     ::signal(SIGCHLD, SIG_IGN);
     std::error_code ec;
     fs::create_directories("/data/ps5medic", ec);
-    const pid_t old_pid = previous_pid_from_log();
     g_log = std::fopen(kLogPath, "w");
     trace(std::string("PS5 Medic Launcher startet (Pid ") + std::to_string(::getpid()) + ")" +
 #ifdef MEDIC_TILE_INSTALL
@@ -319,7 +315,7 @@ int main() {
 #endif
     );
 
-    replace_previous_instance(old_pid);
+    replace_previous_instance();
     const int uerr = sceUserServiceInitialize(nullptr);
     if (uerr != 0) trace("sceUserServiceInitialize: " + std::to_string(uerr));
     kernel_set_ucred_authid(-1, kSystemAuthId);

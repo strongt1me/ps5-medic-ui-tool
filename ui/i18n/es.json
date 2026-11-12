@@ -38,6 +38,7 @@
   "findings.empty": "Todo bien",
   "findings.empty_sub": "Sin problemas conocidos.",
   "start.last_clean_partial": "Sin problemas conocidos en las áreas revisadas.",
+  "start.last_incomplete": "Revisión incompleta: faltan reglas o falló un área de revisión. No es una señal de todo correcto.",
   "start.not_tested": "Sin revisar: {n} áreas (lista en el informe)",
   "findings.empty_partial": "Sin hallazgos",
   "findings.empty_partial_sub": "No se encontró nada en las áreas revisadas. Eso no significa que todo esté bien: no se revisó {list}.",

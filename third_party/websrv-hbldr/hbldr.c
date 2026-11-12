@@ -19,6 +19,7 @@ You should have received a copy of the GNU General Public License
 along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
+#include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <signal.h>
@@ -416,6 +417,8 @@ bigapp_replace(pid_t pid, uint8_t* elf, const char* progname, int stdio,
 }
 
 
+int (*hbldr_kill_guard)(int app_id) = 0;
+
 pid_t
 hbldr_launch(const char*cwd, const char* path, int stdio, char** argv,
 	     char** envp) {
@@ -436,12 +439,21 @@ hbldr_launch(const char*cwd, const char* path, int stdio, char** argv,
   }
 
   if((app_id=sceSystemServiceGetAppIdOfRunningBigApp()) > 0) {
+    if(hbldr_kill_guard && !hbldr_kill_guard(app_id)) {
+      errno = EBUSY;
+      return -1;
+    }
     if(sceSystemServiceKillApp(app_id, -1, 0, 0)) {
       perror("sceSystemServiceKillApp");
       return -1;
     }
 
-    while(!sceKernelGetAppState(app_id, 0, 0)) {
+    /* PS5 Medic: mit Zeitlimit (15 s), sonst haengt der Lader fuer immer, wenn die App nicht endet */
+    for(int waited=0; !sceKernelGetAppState(app_id, 0, 0); waited++) {
+      if(waited >= 15) {
+        errno = ETIMEDOUT;
+        return -1;
+      }
       printf("Waiting for App with id 0x%x to terminate\n", app_id);
       sleep(1);
     }

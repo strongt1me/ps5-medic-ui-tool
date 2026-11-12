@@ -38,6 +38,7 @@
 "findings.empty": "Tutto a posto",
 "findings.empty_sub": "Nessun problema noto trovato.",
 "start.last_clean_partial": "Nessun problema noto nelle aree controllate.",
+"start.last_incomplete": "Controllo incompleto: regole mancanti o un'area di controllo è fallita. Non è un via libera.",
 "start.not_tested": "Non controllate: {n} aree (elenco nel rapporto)",
 "findings.empty_partial": "Nessun rilevamento",
 "findings.empty_partial_sub": "Nelle aree controllate non è stato trovato nulla. Non significa che sia tutto a posto: non sono stati controllati {list}.",

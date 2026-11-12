@@ -1324,7 +1324,7 @@ void App::draw_start(Canvas& c) const {
     Icon st_icon = Icon::Info;
     Color st_col = kDim;
     if (has_result_ && result_.findings.empty()) {
-        const bool partial = std::any_of(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; });
+        const bool partial = result_.incomplete || std::any_of(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; });
         st_icon = partial ? Icon::Info : Icon::Ok;  // nicht alles gelesen: nie "in Ordnung" in Gruen
         st_col = partial ? kInfo : kOk;
     } else if (has_result_) {
@@ -1342,7 +1342,7 @@ void App::draw_start(Canvas& c) const {
         body().draw(c, tx, 676, S("start.last_none"), kText);
     } else if (result_.findings.empty()) {
         const int untested = static_cast<int>(std::count_if(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; }));
-        body().draw(c, tx, 676, S(untested ? "start.last_clean_partial" : "start.last_clean"), untested ? kText : kOk, tw);
+        body().draw(c, tx, 676, S(result_.incomplete ? "start.last_incomplete" : untested ? "start.last_clean_partial" : "start.last_clean"), (untested || result_.incomplete) ? kText : kOk, tw);
         if (untested) small().draw(c, tx, 740, S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), kDim);
     } else {
         int crit = 0, warn = 0, info = 0;

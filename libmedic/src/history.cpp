@@ -105,7 +105,8 @@ bool append_history(Platform& p, const HistoryRun& run) {
     for (const auto& [id, sev] : run.findings) rec["findings"].push_back({{"id", id}, {"sev", sev}});
 
     std::string text;
-    p.fs().read_file(kHistoryPath, text);
+    // Eine vorhandene, aber nicht lesbare Verlaufsdatei nicht durch eine einzelne Zeile ersetzen
+    if (!p.fs().read_file(kHistoryPath, text) && p.fs().exists(kHistoryPath)) return false;
     if (text.size() > kHistoryMaxBytes) {
         // Beiseite legen statt kuerzen: die alte Datei bleibt vollstaendig, die neue beginnt mit den juengsten Pruefungen.
         const std::string aside = std::string("/data/ps5medic/history_") + run.ts + ".jsonl";

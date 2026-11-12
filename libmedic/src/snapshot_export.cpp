@@ -70,12 +70,20 @@ std::string redact_secrets(const std::string& text) {
         const bool comment = first != std::string::npos && (line[first] == '#' || line[first] == ';');
         if (eq != std::string::npos && !comment) {
             const std::string key = lower_str(line.substr(0, eq));
-            for (const char* secret : {"password", "passwd", "secret", "token"})
+            for (const char* secret : {"password", "passwd", "secret", "token", "pass", "pwd", "username", "login", "credential", "auth"})
                 if (key.find(secret) != std::string::npos) {
                     const bool cr = !line.empty() && line.back() == '\r';
                     line = line.substr(0, eq + 1) + " ***" + (cr ? "\r" : "");
                     break;
                 }
+        }
+        // Zugangsdaten in Adressen (smb://benutzer:passwort@host/...) auch ausserhalb von "Schluessel = Wert" schwaerzen (Logs)
+        for (std::size_t at = line.find("://"); at != std::string::npos; at = line.find("://", at + 3)) {
+            const std::size_t start = at + 3;
+            const std::size_t end = line.find_first_of("/ \t\r", start);
+            const std::size_t stop = end == std::string::npos ? line.size() : end;
+            const std::size_t amp = line.rfind('@', stop);
+            if (amp != std::string::npos && amp >= start && amp < stop) line.replace(start, amp - start, "***");
         }
         out += line;
         if (nl != std::string::npos) out += '\n';
@@ -366,7 +374,7 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
         ex.copy_text(f, /*tail=*/false, /*redact=*/true);
     for (const char* f : {"/data/shadowmount/manual.lst", "/data/ps5_autoloader/autoload.txt", "/data/pldmgr/autoload.txt", "/data/pldmgr/pldmgr_config.txt"})
         ex.copy_text(f, /*tail=*/false);
-    ex.copy_text("/data/shadowmount/debug.log", /*tail=*/true);
+    ex.copy_text("/data/shadowmount/debug.log", /*tail=*/true, /*redact=*/true);
     ex.copy_text("/data/ps5medic/history.jsonl", /*tail=*/true);  // Verlauf der Check-ups (nur Regel-IDs und Zahlen): Grundlage der Vergleiche mit frueheren Messungen
     for (const char* f : {"/data/ps5medic/selftest/last.json", "/data/ps5medic/selftest/running.json"}) ex.copy_text(f, /*tail=*/false);  // Selbsttest: Ergebnis und Absturz-Marker (nur Zahlen und IDs)
     // Marke der Konfigurationsumwandlung von SM+ (nur das Vorhandensein zaehlt; die Sicherung selbst kann Zugangsdaten enthalten)

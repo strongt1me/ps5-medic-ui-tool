@@ -38,6 +38,7 @@
   "findings.empty": "All good",
   "findings.empty_sub": "No known problems were found.",
   "start.last_clean_partial": "No known problems in the areas that were checked.",
+  "start.last_incomplete": "Check incomplete: rules are missing or a check area failed. This is not an all-clear.",
   "start.not_tested": "Not checked: {n} areas (list in the report)",
   "findings.empty_partial": "No findings",
   "findings.empty_partial_sub": "Nothing was found in the areas that were checked. That does not mean everything is fine: not checked were {list}.",

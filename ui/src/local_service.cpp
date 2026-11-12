@@ -40,6 +40,10 @@ CheckResult LocalService::run_check() {
     r.rules_version = rules_.db_version;
     r.findings = medic::evaluate(rules_, facts_);
     r.coverage = medic::evaluate_coverage(rules_, facts_);
+    {
+        const nlohmann::json* failed = facts_.get("collector.failed");
+        r.incomplete = rules_.rules.empty() || (failed && failed->is_array() && !failed->empty());
+    }
     // Verlauf: gegen die letzte Pruefung vergleichen, dann diese Pruefung anhaengen (ohne Schreibzugriff nur der Vergleich).
     const std::string now = clock_();
     const auto hist = medic::load_history(p_.fs());

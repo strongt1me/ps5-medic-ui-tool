@@ -99,8 +99,10 @@ std::string apply_wal(const std::string& image, const std::string& wal, unsigned
         ++valid;
     }
     if (last_commit < 0 || commit_pages == 0) return image;
+    // Die Seitenzahl kommt aus der WAL-Datei: nicht ungeprueft (bis 2^48 Byte) anlegen
+    if (static_cast<std::uint64_t>(commit_pages) * page > kMaxImageBytes) return image;
     std::string out = image;
-    out.resize(static_cast<std::size_t>(commit_pages) * page, '\0');
+    out.resize(static_cast<std::size_t>(commit_pages) * page,'\0');
     for (long i = 0; i <= last_commit; ++i) {
         const unsigned char* fr = w + 32 + static_cast<std::size_t>(i) * frame;
         const std::uint32_t pg = be32(fr);

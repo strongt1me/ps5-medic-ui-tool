@@ -75,6 +75,9 @@ target_link_libraries(medic-ui-preview PRIVATE medic_ui)
 target_compile_definitions(medic-ui-preview PRIVATE MEDIC_DEFAULT_RULES="${CMAKE_SOURCE_DIR}/knowledge/rules.json"
   MEDIC_DEFAULT_ERROR_CODES="${CMAKE_SOURCE_DIR}/knowledge/error_codes.json")
 
+add_executable(medic-fuzz-image tests/fuzz_image.cpp)
+target_link_libraries(medic-fuzz-image PRIVATE medic)
+target_compile_definitions(medic-fuzz-image PRIVATE MEDIC_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 add_executable(medic-sign tools/medic_sign.cpp)
 target_link_libraries(medic-sign PRIVATE medic)
 
