@@ -18,6 +18,7 @@ add_library(medic STATIC
   libmedic/src/history.cpp
   libmedic/src/selftest.cpp
   libmedic/src/error_codes.cpp
+  libmedic/src/exfat.cpp
   libmedic/src/text_policy.cpp
   libmedic/src/sqlite_check.cpp
   libmedic/src/sha256.cpp

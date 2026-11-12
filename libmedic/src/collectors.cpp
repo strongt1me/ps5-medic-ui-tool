@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/collectors.hpp"
+#include "medic/exfat.hpp"
 #include "medic/history.hpp"
 #include "medic/selftest.hpp"
 
@@ -11,6 +12,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <functional>
 #include <map>
 #include <regex>
 #include <set>
@@ -638,9 +640,12 @@ std::uint64_t rd_le64(const std::string& b, std::size_t off) {
     return static_cast<std::uint64_t>(rd_le(b, off, 4)) | (static_cast<std::uint64_t>(rd_le(b, off + 4, 4)) << 32);
 }
 
-std::uint32_t eboot_sdk_raw(const IFileSystem& fs, const std::string& path) {
+// Liest Bytebereiche der eboot.bin: aus einer Datei im Dateisystem oder aus einem exFAT-Image.
+using RangeReader = std::function<bool(std::uint64_t, std::size_t, std::string&)>;
+
+std::uint32_t eboot_sdk_raw(const RangeReader& read) {
     std::string h;
-    if (!fs.read_range(path, 0, 4096, h) || h.size() < 0x100) return 0;
+    if (!read(0, 4096, h) || h.size() < 0x100) return 0;
     if (h.compare(0, 4, "\x4f\x15\x3d\x1d") != 0 && h.compare(0, 4, "\x54\x14\xf5\xee") != 0) return 0;
     const std::uint32_t cnt = rd_le(h, 0x18, 2);
     const std::size_t elf = 0x20 + static_cast<std::size_t>(cnt) * 0x20;
@@ -667,12 +672,20 @@ std::uint32_t eboot_sdk_raw(const IFileSystem& fs, const std::string& path) {
             if (props & 0xA) return 0;  // verschluesselt oder komprimiert
             const std::uint64_t eoff = rd_le64(h, en + 8), efsz = rd_le64(h, en + 16), rel = pp - off;
             std::string b;
-            if (rel + 0x18 <= efsz && fs.read_range(path, eoff + rel, 0x18, b) && b.size() == 0x18 && b.compare(8, 4, "ORBI") == 0) return rd_le(b, 0x14, 4);
+            if (rel + 0x18 <= efsz && read(eoff + rel, 0x18, b) && b.size() == 0x18 && b.compare(8, 4, "ORBI") == 0) return rd_le(b, 0x14, 4);
             return 0;
         }
         return 0;
     }
     return 0;
+}
+
+std::string lower_ext_of(const std::string& path) {
+    const auto dot = path.rfind('.');
+    if (dot == std::string::npos) return {};
+    std::string e = path.substr(dot);
+    std::transform(e.begin(), e.end(), e.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return e;
 }
 
 // "0x10000040" -> "10.00": die oberen zwei Bytes, je zwei Dezimalziffern in Hex (wie bei sdkVersion der param.json). Leer, wenn es nicht passt.
@@ -733,8 +746,18 @@ void collect_game_firmware(const Platform& p, Facts& f) {
         // nicht ueber der Firmware der Konsole, obwohl param.json mehr verlangt, ist das Spiel angepasst. Nur wenn die eboot.bin lesbar ist.
         std::string eboot_sdk;
         if (const auto it = folders.find(app.name); it != folders.end())
-            for (const auto& dir : it->second) {
-                eboot_sdk = sdk_raw_to_fw(eboot_sdk_raw(fs, join_path(dir, "eboot.bin")));
+            for (const auto& src : it->second) {
+                std::uint32_t raw = 0;
+                if (fs.is_dir(src)) {
+                    const std::string eboot = join_path(src, "eboot.bin");
+                    raw = eboot_sdk_raw([&](std::uint64_t off, std::size_t n, std::string& out) { return fs.read_range(eboot, off, n, out); });
+                } else if (lower_ext_of(src) == ".exfat") {  // Image: ohne Einhaengen aus dem Wurzelverzeichnis des Images lesen
+                    ExfatImage img;
+                    ExfatFile file;
+                    if (ExfatImage::open(fs, src, img) && img.find_root_file("eboot.bin", file))
+                        raw = eboot_sdk_raw([&](std::uint64_t off, std::size_t n, std::string& out) { return img.read(file, off, n, out); });
+                }
+                eboot_sdk = sdk_raw_to_fw(raw);
                 if (!eboot_sdk.empty()) break;
             }
         bool backport_inline = false;

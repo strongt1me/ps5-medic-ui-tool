@@ -481,3 +481,7 @@ Ausnahme von D1 und von Leitlinie 5: Der Selbsttest (Standard-Stufe, läuft auch
 - Tests: Snapshot-Sonde über `system.json` (`net_probe`: `reply`, `rtt_ms`, `loss_every`), Fixtures `n1_*`.
 
 **An der Test-Konsole** (FW 12.00, Diagnose-Payload): Gateway aus der Routentabelle gefunden, `sw.net.local` **bestanden** (20 Versuche, 0 % Verlust, mittlere Antwortzeit 5,5 ms, höchste 47 ms).
+
+## Nachtrag: eboot.bin aus exFAT-Images lesen (12. Nov. 2026)
+
+`libmedic/src/exfat.cpp` ist ein kleiner, **nur lesender** exFAT-Leser: Kopf, Wurzelverzeichnis (Kette in der FAT) und von einer Datei nur die gewünschten Bytebereiche; das Image wird nicht eingehängt. Damit liest `collect_game_firmware` die SDK-Version der `eboot.bin` auch bei Spielen, die als `.exfat`-Image vorliegen (zwei kleine Lesezugriffe). **An der Test-Konsole bestätigt:** PPSA34015 (Image, `param.json` verlangt 13.60) wird danach nicht mehr als „braucht Backport“ gemeldet, der Backport steckt im Spiel; PPSA34356 (Ordner) war schon vorher erkannt. Nicht gelesen werden andere Formate (`.ffpkg`, `.ffpfs`), Unterordner im Image und beschädigte Images (dann bleibt der Befund). Fixtures `g1_neg_inline_image` und `g1_pos_image_ebootnew` (erzeugt von `tools/gen_exfat_fixture.py`, die eboot.bin liegt zerstückelt in der FAT-Kette) und ein Test des Lesers mit dem C++-Bauer `build_exfat_stub`, der auch den Snapshot-Export nutzt (ein winziges Ersatz-Image mit derselben Cluster-Einteilung).

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/snapshot_export.hpp"
 
+#include "medic/exfat.hpp"
 #include "medic/sqlite_check.hpp"
 
 #include <nlohmann/json.hpp>
@@ -258,6 +259,8 @@ public:
                 } else {
                     mkdir(path);
                 }
+            } else if (lower_ext(e.name) == ".exfat" && stub_images.count(path)) {
+                // schon als winziges Image mit Ersatz-eboot.bin geschrieben (siehe oben)
             } else if (lower_ext(e.name) == ".exfat") {
                 std::string head;
                 fs_.read_range(path, 0, kHeaderBytes, head);
@@ -279,6 +282,7 @@ public:
         }
     }
 
+    std::set<std::string> stub_images;  // Images, die schon als Ersatz-Image im Export liegen
     const Platform& p_;
     const IFileSystem& fs_;
     fs::path dest_;
@@ -423,8 +427,23 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
                 const std::string stub = stub_eboot_with_sdk(e["eboot_sdk"].get<std::string>());
                 if (stub.empty()) continue;
                 for (const auto& x : *t)
-                    if (x.is_object() && x.contains("titleid") && x["titleid"] == e["titleid"] && x.contains("path") && x["path"].is_string() && !image_paths.count(x["path"].get<std::string>())) {
-                        ex.write(join_path(x["path"].get<std::string>(), "eboot.bin"), stub);
+                    if (x.is_object() && x.contains("titleid") && x["titleid"] == e["titleid"] && x.contains("path") && x["path"].is_string()) {
+                        const std::string src = x["path"].get<std::string>();
+                        if (!image_paths.count(src)) {
+                            ex.write(join_path(src, "eboot.bin"), stub);
+                        } else {
+                            // Image: ein winziges exFAT-Image mit derselben Cluster-Einteilung, das nur die Ersatz-eboot.bin enthaelt (nur vollstaendige
+                            // .exfat-Images; der Kopf-Export in mirror() wuerde es sonst durch den blossen Kopf ersetzen)
+                            std::string raw;
+                            if (src.size() > 6 && lower_ext(src) == ".exfat" && p.fs().read_range(src, 0, 512, raw) && raw.size() >= 112 && raw.compare(3, 8, "EXFAT   ") == 0) {
+                                const unsigned bps = static_cast<unsigned char>(raw[108]), spc = static_cast<unsigned char>(raw[109]);
+                                const std::string image = build_exfat_stub(bps, spc, "eboot.bin", stub);
+                                if (!image.empty()) {
+                                    ex.write(src, image);
+                                    ex.stub_images.insert(src);
+                                }
+                            }
+                        }
                         break;
                     }
             }
