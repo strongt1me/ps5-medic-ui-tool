@@ -4,13 +4,13 @@
 # Gleiche Kette wie title/build_title.sh, aber mit der ganzen UI (ps5/native_ui_main.cpp, ui/src/*) statt des Starters. Die kleine C++-Laufzeit
 # (app_crt.cpp, app_cpp_runtime.cpp), das Linkerskript und die Symbolliste stammen aus ps5-native-app-boilerplate (kein libc++-Laufzeitpaket,
 # keine Ausnahmen, kein RTTI).
-# Aufruf: bash title/build_native_ui.sh [TITEL-ID]     (Standard FAKE42009 = Test-Kachel neben dem Starter FAKE42007)
+# Aufruf: bash title/build_native_ui.sh [TITEL-ID]     (Standard FAKE42007 = die Kachel "PS5 Medic"; andere IDs fuer Testkacheln)
 # Braucht: PS5_PAYLOAD_SDK (SDK 0.45), PS5_BOILERPLATE (Standard ~/lmms-ps5/boilerplate, gebaut: build/host/ps5-native-tool), PS5_LIBC_PRX, clang-18.
 # Ergebnis: build-native/<TITEL-ID>/ -> `make deploy-native` (FTP nach /data/homebrew/<TITEL-ID>).
 set -euo pipefail
 
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-ID=${1:-FAKE42009}
+ID=${1:-FAKE42007}
 SDK=${PS5_PAYLOAD_SDK:-$HOME/ps5-sdk-045/PS5_PAYLOAD_SDK}
 BOILER=${PS5_BOILERPLATE:-$HOME/lmms-ps5/boilerplate}
 TOOL=${PS5_NATIVE_TOOL:-$BOILER/build/host/ps5-native-tool}
@@ -70,6 +70,7 @@ cp "$B/eboot.bin" "$OUT/eboot.bin"
 cp "$LIBC" "$OUT/sce_module/libc.prx"
 cp "$REPO/ps5/homebrew/sce_sys/icon0.png" "$OUT/sce_sys/icon0.png"
 concept=${ID: -5}
+NAME="PS5 Medic"; [[ $ID == FAKE42007 ]] || NAME="PS5 Medic (native $ID)"
 cat > "$OUT/sce_sys/param.json" <<JSON
 {
   "ageLevel": { "default": 0 },
@@ -80,14 +81,14 @@ cat > "$OUT/sce_sys/param.json" <<JSON
   "attribute3": 1048576,
   "conceptId": "$concept",
   "contentBadgeType": 1,
-  "contentId": "IV9999-${ID}_00-PS5MEDICNATIVE01",
+  "contentId": "IV9999-${ID}_00-PS5MEDICSTART001",
   "contentVersion": "01.000.000",
   "downloadDataSize": 256,
   "gameIntent": { "permittedIntents": [ { "intentType": "launchActivity" } ] },
   "localizedParameters": {
     "defaultLanguage": "en-US",
-    "en-US": { "titleName": "PS5 Medic (native)" },
-    "de-DE": { "titleName": "PS5 Medic (nativ)" }
+    "en-US": { "titleName": "$NAME" },
+    "de-DE": { "titleName": "$NAME" }
   },
   "masterVersion": "01.00",
   "pubtools": { "creationDate": "2026-11-12 00:00:00", "toolVersion": "2.00" },

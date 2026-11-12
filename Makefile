@@ -202,22 +202,20 @@ VERSION := $(shell sed -n 's/.*kMedicVersion = "\(.*\)";/\1/p' libmedic/include/
 DIST_NAME := ps5-medic-$(VERSION)
 DIST_DIR := dist/$(DIST_NAME)
 
-dist: ps5 ps5-ui ps5-launcher title
+dist: ps5 ps5-service native-ui
 	@test -n "$(VERSION)" || { echo "Version nicht gefunden (kMedicVersion in libmedic/include/medic/report.hpp)"; exit 1; }
 	rm -rf $(DIST_DIR) dist/$(DIST_NAME).zip
 	mkdir -p $(DIST_DIR)/PS5MEDIC/sce_sys
-	cp $(PS5_UI_ELF) $(DIST_DIR)/PS5MEDIC/ps5medicui.elf
-	cp $(PS5_LAUNCHER_ELF) $(DIST_DIR)/PS5MEDIC/ps5medic-launcher.elf
+	cp $(PS5_SERVICE_ELF) $(DIST_DIR)/PS5MEDIC/ps5medicservice.elf
 	cp $(PS5_ELF) $(DIST_DIR)/PS5MEDIC/ps5medic.elf
 	cp knowledge/rules.json $(DIST_DIR)/PS5MEDIC/rules.json
 	cp knowledge/error_codes.json $(DIST_DIR)/PS5MEDIC/error_codes.json
-	cp ps5/homebrew/homebrew.js $(DIST_DIR)/PS5MEDIC/homebrew.js
 	cp ps5/homebrew/sce_sys/icon0.png $(DIST_DIR)/PS5MEDIC/sce_sys/icon0.png
-	cp -r build-title/FAKE42007 $(DIST_DIR)/FAKE42007
+	cp -r build-native/$(NATIVE_ID) $(DIST_DIR)/$(NATIVE_ID)
 	cp LICENSE README.md README.en.md THIRD_PARTY.md docs/TESTER.md $(DIST_DIR)/
 	cd $(DIST_DIR) && find . -type f ! -name SHA256SUMS.txt | sort | xargs sha256sum > SHA256SUMS.txt
 	cd dist && python3 -m zipfile -c $(DIST_NAME).zip $(DIST_NAME)
-	@echo "Fertig: dist/$(DIST_NAME).zip (Ordner PS5MEDIC und FAKE42007 nach /data/homebrew/ kopieren). Lizenz GPL-3.0-or-later; bei Weitergabe den Quelltext anbieten."
+	@echo "Fertig: dist/$(DIST_NAME).zip (Ordner PS5MEDIC und FAKE42007 nach /data/homebrew/ kopieren; die Kachel startet die native App, die den Dienst beim ersten Start selbst an den ELF-Lader sendet). Lizenz GPL-3.0-or-later; bei Weitergabe den Quelltext anbieten."
 
 # Kachel unter "Medien": ein winziger Starter-Titel (title/), der den Launcher an den ELF-Lader sendet. Siehe docs/TITLE.md.
 title: $(TILE_DIR)/eboot.bin
@@ -231,8 +229,9 @@ deploy-title: title
 	@echo "Hochgeladen. ShadowMount+ legt die Kachel \"PS5 Medic\" unter Medien innerhalb von Sekunden an. Voraussetzung beim Start: der ELF-Lader (Port 9021) laeuft und der Ordner PS5MEDIC (make deploy-ui) liegt in /data/homebrew/."
 
 # Die Oberflaeche als native App (eigener Titel, siehe docs/NATIVE.md): `make native-ui` baut build-native/<NATIVE_ID>, `make deploy-native` legt sie
-# per FTP nach /data/homebrew/<NATIVE_ID> (ShadowMount+ legt die Kachel an). Test-Kachel neben dem Starter FAKE42007.
-NATIVE_ID := FAKE42009
+# per FTP nach /data/homebrew/<NATIVE_ID> (ShadowMount+ legt die Kachel an). Standard ist die Kachel FAKE42007 "PS5 Medic" (ersetzt seit 12. Nov. 2026
+# den alten Starter); `make deploy-native NATIVE_ID=FAKE42009` legt eine Testkachel daneben an.
+NATIVE_ID := FAKE42007
 native-ui:
 	bash title/build_native_ui.sh $(NATIVE_ID)
 
@@ -240,7 +239,7 @@ deploy-native: native-ui $(PS5_SERVICE_ELF)
 	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (FTP-Server auf Port $(PS5_FTP_PORT) muss laufen)"; exit 1; }
 	for f in eboot.bin sce_module/libc.prx sce_sys/icon0.png sce_sys/param.json; do 	    curl --fail --ftp-create-dirs -T build-native/$(NATIVE_ID)/$$f ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/$(NATIVE_ID)/$$f || exit 1; 	done
 	curl --fail --ftp-create-dirs -T $(PS5_SERVICE_ELF) ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/ps5medicservice.elf
-	@echo "Hochgeladen. ShadowMount+ legt die Kachel \"PS5 Medic (nativ)\" unter Medien an."
+	@echo "Hochgeladen. ShadowMount+ legt die Kachel \"PS5 Medic\" unter Medien an (Dienstdatei: /data/homebrew/PS5MEDIC/ps5medicservice.elf)."
 
 # Signierte Regeln fuer den Download (nur am PC; der Privatschluessel liegt ausserhalb des Repositorys).
 # Ablauf: Regeln aendern, db_version hochzaehlen, `make sign-rules`, `make serve-rules`; auf der Konsole: Einstellungen -> Regel-Update -> Herunterladen.
