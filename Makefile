@@ -4,8 +4,9 @@
 #   make test     Unit- und Regel-Tests gegen alle Fixtures
 #   make ps5      Diagnose-Payload (ELF, nur lesend) mit dem ps5-payload-sdk bauen
 #   make ps5-ui   Vollbild-UI-Payload bauen (braucht zusaetzlich ps5-payload-sdl2, siehe docs/PHASE3.md)
-#   make ps5-launcher  Launcher-ELF bauen (ohne websrv: legt den Kachel-Ordner FAKE42007 an, startet die UI mit App-Kontext), siehe docs/TITLE.md
-#   make send-launcher  Launcher an Port 9021 der Konsole senden (PS5_HOST=<ip> noetig; legt Kachel an und startet die UI)
+#   make ps5-launcher  Installer-ELF bauen (ps5medic-launcher.elf: legt die native Kachel FAKE42007 und den Dienst PS5MEDIC an), siehe docs/NATIVE.md
+#   make send-launcher  Installer an Port 9021 der Konsole senden (PS5_HOST=<ip> noetig; schreibt beide Ordner nach /data/homebrew, kein FTP noetig)
+#   make ps5-start     Alter Weg (Ausweichweg, docs/TITLE.md): Starter-ELF ps5medic-start.elf fuer title/starter.c
 #   make deploy    ps5medic.elf + Regeln per FTP (Port 2121) auf die Konsole legen   (PS5_HOST=<ip> noetig)
 #   make deploy-ui ps5medicui.elf + Regeln + Fehlercodes + Launcher-Eintrag per FTP auf die Konsole legen (PS5_HOST=<ip> noetig)
 #   make launch-ui (Alternative ohne Launcher) deploy-ui und danach per websrv (/hbldr, Port 8080) im App-Kontext starten
@@ -55,13 +56,14 @@ PS5_SERVICE_ELF := $(PS5_BUILD)/ps5medicservice.elf
 PS5_SERVICE_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) $(PS5_UI_SRCS) ps5/service_main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
 # Launcher ohne websrv und ohne Homebrew-Lader (docs/TITLE.md). Der Lader (hbldr/elfldr/pt) stammt aus websrv, siehe third_party/websrv-hbldr/.
 #   ps5medic-start.elf     startet nur die UI; steckt im Starter der Kachel (title/starter.c)
-#   ps5medic-launcher.elf  dasselbe, legt aber vorher den Kachel-Ordner /data/homebrew/FAKE42007 an (Dateien aus build-title/FAKE42007); das ist die ELF zum Senden
+#   ps5medic-launcher.elf  der Installer zum Senden (ps5/installer_main.cpp): schreibt die native App FAKE42007 (build-native/FAKE42007) und den Dienst
+#                          PS5MEDIC (ps5medicservice.elf, rules.json, error_codes.json, Icon) nach /data/homebrew; braucht weder Lader noch Rechte
 PS5_START_ELF := $(PS5_BUILD)/ps5medic-start.elf
 PS5_LAUNCHER_ELF := $(PS5_BUILD)/ps5medic-launcher.elf
 PS5_LAUNCHER_C_SRCS := third_party/websrv-hbldr/hbldr.c third_party/websrv-hbldr/elfldr.c third_party/websrv-hbldr/pt.c
 PS5_LAUNCHER_C_OBJS := $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_LAUNCHER_C_SRCS))
 PS5_START_OBJS := $(PS5_BUILD)/ps5/launcher_main.o $(PS5_LAUNCHER_C_OBJS)
-PS5_LAUNCHER_OBJS := $(PS5_BUILD)/ps5/launcher_setup.o $(PS5_LAUNCHER_C_OBJS)
+PS5_LAUNCHER_OBJS := $(PS5_BUILD)/ps5/installer_main.o
 TILE_DIR := build-title/FAKE42007
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
@@ -132,9 +134,10 @@ $(PS5_BUILD)/ui/src/splash.o: private PS5_CXXFLAGS += '-DMEDIC_SPLASH_PATH="$(CU
 $(PS5_BUILD)/ui/src/splash.o: ui/assets/splash.jpg ui/assets/background.jpg
 
 $(PS5_BUILD)/ps5/launcher_main.o: private PS5_CXXFLAGS += -Ithird_party/websrv-hbldr
-$(PS5_BUILD)/ps5/launcher_setup.o: private PS5_CXXFLAGS += -Ithird_party/websrv-hbldr -DMEDIC_TILE_INSTALL '-DMEDIC_TILE_DIR="$(TILE_DIR)"'
+# Installer: die Dateien stecken per .incbin im Objekt. native-ui (phony) baut die App neu, bevor sie eingebunden wird.
+$(PS5_BUILD)/ps5/installer_main.o: private PS5_CXXFLAGS += '-DMEDIC_TILE_DIR="$(CURDIR)/build-native/FAKE42007"' '-DMEDIC_SERVICE_ELF="$(CURDIR)/$(PS5_SERVICE_ELF)"'     '-DMEDIC_RULES_JSON="$(CURDIR)/knowledge/rules.json"' '-DMEDIC_ERROR_CODES_JSON="$(CURDIR)/knowledge/error_codes.json"' '-DMEDIC_FOLDER_ICON="$(CURDIR)/ps5/homebrew/sce_sys/icon0.png"'
 
-$(PS5_BUILD)/ps5/launcher_setup.o: ps5/launcher_main.cpp $(TILE_DIR)/eboot.bin
+$(PS5_BUILD)/ps5/installer_main.o: ps5/installer_main.cpp native-ui $(PS5_SERVICE_ELF) knowledge/rules.json knowledge/error_codes.json ps5/homebrew/sce_sys/icon0.png
 	@mkdir -p $(dir $@)
 	$(PS5_CXX) $(PS5_CXXFLAGS) -MMD -MP -c $< -o $@
 
@@ -166,13 +169,14 @@ $(PS5_LAUNCHTITLE_ELF): $(PS5_BUILD)/ps5/launch_title.o
 $(PS5_LAUNCHER_ELF): $(PS5_LAUNCHER_OBJS)
 	$(PS5_CXX) $^ -lkernel_sys -lSceSystemService -lSceUserService -o $@
 
--include $(PS5_OBJS:.o=.d) $(PS5_UI_OBJS:.o=.d) $(PS5_SERVICE_OBJS:.o=.d) $(PS5_START_OBJS:.o=.d) $(PS5_BUILD)/ps5/launcher_setup.d
+-include $(PS5_OBJS:.o=.d) $(PS5_UI_OBJS:.o=.d) $(PS5_SERVICE_OBJS:.o=.d) $(PS5_START_OBJS:.o=.d) $(PS5_BUILD)/ps5/installer_main.d
 
-# Launcher an elfldr (Port 9021) senden. Danach: Kachel "PS5 Medic" (FAKE42007) erscheint, sobald ShadowMount+ den Ordner sieht, die UI startet. Protokoll: /data/ps5medic/launcher.log
+# Installer an elfldr (Port 9021) senden. Er schreibt FAKE42007 (native App) und PS5MEDIC (Dienst) nach /data/homebrew; die Kachel "PS5 Medic" erscheint,
+# sobald ShadowMount+ den Ordner sieht. Die native App muss dabei geschlossen sein. Protokoll: /data/ps5medic/installer.log
 send-launcher: $(PS5_LAUNCHER_ELF)
 	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (elfldr muss auf Port 9021 lauschen)"; exit 1; }
 	nc -w 3 $(PS5_HOST) 9021 < $(PS5_LAUNCHER_ELF)
-	@echo "Gesendet. Protokoll: ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/launcher.log (UI: ui.log)"
+	@echo "Gesendet. Protokoll: ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/installer.log"
 
 deploy: $(PS5_ELF)
 	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (FTP-Server auf Port $(PS5_FTP_PORT) muss laufen)"; exit 1; }
@@ -180,15 +184,14 @@ deploy: $(PS5_ELF)
 	curl --fail --ftp-create-dirs -T knowledge/rules.json ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/knowledge/rules.json
 	@echo "Hochgeladen. ps5medic.elf ueber den Payload Manager starten; Ergebnis: /data/ps5medic/last_check.txt und snapshots/"
 
-deploy-ui: $(PS5_UI_ELF) $(PS5_LAUNCHER_ELF)
+deploy-ui: $(PS5_UI_ELF)
 	@test -n "$(PS5_HOST)" || { echo "PS5_HOST=<ip der Konsole> setzen (FTP-Server auf Port $(PS5_FTP_PORT) muss laufen)"; exit 1; }
 	curl --fail --ftp-create-dirs -T $(PS5_UI_ELF) ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/ps5medicui.elf
-	curl --fail --ftp-create-dirs -T $(PS5_LAUNCHER_ELF) ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/ps5medic-launcher.elf
 	curl --fail --ftp-create-dirs -T ps5/homebrew/homebrew.js ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/homebrew.js
 	curl --fail --ftp-create-dirs -T ps5/homebrew/sce_sys/icon0.png ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/homebrew/PS5MEDIC/sce_sys/icon0.png
 	curl --fail --ftp-create-dirs -T knowledge/rules.json ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/knowledge/rules.json
 	curl --fail --ftp-create-dirs -T knowledge/error_codes.json ftp://$(PS5_HOST):$(PS5_FTP_PORT)/data/ps5medic/knowledge/error_codes.json
-	@echo "Hochgeladen. Starten: make send-launcher PS5_HOST=$(PS5_HOST) (legt den Kachel-Ordner an) oder die Kachel \"PS5 Medic\" druecken (make deploy-title fuer die Ordner-App)."
+	@echo "Hochgeladen (alter Weg, docs/TITLE.md). Starten: make launch-ui (websrv)."
 
 # Startet die UI ueber websrvs Big-App-Lader (/hbldr): nur so hat der Prozess App-Kontext, und nur dann oeffnet sich das Pad.
 # curl endet mit 28 (Zeitlimit), weil die Ausgabe der laufenden App gestreamt wird -- das ist der Normalfall.

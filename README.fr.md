@@ -137,6 +137,7 @@ make native-ui                      # application native (build-native/FAKE42007
 make ps5-service                    # service (ps5medicservice.elf)
 make ps5                            # payload de diagnostic (ps5medic.elf)
 make deploy-native PS5_HOST=192.168.1.x # application et service vers /data/homebrew par FTP (l'application doit être fermée)
+make send-launcher PS5_HOST=192.168.1.x # envoyer l'installateur au port 9021 : il écrit lui-même l'application et le service dans /data/homebrew (sans FTP)
 make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
 ```
 

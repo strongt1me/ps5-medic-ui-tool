@@ -1,16 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // PS5 Medic Launcher: startet die Vollbild-UI (ps5medicui.elf) mit App-Kontext, ohne websrv und ohne Homebrew-Lader.
 //
-// Es gibt ihn in zwei Fassungen aus demselben Quelltext:
-//
-//  * ps5medic-start.elf (ohne MEDIC_TILE_INSTALL): wird vom Starter der Kachel (title/starter.c) an Port 9021 gesendet, sobald die
-//    Kachel "PS5 Medic" geoeffnet wird. Er startet die UI und beendet sich, wenn die UI endet.
-//  * ps5medic-launcher.elf (mit MEDIC_TILE_INSTALL): die ELF, die man von Hand an Port 9021 sendet (make send-launcher). Sie legt
-//    zuerst die Ordner-App "PS5 Medic" (Titel-ID FAKE42007) unter /data/homebrew/FAKE42007 an, genau dort, wo alle Apps und Spiele
-//    liegen: eboot.bin (der Starter, ein echter nativer Titel), sce_module/libc.prx, sce_sys/param.json und icon0.png (die Dateien
-//    stecken in dieser ELF). ShadowMount+ erkennt den Ordner und installiert die Kachel unter "Medien"; die Konsole selbst wird nicht
-//    angefasst (nichts unter /system_ex oder /user/app). Danach startet sie die UI wie die erste Fassung. Die Kachel braucht
-//    danach nur noch ShadowMount+ und den ELF-Lader.
+// Er gehoert zum alten Weg (Ausweichweg, docs/TITLE.md): ps5medic-start.elf steckt im Starter der Kachel (title/starter.c) und wird an Port
+// 9021 gesendet, sobald diese Kachel geoeffnet wird. Er startet die UI und beendet sich, wenn die UI endet. Die native App (docs/NATIVE.md)
+// braucht ihn nicht; ihre Kachel legt der Installer (ps5/installer_main.cpp, make send-launcher) an.
 //
 // UI-Start: Der Lader dafuer stammt aus websrv (third_party/websrv-hbldr, GPL-3.0-or-later, nur der Code, nicht der Dienst): eine
 // echte System-App (FAKE00000) wird per sceSystemServiceLaunchApp gestartet und per ptrace gegen die ELF getauscht. Das gibt der UI
@@ -49,26 +42,10 @@ int sceKernelGetAppInfoByAppId(int app_id, void* info);
 int sceKernelSendNotificationRequest(int device, void* request, size_t size, int blocking);
 }
 
-#ifdef MEDIC_TILE_INSTALL
-// Die Dateien der Kachel (build-title/FAKE42007/, siehe title/build_title.sh), per .incbin in die ELF gebunden.
-#define MEDIC_INCBIN(sym, file)                           \
-    __asm__(".section .rodata\n.balign 16\n.global " #sym \
-            "\n" #sym ":\n.incbin \"" MEDIC_TILE_DIR "/" file "\"\n.global " #sym "_end\n" #sym "_end:\n.previous\n")
-MEDIC_INCBIN(tile_eboot, "eboot.bin");
-MEDIC_INCBIN(tile_libc, "sce_module/libc.prx");
-MEDIC_INCBIN(tile_param, "sce_sys/param.json");
-MEDIC_INCBIN(tile_icon, "sce_sys/icon0.png");
-extern "C" const unsigned char tile_eboot[], tile_eboot_end[], tile_libc[], tile_libc_end[], tile_param[], tile_param_end[], tile_icon[], tile_icon_end[];
-#endif
-
 namespace fs = std::filesystem;
 
 namespace {
 
-#ifdef MEDIC_TILE_INSTALL
-constexpr const char* kTileTitle = "FAKE42007";
-constexpr const char* kTileDir = "/data/homebrew/FAKE42007";
-#endif
 constexpr const char* kUiDir = "/data/homebrew/PS5MEDIC";
 constexpr const char* kUiElf = "/data/homebrew/PS5MEDIC/ps5medicui.elf";
 constexpr const char* kLogPath = "/data/ps5medic/launcher.log";
@@ -225,68 +202,6 @@ extern "C" int medic_kill_guard(int app_id) {
     return 1;
 }
 
-#ifdef MEDIC_TILE_INSTALL
-// ---- Kachel ------------------------------------------------------------------------------------------------------------------------
-struct Blob {
-    const char* rel;  // Pfad unterhalb des Titelordners
-    const unsigned char* data;
-    std::size_t size;
-};
-
-// Stimmt die Datei schon mit dem Blob ueberein? (Gleiche Groesse, gleicher Inhalt.)
-bool same_content(const std::string& path, const Blob& b) {
-    std::FILE* f = std::fopen(path.c_str(), "rb");
-    if (!f) return false;
-    bool same = true;
-    std::size_t done = 0;
-    unsigned char buf[1 << 14];
-    while (same) {
-        const std::size_t n = std::fread(buf, 1, sizeof buf, f);
-        if (n == 0) break;
-        if (done + n > b.size || std::memcmp(buf, b.data + done, n) != 0) same = false;
-        done += n;
-    }
-    std::fclose(f);
-    return same && done == b.size;
-}
-
-bool write_blob(const std::string& path, const Blob& b) {
-    std::FILE* f = std::fopen(path.c_str(), "wb");
-    if (!f) return false;
-    const bool ok = std::fwrite(b.data, 1, b.size, f) == b.size;
-    return std::fclose(f) == 0 && ok;
-}
-
-// Legt die Ordner-App an (oder bringt eine aeltere Fassung auf den Stand dieser ELF). Alles liegt unter /data/homebrew/FAKE42007, wo
-// ShadowMount+ nach Apps sucht und sie als Kachel unter "Medien" installiert. Nichts wird geloescht, nur eigene Dateien werden
-// ueberschrieben; param.json kommt zuletzt, damit ShadowMount+ keinen halben Ordner sieht.
-std::string ensure_tile() {
-    const std::string dir = kTileDir;
-    const Blob blobs[] = {
-        {"/sce_module/libc.prx", tile_libc, static_cast<std::size_t>(tile_libc_end - tile_libc)},
-        {"/eboot.bin", tile_eboot, static_cast<std::size_t>(tile_eboot_end - tile_eboot)},
-        {"/sce_sys/icon0.png", tile_icon, static_cast<std::size_t>(tile_icon_end - tile_icon)},
-        {"/sce_sys/param.json", tile_param, static_cast<std::size_t>(tile_param_end - tile_param)},
-    };
-    bool current = true;
-    for (const Blob& b : blobs)
-        if (current && !same_content(dir + b.rel, b)) current = false;
-    if (current) return std::string("Kachel-Ordner ") + dir + ": schon auf dem Stand";
-
-    std::error_code ec;
-    for (const char* d : {"/sce_sys", "/sce_module"}) {
-        fs::create_directories(dir + d, ec);
-        if (ec) return std::string("Kachel: ") + dir + d + " nicht anlegbar (" + ec.message() + ")";
-    }
-    for (const Blob& b : blobs) {
-        const std::string path = dir + b.rel;
-        if (same_content(path, b)) continue;
-        if (!write_blob(path, b)) return std::string("Kachel: ") + path + " nicht schreibbar (errno " + std::to_string(errno) + ")";
-    }
-    return std::string("Kachel-Ordner ") + dir + ": geschrieben, ShadowMount+ legt die Kachel an";
-}
-#endif
-
 // ---- UI starten --------------------------------------------------------------------------------------------------------------------
 // Blockiert bis die UI laeuft (oder es scheitert). Gibt die Pid der UI zurueck oder -1.
 pid_t launch_ui(const char* why) {
@@ -361,13 +276,7 @@ int main() {
     std::error_code ec;
     fs::create_directories("/data/ps5medic", ec);
     g_log = std::fopen(kLogPath, "w");
-    trace(std::string("PS5 Medic Launcher startet (Pid ") + std::to_string(::getpid()) + ")" +
-#ifdef MEDIC_TILE_INSTALL
-          " [ELF mit Kachel]"
-#else
-          " [Start ueber die Kachel]"
-#endif
-    );
+    trace(std::string("PS5 Medic Launcher startet (Pid ") + std::to_string(::getpid()) + ") [Start ueber die Kachel]");
 
     if (!replace_previous_instance()) {
         notify("PS5 Medic: Ein vorheriger Start laeuft noch. Bitte kurz warten und noch einmal starten.");
@@ -378,18 +287,7 @@ int main() {
     if (uerr != 0) trace("sceUserServiceInitialize: " + std::to_string(uerr));
     kernel_set_ucred_authid(-1, kSystemAuthId);
 
-#ifdef MEDIC_TILE_INSTALL
-    trace(ensure_tile());
-    notify("PS5 Medic: Kachel-Ordner liegt in /data/homebrew, ShadowMount+ legt die Kachel an. Die Oberflaeche startet.");
-#endif
-
-    const pid_t ui = launch_ui(
-#ifdef MEDIC_TILE_INSTALL
-        "ELF gesendet"
-#else
-        "Kachel"
-#endif
-    );
+    const pid_t ui = launch_ui("Kachel");
     if (ui < 0) {
         if (g_log) std::fclose(g_log);
         ::_exit(1);
