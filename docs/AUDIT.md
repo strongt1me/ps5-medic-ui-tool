@@ -19,6 +19,12 @@ Werkzeuge: ASAN/UBSAN-Build des ganzen Projekts (`medic-tests`), Fuzzer `tests/f
 
 Fuzzer: 270 000 Läufe über vier Startwerte ohne Absturz. UBSAN meldet nur Linksverschiebungen negativer Werte in `tweetnacl.c` (Fremdcode, bekannt harmlos).
 
+## Launcher-Änderungen vom 12. Nov. (Verdachtspunkte, auf der Konsole noch nicht getestet)
+- **Phase-Datei** `/data/ps5medic/launcher.phase` (`launching`/`monitoring`/`failed`/`done`): eine neue Launcher-Instanz beendet die vorige nie, solange diese im ptrace-Tausch steckt; sie wartet bis zu 90 s und bricht sonst mit Meldung ab.
+- **Höchstens zwei Startversuche**, und der zweite nur, wenn keine Big App läuft (kein doppelter Start durch einen hängenden LaunchApp-Aufruf).
+- **Testhebel ohne Neubau:** liegt die (leere) Datei `/data/ps5medic/no_budget_syscall` auf der Konsole, lässt hbldr den Syscall `sys_set_budget(0)` weg. Test: Datei anlegen, UI starten, dann den Launcher erneut senden bzw. die Kachel drücken, während die UI läuft. Stürzt die Konsole dann nicht mehr ab, ist S1 bestätigt und der Syscall kann dauerhaft entfallen. Läuft die UI ohne ihn nicht (Zugriff auf `/data`), bleibt er an.
+- Nicht umgesetzt: Titelprüfung des Kindprozesses vor `pt_attach` (S3), `flock` zwischen Launcher/UI/Payload (S8) – beides ohne Konsole nicht prüfbar.
+
 ## Offen, braucht die Konsole (nicht belegt, nur Verdacht)
 1. `hbldr.c`: `sys_set_budget(0)` (Syscall 0x23b) beim Neustart der Big App – der Autor nennt auf älteren Firmwares Kernel-Panic; passt zum Absturzmuster „UI läuft, Kachel startet neu“. Test: Syscall weglassen (UI nutzt absolute Pfade).
 2. Tracer-Prozess wird mitten im ptrace-Tausch beendet (neue Launcher-Instanz) – Phase in einer Sperrdatei führen.

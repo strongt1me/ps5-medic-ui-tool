@@ -223,6 +223,10 @@ bigapp_launch_thread(void* arg) {
 }
 
 
+int (*hbldr_kill_guard)(int app_id) = 0;
+int hbldr_skip_budget = 0;
+
+
 /**
  *
  **/
@@ -404,7 +408,9 @@ bigapp_replace(pid_t pid, uint8_t* elf, const char* progname, int stdio,
   // relative paths using open, mkdir, etc. TODO: On older firmwares, this
   // causes a kernel panic when the bigapp is restarted. Figure out what
   // firmwares this issue affect, and how to address it.
-  if(kernel_get_fw_version() > 0x10000000) {
+  // PS5 Medic: abschaltbar (hbldr_skip_budget), Verdacht aus der Pruefung 12. Nov. 2026: der Aufruf koennte beim Neustart der Big App
+  // auch auf neueren Firmwares den Kernel-Panic ausloesen. Die UI nutzt absolute Pfade.
+  if(!hbldr_skip_budget && kernel_get_fw_version() > 0x10000000) {
     pt_syscall(pid, 0x23b, 0);
   }
 
@@ -416,8 +422,6 @@ bigapp_replace(pid_t pid, uint8_t* elf, const char* progname, int stdio,
   return pid;
 }
 
-
-int (*hbldr_kill_guard)(int app_id) = 0;
 
 pid_t
 hbldr_launch(const char*cwd, const char* path, int stdio, char** argv,

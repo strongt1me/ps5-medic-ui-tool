@@ -23,6 +23,9 @@ along with this program; see the file COPYING. If not, see
    geschlossen und hbldr_launch scheitert mit errno EBUSY (die App kann sich zwischen der Pruefung des Aufrufers und dem Kill geaendert haben). */
 extern int (*hbldr_kill_guard)(int app_id);
 
+/* PS5 Medic: != 0 laesst den Syscall sys_set_budget(0) (0x23b) beim Start der Big App weg (siehe docs/AUDIT.md). */
+extern int hbldr_skip_budget;
+
 pid_t hbldr_launch(const char* cwd, const char* path, int stdio, char** argv,
 		   char** envp);
 

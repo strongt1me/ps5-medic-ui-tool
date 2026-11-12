@@ -122,17 +122,48 @@ std::vector<pid_t> find_pids(const char* name) {
 // Die Pid aus dem Protokoll der vorigen Sitzung wird nicht mehr herangezogen (Audit 12. Nov. 2026): elfldr benennt jeden Payload "payload.elf",
 // und nach einem Neustart kann dieselbe Pid zu kstuff, ShadowMount+ oder dem Luefterregler gehoeren. Beendet wird nur, was den
 // eigenen Thread-Namen traegt.
-void replace_previous_instance() {
+// Phase des Launchers in einer Datei (Audit 12. Nov. 2026): "launching" = hbldr_launch laeuft (die Big App ist unter ptrace angehalten, der
+// Tracer darf jetzt nicht sterben, sonst bleibt eine System-App halb umgebaut zurueck), "monitoring" = die UI laeuft, der Launcher wartet nur.
+constexpr const char* kPhasePath = "/data/ps5medic/launcher.phase";
+
+void set_phase(const char* phase) {
+    std::FILE* f = std::fopen(kPhasePath, "w");
+    if (!f) return;
+    std::fputs(phase, f);
+    std::fclose(f);
+}
+
+bool phase_is_launching() {
+    char buf[32] = {0};
+    std::FILE* f = std::fopen(kPhasePath, "r");
+    if (!f) return false;
+    std::fread(buf, 1, sizeof buf - 1, f);
+    std::fclose(f);
+    return std::strncmp(buf, "launching", 9) == 0;
+}
+
+// false: eine vorige Instanz steckt noch mitten im Start und wurde nicht beendet (der Aufrufer bricht ab).
+bool replace_previous_instance() {
     syscall(SYS_thr_set_name, -1, kThreadName);
+    // Laeuft die vorige Instanz noch im ptrace-Tausch, bis zu 90 s warten (ein Start dauert hoechstens etwa 75 s) statt sie zu beenden.
+    for (int waited = 0; waited < 90 && phase_is_launching() && !find_pids(kThreadName).empty(); ++waited) {
+        if (waited == 0) trace("Vorige Instanz startet gerade die UI, warte auf das Ende");
+        ::sleep(1);
+    }
+    if (phase_is_launching() && !find_pids(kThreadName).empty()) {
+        trace("Vorige Instanz steckt noch im Start, nichts wird beendet");
+        return false;
+    }
     for (int round = 0; round < 5; ++round) {
         std::vector<pid_t> pids = find_pids(kThreadName);
-        if (pids.empty()) return;
+        if (pids.empty()) return true;
         for (pid_t p : pids) {
             trace("Vorige Instanz (Pid " + std::to_string(p) + ") wird beendet");
             ::kill(p, SIGKILL);
         }
         ::sleep(1);
     }
+    return true;
 }
 
 // ---- Titel-ID einer laufenden App ---------------------------------------------------------------------------------------------
@@ -279,18 +310,30 @@ pid_t launch_ui(const char* why) {
     // ohne zweiten Versuch scheitert hbldr_launch dann mit "Broken pipe" (Konsolentest 12. Nov. 2026, Kachel bei laufender UI).
     if (app > 0) ::sleep(2);
     hbldr_kill_guard = medic_kill_guard;
+    // Marker-Datei zum Testen ohne neuen Bau: kein sys_set_budget(0) beim Start der Big App (Verdacht auf Kernel-Panic beim Neustart)
+    struct stat mk;
+    hbldr_skip_budget = ::stat("/data/ps5medic/no_budget_syscall", &mk) == 0 ? 1 : 0;
+    if (hbldr_skip_budget) trace("Marker no_budget_syscall gefunden: Syscall sys_set_budget wird weggelassen");
+    set_phase("launching");
     pid_t pid = -1;
-    for (int attempt = 1; attempt <= 3 && pid < 0; ++attempt) {
+    // Hoechstens zwei Versuche, und nur wenn keine Big App laeuft: ein haengender LaunchApp-Aufruf kann sonst noch eine App starten, die
+    // der zweite Versuch mitten im Hochfahren schliessen wuerde (doppelter Start).
+    for (int attempt = 1; attempt <= 2 && pid < 0; ++attempt) {
         trace(std::string("UI-Start (") + why + "): hbldr_launch, Versuch " + std::to_string(attempt));
-        const int out = ::open("/data/ps5medic/ui.stdout", O_WRONLY | O_CREAT | O_TRUNC, 0644);  // stdout/stderr der UI
+        const int out = ::open("/data/ps5medic/ui.stdout", O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0644);  // stdout/stderr der UI
         char* argv[] = {nullptr};
         char* envp[] = {nullptr};
         pid = hbldr_launch(kUiDir, kUiElf, out >= 0 ? out : 1, argv, envp);
         if (out >= 0) ::close(out);
         if (pid >= 0) break;
         trace("UI-Start: hbldr_launch fehlgeschlagen (errno " + std::to_string(errno) + ": " + std::strerror(errno) + ")");
+        if (sceSystemServiceGetAppIdOfRunningBigApp() > 0) {
+            trace("UI-Start: eine Big App laeuft noch, kein zweiter Versuch");
+            break;
+        }
         ::sleep(3);
     }
+    set_phase(pid < 0 ? "failed" : "monitoring");
     if (pid < 0) {
         notify("PS5 Medic: Die Oberflaeche liess sich nicht starten (Protokoll: /data/ps5medic/launcher.log).");
         return -1;
@@ -315,7 +358,11 @@ int main() {
 #endif
     );
 
-    replace_previous_instance();
+    if (!replace_previous_instance()) {
+        notify("PS5 Medic: Ein vorheriger Start laeuft noch. Bitte kurz warten und noch einmal starten.");
+        if (g_log) std::fclose(g_log);
+        ::_exit(1);
+    }
     const int uerr = sceUserServiceInitialize(nullptr);
     if (uerr != 0) trace("sceUserServiceInitialize: " + std::to_string(uerr));
     kernel_set_ucred_authid(-1, kSystemAuthId);
@@ -341,6 +388,7 @@ int main() {
         ::sleep(2);
         if (::kill(ui, 0) != 0 && errno == ESRCH) break;
     }
+    set_phase("done");
     trace("UI beendet, der Launcher endet.");
     if (g_log) std::fclose(g_log);
     ::_exit(0);
