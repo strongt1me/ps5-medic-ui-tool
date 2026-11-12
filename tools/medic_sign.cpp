@@ -8,6 +8,7 @@
 //
 // Die Schluesseldatei enthaelt den geheimen Seed (eine Zeile "ps5medic-ed25519-seed <64 Hex>"). Sie gehoert NICHT ins
 // Repository; wer sie hat, kann Regeln signieren, die jede PS5 Medic mit dem eingebauten Schluessel annimmt.
+#include "medic/error_codes.hpp"
 #include "medic/rules.hpp"
 #include "medic/signature.hpp"
 
@@ -127,11 +128,20 @@ int cmd_sign(const std::string& keyfile, const std::string& rules_path, std::str
         std::cerr << "rules.json nicht lesbar: " << rules_path << "\n";
         return 1;
     }
+    // Die Datei kann die Regeln (rules.json) oder die Fehlercodes (error_codes.json) sein; beide werden mit demselben Schluessel
+    // signiert und von der Konsole gleich geprueft. Welche es ist, steht am Dateinamen.
+    const std::string codes_name = "error_codes.json";
+    const bool is_codes = rules_path.size() >= codes_name.size() && rules_path.compare(rules_path.size() - codes_name.size(), codes_name.size(), codes_name) == 0;
     try {
-        const RuleSet rs = load_rules_from_string(rules);
-        std::cout << "Regeln: Version " << rs.db_version << ", " << rs.rules.size() << " Regeln, " << rules.size() << " Bytes\n";
+        if (is_codes) {
+            const ErrorCodeSet set = load_error_codes_from_string(rules);
+            std::cout << "Fehlercodes: Version " << set.db_version << ", " << set.codes.size() << " Codes, " << rules.size() << " Bytes\n";
+        } else {
+            const RuleSet rs = load_rules_from_string(rules);
+            std::cout << "Regeln: Version " << rs.db_version << ", " << rs.rules.size() << " Regeln, " << rules.size() << " Bytes\n";
+        }
     } catch (const std::exception& e) {
-        std::cerr << "rules.json ist ungueltig, wird nicht signiert: " << e.what() << "\n";
+        std::cerr << rules_path << " ist ungueltig, wird nicht signiert: " << e.what() << "\n";
         return 1;
     }
     const Ed25519KeyPair kp = ed25519_keypair_from_seed(seed);
