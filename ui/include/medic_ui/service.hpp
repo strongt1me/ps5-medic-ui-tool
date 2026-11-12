@@ -70,6 +70,8 @@ class IMedicService {
 public:
     virtual ~IMedicService() = default;
     virtual CheckResult run_check() = 0;
+    // Fortschritt eines laufenden run_check (0 bis 1), zwischen den Pruefbereichen gerufen; leer = keiner.
+    virtual void set_progress(std::function<void(double)> /*cb*/) {}
     virtual medic::FixPlan plan_fix(const medic::Finding& f) = 0;
     // Schreibt wirklich. Die UI ruft das nur nach ausdruecklicher Bestaetigung des Nutzers auf (Vorschau -> Kreuz).
     virtual medic::ApplyResult apply_fix(const medic::FixPlan& plan) = 0;
@@ -174,6 +176,7 @@ class LocalService : public IMedicService {
 public:
     LocalService(medic::Platform& platform, medic::RuleSet rules, std::function<std::string()> clock = nullptr);
     CheckResult run_check() override;
+    void set_progress(std::function<void(double)> cb) override { progress_ = std::move(cb); }
     medic::FixPlan plan_fix(const medic::Finding& f) override;
     medic::ApplyResult apply_fix(const medic::FixPlan& plan) override;
     std::string read_text(const std::string& path) override;
@@ -232,6 +235,7 @@ private:
     void ensure_facts();
     std::function<std::string()> clock_;
     medic::IHttpClient* http_ = nullptr;
+    std::function<void(double)> progress_;
     std::optional<std::vector<medic::TrustedKey>> keys_;
 };
 

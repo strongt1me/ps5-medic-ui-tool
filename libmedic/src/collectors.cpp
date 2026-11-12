@@ -1592,9 +1592,11 @@ void collect_app_registry(const Platform& p, Facts& f) {
     f.set("appdb.unregistered", std::move(unregistered));
 }
 
-Facts collect_all(const Platform& p) {
+Facts collect_all(const Platform& p, const std::function<void(int, int)>& progress) {
     Facts f;
     json failed = json::array();
+    constexpr int kSteps = 22;  // 21 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
+    int done = 0;
     // Jeder Collector einzeln: ein Fehler (z. B. beschaedigtes JSON in einer von Hand bearbeiteten Datei) beendet nicht den ganzen Check-up,
     // sondern wird als collector.failed vermerkt; die uebrigen Fakten bleiben gueltig (Audit 12. Nov. 2026)
     auto run = [&](const char* name, auto&& fn) {
@@ -1605,6 +1607,7 @@ Facts collect_all(const Platform& p) {
         } catch (...) {
             failed.push_back({{"name", name}, {"error", "unbekannt"}});
         }
+        if (progress) progress(std::min(++done, kSteps), kSteps);
     };
 #define MEDIC_RUN(fn) run(#fn, [&] { fn(p, f); })
     MEDIC_RUN(collect_firmware);

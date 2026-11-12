@@ -35,6 +35,9 @@ public:
 
     // Startbild: wird einige Sekunden gezeigt (jede Taste ueberspringt es), danach der Startbildschirm.
     void show_splash(const Canvas& image);
+    // Der Host zeichnet und sendet auf Aufruf ein Bild; die App ruft das zwischen den Pruefbereichen eines Check-ups, damit der Fortschritt
+    // sichtbar wird, obwohl der Check-up am Stueck laeuft.
+    void set_redraw_hook(std::function<void()> h) { redraw_ = std::move(h); }
     // Hintergrundbild fuer alle Bildschirme (wird abgedunkelt, damit Text lesbar bleibt); ohne Bild gilt der einfache Verlauf.
     void set_background(const Canvas& image);
 
@@ -87,6 +90,7 @@ private:
     void draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::string>>& hints) const;
     void draw_start(Canvas& c) const;
     void draw_running(Canvas& c) const;
+    CheckResult run_check_with_progress();
     void draw_findings(Canvas& c) const;
     void draw_detail(Canvas& c) const;
     void draw_fix_preview(Canvas& c) const;
@@ -122,6 +126,8 @@ private:
     Screen screen_ = Screen::Start;
     int tick_ = 0;
     bool quit_ = false;
+    std::function<void()> redraw_;
+    double check_progress_ = 0;  // 0 bis 1 waehrend des Check-ups
 
     int start_sel_ = 0;
     int start_small_ = 1;  // kleine Kachel (1..5), von der man zur grossen hochgegangen ist: Ziel von Runter

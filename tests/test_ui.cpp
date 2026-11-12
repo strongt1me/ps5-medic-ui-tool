@@ -125,8 +125,13 @@ struct FakeService : IMedicService {
 
     CheckResult run_check() override {
         ++checks;
+        if (progress_cb)
+            for (double v : progress_steps) progress_cb(v);
         return result;
     }
+    void set_progress(std::function<void(double)> cb) override { progress_cb = std::move(cb); }
+    std::function<void(double)> progress_cb;
+    std::vector<double> progress_steps;
     FixPlan plan_fix(const Finding&) override {
         ++plans;
         return plan;
@@ -366,6 +371,30 @@ void png_tests() {
     CHECK(write_png(p.string(), c, 2), "PNG: verkleinert schreiben");
     std::error_code ec;
     fs::remove(p, ec);
+}
+
+// Fortschritt des Check-ups: die Herzlinie fuellt sich, der Host wird zwischen den Schritten zum Zeichnen aufgerufen
+void check_progress_tests() {
+    const Color kAccent = rgb(76, 154, 255);  // Akzentfarbe der Oberflaeche (app.cpp)
+    FakeService svc;
+    svc.result.fw = "12.00";
+    svc.progress_steps = {0.1, 0.5, 0.9};
+    Canvas cv(App::kWidth, App::kHeight);
+    App app(svc);
+    int hooks = 0;
+    std::vector<int> accent_counts;
+    app.set_redraw_hook([&] {
+        ++hooks;
+        app.render(cv);
+        int n = 0;
+        for (int y = 300; y < 640; y += 2)
+            for (int x = 0; x < cv.width(); x += 2) n += cv.at(x, y) == kAccent;
+        accent_counts.push_back(n);
+    });
+    run_check_via_ui(app, cv);
+    CHECK(hooks == 3 && svc.checks == 1, "Fortschritt: der Host wird je Schritt zum Zeichnen gerufen");
+    CHECK(accent_counts.size() == 3 && accent_counts[0] < accent_counts[1] && accent_counts[1] < accent_counts[2], "Fortschritt: die helle Linie waechst mit dem Fortschritt");
+    CHECK(!svc.progress_cb && app.screen() == App::Screen::Findings, "Fortschritt: Rueckruf danach abgemeldet, Befunde angezeigt");
 }
 
 void screen_flow_tests() {
@@ -3100,6 +3129,7 @@ void ui_tests() {
     coverage_ui_tests();
     redetect_ui_tests();
     confidence_ui_tests();
+    check_progress_tests();
     selftest_ui_tests();
     checks_archive_tests();
     games_tests();

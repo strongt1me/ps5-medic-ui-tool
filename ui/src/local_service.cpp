@@ -56,7 +56,11 @@ void collect_rule_facts(const nlohmann::json& j, std::set<std::string>& out) {
 }  // namespace
 
 CheckResult LocalService::run_check() {
-    facts_ = medic::collect_all(p_);
+    // Die Sammler brauchen fast die ganze Zeit; Auswerten und Speichern bekommen das letzte Zehntel.
+    facts_ = medic::collect_all(p_, [this](int done, int total) {
+        if (progress_ && total > 0) progress_(0.9 * done / total);
+    });
+    if (progress_) progress_(0.92);
     medic::persist_klog(p_, facts_);  // gelesene Kernel-Log-Zeilen sichern (verbrauchendes Lesen, D10b)
     CheckResult r;
     r.fw = p_.sys().firmware();
@@ -88,6 +92,7 @@ CheckResult LocalService::run_check() {
                                     }),
                      r.resolved.end());
     r.metrics = medic::metric_changes(rules_, metrics, hist);
+    if (progress_) progress_(0.97);
     bool saved = medic::append_history(p_, medic::make_history_run(now, rules_.db_version, r.fw, r.findings, metrics));
     {  // jeder Check-up als eigene Datei, damit man ihn spaeter einzeln ansehen und vergleichen kann
         medic::StoredCheck sc;

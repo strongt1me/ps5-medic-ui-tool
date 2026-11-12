@@ -4,6 +4,8 @@
 #include "medic/facts.hpp"
 #include "medic/platform.hpp"
 
+#include <functional>
+
 namespace medic {
 
 void collect_firmware(const Platform& p, Facts& f);    // fw.version, fw.model
@@ -23,8 +25,9 @@ void collect_system_logs(const Platform& p, Facts& f);    // boot.log_last, boot
 void collect_databases(const Platform& p, Facts& f);      // db.count, db.integrity_tested, db.files[].{path,name,size,readable,header_bad,truncated,unaligned,page_size,header_pages,journal_hot,journal_size,wal_size,integrity,integrity_note,integrity_skip}
 void collect_game_files(const Platform& p, Facts& f);    // games.case_mismatch[].{titleid,path,expected,actual,fstype,case_sensitive}
 
-// Fuehrt alle Collectors aus.
-Facts collect_all(const Platform& p);
+// Fuehrt alle Collectors aus. progress (optional) wird nach jedem Schritt mit (erledigt, gesamt) gerufen, damit die Oberflaeche einen
+// Fortschritt zeigen kann; der Aufruf laeuft im selben Thread zwischen zwei Collectors.
+Facts collect_all(const Platform& p, const std::function<void(int, int)>& progress = {});
 
 // Gesammelter Kernel-Log je Konsolenstart (D10b): Weil das Lesen von klogsrv verbraucht, haengt die App die neu gelesenen, gefilterten Zeilen
 // (Fakt klog.new_lines) an diese Datei und liest sie beim naechsten Check-up wieder ein. Erste Zeile: "# boot <Startzeit>"; bei einem neuen

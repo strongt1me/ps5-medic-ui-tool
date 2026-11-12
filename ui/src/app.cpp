@@ -367,6 +367,7 @@ void App::start_check() {
     screen_ = Screen::Running;
     pending_check_ = true;
     running_rendered_ = false;
+    check_progress_ = 0;
 }
 
 void App::move_selection(int& sel, int& top, int count, int visible, int delta) {
@@ -901,12 +902,24 @@ void App::show_splash(const Canvas& image) {
     screen_ = Screen::Splash;
 }
 
+CheckResult App::run_check_with_progress() {
+    check_progress_ = 0;
+    svc_.set_progress([this](double v) {
+        check_progress_ = std::clamp(v, 0.0, 1.0);
+        ++tick_;  // die Punkte hinter "Pruefe" laufen mit
+        if (redraw_) redraw_();
+    });
+    CheckResult r = svc_.run_check();
+    svc_.set_progress(nullptr);
+    return r;
+}
+
 void App::update() {
     ++tick_;
     if (screen_ == Screen::Splash && tick_ >= splash_until_) screen_ = Screen::Start;
     if (pending_check_ && running_rendered_) {  // erst ausfuehren, wenn "Pruefe..." sichtbar war
         pending_check_ = false;
-        result_ = svc_.run_check();
+        result_ = run_check_with_progress();
         has_result_ = true;
         sel_ = top_ = 0;
         screen_ = Screen::Findings;
@@ -1373,12 +1386,18 @@ void App::draw_running(Canvas& c) const {
     std::string dots(static_cast<std::size_t>(tick_ % 4), '.');
     title().draw(c, M + 240, 350, S("running.title") + dots, kText);
     body().draw(c, M + 240, 430, S("running.sub"), kDim, W - 2 * M - 300);
-    // Herzschlaglinie läuft von rechts nach links; der helle Teil wandert mit
+    // Herzschlaglinie als Fortschrittsanzeige: der helle Teil waechst von links nach rechts mit dem Check-up, vorn sitzt ein heller Punkt
     const int bw = W - 2 * M - 120;
-    const auto pts = ecg_points(static_cast<float>(M + 60), static_cast<float>(bw), 560.0f, 46.0f, 420.0f, static_cast<float>(tick_ * 14));
+    const auto pts = ecg_points(static_cast<float>(M + 60), static_cast<float>(bw), 560.0f, 46.0f, 420.0f, 0.0f);
     c.stroke_polyline(pts, 5, rgb(52, 70, 98));
-    const std::size_t from = pts.size() * static_cast<std::size_t>((tick_ * 9) % 100) / 100;
-    c.stroke_polyline(std::vector<std::pair<float, float>>(pts.begin() + static_cast<long>(from), pts.begin() + static_cast<long>(std::min(pts.size(), from + pts.size() / 4))), 6, kAccent);
+    const double pr = std::clamp(check_progress_, 0.0, 1.0);
+    const std::size_t upto = std::min(pts.size(), std::max<std::size_t>(2, static_cast<std::size_t>(static_cast<double>(pts.size()) * pr) + 1));
+    c.stroke_polyline(std::vector<std::pair<float, float>>(pts.begin(), pts.begin() + static_cast<long>(upto)), 6, kAccent);
+    const auto tip = pts[upto - 1];
+    c.fill_round_rect(static_cast<int>(tip.first) - 11, static_cast<int>(tip.second) - 11, 22, 22, 11, kText);
+    char pct[16];
+    std::snprintf(pct, sizeof pct, "%d %%", static_cast<int>(pr * 100.0 + 0.5));
+    text_right(c, small(), W - M - 40, 580, pct, kDim);
 }
 
 void App::draw_findings(Canvas& c) const {

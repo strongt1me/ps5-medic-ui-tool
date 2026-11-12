@@ -84,7 +84,12 @@ int main(int argc, char** argv) {
         shot("01_start");
         app.handle(Button::Cross);  // Check-up starten
         shot("02_running");
+        int frames = 0;  // Zwischenbilder des Fortschritts (jeder 6. Schritt)
+        app.set_redraw_hook([&] {
+            if (frames++ % 6 == 5) shot("02_running_" + std::to_string(frames));
+        });
         app.update();
+        app.set_redraw_hook(nullptr);
         shot("03_findings");
         app.handle(Button::Square);  // Bericht (die Vorschau-Plattform ist nur lesend: nichts wird gespeichert, den QR-Code gibt es trotzdem)
         shot("03b_report");

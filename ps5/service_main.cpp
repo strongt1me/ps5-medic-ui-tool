@@ -161,6 +161,56 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
     std::vector<std::uint8_t> rx;  // noch nicht verarbeitete Bytes der App
 
     bool first_logged = false;
+    // Bild zeichnen und die geaenderten Streifen an die App senden. Auch der Hook der App ruft es mitten im Check-up (Fortschritt).
+    auto emit_frame = [&]() -> bool {
+        app.render(canvas);
+
+        // Geaenderte Streifen senden (Raster von kBandRows Zeilen; zusammenhaengende Streifen in einer Nachricht)
+        const std::uint32_t* px = canvas.data();
+        const std::size_t row_px = proto::kWidth;
+        int run_start = -1;
+        bool ok = true;
+        auto flush_run = [&](int end_row) {
+            if (run_start < 0) return;
+            const int rows = end_row - run_start;
+            const std::uint32_t bytes = static_cast<std::uint32_t>(4 + static_cast<std::size_t>(rows) * row_px * 4);
+            std::uint8_t head[9];
+            head[0] = static_cast<std::uint8_t>(proto::kBand);
+            proto::put32(head + 1, bytes);
+            proto::put16(head + 5, static_cast<std::uint16_t>(run_start));
+            proto::put16(head + 7, static_cast<std::uint16_t>(rows));
+            ok = ok && proto::send_all(client, head, sizeof head) && proto::send_all(client, px + static_cast<std::size_t>(run_start) * row_px, static_cast<std::size_t>(rows) * row_px * 4);
+            std::memcpy(&sent[static_cast<std::size_t>(run_start) * row_px], px + static_cast<std::size_t>(run_start) * row_px, static_cast<std::size_t>(rows) * row_px * 4);
+            run_start = -1;
+        };
+        bool any = false;
+        for (int y = 0; y < proto::kHeight && ok; y += proto::kBandRows) {
+            const int rows = std::min(proto::kBandRows, proto::kHeight - y);
+            const bool changed = first || std::memcmp(px + static_cast<std::size_t>(y) * row_px, &sent[static_cast<std::size_t>(y) * row_px], static_cast<std::size_t>(rows) * row_px * 4) != 0;
+            if (changed) {
+                if (run_start < 0) run_start = y;
+                any = true;
+            } else {
+                flush_run(y);
+            }
+        }
+        flush_run(proto::kHeight);
+        if (!ok) return false;
+        if (any || first) {
+            if (!proto::send_message(client, proto::kPresent, nullptr, 0)) return false;
+        }
+        if (!first_logged) {
+            first_logged = true;
+            trace("Erstes Bild gesendet");
+        }
+        first = false;
+        return true;
+    };
+    bool link_ok = true;
+    app.set_redraw_hook([&] {
+        if (link_ok && !emit_frame()) link_ok = false;  // der Hauptlauf bemerkt es nach dem Check-up
+    });
+
     for (;;) {
         const std::uint32_t t0 = now_ms();
 
@@ -222,47 +272,7 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
         }
 
         app.update();
-        app.render(canvas);
-
-        // Geaenderte Streifen senden (Raster von kBandRows Zeilen; zusammenhaengende Streifen in einer Nachricht)
-        const std::uint32_t* px = canvas.data();
-        const std::size_t row_px = proto::kWidth;
-        int run_start = -1;
-        bool ok = true;
-        auto flush_run = [&](int end_row) {
-            if (run_start < 0) return;
-            const int rows = end_row - run_start;
-            const std::uint32_t bytes = static_cast<std::uint32_t>(4 + static_cast<std::size_t>(rows) * row_px * 4);
-            std::uint8_t head[9];
-            head[0] = static_cast<std::uint8_t>(proto::kBand);
-            proto::put32(head + 1, bytes);
-            proto::put16(head + 5, static_cast<std::uint16_t>(run_start));
-            proto::put16(head + 7, static_cast<std::uint16_t>(rows));
-            ok = ok && proto::send_all(client, head, sizeof head) && proto::send_all(client, px + static_cast<std::size_t>(run_start) * row_px, static_cast<std::size_t>(rows) * row_px * 4);
-            std::memcpy(&sent[static_cast<std::size_t>(run_start) * row_px], px + static_cast<std::size_t>(run_start) * row_px, static_cast<std::size_t>(rows) * row_px * 4);
-            run_start = -1;
-        };
-        bool any = false;
-        for (int y = 0; y < proto::kHeight && ok; y += proto::kBandRows) {
-            const int rows = std::min(proto::kBandRows, proto::kHeight - y);
-            const bool changed = first || std::memcmp(px + static_cast<std::size_t>(y) * row_px, &sent[static_cast<std::size_t>(y) * row_px], static_cast<std::size_t>(rows) * row_px * 4) != 0;
-            if (changed) {
-                if (run_start < 0) run_start = y;
-                any = true;
-            } else {
-                flush_run(y);
-            }
-        }
-        flush_run(proto::kHeight);
-        if (!ok) return false;
-        if (any || first) {
-            if (!proto::send_message(client, proto::kPresent, nullptr, 0)) return false;
-        }
-        if (!first_logged) {
-            first_logged = true;
-            trace("Erstes Bild gesendet");
-        }
-        first = false;
+        if (!link_ok || !emit_frame()) return false;
 
         const std::uint32_t used = now_ms() - t0;
         if (used < 33) usleep((33 - used) * 1000);  // ~30 Bilder/s
