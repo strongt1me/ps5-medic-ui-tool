@@ -7,6 +7,7 @@
 // zurueck. Laeuft der Dienst nicht, sendet die App ihn aus /data/homebrew/PS5MEDIC/ps5medicservice.elf an den ELF-Lader (Port 9021). docs/NATIVE.md.
 #include "medic_ui/canvas.hpp"
 #include "medic_ui/font.hpp"
+#include "medic_ui/splash.hpp"
 #include "service_protocol.hpp"
 
 #include <array>
@@ -85,10 +86,12 @@ void notify(const char* msg) {
 
 // Das Protokoll liegt unter /data/ps5medic/ nur, wenn die Sandbox es erlaubt; sonst bleibt es still.
 std::FILE* g_log = nullptr;
+std::uint32_t now_ms();
+std::uint32_t g_t0 = 0;
+// Jede Zeile mit Millisekunden seit dem Start der App (Diagnose der Startdauer)
 void trace(const char* line) {
     if (!g_log) return;
-    std::fputs(line, g_log);
-    std::fputc('\n', g_log);
+    std::fprintf(g_log, "[%u ms] %s\n", static_cast<unsigned>(now_ms() - g_t0), line);
     std::fflush(g_log);
 }
 
@@ -187,14 +190,19 @@ void copy_to_buffer(const std::uint32_t* in, void* target) {
 using medic::ui::Canvas;
 using medic::ui::Font;
 
-// Einfache Statusseite (Dienst startet, Fehler), solange noch kein Bild vom Dienst da ist
+// Statusseite (Dienst startet, Fehler), solange noch kein Bild vom Dienst da ist: das Startbild der UI mit einer Zeile am unteren Rand. Das erste
+// Bild des Dienstes ist dasselbe Startbild, der Uebergang faellt also nicht auf. Ohne Startbild ein einfacher dunkler Hintergrund.
+Canvas* g_splash = nullptr;
+
 void draw_status(Canvas& c, const char* line1, const char* line2) {
-    c.clear(medic::ui::rgb(12, 18, 32));
-    const Font& title = Font::get(Font::Id::Title);
+    if (g_splash) c.copy_from(*g_splash);
+    else c.clear(medic::ui::rgb(12, 18, 32));
     const Font& body = Font::get(Font::Id::Body);
-    title.draw(c, 120, 400, "PS5 Medic", medic::ui::rgb(240, 245, 255));
-    body.draw(c, 120, 500, line1, medic::ui::rgb(200, 210, 230));
-    if (line2 && *line2) body.draw(c, 120, 550, line2, medic::ui::rgb(240, 180, 90));
+    const bool two = line2 && *line2;
+    const int h = two ? 120 : 76;
+    c.fill_round_rect(80, 1080 - 60 - h, 1760, h, 20, 0xCC0C1220u);
+    body.draw(c, 120, 1080 - 60 - h + 20, line1, medic::ui::rgb(230, 238, 250));
+    if (two) body.draw(c, 120, 1080 - 60 - h + 64, line2, medic::ui::rgb(240, 180, 90));
 }
 
 // Sendet den Dienst-Payload aus der Datei an den ELF-Lader. 0 = gesendet, sonst 1 Datei fehlt, 2 Lader nicht erreichbar, 3 Senden fehlgeschlagen.
@@ -307,6 +315,7 @@ private:
 }  // namespace
 
 int main() {
+    g_t0 = now_ms();
     g_log = std::fopen("/data/ps5medic/native.log", "a");
     trace("PS5 Medic (native App) startet");
     install_crash_handler();
@@ -348,6 +357,8 @@ int main() {
     std::uint32_t next_pad_try = 0;
 
     Canvas status(kW, kH);
+    Canvas splash(kW, kH);
+    if (medic::ui::load_splash(splash)) g_splash = &splash;
     std::vector<std::uint32_t> screen(static_cast<std::size_t>(kW) * kH, 0xFF000000u);
     StreamReader reader(screen.data());
     std::int64_t frame = 0;
@@ -368,8 +379,10 @@ int main() {
     // Ein Bild zeigen, damit der Bildschirm nicht schwarz bleibt, waehrend der Dienst startet
     show_status("Dienst wird gestartet ...", "");
     show_status("Dienst wird gestartet ...", "");
+    trace("Statusbild angezeigt");
 
     int sock = -1;
+    bool first_frame_logged = false;
     for (;;) {
         // --- Verbindung herstellen (notfalls den Dienst starten) ---
         if (sock < 0) {
@@ -397,6 +410,7 @@ int main() {
             }
             trace("Mit dem Dienst verbunden");
             reader = StreamReader(screen.data());
+            first_frame_logged = false;
         }
 
         // --- Pad lesen und senden ---
@@ -427,20 +441,26 @@ int main() {
         }
 
         // --- Bilder des Dienstes lesen ---
-        if (!reader.pump(sock)) {
+        const bool alive = reader.pump(sock);
+        // Die Ende-Meldung zuerst auswerten: der Dienst schliesst die Verbindung gleich nach 'Q', das ist kein Verbindungsverlust
+        if (reader.quit) {
+            trace("Dienst meldet: beendet");
+            break;
+        }
+        if (!alive) {
             trace("Verbindung zum Dienst verloren");
             close(sock);
             sock = -1;
             show_status("Verbindung zum Dienst verloren ...", "Neuer Versuch");
             continue;
         }
-        if (reader.quit) {
-            trace("Dienst meldet: beendet");
-            break;
-        }
         if (reader.frame_ready) {
             reader.frame_ready = false;
             show(screen.data());
+            if (!first_frame_logged) {
+                first_frame_logged = true;
+                trace("Erstes Bild des Dienstes angezeigt");
+            }
         } else {
             (void)sceKernelUsleep(8000);
         }

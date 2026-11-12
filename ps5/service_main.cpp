@@ -42,19 +42,23 @@ const char* const kLogPath = "/data/ps5medic/service.log";
 
 std::FILE* g_log = nullptr;
 
-void trace(const std::string& line) {
+std::uint32_t now_ms() {
+    timespec ts{};
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return static_cast<std::uint32_t>(ts.tv_sec * 1000u + ts.tv_nsec / 1000000u);
+}
+
+const std::uint32_t g_t0 = now_ms();
+
+// Jede Zeile mit Millisekunden seit dem Start des Dienstes (Diagnose der Startdauer)
+void trace(const std::string& raw) {
+    const std::string line = "[" + std::to_string(now_ms() - g_t0) + " ms] " + raw;
     std::puts(line.c_str());
     klog_puts((line + "\n").c_str());
     if (g_log) {
         std::fputs((line + "\n").c_str(), g_log);
         std::fflush(g_log);
     }
-}
-
-std::uint32_t now_ms() {
-    timespec ts{};
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return static_cast<std::uint32_t>(ts.tv_sec * 1000u + ts.tv_nsec / 1000000u);
 }
 
 medic::RuleSet load_rules() {
@@ -135,6 +139,7 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
         if (load_splash(splash)) app.show_splash(splash);
     }
 
+    trace("Sitzung: Regeln und Fehlercodes geladen, Oberflaeche und Bilder bereit");
     std::uint8_t hello[4];
     proto::put16(hello, proto::kWidth);
     proto::put16(hello + 2, proto::kHeight);
@@ -148,6 +153,7 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
     std::uint32_t prev_buttons = 0;
     std::vector<std::uint8_t> rx;  // noch nicht verarbeitete Bytes der App
 
+    bool first_logged = false;
     for (;;) {
         const std::uint32_t t0 = now_ms();
 
@@ -244,6 +250,10 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
         if (!ok) return false;
         if (any || first) {
             if (!proto::send_message(client, proto::kPresent, nullptr, 0)) return false;
+        }
+        if (!first_logged) {
+            first_logged = true;
+            trace("Erstes Bild gesendet");
         }
         first = false;
 

@@ -116,7 +116,8 @@ Rule parse_rule(const json& j, std::size_t index) {
     Rule r;
     r.id = need_string(j, "id", where);
     where = "rule '" + r.id + "'";
-    if (!std::regex_match(r.id, std::regex("^[a-z0-9_.]+$"))) fail(where, "ungueltige ID (erlaubt: a-z 0-9 _ .)");
+    // ^[a-z0-9_.]+$ ohne std::regex (jede Konstruktion kostete auf der Konsole rund 10 ms; 76 Regeln = Sekunden Ladezeit)
+    if (r.id.empty() || !std::all_of(r.id.begin(), r.id.end(), [](char c) { return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '.'; })) fail(where, "ungueltige ID (erlaubt: a-z 0-9 _ .)");
 
     std::string sev = need_string(j, "severity", where);
     if (sev == "critical") r.severity = Severity::Critical;
