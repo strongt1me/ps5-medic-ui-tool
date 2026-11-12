@@ -37,12 +37,20 @@ Testhebel im Launcher (nur Diagnose): `/data/ps5medic/no_budget_syscall` (leer) 
 5. hbldr hängt `/system_ex` beschreibbar ein und legt `FAKE00000` an, wenn es fehlt – das widerspricht „keine Schreibzugriffe auf /system_ex“ in CLAUDE.md (Ausnahme dokumentieren oder Weg entfernen; Entscheidung von Marc).
 6. Kein Sperrmechanismus (`flock`) zwischen Launcher, UI und Payload.
 
-## Offen, host-seitig machbar
-- `posix_fs`: `list_dir` ohne Fehlerflag, `slurp` ohne Streamprüfung, `read_file` ohne Größengrenze (große Logs).
-- `collect_*`: Lesefehler ergeben leere Fakten statt „unbekannt“ (Fehlerverlauf, Logzeilen, Prozessliste); „resolved“ wird ohne Prüfung der Coverage gemeldet.
+## Zweite Runde (12. Nov. 2026): Lesefehler und Schreibwege, Host-Tests grün (4668 Prüfungen)
+Behoben:
+- `PosixFs::list_dir`: ein nicht lesbarer Eintrag beendet das Auflisten nicht mehr; `file_size` im Fehlerfall ergibt 0 statt 2^64-1; `slurp` prüft Lesefehler (`bad`) und begrenzt auf 256 MiB.
+- Fehlerverlauf: fehlt der Ordner `/system_data/priv/error/history`, fehlt der Fakt (nicht geprüft) statt „0 Fehler"; ein nicht lesbares Log fehlt als Fakt statt „leeres Log"; eine vorhandene, nicht lesbare `config.ini` wird nicht als „fehlt" gemeldet; die ELF-Prüfung unterscheidet „unreadable" von „truncated".
+- „Behoben/resolved" nur noch, wenn alle Fakten der Regel vorhanden sind (sonst wurde sie nicht geprüft).
+- **Symlink als Zwischenordner:** `PosixRw` verweigert Schreiben, Anhängen, Umbenennen und Ordner anlegen, wenn ab der dritten Pfadstufe ein Ordner ein Symlink ist (`/data`, `/mnt/usbN` bleiben frei, weil sie Einhängepunkte sein können). Tests mit echtem Symlink.
+
+Bewusst nicht geändert:
+- Unlesbare `eboot.bin` eines Spiels ohne Backport-Ordner bleibt ein Befund „braucht Backport" (vorsichtig, ein Hinweis zum Nachprüfen); ein leerer Prozess-Snapshot (sysctl-Fehler) wird nicht gesondert behandelt, weil Regeln mit leerem Array ohnehin nicht feuern und Negativ-Regeln dafür Fixtures nutzen.
+- Die UI-Verifikation nach einer Reparatur (`Verify::Fixed`) prüft die Vollständigkeit des Check-ups nicht (bräuchte einen eigenen Text in fünf Sprachen).
+
+Weiterhin offen:
 - Rückgabewerte in `LocalService` (`append_history`, `save_check`, `set_language`, `reload_rules`) und `selftest.cpp` (Budget) werden ignoriert.
-- Whitelist prüft nur den Pfadtext; Zwischenordner als Symlink nicht abgefangen (`realpath` der Elternordner).
-- Aktive `rules.json` wird beim Laden nicht auf Signatur geprüft (Signatur nur bei Installation).
+- Aktive `rules.json` wird beim Laden nicht auf ihre Signatur geprüft (Signatur nur bei Installation).
 - Snapshot-Export: Ordner-/Dateinamen, `param.json`, Prozessliste unmaskiert (D12 sagt anderes).
 
 ## Firmware 4.00 bis 14.10

@@ -44,11 +44,35 @@ void sync_dir(const fs::path& dir) {
 bool slurp(const fs::path& p, std::string& out) {
     std::error_code ec;
     if (!fs::is_regular_file(p, ec)) return false;
+    // Obergrenze gegen Speichermangel bei riesigen Dateien (Logs lesen Aufrufer mit read_range, wenn sie nur das Ende brauchen)
+    const std::uintmax_t size = fs::file_size(p, ec);
+    if (ec || size > (256u << 20)) return false;
     std::ifstream in(p, std::ios::binary);
     if (!in) return false;
     std::ostringstream ss;
-    ss << in.rdbuf();
+    ss << in.rdbuf();  // eine leere Datei setzt hier das failbit des Zielstroms: kein Fehler
+    if (in.bad()) return false;  // Lesefehler mitten in der Datei: nicht als Teilstueck "erfolgreich" melden
     out = ss.str();
+    return true;
+}
+
+// Ab der dritten Pfadstufe (/data/<Wurzel>/<Unterordner>/...) darf kein Ordner auf dem Weg ein Symlink sein: O_NOFOLLOW und der Test beim Umbenennen
+// schuetzen nur die letzte Komponente; ein Symlink dazwischen (z. B. /data/<Scanwurzel>/x -> /user/app) wuerde Schreiben und Verschieben aus
+// den erlaubten Ordnern hinausfuehren. Die ersten beiden Stufen (/data, /mnt/usb0 ...) bleiben frei, weil sie auf anderen Firmwares Einhaengepunkte
+// sein koennen. `count_all` zaehlt auch die letzte Komponente mit (Ordner, die angelegt werden).
+bool ancestors_clean(const fs::path& base, const std::string& vpath, bool count_all) {
+    std::vector<std::string> segs;
+    std::stringstream ss(vpath);
+    std::string seg;
+    while (std::getline(ss, seg, '/'))
+        if (!seg.empty() && seg != ".") segs.push_back(seg);
+    const std::size_t last = count_all ? segs.size() : (segs.empty() ? 0 : segs.size() - 1);
+    fs::path cur = base;
+    std::error_code ec;
+    for (std::size_t i = 0; i < last; ++i) {
+        cur /= segs[i];
+        if (i >= 2 && fs::is_symlink(cur, ec)) return false;
+    }
     return true;
 }
 
@@ -90,8 +114,13 @@ std::vector<DirEntry> PosixFs::list_dir(const std::string& path) const {
     for (fs::directory_iterator it(p, ec), end; !ec && it != end; it.increment(ec)) {
         DirEntry e;
         e.name = it->path().filename().string();
-        e.is_dir = it->is_directory(ec);
-        if (!e.is_dir) e.size = it->file_size(ec);
+        std::error_code entry_ec;  // ein einzelner nicht lesbarer Eintrag beendet das Auflisten nicht
+        e.is_dir = it->is_directory(entry_ec);
+        if (entry_ec) e.is_dir = false;
+        if (!e.is_dir) {
+            const std::uintmax_t size = it->file_size(entry_ec);
+            e.size = entry_ec ? 0 : size;  // im Fehlerfall liefert file_size 2^64-1
+        }
         out.push_back(std::move(e));
     }
     std::sort(out.begin(), out.end(), [](const DirEntry& a, const DirEntry& b) { return a.name < b.name; });
@@ -121,7 +150,7 @@ bool PosixFs::read_range(const std::string& path, std::uint64_t offset, std::siz
 bool PosixRw::write_file(const std::string& path, const std::string& content) {
     fs::path p, tmp;
     std::error_code ec;
-    if (!map_virtual_path(base_, path, p)) return false;
+    if (!map_virtual_path(base_, path, p) || !ancestors_clean(base_, path, false)) return false;
     fs::create_directories(p.parent_path(), ec);
     tmp = p;
     tmp += ".medic-tmp";
@@ -147,7 +176,7 @@ bool PosixRw::write_file(const std::string& path, const std::string& content) {
 bool PosixRw::write_range(const std::string& path, std::uint64_t offset, const std::string& content, bool sync) {
     fs::path p;
     std::error_code ec;
-    if (!map_virtual_path(base_, path, p)) return false;
+    if (!map_virtual_path(base_, path, p) || !ancestors_clean(base_, path, false)) return false;
     fs::create_directories(p.parent_path(), ec);
     const int fd = ::open(p.c_str(), O_WRONLY | O_CREAT | O_NOFOLLOW, 0666);  // ohne O_TRUNC: die Datei wird nur ueberschrieben, nie gekuerzt
     if (fd < 0) return false;
@@ -167,7 +196,7 @@ bool PosixRw::write_range(const std::string& path, std::uint64_t offset, const s
 bool PosixRw::append_file(const std::string& path, const std::string& content) {
     fs::path p;
     std::error_code ec;
-    if (!map_virtual_path(base_, path, p)) return false;
+    if (!map_virtual_path(base_, path, p) || !ancestors_clean(base_, path, false)) return false;
     fs::create_directories(p.parent_path(), ec);
     const int fd = ::open(p.c_str(), O_WRONLY | O_APPEND | O_CREAT | O_NOFOLLOW, 0666);
     if (fd < 0) return false;
@@ -193,6 +222,7 @@ bool PosixRw::rename(const std::string& from, const std::string& to) {
     fs::path a, b;
     std::error_code ec;
     if (!map_virtual_path(base_, from, a) || !map_virtual_path(base_, to, b)) return false;
+    if (!ancestors_clean(base_, from, false) || !ancestors_clean(base_, to, false)) return false;
     if (fs::is_symlink(a, ec)) return false;  // ein Symlink kann ausserhalb der erlaubten Ordner zeigen
     if (!fs::exists(a, ec) || fs::exists(b, ec)) return false;
     fs::create_directories(b.parent_path(), ec);
@@ -206,7 +236,7 @@ bool PosixRw::rename(const std::string& from, const std::string& to) {
 bool PosixRw::make_dirs(const std::string& path) {
     fs::path p;
     std::error_code ec;
-    if (!map_virtual_path(base_, path, p)) return false;
+    if (!map_virtual_path(base_, path, p) || !ancestors_clean(base_, path, true)) return false;
     fs::create_directories(p, ec);
     return !ec;
 }

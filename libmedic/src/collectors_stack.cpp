@@ -174,7 +174,8 @@ std::string elf_state(const IFileSystem& fs, const std::string& path, std::uint6
     if (phnum == 0) return "ok";
     if (phentsize < 56 || phnum > 128 || phoff > size || phoff + phnum * phentsize > size) return "truncated";
     std::string ph;
-    if (!fs.read_range(path, phoff, static_cast<std::size_t>(phnum * phentsize), ph) || ph.size() < phnum * phentsize) return "truncated";
+    if (!fs.read_range(path, phoff, static_cast<std::size_t>(phnum * phentsize), ph)) return "unreadable";  // Lesefehler ist kein Befund "abgebrochene Uebertragung"
+    if (ph.size() < phnum * phentsize) return "truncated";
     std::uint64_t end = 0;
     for (std::uint64_t i = 0; i < phnum; ++i) {
         const std::size_t base = static_cast<std::size_t>(i * phentsize);

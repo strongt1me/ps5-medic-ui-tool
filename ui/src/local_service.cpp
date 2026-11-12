@@ -8,6 +8,9 @@
 #include <chrono>
 #include <cstdio>
 #include <ctime>
+#include <set>
+#include <string>
+#include <nlohmann/json.hpp>
 
 namespace medic::ui {
 
@@ -31,6 +34,27 @@ std::string utc_now() {
 LocalService::LocalService(medic::Platform& platform, medic::RuleSet rules, std::function<std::string()> clock)
     : p_(platform), rules_(std::move(rules)), clock_(clock ? std::move(clock) : std::function<std::string()>(utc_now)) {}
 
+namespace {
+
+// Alle Fakten, die eine Regel in `when` abfragt (Schluessel "fact"; bei "a.b[].c" gilt das Feld bis zur eckigen Klammer).
+void collect_rule_facts(const nlohmann::json& j, std::set<std::string>& out) {
+    if (j.is_object()) {
+        for (auto it = j.begin(); it != j.end(); ++it) {
+            if (it.key() == "fact" && it.value().is_string()) {
+                std::string f = it.value().get<std::string>();
+                if (const auto br = f.find('['); br != std::string::npos) f.resize(br);
+                out.insert(f);
+            } else {
+                collect_rule_facts(it.value(), out);
+            }
+        }
+    } else if (j.is_array()) {
+        for (const auto& e : j) collect_rule_facts(e, out);
+    }
+}
+
+}  // namespace
+
 CheckResult LocalService::run_check() {
     facts_ = medic::collect_all(p_);
     medic::persist_klog(p_, facts_);  // gelesene Kernel-Log-Zeilen sichern (verbrauchendes Lesen, D10b)
@@ -49,6 +73,20 @@ CheckResult LocalService::run_check() {
     const auto hist = medic::load_history(p_.fs());
     const auto metrics = medic::evaluate_metrics(rules_, facts_);
     r.resolved = medic::annotate_with_history(r.findings, hist, now);
+    // "Behoben" nur, wenn die Regel auch ausgewertet werden konnte: fehlt einer ihrer Fakten (Lesefehler, USB gezogen), ist sie nicht behoben,
+    // sondern in dieser Pruefung nicht geprueft worden.
+    r.resolved.erase(std::remove_if(r.resolved.begin(), r.resolved.end(),
+                                    [&](const std::string& id) {
+                                        for (const auto& rule : rules_.rules) {
+                                            if (rule.id != id) continue;
+                                            std::set<std::string> names;
+                                            collect_rule_facts(rule.when, names);
+                                            for (const auto& n : names)
+                                                if (!facts_.get(n)) return true;
+                                        }
+                                        return false;
+                                    }),
+                     r.resolved.end());
     r.metrics = medic::metric_changes(rules_, metrics, hist);
     medic::append_history(p_, medic::make_history_run(now, rules_.db_version, r.fw, r.findings, metrics));
     {  // jeder Check-up als eigene Datei, damit man ihn spaeter einzeln ansehen und vergleichen kann

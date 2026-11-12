@@ -803,6 +803,23 @@ void stack_tests() {
         CHECK(cfg.find("password = ***") != std::string::npos || cfg.find("password=***") != std::string::npos || cfg.find("password= ***") != std::string::npos, "Export: Schluessel bleibt, Wert ist ***");
         CHECK(cfg.find("host = 192.0.2.1") != std::string::npos && cfg.find("# password = kommentar") != std::string::npos, "Export: uebrige Zeilen und Kommentare unveraendert");
     }
+    // Ein Symlink als Zwischenordner fuehrt Schreiben nicht aus den erlaubten Ordnern hinaus (ab der dritten Pfadstufe)
+    {
+        TempCopy tmp("smp2_neg_same_names");
+        auto p = make_snapshot_platform(tmp.dir.string(), true);
+        fs::create_directories(tmp.dir / "fs/data/ps5medic/real");
+        fs::create_directories(tmp.dir / "fs/user/app/OUTSIDE");
+        std::error_code lec;
+        fs::create_directory_symlink(tmp.dir / "fs/user/app/OUTSIDE", tmp.dir / "fs/data/ps5medic/link", lec);
+        if (!lec) {
+            CHECK(!p->fs_rw()->write_file("/data/ps5medic/link/x.txt", "x") && !fs::exists(tmp.dir / "fs/user/app/OUTSIDE/x.txt"), "Symlink als Zwischenordner: write_file verweigert");
+            CHECK(!p->fs_rw()->append_file("/data/ps5medic/link/y.txt", "y") && !fs::exists(tmp.dir / "fs/user/app/OUTSIDE/y.txt"), "Symlink als Zwischenordner: append_file verweigert");
+            CHECK(!p->fs_rw()->make_dirs("/data/ps5medic/link/neu"), "Symlink als Zwischenordner: make_dirs verweigert");
+            CHECK(p->fs_rw()->write_file("/data/ps5medic/real/ok.txt", "ok"), "normaler Unterordner: write_file geht weiter");
+        } else {
+            CHECK(true, "Symlinks hier nicht verfuegbar: uebersprungen");
+        }
+    }
     // Weitere Zugangsdaten: Benutzername, Kurzformen, Adressen mit Benutzer:Passwort im Log
     {
         TempCopy tmp("smp2_neg_same_names");

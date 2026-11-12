@@ -376,6 +376,8 @@ void collect_log_lines(const IFileSystem& fs, const std::string& path, Facts& f,
         std::size_t from = lines.size() > kMaxLogLines ? lines.size() - kMaxLogLines : 0;
         for (std::size_t i = from; i < lines.size(); ++i)
             if (!trim(lines[i]).empty()) arr.push_back(lines[i]);
+    } else if (fs.exists(path)) {
+        return;  // vorhanden, aber nicht lesbar: der Fakt fehlt ("nicht geprueft"), statt als leeres Log "keine Fehler" zu behaupten
     }
     f.set(fact, std::move(arr));
 }
@@ -849,7 +851,10 @@ void collect_shadowmount(const Platform& p, Facts& f) {
     const std::string cfg_path = join_path(kSmpDir, "config.ini");
 
     std::string cfg_text;
-    f.set("smp.config_present", fs.read_file(cfg_path, cfg_text));
+    const bool cfg_read = fs.read_file(cfg_path, cfg_text);
+    // Vorhanden, aber nicht lesbar (Lesefehler): nicht als "config.ini fehlt, Standardwerte" melden, sondern nichts ueber die Datei behaupten
+    // (die uebrigen Fakten von ShadowMount+ werden trotzdem gesammelt)
+    if (cfg_read || !fs.exists(cfg_path)) f.set("smp.config_present", cfg_read);
     Config cfg = parse_ini(cfg_text);
     f.set("smp.config", cfg.values);
     f.set("smp.scanpaths_custom", cfg.scanpaths);
@@ -1227,7 +1232,7 @@ void collect_system_logs(const Platform& p, Facts& f) {
             }
         }
     }
-    {  // Fehlerverlauf
+    if (fs.is_dir("/system_data/priv/error/history")) {  // Fehlerverlauf (fehlt der Ordner, fehlt der Fakt: nicht "0 Fehler")
         const std::string dir = "/system_data/priv/error/history";
         struct Agg {
             int count = 0;

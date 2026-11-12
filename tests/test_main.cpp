@@ -314,7 +314,7 @@ static void new_fact_tests() {
             }
         CHECK(ce == 3 && wv == 6 && num(pos, "errors.total") == 9, "Fehlerverlauf: Paare gezaehlt (auch mit BOM am Dateianfang)");
         CHECK(pr && (*pr)[0]["label"] == "CE-100001-1 - PPSA77401 - 3x, zuletzt 2026-11-07", "Fehlerverlauf: Beschriftung mit Code, Titel, Anzahl und letztem Tag");
-        CHECK(num(facts_of("a3_neg"), "errors.total") == 0, "Fehlerverlauf: ohne Verlauf Summe 0");
+        CHECK(facts_of("a3_neg").get("errors.total") == nullptr, "Fehlerverlauf: ohne Ordner fehlt der Fakt (nicht geprueft), keine Summe 0");
     }
     {  // Datenbanken (SQLite): Kopf, Groesse, Journal
         auto dbf = [&](const char* fixture, const char* name) -> json {
