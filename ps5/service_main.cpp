@@ -31,6 +31,8 @@
 
 #include <ps5/klog.h>
 
+extern "C" int sceSystemServiceParamGetInt(int param_id, int* value);
+
 using namespace medic::ui;
 namespace proto = medic::proto;
 
@@ -59,6 +61,16 @@ void trace(const std::string& raw) {
         std::fputs((line + "\n").c_str(), g_log);
         std::fflush(g_log);
     }
+}
+
+// Sprache der Konsole (Wert 1 von sceSystemServiceParamGetInt = SCE_SYSTEM_SERVICE_PARAM_ID_LANG). Gibt es sie in der App nicht, oder schlaegt die
+// Abfrage fehl, ist es Englisch.
+Lang console_language() {
+    int id = -1;
+    const int rc = sceSystemServiceParamGetInt(1, &id);
+    const Lang lang = lang_from_system_id(rc == 0 ? id : -1);
+    trace("Systemsprache: rc=" + std::to_string(rc) + " Wert=" + std::to_string(id) + " -> " + lang_code(lang));
+    return lang;
 }
 
 medic::RuleSet load_rules() {
@@ -138,7 +150,7 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
     service.set_error_codes(load_error_codes());
     progress(70);
     service.set_http_client(http.get());
-    App app(service);
+    App app(service, console_language());  // die in config.ini gespeicherte Sprache hat im App-Konstruktor Vorrang
     {
         // Kein eigenes Startbild: die App zeigt es waehrend des Ladens (mit dem Fortschrittsbalken), danach folgt gleich der Startbildschirm.
         Canvas background(App::kWidth, App::kHeight);

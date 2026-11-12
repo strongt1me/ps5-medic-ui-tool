@@ -31,6 +31,18 @@ bool lang_from_code(std::string_view code, Lang& out) {
     return false;
 }
 
+Lang lang_from_system_id(int id) {
+    switch (id) {
+        case 4: return Lang::De;
+        case 2:
+        case 22: return Lang::Fr;
+        case 5: return Lang::It;
+        case 3:
+        case 20: return Lang::Es;
+        default: return Lang::En;
+    }
+}
+
 const Strings& Strings::get(Lang l) {
     static const Strings de(kDeJson), en(kEnJson), fr(kFrJson), it(kItJson), es(kEsJson);
     switch (l) {

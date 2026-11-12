@@ -125,7 +125,7 @@ $(PS5_UI_ELF): $(PS5_UI_OBJS)
 
 $(PS5_SERVICE_ELF): $(PS5_SERVICE_OBJS)
 	@mkdir -p $(dir $@)
-	$(PS5_CXX) $^ -lkernel_sys -o $@
+	$(PS5_CXX) $^ -lkernel_sys -lSceSystemService -o $@
 
 ps5-service: $(PS5_SERVICE_ELF)
 

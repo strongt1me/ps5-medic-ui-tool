@@ -17,6 +17,9 @@ constexpr Lang kAllLangs[] = {Lang::De, Lang::En, Lang::Fr, Lang::It, Lang::Es};
 
 const char* lang_code(Lang l);                // "de", "en", "fr", "it", "es"
 bool lang_from_code(std::string_view code, Lang& out);  // false bei unbekanntem Kuerzel
+// Sprache der Konsole (Wert von sceSystemServiceParamGetInt(SCE_SYSTEM_SERVICE_PARAM_ID_LANG), PS4/PS5-Liste: 1 Englisch (US), 18 Englisch (UK),
+// 2 und 22 Franzoesisch, 3 und 20 Spanisch, 4 Deutsch, 5 Italienisch). Jede andere Sprache und jeder Fehlwert (< 0): Englisch.
+Lang lang_from_system_id(int id);
 
 extern const char* const kDeJson;
 extern const char* const kEnJson;

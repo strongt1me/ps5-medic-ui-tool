@@ -252,6 +252,20 @@ struct TempCopy {
     }
 };
 
+void test_system_language() {
+    CHECK(lang_from_system_id(4) == Lang::De, "Systemsprache 4 = Deutsch");
+    CHECK(lang_from_system_id(1) == Lang::En && lang_from_system_id(18) == Lang::En, "Systemsprache 1/18 = Englisch");
+    CHECK(lang_from_system_id(2) == Lang::Fr && lang_from_system_id(22) == Lang::Fr, "Systemsprache 2/22 = Franzoesisch");
+    CHECK(lang_from_system_id(5) == Lang::It, "Systemsprache 5 = Italienisch");
+    CHECK(lang_from_system_id(3) == Lang::Es && lang_from_system_id(20) == Lang::Es, "Systemsprache 3/20 = Spanisch");
+    CHECK(lang_from_system_id(0) == Lang::En && lang_from_system_id(6) == Lang::En && lang_from_system_id(8) == Lang::En && lang_from_system_id(99) == Lang::En,
+          "Systemsprache ohne Uebersetzung (Japanisch, Niederlaendisch, Russisch, unbekannt) = Englisch");
+    CHECK(lang_from_system_id(-1) == Lang::En, "Systemsprache nicht lesbar = Englisch");
+    FakeService svc;
+    App a(svc, lang_from_system_id(5));
+    CHECK(a.lang() == Lang::It, "App uebernimmt die uebergebene Systemsprache, wenn nichts gespeichert ist");
+}
+
 void canvas_tests() {
     Canvas c(40, 30);
     c.clear(rgb(10, 20, 30));
@@ -3225,6 +3239,7 @@ void icon_tests() {
 
 void ui_tests() {
     canvas_tests();
+    test_system_language();
     font_tests();
     i18n_tests();
     png_tests();
