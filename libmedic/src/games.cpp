@@ -65,6 +65,7 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
         for (const auto& e : *a) {
             GameInfo* g = at(str_of(e, "titleid"));
             if (!g) continue;
+            if (g->name.empty() && !str_of(e, "name").empty() && str_of(e, "name") != g->titleid) g->name = str_of(e, "name");  // Namen aus dem Quellordner, wenn der Titel nicht eingehaengt ist
             GameSource s;
             s.path = str_of(e, "path");
             s.root = str_of(e, "root");

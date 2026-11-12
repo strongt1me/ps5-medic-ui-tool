@@ -3021,6 +3021,12 @@ void games_tests() {
         const auto only = collect_game_infos(g, {});
         CHECK(only.size() == 1 && only[0].registered == -1 && only[0].findings.empty(), "Spiele: Registrierung unbekannt, wenn die Systemdatenbank nicht gelesen wurde");
         CHECK(collect_game_infos(Facts{}, {}).empty(), "Spiele: ohne Fakten keine Titel");
+        // Nicht eingehaengter Titel: der Name kommt aus der param.json des Quellordners (smp.titles); ein eingehaengter behaelt seinen
+        Facts s;
+        s.set("smp.titles", json::array({{{"titleid", "PPSA00004"}, {"path", "/data/homebrew/PPSA00004"}, {"root", "/data/homebrew"}, {"level", 1}, {"dup_count", 1}, {"active", false}, {"name", "Quellname"}},
+                                         {{"titleid", "PPSA00005"}, {"path", "/data/homebrew/PPSA00005"}, {"root", "/data/homebrew"}, {"level", 1}, {"dup_count", 1}, {"active", false}}}));
+        const auto src = collect_game_infos(s, {});
+        CHECK(src.size() == 2 && src[0].name == "Quellname" && src[1].name.empty(), "Spiele: Name aus dem Quellordner, sonst leer");
     }
 
     // Oberflaeche mit dem echten Kern gegen eine Fixture mit Spielen (synthetisch)

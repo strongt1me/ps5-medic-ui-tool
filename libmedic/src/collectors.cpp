@@ -284,6 +284,16 @@ std::string title_id_from_name(const std::string& name) {
     return std::regex_search(name, m, re) ? m.str() : std::string();
 }
 
+std::string app_title_name(const json& param, const std::string& fallback);
+
+// Anzeigename aus der param.json eines Quellordners (leer, wenn nicht lesbar oder ohne Namen).
+std::string title_name_from_param(const IFileSystem& fs, const std::string& game_dir) {
+    std::string text;
+    if (!fs.read_file(join_path(game_dir, "sce_sys/param.json"), text)) return {};
+    auto j = json::parse(text, nullptr, false);
+    return j.is_object() ? app_title_name(j, std::string()) : std::string();
+}
+
 std::string title_id_from_param(const IFileSystem& fs, const std::string& game_dir) {
     std::string text;
     if (!fs.read_file(join_path(game_dir, "sce_sys/param.json"), text)) return {};
@@ -318,6 +328,7 @@ ExfatInfo exfat_info(const IFileSystem& fs, const std::string& path) {
 
 struct Entry {
     std::string path, name, ext, titleid, root;  // root = Scanpfad, unter dem der Eintrag gefunden wurde
+    std::string title_name;                      // Name laut param.json des Spielordners (Images: leer)
     bool is_image = false;
     bool active = false;  // diese Quelle nutzt SM+ gerade (Link-Datei unter /user/app/<TITLE_ID>/)
     std::uint64_t size = 0;
@@ -343,6 +354,7 @@ void scan_dir(const IFileSystem& fs, const std::string& root, const std::string&
         if (e.is_dir) {
             if (fs.exists(join_path(path, "sce_sys/param.json"))) {  // Spielordner: nicht weiter hinein
                 en.titleid = title_id_from_param(fs, path);
+                en.title_name = title_name_from_param(fs, path);
                 if (en.titleid.empty()) en.titleid = title_id_from_name(e.name);
             } else {
                 if (level < kMaxScanLevel) scan_dir(fs, root, path, level + 1, out);
@@ -981,7 +993,11 @@ void collect_shadowmount(const Platform& p, Facts& f) {
             deep.push_back({{"path", e.path}, {"level", e.level}, {"titleid", e.titleid}});
             continue;
         }
-        if (!e.titleid.empty()) titles.push_back({{"titleid", e.titleid}, {"path", e.path}, {"root", e.root}, {"level", e.level}, {"dup_count", count[e.titleid]}, {"active", e.active}});
+        if (!e.titleid.empty()) {
+            json t = {{"titleid", e.titleid}, {"path", e.path}, {"root", e.root}, {"level", e.level}, {"dup_count", count[e.titleid]}, {"active", e.active}};
+            if (!e.title_name.empty()) t["name"] = e.title_name;
+            titles.push_back(std::move(t));
+        }
     }
     f.set("smp.images", std::move(images));
     f.set("smp.titles", std::move(titles));

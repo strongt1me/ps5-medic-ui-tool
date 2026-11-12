@@ -2024,7 +2024,7 @@ void App::draw_gamedetail(Canvas& c) const {
             small().draw(c, cx + 18, 151, g.titleid, kText);
         }
         text_right(c, small(), W - M, 148, S.fmt("games.pos", {{"i", std::to_string(game_sel_ + 1)}, {"n", std::to_string(total)}}), kDim);
-        small().draw(c, M + 4, 196, (named ? std::string() : S("games.d.name_unknown") + "  ·  ") + S.fmt("games.console_fw", {{"fw", result_.fw.empty() ? "?" : result_.fw}}), kDim);
+        small().draw(c, M + 4, 196, (named ? std::string() : S(g.titleid.compare(0, 4, "NPXS") == 0 ? "title.system_app" : "games.d.name_unknown") + "  ·  ") + S.fmt("games.console_fw", {{"fw", result_.fw.empty() ? "?" : result_.fw}}), kDim);
     }
 
     // Links: der Zustand des Spiels als Liste mit Statussymbol. Gruen = in Ordnung, Orange/Rot = Problem, Grau = nicht bekannt.
