@@ -37,7 +37,7 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 
 ## Lizenz & Sichtbarkeit (Entscheidung von Marc, 8. Nov. 2026)
 - Lizenz: **GPL-3.0-or-later** (`LICENSE`). Jede neue eigene Quelldatei bekommt als erste Zeile (nach einer Shebang) `SPDX-License-Identifier: GPL-3.0-or-later` (`//` bzw. `#`). Nicht für `third_party/`.
-- Das Repository bleibt **privat**: kein GitHub-Release, keine Forenbeiträge. Echte Dateinamen aus Marcs Sammlung trotzdem nie in Fixtures, Tests oder Doku.
+- Das Repository bleibt **privat**: keine Forenbeiträge. Ein GitHub-Release gab es erst nicht; Marc hat am 13. Nov. 2026 ausdrücklich eines verlangt (Pre-Release `v0.4.0-dev.2` im privaten Repo, sichtbar nur für ihn). Weitere Releases nur auf seine Anweisung. Echte Dateinamen aus Marcs Sammlung trotzdem nie in Fixtures, Tests oder Doku.
 
 ## Build & Test (Zielzustand)
 - `make host` → baut `medic-cli` für Linux/WSL, läuft gegen `tests/fixtures/<fall>/`.
