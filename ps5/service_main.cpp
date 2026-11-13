@@ -387,7 +387,7 @@ int main() {
             }
             trace("App verbunden");
             proto::set_nodelay(client);
-            proto::set_send_timeout(client, 30);  // liest die App nicht mehr, bleibt der Dienst nicht fuer immer in send() haengen (30 s: eine App im Hintergrund nach der PS-Taste soll nicht gleich ihre Sitzung verlieren)
+            proto::set_send_timeout(client, 120);  // liest die App nicht mehr, bleibt der Dienst nicht fuer immer in send() haengen (120 s, Marc 13. Nov. 2026: eine App im Hintergrund nach der PS-Taste soll bei einem laengeren Test nicht ihre Sitzung verlieren)
             const bool finished = serve(client, *platform, http);
             close(client);
             last_client = now_ms();
