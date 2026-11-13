@@ -2,9 +2,11 @@
 #include "medic/games.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 #include <map>
 #include <regex>
+#include <set>
 
 namespace medic {
 
@@ -21,7 +23,27 @@ const json* arr_of(const Facts& f, const char* path) {
 
 int rank_of(Severity s) { return s == Severity::Critical ? 0 : (s == Severity::Warning ? 1 : 2); }
 
-bool contains_word(const std::string& hay, const std::string& needle) { return !needle.empty() && hay.find(needle) != std::string::npos; }
+// Kommt needle in hay vor, und endet der Treffer an einer Namensgrenze? "/data/homebrew/Game" steht nicht in "/data/homebrew/Game2/x" (sonst bekaeme das Spiel
+// "Game" die Befunde von "Game2").
+bool contains_word(const std::string& hay, const std::string& needle) {
+    if (needle.empty()) return false;
+    for (std::size_t pos = hay.find(needle); pos != std::string::npos; pos = hay.find(needle, pos + 1)) {
+        const std::size_t end = pos + needle.size();
+        if (end >= hay.size()) return true;
+        const unsigned char c = static_cast<unsigned char>(hay[end]);
+        if (needle[0] != '/') {  // Titel-ID
+            if (!std::isalnum(c) && c != '_') return true;
+        } else if (c == '/' || c == ',' || c == ';' || c == ':' || c == ')' || c == ']' || c == '\'' || c == '"' || c == '\r' || c == '\n' || c == '\t') {
+            return true;
+        } else if (c == '.') {  // Satzende ("... /pfad/Spiel."), nicht "Spiel.v2"
+            if (end + 1 >= hay.size() || !std::isalnum(static_cast<unsigned char>(hay[end + 1]))) return true;
+        } else if (c == ' ') {  // "/pfad/Game (1)/..." ist ein anderer Ordner als "/pfad/Game"
+            const auto next = hay.find_first_not_of(' ', end);
+            if (next == std::string::npos || hay[next] != '(') return true;
+        }
+    }
+    return false;
+}
 
 }  // namespace
 
@@ -84,10 +106,17 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
                     if (str_of(im, "path") == s.path) is_img = true;
                 s.kind = is_img ? "image" : "folder";
             }
-    if (have_db) {
+    // Eintraege der Titel-Registry machen keinen Titel zum "Spiel" (sie enthalten auch Systemapps und Zusatzinhalte und fuellten die Liste bis kMaxGames); sie
+    // setzen nur bei Titeln, die ohnehin vorkommen, "registriert". Die Menge dient unten auch fuer Titel, die erst spaeter in die Liste kommen.
+    std::set<std::string> reg_ids;
+    if (have_db)
         if (const json* a = arr_of(facts, "appdb.entries"))
-            for (const auto& e : *a)
-                if (GameInfo* g = at(str_of(e, "titleid"))) g->registered = 1;
+            for (const auto& e : *a) reg_ids.insert(str_of(e, "titleid"));
+    const json* trunc = facts.get("appdb.truncated");
+    const bool db_truncated = trunc && trunc->is_boolean() && trunc->get<bool>();  // mehr Zeilen als gelesen: "nicht gefunden" sagt dann nichts
+    if (have_db) {
+        for (auto& [id, g] : games)
+            if (reg_ids.count(id)) g.registered = 1;
         if (const json* a = arr_of(facts, "appdb.orphans"))
             for (const auto& e : *a)
                 if (GameInfo* g = at(str_of(e, "titleid"))) {
@@ -101,7 +130,7 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
                     g->registered = 0;
                 }
         // Titel mit Ordner unter /user/app (games.fw), aber ohne Eintrag: nur sagen, wenn die Datenbank gelesen wurde
-        if (have_fw)
+        if (have_fw && !db_truncated)
             for (auto& [id, g] : games)
                 if (g.installed == 1 && g.registered < 0) g.registered = 0;
     }
@@ -124,6 +153,8 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
     if (const json* a = arr_of(facts, "savedata.foreign"))
         for (const auto& e : *a)
             if (GameInfo* g = at(str_of(e, "titleid"))) ++g->foreign_saves;
+    for (auto& [id, g] : games)  // Titel, die erst nach der Registry-Abfrage in die Liste kamen
+        if (reg_ids.count(id)) g.registered = 1;
 
     // Befunde, die einen Titel nennen (Titel-ID in der Evidenz oder Pfad einer seiner Quellen)
     static const std::regex id_re("PPSA[0-9]{5}");

@@ -388,6 +388,7 @@ SelftestStep LocalService::selftest_step() {
         s.result.status = medic::TestStatus::Error;  // ein Fehler im Test ist nie "passed"
         s.result.reason = "exception";
         selftest_session_.reset();
+        selftest_t0_ = {};  // sonst enthielte die Dauer des naechsten Tests die Zeit des abgebrochenen
         return s;
     }
     s.progress = selftest_session_->progress();

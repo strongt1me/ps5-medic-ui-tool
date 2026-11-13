@@ -48,7 +48,7 @@
   <tr>
     <td valign="top">
       <h3>📚 Fehlercodes</h3>
-      Nachschlagewerk zu 40 Meldungen wie CE-108262-9: Erklärung, Schritte laut Sony, Quelle als Text und QR-Code. Nach einem Check-up zeigt der Eintrag, was Medic an der Konsole sieht.
+      Nachschlagewerk zu 150 Meldungen wie CE-108262-9: Erklärung, Schritte laut Sony, Quelle als Text und QR-Code. Nach einem Check-up zeigt der Eintrag, was Medic an der Konsole sieht.
     </td>
     <td valign="top">
       <h3>🕑 Verlauf und Vergleich</h3>
@@ -87,8 +87,8 @@
 ## Sicherheit
 
 - **Nie löschen**, nur verschieben oder umbenennen. Dateien, die geändert werden, werden vorher gesichert (`/data/ps5medic/backups/`), jede Änderung steht im Journal (`/data/ps5medic/journal.jsonl`).
-- **Kein Schreiben ohne ✕**: Reparatur und Rückgängig passieren erst nach ausdrücklicher Bestätigung auf der Vorschau. Weitere Schreibaktionen: der Bericht (□), das Regel-Update (✕ auf dem Angebot), die gewählte Sprache in `/data/ps5medic/config.ini`.
-- Reparaturen schreiben nur in einer Whitelist (ShadowMount+-Ordner, Autoload-Listen, die eigenen Scanpfade, `/data/ps5medic`). Nie unter `/system`, `/system_ex`, `/dev` oder im Flash. Die Kachel ist ein Ordner, den du selbst nach `/data/homebrew/` kopierst; ShadowMount+ erzeugt sie, PS5 Medic legt sie nicht an.
+- **Kein Schreiben ohne ✕**: Reparatur und Rückgängig passieren erst nach ausdrücklicher Bestätigung auf der Vorschau. Weitere Schreibaktionen: der Bericht (□), das Regel-Update (✕ auf dem Angebot), die gewählte Sprache in `/data/ps5medic/config.ini`, die Ergebnisse jedes Check-ups (`/data/ps5medic/checks/`, für den Verlauf und den Vergleich), das Journal und die eine Testdatei des gründlichen Selbsttests in `/data/ps5medic` (wird überschrieben, nie gelöscht).
+- Reparaturen schreiben nur in einer Whitelist (ShadowMount+-Ordner, Autoload-Listen, die eigenen Scanpfade, `/data/ps5medic`). Nie unter `/system`, `/system_ex`, `/dev` oder im Flash. Die Kachel ist ein Ordner unter `/data/homebrew/`, den du selbst kopierst oder den der Installer `ps5medic-launcher.elf` anlegt; die Kachel selbst erzeugt ShadowMount+.
 - **Das Netz wird nur für den Regel-Download benutzt**, nur auf □ und Bestätigung, nur zur Adresse aus deiner `config.ini`, und es wird nichts gesendet außer einer GET-Anfrage. Daneben gibt es einen lokalen Netztest im Selbsttest: nur ein Verbindungsaufbau zum Router im privaten Adressbereich, ohne Daten, nie ins Internet.
 - Keine Exploits, keine Firmware-Änderungen, keine Funktionen zum Beschaffen, Entsperren oder Verteilen von Spielen, Keys oder Firmware. PS5 Medic repariert die **Umgebung**, nicht Inhalte. Es empfiehlt nie ein Update der Systemsoftware.
 

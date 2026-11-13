@@ -47,8 +47,7 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 
 ### 4.4 Später (v2+)
 - Live-Monitor: kstuff/SM+-Crash in Echtzeit erkennen und Ursache anzeigen.
-- Regel-Update aus GitHub (manuell, SHA-256-geprüft).
-- Vergleich „vorher/nachher“ zweier Check-ups.
+- ~~Regel-Update (manuell, signiert)~~ und ~~Vergleich „vorher/nachher“ zweier Check-ups~~ sind seit Phase 5 fertig (`docs/PHASE5.md`).
 - Mitmachen: Befunde ohne Regel („unbekannte Fehlerzeilen“) sammeln und als Issue-Vorlage exportieren.
 
 ## 5. Bedienung (Vollbild, Controller)
@@ -57,7 +56,7 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 - **Detail:** Evidenz, Erklärung, Quelle, Schritte. Reparieren zeigt **vorher** genau, was geändert wird.
 - **Verlauf:** Liste aller Reparaturen mit „Rückgängig“.
 - **Fehlercodes:** Nachschlagewerk (Liste, Details mit Erklärung, Schritten und Quelle), nur lesen; siehe `docs/RULES.md`, „Fehlercodes nachschlagen“. Nennt ein Befund einen bekannten Code, springt □ im Befund-Detail zum Eintrag. Im Eintrag: □ Quelle als QR-Code, △ Code für den Bericht vermerken, nach einem Check-up „Was Medic gerade sieht“.
-- Sprache: Deutsch + Englisch (Strings in JSON).
+- Sprache: Deutsch, Englisch, Französisch, Italienisch, Spanisch (Strings in JSON, `ui/i18n/`, Wissenstexte in `knowledge/l10n/`).
 
 ## 6. Nicht-Ziele
 - Kein Jailbreak, kein Payload-Loader-Ersatz, kein Game-Installer.

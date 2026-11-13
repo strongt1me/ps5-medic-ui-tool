@@ -26,6 +26,7 @@ std::string sqlite_broken_sample();
 // bleibt unberuehrt). `ran` false: Datenbank oder Abfrage nicht ausfuehrbar (z. B. Tabelle fehlt). Hoechstens `max_rows` Zeilen.
 struct SqliteRows {
     bool ran = false;
+    bool truncated = false;  // es gab mehr Zeilen als max_rows
     std::vector<std::vector<std::string>> rows;
 };
 SqliteRows sqlite_select_text(const std::string& image, const std::string& wal, const std::string& sql, int columns, std::size_t max_rows);

@@ -42,6 +42,11 @@ void validate_condition(const json& c, const std::string& where) {
     if (!c.contains("fact") || !c["fact"].is_string()) fail(where, "Blatt braucht 'fact' (String)");
     for (auto it = c.begin(); it != c.end(); ++it)
         if (!kLeafKeys.count(it.key())) fail(where, "unbekannter Schluessel '" + it.key() + "'");
+    {  // mehr als ein [] im Fakt-Pfad loest die Auswertung nie auf: die Regel feuerte still nie
+        const std::string fact = c["fact"].get<std::string>();
+        const auto first = fact.find("[]");
+        if (first != std::string::npos && fact.find("[]", first + 2) != std::string::npos) fail(where, "'fact' darf hoechstens ein [] enthalten");
+    }
     int ops = 0;
     for (const char* k : {"eq", "in", "lt", "gt", "matches", "contains", "exists", "count_matches"}) ops += c.contains(k) ? 1 : 0;
     if (ops != 1) fail(where, "genau ein Operator erwartet (eq, in, lt, gt, matches, contains, exists, count_matches)");
@@ -354,7 +359,9 @@ bool fw_in_range(const std::string& fw, const std::string& range) {
         std::size_t i = 0;
         while (i < tok.size() && (tok[i] == '<' || tok[i] == '>' || tok[i] == '=')) op += tok[i++];
         if (op.empty()) op = "=";
-        int c = compare_versions(fw, tok.substr(i));
+        std::string ver = tok.substr(i);
+        if (ver.empty()) ss >> ver;  // ">= 13.60": Operator und Version durch Leerraum getrennt
+        int c = compare_versions(fw, ver);
         bool ok = (op == ">=" && c >= 0) || (op == "<=" && c <= 0) || (op == ">" && c > 0) || (op == "<" && c < 0) ||
                   (op == "=" && c == 0);
         if (!ok) return false;

@@ -48,7 +48,7 @@
   <tr>
     <td valign="top">
       <h3>📚 Codici di errore</h3>
-      Opera di consultazione su 40 messaggi come CE-108262-9: spiegazione, passaggi secondo Sony, fonte come testo e codice QR. Dopo un check-up la voce mostra ciò che Medic vede sulla console.
+      Opera di consultazione su 150 messaggi come CE-108262-9: spiegazione, passaggi secondo Sony, fonte come testo e codice QR. Dopo un check-up la voce mostra ciò che Medic vede sulla console.
     </td>
     <td valign="top">
       <h3>🕑 Cronologia e confronto</h3>
@@ -87,8 +87,8 @@
 ## Sicurezza
 
 - **Mai eliminare**, solo spostare o rinominare. I file che vengono modificati sono prima salvati in backup (`/data/ps5medic/backups/`); ogni modifica è registrata nel journal (`/data/ps5medic/journal.jsonl`).
-- **Nessuna scrittura senza ✕**: riparazione e annullamento avvengono solo dopo conferma esplicita nell'anteprima. Altre azioni di scrittura: il rapporto (□), l'aggiornamento delle regole (✕ sulla proposta), la lingua scelta in `/data/ps5medic/config.ini`.
-- Le riparazioni scrivono solo in una whitelist (cartelle di ShadowMount+, elenchi di autoload, i propri percorsi di scansione, `/data/ps5medic`). Mai sotto `/system`, `/system_ex`, `/dev` o nella flash. Il riquadro è una cartella che copi tu stesso in `/data/homebrew/`; lo crea ShadowMount+, non PS5 Medic.
+- **Nessuna scrittura senza ✕**: riparazione e annullamento avvengono solo dopo conferma esplicita nell'anteprima. Altre azioni di scrittura: il rapporto (□), l'aggiornamento delle regole (✕ sulla proposta), la lingua scelta in `/data/ps5medic/config.ini`, i risultati di ogni check-up (`/data/ps5medic/checks/`, per la cronologia e il confronto), il journal e l'unico file di prova dell'autotest approfondito in `/data/ps5medic` (sovrascritto, mai eliminato).
+- Le riparazioni scrivono solo in una whitelist (cartelle di ShadowMount+, elenchi di autoload, i propri percorsi di scansione, `/data/ps5medic`). Mai sotto `/system`, `/system_ex`, `/dev` o nella flash. Il riquadro è una cartella in `/data/homebrew/` che copi tu stesso o che crea l'installer `ps5medic-launcher.elf`; il riquadro vero e proprio lo crea ShadowMount+.
 - **La rete viene usata solo per il download delle regole**, solo su □ e conferma, solo verso l'indirizzo del tuo `config.ini`, e non viene inviato nulla oltre a una richiesta GET. Inoltre nell'autotest c'è un test della rete locale: solo una connessione al router nell'intervallo di indirizzi privato, senza dati, mai verso Internet.
 - Nessun exploit, nessuna modifica del firmware, nessuna funzione per procurarsi, sbloccare o distribuire giochi, chiavi o firmware. PS5 Medic ripara l'**ambiente**, non i contenuti. Non consiglia mai un aggiornamento del software di sistema.
 
@@ -126,9 +126,9 @@ Il riquadro `FAKE42007` sostituisce i metodi precedenti (launcher, websrv, riqua
 Linux o WSL, CMake, un compilatore C++20. Il nucleo e le regole funzionano anche al PC contro cartelle fixture.
 
 ```bash
-make test        # Unit-, Regel-, UI- und Berichts-Tests gegen alle Fixtures
-make host        # medic-cli und die PC-Vorschau der UI
-make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # Bilder der UI am PC (de en fr it es)
+make test        # test unitari, delle regole, dell'interfaccia e del rapporto su tutte le fixture
+make host        # medic-cli e l'anteprima dell'interfaccia su PC
+make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # immagini dell'interfaccia su PC (de en fr it es)
 ```
 
 Per la console servono il [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versione 0.45** (`PS5_PAYLOAD_SDK`) e SDL2 per la PS5 (solo per l'interfaccia di riserva); le istruzioni di compilazione si trovano in [docs/PHASE3.md](docs/PHASE3.md), struttura e compilazione dell'app nativa in [docs/NATIVE.md](docs/NATIVE.md).
@@ -139,15 +139,15 @@ make ps5-service                    # servizio (ps5medicservice.elf)
 make ps5                            # payload di diagnosi (ps5medic.elf)
 make deploy-native PS5_HOST=192.168.1.x # app e servizio in /data/homebrew via FTP (l'app deve essere chiusa)
 make send-launcher PS5_HOST=192.168.1.x # invia l'installer alla porta 9021: scrive da sé app e servizio in /data/homebrew (senza FTP)
-make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
+make dist                           # cartella di rilascio e zip in dist/ (solo in locale)
 ```
 
 Strumenti al PC (`build/medic-cli`):
 
 ```bash
-medic-cli check   <snapshot-ordner>            # Befunde
-medic-cli report  <snapshot-ordner> [--qr]     # Bericht, optional QR-Code im Terminal
-medic-cli fix     <snapshot-ordner> <regel-id> # Plan ansehen (mit --apply --yes ausführen, nur an einer Kopie!)
+medic-cli check   <snapshot-ordner>            # riscontri
+medic-cli report  <snapshot-ordner> [--qr]     # rapporto, codice QR facoltativo nel terminale
+medic-cli fix     <snapshot-ordner> <regel-id> # vedere il piano (eseguire con --apply --yes, solo su una copia!)
 medic-cli history|undo|export ...
 ```
 

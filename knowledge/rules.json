@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.40",
+  "db_version": "2026.11.44",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -338,8 +338,8 @@
         ]
       },
       "text": {
-        "de": "Der Name eines .ffpfs/.ffpfsc-Images enthält Klammern. In älteren Versionen (gemeldet mit 1.6test15 auf FW 6.02) löste das beim Scan eine Kernel-Panic aus; der Entwickler schreibt, das sei längst behoben, und es ließ sich mit neueren Versionen (1.7beta4, FW 12.00) nicht nachstellen. Umbenennen ohne Klammern ist trotzdem harmlos und schützt, falls eine ältere Version läuft.",
-        "en": "A .ffpfs/.ffpfsc image name contains parentheses. In older versions (reported with 1.6test15 on FW 6.02) this caused a kernel panic during the scan; the developer says it was fixed long ago, and it could not be reproduced with newer versions (1.7beta4, FW 12.00). Renaming it without the parentheses is harmless anyway and protects you if an older version is running."
+        "de": "Der Name eines .ffpfs/.ffpfsc-Images enthält Klammern. Ältere ShadowMount+-Versionen (z. B. 1.6test15) lösten dadurch beim Scan eine Kernel-Panic aus, neuere wohl nicht mehr. Der Fix benennt das Image ohne Klammern um (mit Backup und Rückgängig).",
+        "en": "A .ffpfs/.ffpfsc image name contains parentheses. Older ShadowMount+ versions (e.g. 1.6test15) caused a kernel panic during the scan, newer ones probably do not. The fix renames the image without parentheses (with backup and undo)."
       },
       "evidence": "smp.images[].path",
       "fix": "rename_image_parentheses",
@@ -368,8 +368,8 @@
         ]
       },
       "text": {
-        "de": "Diese Kombination (FW 13.60, ShadowMount+ 1.7beta3, kstuff-lite 1.11, kstuff_game_auto_toggle=1) wurde mit wiederkehrenden Spielabstürzen gemeldet. Workaround: kstuff_game_auto_toggle=0 setzen (kstuff bleibt geladen). Vorher config.ini sichern.",
-        "en": "This combination (FW 13.60, ShadowMount+ 1.7beta3, kstuff-lite 1.11, kstuff_game_auto_toggle=1) was reported with recurring game crashes. Workaround: set kstuff_game_auto_toggle=0 (kstuff stays loaded). Back up config.ini first."
+        "de": "Diese Kombination (FW 13.60, ShadowMount+ 1.7beta3, kstuff-lite 1.11, kstuff_game_auto_toggle=1) wurde mit wiederkehrenden Spielabstürzen gemeldet. Workaround: kstuff_game_auto_toggle=0 (kstuff bleibt geladen); der Fix setzt das mit Backup und Rückgängig.",
+        "en": "This combination (FW 13.60, ShadowMount+ 1.7beta3, kstuff-lite 1.11, kstuff_game_auto_toggle=1) was reported with recurring game crashes. Workaround: kstuff_game_auto_toggle=0 (kstuff stays loaded); the fix sets it with backup and undo."
       },
       "evidence": "smp.config.kstuff_game_auto_toggle",
       "fix": "smp_set_key",
@@ -502,8 +502,8 @@
         ]
       },
       "text": {
-        "de": "Dieselbe TITLE_ID liegt in mehreren Quellen vor (z. B. ein Spielordner und ein Image desselben Spiels). ShadowMount+ nutzt nur eine und zeigt bei jedem Start die Meldung „Duplikat … ignoriert“ – die überzähligen Kopien entfernen (verschieben); die von ShadowMount+ genutzte Quelle bleibt.",
-        "en": "The same TITLE_ID exists in more than one source (e.g. a game folder and an image of the same game). ShadowMount+ uses only one and shows the message “Duplicate … ignored” at every start – move the extra copies away; the source ShadowMount+ uses stays."
+        "de": "Dieselbe TITLE_ID liegt in mehreren Quellen (z. B. Ordner und Image). ShadowMount+ nutzt nur eine und meldet bei jedem Start „Duplikat … ignoriert“. Der Fix verschiebt die überzähligen Kopien (nichts wird gelöscht, mit Rückgängig); die genutzte Quelle bleibt.",
+        "en": "The same TITLE_ID exists in more than one source (e.g. a folder and an image). ShadowMount+ uses only one and reports “Duplicate … ignored” at every start. The fix moves the extra copies (nothing is deleted, undo possible); the source in use stays."
       },
       "evidence": "smp.titles[].path",
       "fix": "move_duplicate_titleid",
@@ -522,8 +522,8 @@
         ]
       },
       "text": {
-        "de": "Es sind eigene Scanpfade gesetzt. Dadurch werden die Standardpfade nicht mehr gescannt – diese Spiele werden von ShadowMount+ nicht gefunden. Den Pfad zur Liste ergänzen oder die Spiele in einen gescannten Pfad legen.",
-        "en": "Custom scan paths are set. The default paths are therefore no longer scanned – ShadowMount+ will not find these games. Add the path to the list or move the games into a scanned path."
+        "de": "Es sind eigene Scanpfade gesetzt, daher werden die Standardpfade nicht mehr gescannt und ShadowMount+ findet diese Spiele nicht. Der Fix ergänzt den Pfad (mit Backup und Rückgängig); oder die Spiele in einen gescannten Pfad legen.",
+        "en": "Custom scan paths are set, so the default paths are no longer scanned and ShadowMount+ will not find these games. The fix adds the path (with backup and undo); or move the games into a scanned path."
       },
       "evidence": "smp.hidden_sources[].path",
       "fix": "smp_set_key",
@@ -566,7 +566,8 @@
           "array": "smp.deep_sources",
           "field": "level",
           "agg": "max"
-        }
+        },
+        "clamp_max": 2
       },
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
@@ -583,8 +584,8 @@
         ]
       },
       "text": {
-        "de": "debug.log meldet für dieselbe Quelle wiederholt „source not stable yet“: Der Kopiervorgang ist noch nicht abgeschlossen, oder stability_wait_seconds passt nicht zur Quelle. Kopieren abwarten bzw. den Wert prüfen.",
-        "en": "debug.log repeatedly reports \"source not stable yet\" for the same source: the copy is still in progress, or stability_wait_seconds does not suit the source. Wait for the copy to finish or review the value."
+        "de": "debug.log meldet für dieselbe Quelle wiederholt „source not stable yet“: Das Kopieren läuft noch, oder stability_wait_seconds passt nicht zur Quelle. Kopieren abwarten, sonst den Wert prüfen.",
+        "en": "debug.log repeatedly reports “source not stable yet” for the same source: the copy is still running, or stability_wait_seconds does not suit the source. Wait for the copy to finish, otherwise review the value."
       },
       "evidence": "smp.unstable_sources[].path",
       "fix": null,
@@ -627,19 +628,19 @@
         ]
       },
       "text": {
-        "de": "Diese Spielstände wurden mit einer anderen Konto-ID erstellt als der, die jetzt aktiv ist (ACCOUNT_ID in den Metadaten unter savedata_prospero_meta; die jetzige ID steht in den Spielstand-Speichern, die das System bei jedem Spielstart neu anlegt). Spielstände gehören zum Konto, mit dem sie erstellt wurden. Das passiert zum Beispiel, wenn die Konto-ID durch eine erneute Offline-Aktivierung geändert wurde (so auf der Test-Konsole; eine Community-Anleitung für PS4 rät, die Aktivierung nur einmal auszuführen und vorher die Spielstände zu sichern). Mit einem anderen Konto meldet die Konsole „Die gespeicherten Daten können nicht geladen werden, weil sie beschädigt sind“ (Eintrag „Beschädigte Daten“), und zwar bei jedem Laden und Speichern, weil das Spiel immer wieder auf denselben Spielstand zugreift. Die Liste in den Einstellungen zeigt solche Spielstände trotzdem normal an. Die Dateien selbst sind damit nicht bewiesen beschädigt. Weg: wieder das Konto verwenden, mit dem die Spielstände erstellt wurden (dieselbe Konto-ID). Medic ändert weder das Konto noch Spielstände. Neue Spielstände mit dem jetzigen Konto sind möglich; die alten bleiben unangetastet in savedata_prospero. Die alten Spielstände nicht löschen, bevor klar ist, ob das alte Konto wieder verwendet wird, und vor jeder Änderung der Konto-ID die Ordner savedata_prospero und savedata_prospero_meta sowie /system_data/savedata_prospero per FTP sichern.",
-        "en": "These saves were created with a different account ID than the one that is active now (ACCOUNT_ID in the metadata under savedata_prospero_meta; the current ID is in the save-data memories the system re-creates at every game start). Saves belong to the account that created them. This happens for example when the account ID was changed by running the offline activation again (so on the test console; a community guide for PS4 advises to run the activation only once and to back up saves first). With another account the console reports “The saved data cannot be loaded because it is corrupted” (entry “Corrupted data”) on every load and save, because the game keeps accessing the same save. The list in the settings still shows such saves normally. This does not prove the files themselves are damaged. Way out: use the account that created the saves again (same account ID). Medic changes neither the account nor saves. New saves with the current account are possible; the old ones stay untouched in savedata_prospero. Do not delete the old saves before it is clear whether the old account will be used again, and before any change of the account ID copy the folders savedata_prospero and savedata_prospero_meta and /system_data/savedata_prospero via FTP."
+        "de": "Diese Spielstände gehören zu einer anderen Konto-ID als der jetzt aktiven (z. B. nach erneuter Offline-Aktivierung). Die Konsole meldet dann „Beschädigte Daten“, obwohl die Dateien nicht bewiesen beschädigt sind. Lösung: wieder das ursprüngliche Konto verwenden. Alte Spielstände nicht löschen; vor jeder Änderung der Konto-ID savedata_prospero, savedata_prospero_meta und /system_data/savedata_prospero per FTP sichern. Medic ändert nichts.",
+        "en": "These saves belong to a different account ID than the one active now (e.g. after running the offline activation again). The console then reports “Corrupted data”, although the files are not proven damaged. Way out: use the original account again. Do not delete the old saves; before any change of the account ID back up savedata_prospero, savedata_prospero_meta and /system_data/savedata_prospero via FTP. Medic changes nothing."
       },
       "evidence": "savedata.foreign[].label",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "medium",
         "basis": "observed",
         "reason": {
-          "de": "Dass die Konto-IDs abweichen, ist an den Dateien gelesen (ACCOUNT_ID in den Metadaten). Dass genau das die Meldung „beschädigte Daten“ auslöst, ist an der Test-Konsole bei drei Spielen beobachtet, aber noch nicht durch Zurückspielen der alten Konto-ID bestätigt; Sony dokumentiert es nicht.",
-          "en": "That the account IDs differ is read from the files (ACCOUNT_ID in the metadata). That exactly this triggers the “corrupted data” message was observed on the test console with three games, but is not yet confirmed by restoring the old account ID; Sony does not document it."
+          "de": "Die abweichende ACCOUNT_ID ist aus den Dateien gelesen. Dass sie „beschädigte Daten“ auslöst, ist an der Test-Konsole bei drei Spielen beobachtet, aber nicht durch Zurückspielen der alten ID bestätigt.",
+          "en": "The differing ACCOUNT_ID is read from the files. That it triggers “corrupted data” was observed on the test console with three games, but is not confirmed by restoring the old ID."
         }
       }
     },
@@ -663,19 +664,19 @@
         ]
       },
       "text": {
-        "de": "Der Fehlerverlauf der Systemsoftware (/system_data/priv/error/history) enthält denselben CE-Fehlercode mehrfach für denselben Titel. Ein Titel, der immer wieder denselben Fehler meldet, startet oder läuft nicht stabil; die Meldung „Bei diesem Spiel oder dieser App ist ein Fehler aufgetreten“ gehört oft dazu. Code, Titel, Anzahl und letzter Tag stehen unten. Was der Code bedeutet und was Sony oder die Gemeinschaft dazu schreiben, steht unter „Fehlercodes nachschlagen“. Bei Titeln aus Ordnern oder Images auf einer gejailbreakten Konsole kommen unter anderem Backport-Ordner, FakeLib-Einstellungen und fehlende Dateien infrage; der Verlauf allein sagt nicht, welche Ursache zutrifft.",
-        "en": "The error history of the system software (/system_data/priv/error/history) contains the same CE error code several times for the same title. A title that keeps reporting the same error does not start or run reliably; the message “An error has occurred in this game or application” often goes with it. Code, title, count and last day are listed below. What the code means and what Sony or the community say about it is under “Look up error codes”. For titles from folders or images on a jailbroken console, backport folders, FakeLib settings and missing files are possible causes; the history alone does not say which one applies."
+        "de": "Der Fehlerverlauf (/system_data/priv/error/history) enthält denselben CE-Fehlercode mehrfach für denselben Titel: Der Titel startet oder läuft nicht stabil. Was der Code bedeutet, steht unter „Fehlercodes“. Bei Titeln aus Ordnern oder Images kommen Backport-Ordner, FakeLib-Einstellungen oder fehlende Dateien infrage; welche, sagt der Verlauf nicht.",
+        "en": "The error history (/system_data/priv/error/history) contains the same CE error code several times for the same title: the title does not start or run reliably. What the code means is under “Error codes”. For titles from folders or images, backport folders, FakeLib settings or missing files are possible causes; the history does not say which."
       },
       "evidence": "errors.pairs[].label",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "low",
         "basis": "derived",
         "reason": {
-          "de": "Der Fehlerverlauf ist gelesen. Dass wiederholte Codes auf einen unsauber laufenden Titel hinweisen, ist eine Schlussfolgerung; die Schwelle (mehr als zwei Einträge) ist vorläufig und nicht geeicht, die Ursache nennt der Verlauf nicht.",
-          "en": "The error history is read. That repeated codes point to a title that does not run cleanly is an inference; the threshold (more than two entries) is provisional and not calibrated, and the history does not name the cause."
+          "de": "Der Fehlerverlauf ist gelesen. Dass wiederholte Codes auf einen unsauber laufenden Titel hinweisen, ist eine Schlussfolgerung; die Schwelle (mehr als zwei Einträge) ist vorläufig.",
+          "en": "The error history is read. That repeated codes point to a title that does not run cleanly is an inference; the threshold (more than two entries) is provisional."
         }
       }
     },
@@ -699,12 +700,12 @@
         ]
       },
       "text": {
-        "de": "Eine Systemanwendung (Titel NPXS…) hat im Fehlerverlauf denselben CE-Fehlercode mehrfach gemeldet. Das sind oft Verbindungs- oder Serverfehler, etwa wenn Sony-Server durch einen DNS-Filter (z. B. nanoDNS) oder ein Netzwerkproblem nicht erreichbar sind. Aus dem Verlauf allein kann Medic das nicht unterscheiden; ein Hinweis auf defekte Hardware ist es für sich genommen nicht. Der Code lässt sich unter „Fehlercodes nachschlagen“ ansehen.",
-        "en": "A system application (title NPXS…) reported the same CE error code several times in the error history. These are often connection or server errors, for example when Sony servers are unreachable because of a DNS filter (e.g. nanoDNS) or a network problem. Medic cannot tell this apart from the history alone; by itself it does not point to defective hardware. The code can be looked up under “Look up error codes”."
+        "de": "Eine Systemanwendung (Titel NPXS…) hat im Fehlerverlauf mehrfach denselben CE-Fehlercode gemeldet. Oft sind das Verbindungs- oder Serverfehler, etwa durch einen DNS-Filter (z. B. nanoDNS) oder ein Netzwerkproblem. Aus dem Verlauf allein lässt sich das nicht klären; auf defekte Hardware deutet es nicht hin. Code unter „Fehlercodes nachschlagen“ ansehen.",
+        "en": "A system application (title NPXS…) reported the same CE error code several times in the error history. These are often connection or server errors, for example caused by a DNS filter (e.g. nanoDNS) or a network problem. This cannot be told from the history alone; it does not point to defective hardware. Look up the code under “Look up error codes”."
       },
       "evidence": "errors.pairs[].label",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "low",
@@ -731,19 +732,19 @@
         ]
       },
       "text": {
-        "de": "Der Startverlauf der Konsole (/system_data/priv/vshlog) zeigt in den letzten 14 Tagen mindestens drei Neustarts, vor denen kein Herunterfahren protokolliert ist. Jeder normale Neustart steht im Verlauf als „Shutdown for reboot“. Fehlt es, endete die Sitzung ohne ordentliches Herunterfahren; das passt zu einem Absturz, einem Watchdog-Neustart oder Stromverlust. Aus dem Verlauf allein lässt sich die Ursache nicht bestimmen. Auf einer gejailbreakten Konsole kommen unter anderem Payload-Fehler, ein während des Betriebs abgezogenes Laufwerk, Überhitzung und eine wackelige Stromversorgung infrage. Prüfe der Reihe nach: Temperaturen (siehe Hinweise), Laufwerke und deren Kabel, zuletzt gestartete Payloads und die Steckdose bzw. Steckerleiste. Die Zeitpunkte stehen unten.",
-        "en": "The boot history of the console (/system_data/priv/vshlog) shows at least three restarts in the last 14 days that are not preceded by a logged shutdown. Every normal restart appears in the history as “Shutdown for reboot”. If it is missing, the session ended without a proper shutdown; this fits a crash, a watchdog restart or a power loss. The cause cannot be determined from the history alone. On a jailbroken console, payload errors, a drive unplugged while running, overheating and an unstable power supply are possible. Check in this order: temperatures (see the notes), drives and their cables, payloads started most recently, and the wall socket or power strip. The times are listed below."
+        "de": "Der Startverlauf (/system_data/priv/vshlog) zeigt in den letzten 14 Tagen mindestens drei Neustarts, vor denen kein Herunterfahren protokolliert ist (normal wäre „Shutdown for reboot“). Das passt zu Absturz, Watchdog-Neustart oder Stromverlust; die Ursache nennt der Verlauf nicht. Prüfe der Reihe nach: Temperaturen, Laufwerke samt Kabeln, zuletzt gestartete Payloads, Steckdose/Steckerleiste. Zeitpunkte stehen unten.",
+        "en": "The start history (/system_data/priv/vshlog) shows at least three restarts in the last 14 days that are not preceded by a logged shutdown (normally “Shutdown for reboot” appears). That fits a crash, a watchdog restart or a power loss; the history does not name the cause. Check in this order: temperatures, drives and their cables, payloads started most recently, wall socket/power strip. Times are listed below."
       },
       "evidence": "boot.unclean[].ts",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "medium",
         "basis": "observed",
         "reason": {
-          "de": "Dass vor einem Start kein Herunterfahren protokolliert ist, steht so im Startverlauf (an der Test-Konsole beobachtet: ein normaler Neustart schreibt „Shutdown for reboot“). Die Schwelle von drei Fällen in 14 Tagen ist vorläufig, die Ursache nennt der Verlauf nicht.",
-          "en": "That no shutdown is logged before a start is shown in the start history (observed on the test console: a normal restart writes “Shutdown for reboot”). The threshold of three cases in 14 days is provisional, and the history does not name the cause."
+          "de": "Das fehlende Herunterfahren steht im Startverlauf (beobachtet: ein normaler Neustart schreibt „Shutdown for reboot“). Die Schwelle von drei Fällen in 14 Tagen ist vorläufig.",
+          "en": "The missing shutdown is shown in the start history (observed: a normal restart writes “Shutdown for reboot”). The threshold of three cases in 14 days is provisional."
         }
       }
     },
@@ -767,12 +768,12 @@
         ]
       },
       "text": {
-        "de": "Der Startverlauf der Konsole (/system_data/priv/vshlog) enthält Neustarts, vor denen kein Herunterfahren protokolliert ist (z. B. nach einem Stromausfall, einem Absturz oder einem erzwungenen Ausschalten). In den letzten 14 Tagen waren es höchstens zwei, das ist unauffällig. Häufen sich solche Neustarts, meldet Medic das als Warnung.",
-        "en": "The boot history of the console (/system_data/priv/vshlog) contains restarts that are not preceded by a logged shutdown (for example after a power cut, a crash or a forced power-off). There were at most two in the last 14 days, which is unremarkable. If such restarts pile up, Medic reports it as a warning."
+        "de": "Der Startverlauf (/system_data/priv/vshlog) enthält Neustarts ohne protokolliertes Herunterfahren (z. B. Stromausfall, Absturz, erzwungenes Ausschalten). In den letzten 14 Tagen höchstens zwei: unauffällig; häufen sie sich, warnt Medic.",
+        "en": "The start history (/system_data/priv/vshlog) contains restarts without a logged shutdown (e.g. power cut, crash, forced power-off). At most two in the last 14 days is unremarkable; if they pile up, Medic warns."
       },
       "evidence": "boot.unclean[].ts",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "low",
@@ -799,8 +800,8 @@
         ]
       },
       "text": {
-        "de": "Der Kopf einer Datenbank der Systemsoftware ist ungültig (keine SQLite-Kennung, unmögliche Seitengröße oder falsche Kopfwerte). Die Systemsoftware speichert damit Apps, Lizenzen, Spielstände, Downloads und Benachrichtigungen; eine beschädigte Datei kann zu fehlenden Kacheln, Fehlern beim Installieren oder zu den Meldungen „Datenbank beschädigt“ führen. Zuerst die Konsole einmal normal neu starten und erneut prüfen, denn ein unterbrochener Schreibvorgang wird beim nächsten Öffnen oft bereinigt. Bleibt der Befund, ist die Datei beschädigt. Sony bietet im Sicherheitsmodus „Datenbank neu erstellen“ an. Ob das Einträge von per ShadowMount+ eingebundenen Titeln verändert, ist nicht geprüft: vorher notieren, welche Titel installiert sind, und Spielstände sichern. Medic ändert Datenbanken nicht.",
-        "en": "The header of a system software database is invalid (no SQLite signature, impossible page size or wrong header values). The system software uses these databases for apps, licences, save data, downloads and notifications; a damaged file can cause missing tiles, install errors or “database corrupted” messages. First restart the console normally and check again, because an interrupted write is often cleaned up the next time the file is opened. If the finding stays, the file is damaged. Sony offers “Rebuild database” in safe mode. Whether that changes entries of titles mounted by ShadowMount+ has not been checked: note which titles are installed beforehand and back up save data. Medic does not change databases."
+        "de": "Der Kopf einer Datenbank der Systemsoftware ist ungültig (fehlende Kacheln oder „Datenbank beschädigt“ möglich). Zuerst die Konsole normal neu starten und erneut prüfen; bleibt der Befund, ist die Datei beschädigt. Sony bietet im Sicherheitsmodus „Datenbank neu erstellen“ an; Wirkung auf ShadowMount+-Titel ungeprüft, daher vorher Titel notieren und Spielstände sichern. Medic ändert Datenbanken nicht.",
+        "en": "The header of a system software database is invalid (missing tiles or “database corrupted” are possible). First restart the console normally and check again; if the finding stays, the file is damaged. Sony offers “Rebuild database” in safe mode; the effect on ShadowMount+ titles is unchecked, so note the installed titles and back up save data first. Medic does not change databases."
       },
       "evidence": "db.files[].path",
       "fix": null,
@@ -831,8 +832,8 @@
         ]
       },
       "text": {
-        "de": "Eine Datenbank der Systemsoftware ist kleiner, als ihr Kopf angibt (abgeschnittene Datei). Das passiert, wenn ein Schreibvorgang durch Absturz, Stromverlust oder vollen Speicher abgebrochen wurde. Gehe wie bei einem ungültigen Datenbank-Kopf vor: Konsole normal neu starten und erneut prüfen; bleibt der Befund, ist die Datei beschädigt (Sicherheitsmodus „Datenbank neu erstellen“ ist Sonys Weg, Wirkung auf per ShadowMount+ eingebundene Titel ungeprüft). Medic ändert Datenbanken nicht.",
-        "en": "A system software database is smaller than its header says (truncated file). This happens when a write was interrupted by a crash, power loss or full storage. Proceed as for an invalid database header: restart the console normally and check again; if the finding stays, the file is damaged (safe mode “Rebuild database” is Sony's way, effect on titles mounted by ShadowMount+ unchecked). Medic does not change databases."
+        "de": "Eine Datenbank der Systemsoftware ist kleiner, als ihr Kopf angibt (abgeschnitten), z. B. nach Absturz, Stromverlust oder vollem Speicher. Konsole normal neu starten und erneut prüfen; bleibt der Befund, ist die Datei beschädigt. Sony bietet im Sicherheitsmodus „Datenbank neu erstellen“ an (Wirkung auf per ShadowMount+ eingebundene Titel ungeprüft). Medic ändert keine Datenbanken.",
+        "en": "A system software database is smaller than its header says (truncated), e.g. after a crash, power loss or full storage. Restart the console normally and check again; if the finding stays, the file is damaged. Sony offers “Rebuild database” in safe mode (effect on titles mounted by ShadowMount+ unchecked). Medic does not change databases."
       },
       "evidence": "db.files[].path",
       "fix": null,
@@ -859,8 +860,8 @@
         ]
       },
       "text": {
-        "de": "Neben einer Datenbank der Systemsoftware liegt ein Journal mit offener Transaktion (Kennung d9 d5 05 f9 20 a1 63 d7). Das ist normal, solange die Konsole gerade schreibt, und bleibt zurück, wenn ein Schreibvorgang abgebrochen wurde; SQLite macht die Transaktion beim nächsten Öffnen der Datenbank rückgängig. Bleibt der Befund nach einem normalen Neustart bestehen, deutet das auf eine unterbrochene Sitzung hin (siehe Befund zu Neustarts ohne Herunterfahren).",
-        "en": "Next to a system software database there is a journal with an open transaction (signature d9 d5 05 f9 20 a1 63 d7). That is normal while the console is writing, and it stays behind when a write was interrupted; SQLite rolls the transaction back the next time the database is opened. If the finding stays after a normal restart, it points to an interrupted session (see the finding about restarts without shutdown)."
+        "de": "Neben einer Datenbank der Systemsoftware liegt ein Journal mit offener Transaktion. Normal, solange die Konsole schreibt; sonst macht SQLite die Transaktion beim nächsten Öffnen rückgängig. Bleibt der Befund nach einem normalen Neustart, deutet das auf eine unterbrochene Sitzung hin (siehe Befund zu Neustarts ohne Herunterfahren).",
+        "en": "Next to a system software database there is a journal with an open transaction. Normal while the console is writing; otherwise SQLite rolls the transaction back the next time the database is opened. If the finding stays after a normal restart, it points to an interrupted session (see the finding about restarts without shutdown)."
       },
       "evidence": "db.files[].path",
       "fix": null,
@@ -887,8 +888,8 @@
         ]
       },
       "text": {
-        "de": "Die Prüfung einer Datenbank der Systemsoftware hat Fehler gefunden (SQLite integrity_check auf einer Kopie im Arbeitsspeicher; die echte Datei wird nie geöffnet oder geändert). Kopf und Größe sind in Ordnung, der Inhalt aber nicht: Seiten oder Einträge sind beschädigt. Das kann zu fehlenden Kacheln, Installationsfehlern oder Meldungen wie „Datenbank beschädigt“ führen. Zuerst die Konsole normal neu starten und erneut prüfen, denn die Prüfung kann nur Dateien bewerten, die sich währenddessen nicht ändern. Bleibt der Befund, ist die Datei beschädigt. Sony bietet im Sicherheitsmodus „Datenbank neu erstellen“ an. Ob das Einträge von per ShadowMount+ eingebundenen Titeln verändert, ist nicht geprüft: vorher notieren, welche Titel installiert sind, und Spielstände sichern. Medic ändert Datenbanken nicht.",
-        "en": "The check of a system software database found errors (SQLite integrity_check on a copy in memory; the real file is never opened or changed). Header and size are fine, but the content is not: pages or entries are damaged. This can cause missing tiles, install errors or messages like “database corrupted”. First restart the console normally and check again, because the check can only judge files that do not change while it runs. If the finding stays, the file is damaged. Sony offers “Rebuild database” in safe mode. Whether that changes entries of titles mounted by ShadowMount+ has not been checked: note which titles are installed beforehand and back up save data. Medic does not change databases."
+        "de": "Eine Datenbank der Systemsoftware ist beschädigt (SQLite integrity_check auf einer Kopie). Mögliche Folgen: fehlende Kacheln, Installationsfehler, „Datenbank beschädigt“. Konsole zuerst normal neu starten und erneut prüfen. Bleibt der Befund, bietet Sony im Sicherheitsmodus „Datenbank neu erstellen“ an; Wirkung auf per ShadowMount+ eingebundene Titel ungeprüft, vorher Spielstände sichern. Medic ändert keine Datenbanken.",
+        "en": "A system software database is damaged (SQLite integrity_check on a copy). Possible effects: missing tiles, install errors, “database corrupted”. Restart the console normally first and check again. If the finding stays, Sony offers “Rebuild database” in safe mode; its effect on titles mounted by ShadowMount+ is unchecked, so back up save data first. Medic does not change databases."
       },
       "evidence": "db.files[].path",
       "fix": null,
@@ -898,8 +899,8 @@
         "level": "high",
         "basis": "doc",
         "reason": {
-          "de": "SQLite integrity_check ist das dokumentierte Prüfverfahren. Medic prüft nur Dateien, die sich beim zweimaligen Lesen nicht ändern (sonst steht der Bereich unter „nicht geprüft“). Die Folgen für Titel und Kacheln sind Erfahrung, nicht dokumentiert.",
-          "en": "SQLite integrity_check is the documented check. Medic only checks files that do not change between two reads (otherwise the area is listed as “not checked”). The consequences for titles and tiles are experience, not documented."
+          "de": "SQLite integrity_check ist das dokumentierte Prüfverfahren; geprüft werden nur Dateien, die sich nicht ändern (sonst „nicht geprüft“). Die Folgen für Titel und Kacheln sind Erfahrung, nicht dokumentiert.",
+          "en": "SQLite integrity_check is the documented check; only files that do not change are checked (otherwise “not checked”). The consequences for titles and tiles are experience, not documented."
         }
       }
     },
@@ -915,8 +916,8 @@
         ]
       },
       "text": {
-        "de": "In einem Spielordner heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Ordner Media/Modules). Auf der internen SSD und in UFS-Images unterscheidet das Dateisystem Groß- und Kleinschreibung: Das Spiel findet die Datei nicht und stürzt gleich nach dem Start ab (SIGSEGV in der eboot.bin, Adresse 0x0). Auf exFAT-Laufwerken fällt der Unterschied nicht auf. Der Entwickler von ShadowMount+ rät dazu: umbenennen oder das Image als exFAT bauen. Der Fix benennt die Datei um; Sicherung im Journal und Rückgängig inklusive.",
-        "en": "In a game folder the file is called Il2cppUserAssemblies.prx instead of Il2CppUserAssemblies.prx (Unity game, folder Media/Modules). On the internal SSD and in UFS images the file system distinguishes upper and lower case: the game does not find the file and crashes right after launch (SIGSEGV in eboot.bin, address 0x0). On exFAT drives the difference goes unnoticed. The ShadowMount+ developer advises to rename it or build the image as exFAT. The fix renames the file; journal entry and undo included."
+        "de": "Im Spielordner heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Media/Modules). Auf der internen SSD und in UFS-Images zählt die Groß-/Kleinschreibung: Das Spiel findet die Datei nicht und stürzt nach dem Start ab (SIGSEGV in eboot.bin, Adresse 0x0). Der Fix benennt sie um (Backup, Journal, Rückgängig); alternativ das Image als exFAT bauen.",
+        "en": "In the game folder the file is called Il2cppUserAssemblies.prx instead of Il2CppUserAssemblies.prx (Unity game, Media/Modules). On the internal SSD and in UFS images letter case matters: the game does not find the file and crashes after launch (SIGSEGV in eboot.bin, address 0x0). The fix renames it (backup, journal, undo); alternatively build the image as exFAT."
       },
       "evidence": "games.case_mismatch[].path",
       "fix": "rename_case_prx",
@@ -926,8 +927,8 @@
         "level": "medium",
         "basis": "community",
         "reason": {
-          "de": "Die abweichende Schreibweise ist gelesen und die Dateisystemart gemessen. Dass das Spiel deshalb abstürzt, beruht auf dem Bericht des ShadowMount+-Entwicklers (Issue 159, Original gelesen) und ist an der Test-Konsole nicht nachgestellt.",
-          "en": "The differing spelling is read and the file system type measured. That the game therefore crashes rests on the ShadowMount+ developer's report (issue 159, original read) and was not reproduced on the test console."
+          "de": "Schreibweise und Dateisystemart sind gelesen. Dass das Spiel deshalb abstürzt, beruht auf dem Bericht des ShadowMount+-Entwicklers (Issue 159) und wurde an der Test-Konsole nicht nachgestellt.",
+          "en": "Spelling and file system type are read. That the game crashes because of it rests on the ShadowMount+ developer's report (issue 159) and was not reproduced on the test console."
         }
       }
     },
@@ -943,8 +944,8 @@
         ]
       },
       "text": {
-        "de": "In einem Spielordner auf einem exFAT- oder FAT-Laufwerk heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Ordner Media/Modules). Dort fällt der Unterschied nicht auf, das Spiel startet. Sobald der Ordner auf die interne SSD kopiert oder in ein UFS-Image gepackt wird, unterscheidet das Dateisystem Groß- und Kleinschreibung: Das Spiel findet die Datei nicht und stürzt gleich nach dem Start ab. Vor dem Umzug die Datei umbenennen: Der Fix ändert nur die Schreibweise des Dateinamens im selben Ordner (Backup und Journal, Rückgängig stellt den alten Namen wieder her).",
-        "en": "In a game folder on an exFAT or FAT drive the file is called Il2cppUserAssemblies.prx instead of Il2CppUserAssemblies.prx (Unity game, folder Media/Modules). There the difference goes unnoticed and the game starts. As soon as the folder is copied to the internal SSD or packed into a UFS image, the file system distinguishes upper and lower case: the game does not find the file and crashes right after launch. Rename the file before the move: the fix only changes the letter case of the file name in the same folder (journal entry, undo restores the old name)."
+        "de": "Im Spielordner auf einem exFAT-/FAT-Laufwerk heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Media/Modules). Heute harmlos; nach dem Umzug auf die interne SSD oder in ein UFS-Image (dort zählt die Groß-/Kleinschreibung) stürzt das Spiel beim Start ab. Der Fix ändert nur die Schreibweise des Namens (Backup, Journal, Rückgängig).",
+        "en": "In a game folder on an exFAT/FAT drive the file is called Il2cppUserAssemblies.prx instead of Il2CppUserAssemblies.prx (Unity game, Media/Modules). Harmless today; after moving to the internal SSD or into a UFS image (where letter case matters) the game crashes at launch. The fix only changes the letter case of the name (backup, journal, undo)."
       },
       "evidence": "games.case_mismatch[].path",
       "fix": "rename_case_prx",
@@ -1000,8 +1001,8 @@
         ]
       },
       "text": {
-        "de": "Die Registrierung eines Spiels ist fehlgeschlagen. Zuerst das Launcher-Icon entfernen und neu registrieren; als letzten Schritt die Spieldaten löschen (Achtung: Speicherstände gehen verloren). Den Fehlercode nennt die Zeile „[REG] FAIL: 0x…“ (0x80F50005 wurde bei einem einzelnen Titel gemeldet, ohne bekannte Ursache).",
-        "en": "Registering a game failed. First remove the launcher icon and register again; as a last resort delete the game data (warning: saves are lost). The error code is in the line “[REG] FAIL: 0x…” (0x80F50005 was reported for a single title, cause unknown)."
+        "de": "Die Registrierung eines Spiels ist fehlgeschlagen. Zuerst das Launcher-Icon entfernen und neu registrieren; erst zuletzt die Spieldaten löschen (Achtung: Speicherstände gehen verloren). Der Fehlercode steht in der Log-Zeile „[REG] FAIL: 0x…“.",
+        "en": "Registering a game failed. First remove the launcher icon and register again; only as a last resort delete the game data (warning: saves are lost). The error code is in the log line “[REG] FAIL: 0x…”."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "Register failed|\\[REG\\] FAIL",
@@ -1031,8 +1032,8 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ hat die Sektorgröße eines Images automatisch angepasst (ab 1.7beta12 steht der Wert in der profiles.ini unter [image:DATEI], davor in der autotune.ini; im Log: '[CFG] image sector autotuned'). Das Spiel einfach erneut starten.",
-        "en": "ShadowMount+ automatically adjusted an image's sector size (since 1.7beta12 the value is in profiles.ini under [image:FILE], before that in autotune.ini; in the log: '[CFG] image sector autotuned'). Simply start the game again."
+        "de": "ShadowMount+ hat die Sektorgröße eines Images automatisch angepasst (ab 1.7beta12 steht der Wert in der profiles.ini unter [image:DATEI], davor in der autotune.ini). Das Spiel einfach erneut starten.",
+        "en": "ShadowMount+ automatically adjusted an image's sector size (since 1.7beta12 the value is in profiles.ini under [image:FILE], before that in autotune.ini). Simply start the game again."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "image sector autotuned",
@@ -1052,8 +1053,8 @@
         ]
       },
       "text": {
-        "de": "Der erste Prozess der Jailbreak-Kette (Loader, etaHEN, kstuff oder ShadowMount+) wurde weniger als 60 Sekunden nach dem Einschalten gestartet. Laut einem Community-Hinweis zu kstuff-lite sollte man nach dem Einschalten etwa eine Minute warten, bevor man den Jailbreak ausführt, weil dann noch Hintergrundprozesse laufen. Das ist ein Ratschlag, keine bestätigte Fehlerursache.",
-        "en": "The first process of the jailbreak chain (loader, etaHEN, kstuff or ShadowMount+) started less than 60 seconds after power-on. A community hint for kstuff-lite says to wait about a minute after power-on before jailbreaking, because background processes are still running. This is advice, not a confirmed cause of failures."
+        "de": "Der erste Prozess der Jailbreak-Kette startete weniger als 60 Sekunden nach dem Einschalten. Community-Tipp für kstuff-lite: nach dem Einschalten etwa eine Minute warten (Hintergrundprozesse laufen noch). Nur ein Rat, keine bestätigte Fehlerursache.",
+        "en": "The first process of the jailbreak chain started less than 60 seconds after power-on. Community tip for kstuff-lite: wait about a minute after power-on (background processes are still running). Advice only, not a confirmed cause."
       },
       "evidence": "jb.seconds_after_boot",
       "fix": null,
@@ -1084,8 +1085,8 @@
         ]
       },
       "text": {
-        "de": "Port 9021 nimmt keine Verbindungen an, und weder elfldr noch etaHEN läuft: Es ist kein ELF-Loader aktiv, Payloads lassen sich so nicht an die Konsole senden. Den Loader über den Autoloader bzw. den Jailbreak neu starten (hängt vom verwendeten Autoloader ab).",
-        "en": "Port 9021 does not accept connections and neither elfldr nor etaHEN is running: no ELF loader is active, so payloads cannot be sent to the console. Restart the loader through your autoloader or the jailbreak (depends on the autoloader you use)."
+        "de": "Port 9021 nimmt keine Verbindungen an, und weder elfldr noch etaHEN läuft: Es ist kein ELF-Loader aktiv, Payloads lassen sich nicht an die Konsole senden. Loader über den Autoloader bzw. den Jailbreak neu starten.",
+        "en": "Port 9021 does not accept connections and neither elfldr nor etaHEN is running: no ELF loader is active, so payloads cannot be sent to the console. Restart the loader through your autoloader or the jailbreak."
       },
       "evidence": "net.port_9021",
       "fix": null,
@@ -1095,8 +1096,8 @@
         "level": "low",
         "basis": "derived",
         "reason": {
-          "de": "Dass der Port nicht antwortet, ist gemessen. Ob das ein Fehler ist, hängt vom Jailbreak-Weg ab: Nach dem Unified JB lauscht Port 9021 laut Projektnotizen absichtlich nicht mehr, und Payloads kommen dann über einen anderen Weg.",
-          "en": "That the port does not answer is measured. Whether that is a fault depends on the jailbreak route: after the Unified JB, port 9021 deliberately no longer listens according to the project notes, and payloads arrive another way."
+          "de": "Dass der Port nicht antwortet, ist gemessen. Ob das ein Fehler ist, hängt vom Jailbreak-Weg ab: Nach dem Unified JB lauscht Port 9021 absichtlich nicht mehr.",
+          "en": "That the port does not answer is measured. Whether it is a fault depends on the jailbreak route: after the Unified JB, port 9021 deliberately no longer listens."
         }
       }
     },
@@ -1116,8 +1117,8 @@
         ]
       },
       "text": {
-        "de": "Es ist ein ps5-theme-Testbuild installiert (Version zwischen den Releases 1.30 und 1.53). Laut den Release-Notes von 1.53 konnte in solchen frühen Testbuilds ein zurückgebliebenes Overlay den Start aller Spiele und Apps verhindern (Fehler CE-105733-9). Auf ps5-theme 1.53 oder neuer aktualisieren.",
-        "en": "A ps5-theme test build is installed (a version between the releases 1.30 and 1.53). According to the 1.53 release notes, an overlay left behind in such early test builds could stop every game and app from starting (error CE-105733-9). Update to ps5-theme 1.53 or newer."
+        "de": "Installiert ist ein ps5-theme-Testbuild (Version zwischen 1.30 und 1.53), bei dem laut Release-Notes ein zurückgebliebenes Overlay den Start aller Spiele und Apps verhindern konnte (CE-105733-9). Auf ps5-theme 1.53 oder neuer aktualisieren.",
+        "en": "A ps5-theme test build is installed (version between 1.30 and 1.53) in which, according to the release notes, a leftover overlay could stop every game and app from starting (CE-105733-9). Update to ps5-theme 1.53 or newer."
       },
       "evidence": "ps5theme.version",
       "fix": null,
@@ -1127,8 +1128,8 @@
         "level": "low",
         "basis": "derived",
         "reason": {
-          "de": "Die installierte Version ist gelesen. Die Wirkung beruht auf den Release-Notes des Autors von Version 1.53 und ist an dieser Konsole nicht nachgestellt; die Grenze „zwischen 1.30 und 1.53“ ist eine Annahme.",
-          "en": "The installed version is read. The effect rests on the author's release notes of version 1.53 and was not reproduced on this console; the boundary “between 1.30 and 1.53” is an assumption."
+          "de": "Die installierte Version ist gelesen. Die Wirkung steht nur in den Release-Notes des Autors und ist nicht nachgestellt; die Grenze 1.30 bis 1.53 ist eine Annahme.",
+          "en": "The installed version is read. The effect comes only from the author's release notes and was not reproduced; the boundary of 1.30 to 1.53 is an assumption."
         }
       }
     },
@@ -1144,8 +1145,8 @@
         ]
       },
       "text": {
-        "de": "Eine Homebrew-App reserviert mehrere GB Speicher (param.json: downloadDataSize), obwohl ihre Dateien zusammen weniger als 1 GB groß sind. Ein bekanntes Beispiel war CD Player vor Version 1.1.2 (16 GiB statt 256 MiB). Die neue Version einfach drüberzukopieren verkleinert die Reservierung nicht: App in den PS5-Speichereinstellungen entfernen und die aktuelle Version neu installieren (Einstellungen und Cover-Bilder können dabei verloren gehen).",
-        "en": "A homebrew app reserves several GB of storage (param.json: downloadDataSize) although its files add up to less than 1 GB. A known example was CD Player before version 1.1.2 (16 GiB instead of 256 MiB). Copying the new version over the old one does not shrink the reservation: remove the app in the PS5 storage settings and install the current version again (settings and cover art may be lost)."
+        "de": "Eine Homebrew-App reserviert mehrere GB Speicher (param.json: downloadDataSize), obwohl ihre Dateien zusammen unter 1 GB bleiben (z. B. CD Player vor 1.1.2: 16 GiB statt 256 MiB). Neu drüberkopieren verkleinert die Reservierung nicht: Entferne die App in den PS5-Speichereinstellungen und installiere die aktuelle Version neu (Einstellungen und Cover können verloren gehen).",
+        "en": "A homebrew app reserves several GB of storage (param.json: downloadDataSize) although its files add up to less than 1 GB (e.g. CD Player before 1.1.2: 16 GiB instead of 256 MiB). Copying the new version over the old one does not shrink the reservation: remove the app in the PS5 storage settings and install the current version again (settings and cover art may be lost)."
       },
       "evidence": "apps.oversized[].name",
       "fix": null,
@@ -1172,8 +1173,8 @@
         ]
       },
       "text": {
-        "de": "Für diese Spiele verlangt die param.json eine höhere Firmware-Version, als die Konsole hat (Evidenz: Titel und verlangte Version), und in den Scanpfaden liegt kein Backport-Ordner backports/<TITLE_ID>/. Die Konsole startet laut Backport-Toolkit nichts, was für eine höhere Firmware-Version gebaut ist: Das Spiel braucht einen Backport für die genutzte Firmware oder AMPR Emu bzw. AMPR Emu NG. Dass solche Spiele nicht starten, ist an dieser Konsole noch nicht bestätigt. Ausgenommen sind Spiele, bei denen der Backport im Spiel selbst steckt: Liegt die SDK-Version in der eboot.bin des Spielordners nicht über der Firmware der Konsole, gilt das Spiel als angepasst. Bei Images im exFAT-Format (.exfat) liest Medic die eboot.bin direkt aus dem Image, ohne es einzuhängen. Bei anderen Image-Formaten kann Medic sie nicht lesen; steckt der Backport dort im Spiel, ist dieser Befund gegenstandslos.",
-        "en": "For these games the param.json demands a higher firmware version than the console has (evidence: title and required version), and the scan paths contain no backport folder backports/<TITLE_ID>/. According to the backport toolkit the console refuses to start anything built for a higher firmware version: the game needs a backport for the firmware in use, or AMPR Emu / AMPR Emu NG. That such games fail to start is not yet confirmed on this console. Games with the backport built into the game itself are excluded: if the SDK version in the eboot.bin of the game folder is not above the console's firmware, the game counts as adapted. For images in exFAT format (.exfat) Medic reads the eboot.bin straight from the image without mounting it. For other image formats Medic cannot read it; if the backport is built into the game there, this finding does not apply."
+        "de": "Für diese Spiele verlangt die param.json eine höhere Firmware-Version als die der Konsole, und in den Scanpfaden fehlt der Ordner backports/<TITLE_ID>/. Laut Backport-Toolkit startet die Konsole sie nur mit Backport oder AMPR Emu / AMPR Emu NG; an dieser Konsole ist das nicht bestätigt. Bei Images (außer .exfat) kann Medic nicht prüfen, ob der Backport schon im Spiel steckt; dann kann der Befund hinfällig sein.",
+        "en": "For these games the param.json requires a higher firmware version than the console has, and the scan paths contain no backports/<TITLE_ID>/ folder. According to the backport toolkit the console only starts them with a backport or AMPR Emu / AMPR Emu NG; this is not confirmed on this console. For images (other than .exfat) Medic cannot check whether the backport is already built into the game; the finding may then not apply."
       },
       "evidence": "games.need_backport[].desc",
       "fix": null,
@@ -1183,8 +1184,8 @@
         "level": "low",
         "basis": "derived",
         "reason": {
-          "de": "Die verlangte Version steht in der param.json (gelesen) und ist mit der Version der Konsole verglichen. Dass solche Spiele deshalb nicht starten, nennt das Backport-Toolkit, ist an dieser Konsole aber nicht bestätigt.",
-          "en": "The required version is in the param.json (read) and compared with the console's version. That such games therefore do not start is stated by the backport toolkit but not confirmed on this console."
+          "de": "Die verlangte Version ist aus der param.json gelesen und mit der Konsole verglichen. Dass die Spiele deshalb nicht starten, sagt nur das Backport-Toolkit; an dieser Konsole ist das nicht bestätigt.",
+          "en": "The required version is read from the param.json and compared with the console's. That the games therefore do not start is stated only by the backport toolkit; not confirmed on this console."
         }
       }
     },
@@ -1203,8 +1204,8 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ hat seinen Registrierungs-Haken in ShellCore verloren (gemeldet nach Ruhemodus oder Spielwechsel): Neue Spiele werden zwar eingebunden, lassen sich aber nicht registrieren. Abhilfe laut Meldung: den ShadowMount+-Payload erneut senden. Ab 1.7beta5 stellt ShadowMount+ den Haken vor der Registrierung selbst wieder her; steht die Zeile auch dort im Log, bitte mit dem debug.log melden.",
-        "en": "ShadowMount+ lost its registration hook in ShellCore (reported after rest mode or a game switch): new games are mounted but cannot be registered. Reported workaround: send the ShadowMount+ payload again. Since 1.7beta5 ShadowMount+ restores the hook itself before registering; if the line still appears there, report it together with debug.log."
+        "de": "ShadowMount+ hat seinen Registrierungs-Haken in ShellCore verloren (gemeldet nach Ruhemodus oder Spielwechsel): Neue Spiele werden eingebunden, aber nicht registriert. Sende den ShadowMount+-Payload erneut. Ab 1.7beta5 stellt ShadowMount+ den Haken selbst wieder her; steht die Zeile trotzdem im Log, melde sie mit der debug.log.",
+        "en": "ShadowMount+ lost its registration hook in ShellCore (reported after rest mode or a game switch): new games are mounted but not registered. Send the ShadowMount+ payload again. Since 1.7beta5 ShadowMount+ restores the hook itself; if the line still appears in the log, report it together with debug.log."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "AppInstallAll hook is no longer installed|AppInstallTitleDir bridge unavailable",
@@ -1227,8 +1228,8 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ konnte beim Start seine Haken in ShellCore nicht installieren. Das wurde auf mehreren Firmwares (11.60, 12.70) mit 1.7beta3 und 1.7alpha12 gemeldet, die Ursache ist nicht bestätigt; der Entwickler fragte nach einem sauberen Neustart, der Fehler trat laut Melder „nicht immer“ auf. Versuch: Konsole neu starten, dann Jailbreak, kstuff-lite und zuletzt ShadowMount+ laden, und eine neuere Version nehmen (ab 1.7beta6 ist die Zuverlässigkeit der Haken verbessert).",
-        "en": "ShadowMount+ could not install its hooks in ShellCore at startup. This was reported on several firmwares (11.60, 12.70) with 1.7beta3 and 1.7alpha12; the cause is unconfirmed. The developer asked about a clean boot, and the reporter said it did not happen every time. Try: restart the console, then load the jailbreak, kstuff-lite and finally ShadowMount+, and use a newer version (since 1.7beta6 hook reliability is improved)."
+        "de": "ShadowMount+ konnte beim Start seine Haken in ShellCore nicht installieren (gemeldet auf den Firmwares 11.60 und 12.70 mit 1.7beta3 und 1.7alpha12, Ursache unbestätigt). Versuch: Konsole neu starten, dann Jailbreak, kstuff-lite und zuletzt ShadowMount+ laden und eine neuere Version nehmen (ab 1.7beta6 zuverlässiger).",
+        "en": "ShadowMount+ could not install its hooks in ShellCore at startup (reported on the firmwares 11.60 and 12.70 with 1.7beta3 and 1.7alpha12, cause unconfirmed). Try: restart the console, then load the jailbreak, kstuff-lite and finally ShadowMount+, and use a newer version (more reliable since 1.7beta6)."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "[Ff]ailed to [Ii]nstall [Ss]hell[Cc]ore [Hh]ooks|\\[SHELLCORE\\] lifecycle hooks unavailable",
@@ -1251,8 +1252,8 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ hat einen Mount zurückgenommen, weil sein Image-Cache voll war (im gemeldeten Fall bei 64 Einträgen und mehr als 100 Images auf dem Laufwerk). Halte weniger Quellen im Scanpfad und entferne oder verschiebe doppelte Images. Den internen Cache nicht von Hand löschen.",
-        "en": "ShadowMount+ rolled back a mount because its image cache was full (in the reported case at 64 entries with more than 100 images on the drive). Keep fewer sources in the scan path and remove or move duplicate images. Do not delete the internal cache by hand."
+        "de": "ShadowMount+ hat einen Mount zurückgenommen, weil der Image-Cache voll war (gemeldet bei 64 Einträgen und über 100 Images auf dem Laufwerk). Weniger Quellen im Scanpfad halten, doppelte Images verschieben; den internen Cache nicht von Hand löschen.",
+        "en": "ShadowMount+ rolled back a mount because its image cache was full (reported at 64 entries with over 100 images on the drive). Keep fewer sources in the scan path and move duplicate images away; do not delete the internal cache by hand."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "image cache full",
@@ -1276,8 +1277,8 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ hat beim Start gemeldet, dass seine HTTP-API bereit ist, aber der Port nimmt jetzt keine Verbindungen an. Gemeldet wurde, dass dieser Listener still ausfallen kann, während der Rest von ShadowMount+ weiterläuft (Issue 152, 1.7-beta5fix1, inzwischen geschlossen). Programme, die die API nutzen (Weboberfläche, Orbit Store), erreichen ShadowMount+ dann nicht; Scannen und Mounten laufen meist weiter. Naheliegend: den ShadowMount+-Payload erneut senden (Schlussfolgerung aus dem Bericht, nicht bestätigt).",
-        "en": "ShadowMount+ reported at startup that its HTTP API is ready, but the port no longer accepts connections. It was reported that this listener can die silently while the rest of ShadowMount+ keeps running (issue 152, 1.7-beta5fix1, since closed). Programs that use the API (web interface, Orbit Store) then cannot reach ShadowMount+; scanning and mounting usually keep working. Likely remedy: send the ShadowMount+ payload again (an inference from the report, not confirmed)."
+        "de": "ShadowMount+ meldete beim Start seine HTTP-API als bereit, aber der Port nimmt keine Verbindungen mehr an. Programme mit API-Zugriff (Weboberfläche, Orbit Store) erreichen es dann nicht; Scannen und Mounten laufen meist weiter. Naheliegend: den ShadowMount+-Payload erneut senden (nicht bestätigt).",
+        "en": "ShadowMount+ reported its HTTP API as ready at startup, but the port no longer accepts connections. Programs using the API (web interface, Orbit Store) cannot reach it then; scanning and mounting usually keep working. Likely remedy: send the ShadowMount+ payload again (not confirmed)."
       },
       "evidence": "smp.api.port",
       "fix": null,
@@ -1304,12 +1305,12 @@
         ]
       },
       "text": {
-        "de": "Auf /data sind weniger als 5 % Speicher frei. Mounts, Logs, Backups und Installationen können dann scheitern. Platz schaffen: nicht mehr benötigte Homebrew-Dateien und alte Backups unter /data/ps5medic/backups prüfen.",
-        "en": "Less than 5% of /data is free. Mounts, logs, backups and installations can fail. Free up space: check homebrew files you no longer need and old backups under /data/ps5medic/backups."
+        "de": "Auf /data sind weniger als 5 % Speicher frei; Mounts, Logs, Backups und Installationen können scheitern. Platz schaffen: alte Backups in /data/ps5medic/backups und nicht mehr benötigte Homebrew-Dateien prüfen.",
+        "en": "Less than 5% of /data is free; mounts, logs, backups and installations can fail. Free up space: check old backups in /data/ps5medic/backups and homebrew files you no longer need."
       },
       "evidence": "storage.mounts[].free_pct",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "medium",
@@ -1332,8 +1333,8 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ 1.7beta12 verwirft die ganze Konfiguration, wenn auch nur eine Zeile ungültig ist: Beim Start beendet sich der Payload (die Meldung erscheint nur auf der Konsole, nicht im Log), bei einer Änderung zur Laufzeit bleibt der alte Stand und die neuen Werte wirken nicht. Die genannten Zeilen korrigieren (Wahrheitswerte als on/off oder 1/0, scan depth 1 oder 2, Zahlen im erlaubten Bereich) oder aus der config.ini entfernen; vorher eine Kopie der Datei machen.",
-        "en": "ShadowMount+ 1.7beta12 rejects the whole configuration if even one line is invalid: at startup the payload exits (the message appears only on the console, not in the log); a change at runtime keeps the old state and the new values have no effect. Correct the listed lines (booleans as on/off or 1/0, scan depth 1 or 2, numbers within the allowed range) or remove them from config.ini; make a copy of the file first."
+        "de": "ShadowMount+ 1.7beta12 verwirft die ganze Konfiguration, wenn auch nur eine Zeile ungültig ist: Beim Start beendet sich der Payload (Meldung nur auf der Konsole), bei einer Änderung zur Laufzeit bleibt der alte Stand. Die genannten Zeilen korrigieren (on/off oder 1/0, scan depth 1 oder 2, Zahlen im erlaubten Bereich) oder aus der config.ini entfernen; vorher eine Kopie der Datei machen.",
+        "en": "ShadowMount+ 1.7beta12 rejects the whole configuration if even one line is invalid: at startup the payload exits (the message appears only on the console), a change at runtime keeps the old state. Correct the listed lines (on/off or 1/0, scan depth 1 or 2, numbers within the allowed range) or remove them from config.ini; make a copy of the file first."
       },
       "evidence": "smp.config_problems[].text",
       "fix": null,
@@ -1352,8 +1353,8 @@
         ]
       },
       "text": {
-        "de": "In der config.ini (Format v2) stehen Zeilen im alten flachen Format, z. B. scan_depth=2. ShadowMount+ 1.7beta12 liest in einer v2-Datei nur die Schlüssel der Sektionen und ignoriert diese Zeilen still: die Einstellung wirkt nicht (zum Beispiel findet es Spiele in der zweiten Ebene nicht). Das passiert, wenn ein anderes Werkzeug oder eine alte Anleitung flache Zeilen anhängt. Der Fix überträgt Zeilen mit bekannter Entsprechung in die richtige Sektion (scan_depth nach [scan] depth, fakelib_default_mode nach [fakelib] default_mode, scanpath nach [scan] path usw.); Backup und Rückgängig inklusive.",
-        "en": "The config.ini (format v2) contains lines in the old flat format, e.g. scan_depth=2. ShadowMount+ 1.7beta12 reads only the section keys in a v2 file and silently ignores these lines, so the setting has no effect (for example it will not find games in the second level). This happens when another tool or an old guide appends flat lines. The fix moves lines with a known equivalent into the right section (scan_depth to [scan] depth, fakelib_default_mode to [fakelib] default_mode, scanpath to [scan] path, etc.); backup and undo included."
+        "de": "Die config.ini (Format v2) enthält Zeilen im alten flachen Format, z. B. scan_depth=2. ShadowMount+ 1.7beta12 ignoriert sie in einer v2-Datei still, die Einstellung wirkt also nicht. Der Fix überträgt Zeilen mit bekannter Entsprechung in die richtige Sektion (z. B. scan_depth nach [scan] depth); Backup und Rückgängig inklusive.",
+        "en": "The config.ini (format v2) contains lines in the old flat format, e.g. scan_depth=2. ShadowMount+ 1.7beta12 silently ignores them in a v2 file, so the setting has no effect. The fix moves lines with a known equivalent into the right section (e.g. scan_depth to [scan] depth); backup and undo included."
       },
       "evidence": "smp.v1_keys[].key",
       "fix": "smp_translate_v1_keys",
@@ -1384,8 +1385,8 @@
         ]
       },
       "text": {
-        "de": "Die config.ini ist im alten Format (v1), obwohl ShadowMount+ sie schon auf v2 umgewandelt hat (config-v1-backup/ready.ini existiert), und sie gleicht nicht der Sicherung config-v1-backup/config.ini. ShadowMount+ 1.7beta12 verweigert dann den Start, damit die umgewandelten Dateien nicht von einer alten überschrieben werden; die Meldung steht nur auf der Konsole. Das passiert, wenn eine alte config.ini zurückkopiert wurde (aus einem Backup oder von einem PC-Werkzeug). Welche Datei gelten soll, entscheidest du: die v2-Datei wiederherstellen (z. B. aus dem Medic-Backup unter /data/ps5medic/backups) oder die Datei von Hand auf v2 umstellen. Einen automatischen Fix gibt es hier nicht: Welche der beiden Dateien richtig ist, lässt sich nicht lesen, und die Umwandlung selbst nimmt nur ShadowMount+ vor.",
-        "en": "The config.ini is in the old format (v1) although ShadowMount+ already converted it to v2 (config-v1-backup/ready.ini exists), and it does not match the backup config-v1-backup/config.ini. ShadowMount+ 1.7beta12 then refuses to start so that the converted files are not overwritten by old ones; the message appears only on the console. This happens when an old config.ini was copied back (from a backup or a PC tool). Which file should count is your decision: restore the v2 file (e.g. from the Medic backup under /data/ps5medic/backups) or convert the file to v2 by hand. There is no automatic fix here: which of the two files is right cannot be read, and only ShadowMount+ itself does the conversion."
+        "de": "Die config.ini ist im alten Format (v1), obwohl ShadowMount+ sie schon auf v2 umgestellt hat (config-v1-backup/ready.ini existiert), und weicht von config-v1-backup/config.ini ab. ShadowMount+ 1.7beta12 startet deshalb nicht (Meldung nur auf der Konsole). Stelle die v2-Datei wieder her (z. B. aus dem Medic-Backup unter /data/ps5medic/backups) oder stelle sie von Hand auf v2 um; welche gilt, entscheidest du. Kein automatischer Fix.",
+        "en": "The config.ini is in the old format (v1) although ShadowMount+ already converted it to v2 (config-v1-backup/ready.ini exists), and it differs from config-v1-backup/config.ini. ShadowMount+ 1.7beta12 therefore refuses to start (message only on the console). Restore the v2 file (e.g. from the Medic backup under /data/ps5medic/backups) or convert it to v2 by hand; which one counts is your decision. No automatic fix."
       },
       "evidence": "smp.config_v2",
       "fix": null,
@@ -1407,8 +1408,8 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ hat bei einem Titel oder Image nach mehreren Fehlversuchen aufgegeben (2 Versuche je Titel, 3 je Image) und überspringt es bis zum nächsten Start des Payloads. Die Ursache steht in den Logzeilen davor (z. B. 'attach failed', 'nmount … failed', '[REG] FAIL'). Ursache beheben, dann ShadowMount+ erneut senden (oder die Versuche über die API zurücksetzen: POST /api/v1/scan mit {\"reset_attempts\":true}).",
-        "en": "ShadowMount+ gave up on a title or image after several failed attempts (2 per title, 3 per image) and skips it until the payload is restarted. The cause is in the log lines before it (e.g. 'attach failed', 'nmount … failed', '[REG] FAIL'). Fix the cause, then send ShadowMount+ again (or reset the attempts through the API: POST /api/v1/scan with {\"reset_attempts\":true})."
+        "de": "ShadowMount+ hat bei einem Titel oder Image nach mehreren Fehlversuchen aufgegeben (2 je Titel, 3 je Image) und überspringt es bis zum nächsten Payload-Start. Die Ursache steht in den Logzeilen davor (z. B. 'attach failed', 'nmount … failed'). Ursache beheben, dann ShadowMount+ erneut senden (oder Versuche zurücksetzen: POST /api/v1/scan mit {\"reset_attempts\":true}).",
+        "en": "ShadowMount+ gave up on a title or image after several failed attempts (2 per title, 3 per image) and skips it until the payload is restarted. The cause is in the log lines before it (e.g. 'attach failed', 'nmount … failed'). Fix the cause, then send ShadowMount+ again (or reset the attempts: POST /api/v1/scan with {\"reset_attempts\":true})."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "(\\[RETRY\\] limit reached|retry limit reached \\()",
@@ -1440,8 +1441,8 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ wartet auf kstuff und startet bis dahin keine Dienste (kein Scan, keine Mounts). kstuff ist nicht geladen oder noch nicht bereit. kstuff-lite laden (in der Autoload-Liste vor ShadowMount+ oder danach mit Wartezeit) und prüfen, ob die Version zur Firmware passt.",
-        "en": "ShadowMount+ is waiting for kstuff and starts no services until then (no scan, no mounts). kstuff is not loaded or not ready yet. Load kstuff-lite (before ShadowMount+ in the autoload list, or after it with a delay) and check that the version matches the firmware."
+        "de": "ShadowMount+ wartet auf kstuff und startet bis dahin keine Dienste (kein Scan, keine Mounts). kstuff-lite ist nicht geladen oder noch nicht bereit: in der Autoload-Liste vor ShadowMount+ laden (oder danach mit Wartezeit), Version zur Firmware prüfen.",
+        "en": "ShadowMount+ is waiting for kstuff and starts no services until then (no scan, no mounts). kstuff-lite is not loaded or not ready yet: load it before ShadowMount+ in the autoload list (or after it with a delay) and check that the version matches the firmware."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "\\[KSTUFF\\]",
@@ -1471,8 +1472,8 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ konnte einen Scanpfad nicht überwachen (Zugriff verweigert) und hat den Scanner beendet: es werden keine neuen Spiele mehr erkannt. Bis 1.7beta11 reichte dafür ein nicht lesbarer Standard-Scanpfad (gemeldet: /data/etaHEN/games). Ab 1.7beta12 behoben: ShadowMount+ aktualisieren. Sonst die Rechte des genannten Ordners prüfen oder nur eigene Scanpfade setzen ([scan] path).",
-        "en": "ShadowMount+ could not watch a scan path (permission denied) and stopped its scanner: no new games are detected any more. Up to 1.7beta11 an unreadable default scan path was enough for that (reported: /data/etaHEN/games). Fixed in 1.7beta12: update ShadowMount+. Otherwise check the permissions of the named folder or set only your own scan paths ([scan] path)."
+        "de": "ShadowMount+ konnte einen Scanpfad nicht überwachen (Zugriff verweigert) und hat den Scanner beendet: Neue Spiele werden nicht mehr erkannt. Bis 1.7beta11 genügte dafür ein unlesbarer Standard-Scanpfad (z. B. /data/etaHEN/games); ab 1.7beta12 behoben, ShadowMount+ aktualisieren. Sonst die Rechte des genannten Ordners prüfen oder nur eigene Scanpfade setzen ([scan] path).",
+        "en": "ShadowMount+ could not watch a scan path (permission denied) and stopped its scanner: no new games are detected any more. Up to 1.7beta11 an unreadable default scan path was enough for that (e.g. /data/etaHEN/games); fixed in 1.7beta12, update ShadowMount+. Otherwise check the permissions of the named folder or set only your own scan paths ([scan] path)."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "\\[SCAN\\] watcher open failed",
@@ -1495,8 +1496,8 @@
         ]
       },
       "text": {
-        "de": "Spiele starten nicht mehr: ShadowMount+ meldet mehrfach 'launch mount unavailable … status=16 (Device busy)'. Nach einem fehlgeschlagenen Spielwechsel blieb ein Titel reserviert, und jeder verwaltete Start scheiterte (gemeldet bis 1.7beta11, behoben in 1.7beta12). Den fehlgeschlagenen Titel einmal ohne laufendes Spiel starten oder ShadowMount+ erneut senden; ShadowMount+ aktualisieren.",
-        "en": "Games no longer start: ShadowMount+ repeatedly reports 'launch mount unavailable … status=16 (Device busy)'. After a failed game switch a title stayed reserved and every managed launch failed (reported up to 1.7beta11, fixed in 1.7beta12). Start the failed title once without a running game or send ShadowMount+ again; update ShadowMount+."
+        "de": "Spiele starten nicht mehr: ShadowMount+ meldet mehrfach 'launch mount unavailable … status=16 (Device busy)'. Nach einem fehlgeschlagenen Spielwechsel blieb ein Titel reserviert (bis 1.7beta11, behoben in 1.7beta12). Den fehlgeschlagenen Titel einmal ohne laufendes Spiel starten oder ShadowMount+ erneut senden; ShadowMount+ aktualisieren.",
+        "en": "Games no longer start: ShadowMount+ repeatedly reports 'launch mount unavailable … status=16 (Device busy)'. After a failed game switch a title stayed reserved (up to 1.7beta11, fixed in 1.7beta12). Start the failed title once without a running game or send ShadowMount+ again; update ShadowMount+."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "launch mount unavailable",
@@ -1550,8 +1551,8 @@
         ]
       },
       "text": {
-        "de": "Der Backport-Overlay (Fakelib) konnte nicht eingehängt werden ('Operation not permitted'). Das betrifft Backports auf USB-Laufwerken (exFAT), weil der Mount dort nicht erlaubt ist. Laut Entwickler helfen: die Backport-Dateien in den Spielordner kopieren, ein .exfat-Image verwenden oder internen Speicher nutzen.",
-        "en": "The backport overlay (fakelib) could not be mounted ('Operation not permitted'). This affects backports on USB drives (exFAT), where the mount is not allowed. According to the developer this helps: copy the backport files into the game folder, use a .exfat image or use internal storage."
+        "de": "Der Backport-Overlay (Fakelib) ließ sich nicht einhängen ('Operation not permitted'): auf USB-Laufwerken (exFAT) ist das nicht erlaubt. Laut Entwickler hilft: Backport-Dateien in den Spielordner kopieren, ein .exfat-Image oder internen Speicher nutzen.",
+        "en": "The backport overlay (fakelib) could not be mounted ('Operation not permitted'): this is not allowed on USB drives (exFAT). According to the developer this helps: copy the backport files into the game folder, use a .exfat image or internal storage."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "backport overlay failed",
@@ -1575,8 +1576,8 @@
         ]
       },
       "text": {
-        "de": "Diese Version von ShadowMount+ (1.7beta9 oder 1.7beta10) verliert bei jedem Scan Arbeitsspeicher (gemeldet: rund 5 bis 8 MB pro Minute). Nach Stunden kommt es zu Ruckeln, Abstürzen oder dem Fehler CE-108262-9. Behoben in 1.7beta11: ShadowMount+ aktualisieren. Als Notbehelf lässt sich das Scan-Intervall in der config.ini erhöhen ([scan] interval_seconds = 3600, wirkt sofort).",
-        "en": "This version of ShadowMount+ (1.7beta9 or 1.7beta10) leaks memory on every scan (reported: about 5 to 8 MB per minute). After hours this causes stutter, crashes or the error CE-108262-9. Fixed in 1.7beta11: update ShadowMount+. As a workaround raise the scan interval in config.ini ([scan] interval_seconds = 3600, takes effect immediately)."
+        "de": "ShadowMount+ 1.7beta9 oder 1.7beta10 verliert bei jedem Scan Arbeitsspeicher (rund 5 bis 8 MB pro Minute); nach Stunden drohen Ruckeln, Abstürze oder CE-108262-9. Behoben in 1.7beta11: ShadowMount+ aktualisieren. Notbehelf: in der config.ini unter [scan] interval_seconds = 3600 setzen.",
+        "en": "ShadowMount+ 1.7beta9 or 1.7beta10 leaks memory on every scan (about 5 to 8 MB per minute); after hours expect stutter, crashes or CE-108262-9. Fixed in 1.7beta11: update ShadowMount+. Workaround: in config.ini set interval_seconds = 3600 under [scan]."
       },
       "evidence": "smp.version",
       "fix": null,
@@ -1598,8 +1599,8 @@
         ]
       },
       "text": {
-        "de": "Beim Ruhemodus hat ShadowMount+ ein Spiel von einem USB-Laufwerk beendet (Absicht: ein abgezogenes Laufwerk würde sonst das System stören). Ungespeicherter Spielstand kann dabei verloren gehen: das Spiel vor dem Ruhemodus beenden. Bis 1.7beta11 traf das fälschlich auch Spiele auf M.2 (/mnt/ext1); behoben in 1.7beta12.",
-        "en": "On entering rest mode ShadowMount+ closed a game running from a USB drive (by design: an unplugged drive would otherwise disturb the system). Unsaved progress can be lost: quit the game before rest mode. Up to 1.7beta11 this wrongly also hit games on M.2 (/mnt/ext1); fixed in 1.7beta12."
+        "de": "ShadowMount+ hat beim Ruhemodus ein Spiel von einem USB-Laufwerk beendet (gewollt, kein Fehler). Ungespeicherter Spielstand kann verloren gehen: Spiel vor dem Ruhemodus beenden. Bis 1.7beta11 traf das fälschlich auch M.2 (/mnt/ext1), behoben in 1.7beta12.",
+        "en": "On entering rest mode ShadowMount+ closed a game running from a USB drive (by design, not a fault). Unsaved progress can be lost: quit the game before rest mode. Up to 1.7beta11 this wrongly also hit M.2 (/mnt/ext1), fixed in 1.7beta12."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "\\[SLEEP\\] killing USB-backed game",
@@ -1619,8 +1620,8 @@
         ]
       },
       "text": {
-        "de": "In der Autoload-Liste folgt auf den Loader (elfldr) sofort der nächste Eintrag. Ein frisch gestarteter Loader nimmt erst nach einigen Sekunden Verbindungen an: der folgende Eintrag scheitert dann ('Loader connection failed … 0 bytes sent') und fehlt nach jedem Start. Zwischen elfldr und dem nächsten Payload gehört eine Wartezeit (!4000 = vier Sekunden). Der Fix fügt sie ein; Backup und Rückgängig inklusive.",
-        "en": "In the autoload list the loader (elfldr) is directly followed by the next entry. A freshly started loader accepts connections only after a few seconds: the following entry then fails ('Loader connection failed … 0 bytes sent') and is missing after every start. A delay belongs between elfldr and the next payload (!4000 = four seconds). The fix inserts it; backup and undo included."
+        "de": "In der Autoload-Liste folgt auf den Loader (elfldr) sofort der nächste Eintrag. Ein frisch gestarteter Loader nimmt erst nach einigen Sekunden Verbindungen an, der folgende Eintrag scheitert daher bei jedem Start. Dazwischen gehört eine Wartezeit (!4000 = vier Sekunden). Der Fix fügt sie ein; Backup und Rückgängig inklusive.",
+        "en": "In the autoload list the loader (elfldr) is directly followed by the next entry. A freshly started loader accepts connections only after a few seconds, so the following entry fails at every start. A delay belongs in between (!4000 = four seconds). The fix inserts it; backup and undo included."
       },
       "evidence": "autoload.problems[].detail",
       "fix": "autoload_insert_delay",
@@ -1643,8 +1644,8 @@
         ]
       },
       "text": {
-        "de": "Die Autoload-Liste enthält einen Eintrag, zu dem es keine Payload-Datei gibt (oder der Name unterscheidet sich nur in Groß-/Kleinschreibung; Namen sind case-sensitiv). Beim Start meldet der Loader 'Payload not found' bzw. 'Not found' und überspringt den Eintrag: das Payload fehlt nach jedem Neustart. Eintrag korrigieren oder die Payload wieder installieren. Der Fix korrigiert die Schreibweise oder schaltet den Eintrag aus (Backup und Rückgängig inklusive); Dateien werden nicht angefasst.",
-        "en": "The autoload list contains an entry for which there is no payload file (or the name differs only in letter case; names are case-sensitive). At startup the loader reports 'Payload not found' / 'Not found' and skips the entry: the payload is missing after every restart. Correct the entry or install the payload again. The fix corrects the spelling or switches the entry off (backup and undo included); files are not touched."
+        "de": "Ein Eintrag der Autoload-Liste hat keine passende Payload-Datei (oder nur die Groß-/Kleinschreibung weicht ab; Namen sind case-sensitiv). Der Loader meldet 'Payload not found' / 'Not found' und überspringt ihn: Das Payload fehlt nach jedem Neustart. Der Fix korrigiert die Schreibweise oder schaltet den Eintrag aus (mit Backup und Rückgängig); Dateien bleiben unberührt. Oder das Payload neu installieren.",
+        "en": "An entry in the autoload list has no matching payload file (or only the letter case differs; names are case-sensitive). The loader reports 'Payload not found' / 'Not found' and skips it: the payload is missing after every restart. The fix corrects the spelling or switches the entry off (with backup and undo); files are not touched. Or install the payload again."
       },
       "evidence": "autoload.problems[].detail",
       "fix": "autoload_fix_missing",
@@ -1663,8 +1664,8 @@
         ]
       },
       "text": {
-        "de": "Ein Eintrag steht mehrfach in der Autoload-Liste und wird jedes Mal gesendet (die Loader entfernen Doppelte nicht). Doppelte Zeilen entfernen. Der Fix entfernt die späteren Doppelten (Backup und Rückgängig inklusive).",
-        "en": "An entry appears several times in the autoload list and is sent every time (the loaders do not remove duplicates). Remove the duplicate lines. The fix removes the later duplicates (backup and undo included)."
+        "de": "Ein Eintrag steht mehrfach in der Autoload-Liste und wird jedes Mal gesendet (die Loader entfernen Doppelte nicht). Der Fix entfernt die späteren Doppelten (mit Backup und Rückgängig).",
+        "en": "An entry appears several times in the autoload list and is sent every time (the loaders do not remove duplicates). The fix removes the later duplicates (with backup and undo)."
       },
       "evidence": "autoload.problems[].detail",
       "fix": "autoload_remove_duplicates",
@@ -1683,8 +1684,8 @@
         ]
       },
       "text": {
-        "de": "Die Autoload-Liste des Payload Managers hat ein ungültiges Format. Der Payload Manager prüft sie streng: Ein Fehler (Datei über 4095 Byte, Zeile über 511 Zeichen, ungültige Wartezeit '!…', Komma in einer Zeile) macht die ganze Sequenz ungültig, und es wird gar nichts gestartet. Die genannte Zeile korrigieren.",
-        "en": "The Payload Manager's autoload list has an invalid format. The Payload Manager checks it strictly: one error (file over 4095 bytes, line over 511 characters, invalid delay '!…', comma in a line) invalidates the whole sequence and nothing is started at all. Correct the named line."
+        "de": "Die Autoload-Liste des Payload Managers hat ein ungültiges Format. Schon ein Fehler (Datei über 4095 Byte, Zeile über 511 Zeichen, ungültige Wartezeit '!…', Komma in einer Zeile) macht die ganze Sequenz ungültig, und es startet nichts. Die genannte Zeile korrigieren.",
+        "en": "The Payload Manager's autoload list has an invalid format. A single error (file over 4095 bytes, line over 511 characters, invalid delay '!…', comma in a line) invalidates the whole sequence and nothing is started. Correct the named line."
       },
       "evidence": "autoload.problems[].detail",
       "fix": null,
@@ -1707,8 +1708,8 @@
         ]
       },
       "text": {
-        "de": "Der Payload Manager hat Einträge in seiner Autoload-Liste, aber Autoload ist ausgeschaltet (AUTOLOAD_ENABLED=0). Die Liste wird beim Start nicht abgearbeitet; die Payloads müssen von Hand geladen werden. Autoload in den Einstellungen des Payload Managers einschalten, falls das nicht gewollt ist. Der Fix schaltet Autoload ein (Backup und Rückgängig inklusive).",
-        "en": "The Payload Manager has entries in its autoload list, but autoload is switched off (AUTOLOAD_ENABLED=0). The list is not processed at startup; the payloads have to be loaded by hand. Switch autoload on in the Payload Manager settings if that is not intended. The fix switches autoload on (backup and undo included)."
+        "de": "Der Payload Manager hat Einträge in der Autoload-Liste, aber Autoload ist ausgeschaltet (AUTOLOAD_ENABLED=0): die Payloads werden beim Start nicht geladen. Der Fix schaltet Autoload ein (mit Backup und Rückgängig); ist es so gewollt, nichts tun.",
+        "en": "The Payload Manager has entries in its autoload list, but autoload is switched off (AUTOLOAD_ENABLED=0): the payloads are not loaded at startup. The fix switches autoload on (with backup and undo); if this is intended, do nothing."
       },
       "evidence": "pldmgr.autoload_entries",
       "fix": "pldmgr_enable_autoload",
@@ -1727,8 +1728,8 @@
         ]
       },
       "text": {
-        "de": "Mindestens eine ELF-Datei ist unbrauchbar: zu klein, ohne ELF-Kennung (häufig eine gespeicherte HTML-Fehlerseite) oder am Ende abgeschnitten (abgebrochene Übertragung). Der Loader lehnt solche Dateien ab, das Payload startet nicht. Die Datei neu übertragen (FTP im Binärmodus) oder neu herunterladen; die kaputte Datei vorher wegräumen. Der Fix löscht nichts: Er legt die kaputte Datei in den versteckten Ordner .medic_broken daneben (Rückgängig holt sie zurück).",
-        "en": "At least one ELF file is unusable: too small, without an ELF signature (often a saved HTML error page) or cut off at the end (aborted transfer). The loader rejects such files and the payload does not start. Transfer the file again (FTP in binary mode) or download it again; move the broken file out of the way first. The fix deletes nothing: it moves the broken file into the hidden folder .medic_broken next to it (undo brings it back)."
+        "de": "Mindestens eine ELF-Datei ist unbrauchbar: zu klein, ohne ELF-Kennung (oft eine gespeicherte HTML-Fehlerseite) oder abgeschnitten (abgebrochene Übertragung). Der Loader lehnt sie ab, das Payload startet nicht. Übertrage die Datei neu (FTP im Binärmodus) oder lade sie neu herunter. Der Fix löscht nichts: Er verschiebt die kaputte Datei in den versteckten Ordner .medic_broken daneben (Rückgängig holt sie zurück).",
+        "en": "At least one ELF file is unusable: too small, without an ELF signature (often a saved HTML error page) or cut off (aborted transfer). The loader rejects it and the payload does not start. Transfer the file again (FTP in binary mode) or download it again. The fix deletes nothing: it moves the broken file into the hidden folder .medic_broken next to it (undo brings it back)."
       },
       "evidence": "payload.broken_elfs[].path",
       "fix": "quarantine_broken_elf",
@@ -1755,8 +1756,8 @@
         ]
       },
       "text": {
-        "de": "Das Log von nanoDNS enthält Fehler: Es erreicht seine Upstream-DNS-Server nicht (dann scheitert jede Namensauflösung, Apps und der Payload Manager wirken 'offline'), kann Port 53 nicht öffnen oder meldet ungültige Zeilen in nanodns.ini. Die Upstream-Server in nanodns.ini prüfen (z. B. die Router-Adresse als ersten Eintrag) und nanoDNS danach neu senden. Das Log wird nur gezählt; Domains daraus gelangen nicht in den Bericht.",
-        "en": "The nanoDNS log contains errors: it cannot reach its upstream DNS servers (then every name lookup fails and apps and the Payload Manager look 'offline'), cannot open port 53 or reports invalid lines in nanodns.ini. Check the upstream servers in nanodns.ini (e.g. the router address as the first entry) and send nanoDNS again. The log is only counted; domains from it never reach the report."
+        "de": "Das nanoDNS-Log enthält Fehler: nanoDNS erreicht seine Upstream-DNS-Server nicht (dann scheitert jede Namensauflösung, Apps und Payload Manager wirken „offline“), kann Port 53 nicht öffnen oder meldet ungültige Zeilen in nanodns.ini. Prüfe die Upstream-Server in nanodns.ini (z. B. die Router-Adresse als ersten Eintrag) und sende nanoDNS neu.",
+        "en": "The nanoDNS log contains errors: nanoDNS cannot reach its upstream DNS servers (then every name lookup fails and apps and the Payload Manager look “offline”), cannot open port 53 or reports invalid lines in nanodns.ini. Check the upstream servers in nanodns.ini (e.g. the router address as the first entry) and send nanoDNS again."
       },
       "fix": null,
       "source": "https://github.com/drakmor/nanoDNS",
@@ -1774,8 +1775,8 @@
         ]
       },
       "text": {
-        "de": "etaHEN meldet einen Absturz seines Hauptdienstes ('main etaHEN has crashed'). Toolbox und Plugins sind danach nicht mehr verfügbar. Die Konsole neu starten und die Jailbreak-Kette neu laden; wiederholt es sich, zuletzt hinzugefügte Plugins entfernen.",
-        "en": "etaHEN reports a crash of its main service ('main etaHEN has crashed'). Toolbox and plugins are no longer available afterwards. Restart the console and load the jailbreak chain again; if it recurs, remove recently added plugins."
+        "de": "etaHEN meldet einen Absturz seines Hauptdienstes ('main etaHEN has crashed'); Toolbox und Plugins fehlen danach. Konsole neu starten und die Jailbreak-Kette neu laden; wiederholt es sich, zuletzt hinzugefügte Plugins entfernen.",
+        "en": "etaHEN reports a crash of its main service ('main etaHEN has crashed'); Toolbox and plugins are gone afterwards. Restart the console and reload the jailbreak chain; if it recurs, remove recently added plugins."
       },
       "evidence": "etahen.crashed",
       "fix": null,
@@ -1798,8 +1799,8 @@
         ]
       },
       "text": {
-        "de": "In der etaHEN-Konfiguration ist 'Game_rest_kill' (oder 'Util_rest_kill') eingeschaltet: etaHEN beendet beim Ruhemodus das offene Spiel bzw. die Anwendung. Das ist eine Einstellung, kein Fehler. Es erklärt aber 'Spiel nach dem Ruhemodus weg' und nicht gespeicherten Spielstand.",
-        "en": "In the etaHEN configuration 'Game_rest_kill' (or 'Util_rest_kill') is switched on: etaHEN closes the open game or application when the console enters rest mode. This is a setting, not a fault. It does explain 'game gone after rest mode' and lost unsaved progress."
+        "de": "In etaHEN ist 'Game_rest_kill' (oder 'Util_rest_kill') eingeschaltet: Beim Ruhemodus beendet etaHEN das offene Spiel bzw. die Anwendung. Das ist eine Einstellung, kein Fehler, erklärt aber verschwundene Spiele und verlorenen ungespeicherten Spielstand.",
+        "en": "In etaHEN 'Game_rest_kill' (or 'Util_rest_kill') is switched on: etaHEN closes the open game or application when the console enters rest mode. This is a setting, not a fault, but it explains games vanishing and unsaved progress being lost."
       },
       "fix": null,
       "source": "https://github.com/etaHEN/etaHEN",
@@ -1831,8 +1832,8 @@
         ]
       },
       "text": {
-        "de": "Ein angeschlossenes Laufwerk ist schreibgeschützt eingehängt. Kopieren, Verschieben und Reparaturen (z. B. doppelte Quellen) gehen dort nicht. Mögliche Ursachen: ein Schreibschutz-Schalter, ein Dateisystemfehler oder ein defektes Laufwerk. Das Laufwerk am PC prüfen und reparieren (chkdsk bzw. fsck) und neu einstecken.",
-        "en": "A connected drive is mounted read-only. Copying, moving and repairs (e.g. duplicate sources) do not work there. Possible causes: a write-protect switch, a file system error or a failing drive. Check and repair the drive on a PC (chkdsk or fsck) and plug it in again."
+        "de": "Ein angeschlossenes Laufwerk ist schreibgeschützt eingehängt: Kopieren, Verschieben und Reparaturen gehen dort nicht. Mögliche Ursachen: Schreibschutz-Schalter, Dateisystemfehler, defektes Laufwerk. Am PC mit chkdsk bzw. fsck prüfen und neu einstecken.",
+        "en": "A connected drive is mounted read-only, so copying, moving and repairs do not work there. Possible causes: write-protect switch, file system error, failing drive. Check it on a PC with chkdsk or fsck and plug it in again."
       },
       "evidence": "storage.mounts[].mount",
       "fix": null,
@@ -1862,8 +1863,8 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ kann ein Image nicht einhängen: 'nmount rdonly failed: error_code=0x00000060' (Meldung 'Image mount failed: 0x00000060'). Das Image wurde zwar angehängt, das Dateisystem darin lässt sich aber nicht öffnen. Eine mögliche Ursache ist ein fehlerhaft gebautes Image: Ein Fehler in MkPFS 0.0.6 erzeugte beschädigte Images, die die eigene Prüfung des Werkzeugs bestanden; laut dessen Autor häufiger beim direkten Umwandeln eines Ordners, seltener über den Weg Ordner → .exfat → .ffpfsc. Image mit der aktuellen MkPFS-Version neu bauen (zuerst als .exfat). Bei einem zweiten Nutzer halfen auch so gebaute Images nicht, die Ursache ist nicht abschließend geklärt. Nach drei Fehlversuchen überspringt ShadowMount+ das Image bis zum nächsten Start (siehe Befund zum Aufgeben).",
-        "en": "ShadowMount+ cannot mount an image: 'nmount rdonly failed: error_code=0x00000060' (message 'Image mount failed: 0x00000060'). The image was attached, but the file system inside cannot be opened. One possible cause is a badly built image: a bug in MkPFS 0.0.6 produced corrupted images that passed the tool's own verification; according to its author more often when converting a folder directly, less often via folder → .exfat → .ffpfsc. Rebuild the image with the current MkPFS version (as .exfat first). For a second user images built that way did not help either, so the cause is not fully settled. After three failed attempts ShadowMount+ skips the image until the next start (see the finding about giving up)."
+        "de": "ShadowMount+ kann ein Image nicht einhängen (Fehler 0x00000060): Das Image ist angehängt, aber sein Dateisystem lässt sich nicht öffnen. Mögliche Ursache: ein fehlerhaft gebautes Image (ein Fehler in MkPFS 0.0.6 erzeugte beschädigte Images). Neu bauen mit der aktuellen MkPFS-Version, zuerst als .exfat. Bei einem anderen Nutzer half das nicht; die Ursache ist nicht abschließend geklärt.",
+        "en": "ShadowMount+ cannot mount an image (error 0x00000060): the image is attached, but its file system cannot be opened. Possible cause: a badly built image (a bug in MkPFS 0.0.6 produced corrupted images). Rebuild it with the current MkPFS version, as .exfat first. For another user that did not help; the cause is not fully settled."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "nmount rdonly failed|Image mount failed: 0x00000060",
@@ -1874,8 +1875,8 @@
         "level": "medium",
         "basis": "community",
         "reason": {
-          "de": "Der Code steht in der Logzeile. Die Ursache (beschädigt gebautes Image) stammt aus dem zitierten Bericht des MkPFS-Autors zu Version 0.0.6; bei einem zweiten Nutzer halfen auch .exfat-Images nicht, und an der Test-Konsole ist es nicht nachgestellt.",
-          "en": "The code is in the log line. The cause (a badly built image) comes from the quoted report by the MkPFS author about version 0.0.6; for a second user .exfat images did not help either, and it was not reproduced on the test console."
+          "de": "Der Code steht in der Logzeile. Die Ursache stammt aus einem Bericht des MkPFS-Autors zu 0.0.6; bei einem zweiten Nutzer half .exfat nicht, an der Test-Konsole nicht nachgestellt.",
+          "en": "The code is in the log line. The cause comes from a report by the MkPFS author about 0.0.6; for a second user .exfat did not help, not reproduced on the test console."
         }
       }
     },
@@ -1894,8 +1895,8 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ konnte ein Spiel oder eine App nicht registrieren: 'Register failed: … code=0x80A30008'. Der Entwickler von ShadowMount+ sieht die Ursache in der Datenbank der Konsole und rät, sie über den Sicherheitsmodus neu zu erstellen (Sony-Funktion 'Datenbank neu erstellen'). Ob das hilft, hat der Melder nicht zurückgemeldet. Ob dabei Einträge von per ShadowMount+ eingebundenen Titeln verändert werden, ist nicht geprüft: vorher notieren, welche Titel installiert sind, und Spielstände sichern. Zuerst den Befund zu den Datenbanken der Systemsoftware ansehen (falls vorhanden) und die Konsole einmal normal neu starten. Medic ändert Datenbanken nicht.",
-        "en": "ShadowMount+ could not register a game or app: 'Register failed: … code=0x80A30008'. The ShadowMount+ developer sees the cause in the console's database and advises re-creating it through safe mode (Sony's 'Rebuild database' function). The reporter did not say whether that helped. Whether it changes entries of titles mounted by ShadowMount+ is not checked: note which titles are installed first, and back up saves. First look at the finding about the system software's databases (if present) and restart the console normally once. Medic does not change databases."
+        "de": "ShadowMount+ konnte ein Spiel oder eine App nicht registrieren („Register failed: … code=0x80A30008“). Der Entwickler vermutet die Datenbank der Konsole und rät, sie im Sicherheitsmodus neu zu erstellen. Ob das hilft, ist unbestätigt, die Wirkung auf eingebundene Titel ungeprüft: vorher Titel notieren, Spielstände sichern. Zuerst die Konsole einmal normal neu starten. Medic ändert keine Datenbanken.",
+        "en": "ShadowMount+ could not register a game or app (“Register failed: … code=0x80A30008”). The developer suspects the console's database and advises re-creating it in safe mode. Whether that helps is unconfirmed and its effect on mounted titles is unchecked: note your titles and back up saves first. Restart the console normally once first. Medic does not change databases."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "Register failed.*code=0x80[Aa]30008",
@@ -1906,8 +1907,8 @@
         "level": "medium",
         "basis": "community",
         "reason": {
-          "de": "Der Code steht in der Logzeile. Dass es ein Datenbankproblem der Konsole ist, ist ein einzelner Satz des Entwicklers im Issue 156; ob das Neuerstellen half, ist nicht bestätigt, und es ist an der Test-Konsole nicht nachgestellt.",
-          "en": "The code is in the log line. That it is a console database problem is a single sentence by the developer in issue 156; whether re-creating it helped is not confirmed, and it was not reproduced on the test console."
+          "de": "Der Code steht in der Logzeile. Dass die Datenbank der Konsole schuld ist, ist ein einzelner Satz des Entwicklers im Issue 156; ob das Neuerstellen half, ist nicht bestätigt.",
+          "en": "The code is in the log line. That the console's database is to blame is a single sentence by the developer in issue 156; whether re-creating it helped is not confirmed."
         }
       }
     },
@@ -1927,8 +1928,8 @@
         ]
       },
       "text": {
-        "de": "Im Ordner /data/pldmgr/payloads liegen ELF-Dateien lose (Evidenz). Der Payload Manager ab Version 0.6 (Layout 2) kennt nur Payloads aus dem Repository, vom USB-Import und aus dem Hochladen in seiner Web-Oberfläche (Ordner local/<Name>/). Lose abgelegte Dateien funktionierten früher nur zufällig über einen losen rekursiven Scan und waren laut dem Entwickler nie unterstützt: Sie erscheinen nicht in der Oberfläche und werden nicht automatisch geladen. Abhilfe: die Payloads in der Web-Oberfläche des Payload Managers hochladen oder vom USB importieren. Medic ändert diesen Ordner nicht.",
-        "en": "ELF files lie loose in the folder /data/pldmgr/payloads (evidence). From version 0.6 (layout 2) the Payload Manager only knows payloads from the repository, from the USB import and from uploads in its web interface (folder local/<name>/). Files dropped in loosely used to work only by accident through a loose recursive scan and were never supported according to the developer: they do not appear in the interface and are not loaded automatically. Fix: upload the payloads in the Payload Manager's web interface or import them from USB. Medic does not change this folder."
+        "de": "Im Ordner /data/pldmgr/payloads liegen ELF-Dateien lose. Der Payload Manager ab Version 0.6 (Layout 2) kennt nur Payloads aus Repository, USB-Import und Upload in seiner Web-Oberfläche; lose Dateien wurden laut Entwickler nie unterstützt und werden weder angezeigt noch geladen. Lade sie in der Web-Oberfläche hoch oder importiere sie vom USB. Medic ändert den Ordner nicht.",
+        "en": "In the folder /data/pldmgr/payloads, ELF files lie loose. From version 0.6 (layout 2) the Payload Manager only knows payloads from the repository, the USB import and uploads in its web interface; loose files were never supported according to the developer and are neither shown nor loaded. Upload them in the web interface or import them from USB. Medic does not change this folder."
       },
       "evidence": "pldmgr.loose_elfs[].path",
       "fix": null,
@@ -1938,8 +1939,8 @@
         "level": "medium",
         "basis": "doc",
         "reason": {
-          "de": "Die Dateien und das Layout (payloads/.layout = 2) sind gelesen. Die Aussage 'nie unterstützt' ist die des Entwicklers (Issue 135); dass genau diese Dateien nicht erkannt werden, ist aus Layout und Aussage abgeleitet, nicht an einer Datei der Test-Konsole beobachtet.",
-          "en": "The files and the layout (payloads/.layout = 2) are read. 'Never supported' is the developer's statement (issue 135); that exactly these files are not recognised is derived from the layout and that statement, not observed with a file on the test console."
+          "de": "Dateien und Layout (payloads/.layout = 2) sind gelesen. „Nie unterstützt“ sagt der Entwickler (Issue 135); dass genau diese Dateien nicht erkannt werden, ist daraus abgeleitet, nicht beobachtet.",
+          "en": "The files and the layout (payloads/.layout = 2) are read. “Never supported” is the developer's statement (issue 135); that exactly these files are not recognised is derived from it, not observed."
         }
       }
     },
@@ -1960,19 +1961,19 @@
         ]
       },
       "text": {
-        "de": "Die Konsole ist deutlich wärmer als bei deinen früheren Prüfungen: CPU oder SoC liegen mehr als 12 °C über dem Median der letzten Prüfungen (mindestens fünf). Das ist ein Vergleich mit den eigenen Messungen, keine feste Grenze. Ein laufendes Spiel, eine warme Umgebung oder eingeschränkte Belüftung kommen als Gründe infrage; bleibt es bei mehreren Prüfungen im Leerlauf, Lüftungsschlitze freihalten und bei Dauerproblemen die Konsole reinigen. Der Befund gilt erst nach zwei Prüfungen in Folge als bestätigt.",
-        "en": "The console is clearly warmer than in your earlier checks: CPU or SoC are more than 12 °C above the median of the last checks (at least five). This compares against your own measurements, it is not a fixed limit. A running game, a warm room or restricted ventilation are possible reasons; if it stays that way over several idle checks, keep the vents clear and clean the console if the problem persists. The finding counts as confirmed only after two checks in a row."
+        "de": "Die Konsole ist wärmer als sonst: CPU oder SoC liegen mehr als 12 °C über dem Median deiner letzten Prüfungen (mindestens fünf). Mögliche Gründe: laufendes Spiel, warme Umgebung, eingeschränkte Belüftung. Bleibt es im Leerlauf so, Lüftungsschlitze freihalten und die Konsole reinigen. Gilt erst nach zwei Prüfungen in Folge als bestätigt.",
+        "en": "The console is warmer than usual: CPU or SoC are more than 12 °C above the median of your last checks (at least five). Possible reasons: a running game, a warm room, restricted ventilation. If it stays that way when idle, keep the vents clear and clean the console. Counts as confirmed only after two checks in a row."
       },
       "evidence": "sys.temp.cpu_c",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "low",
         "basis": "derived",
         "reason": {
-          "de": "Die jetzige Temperatur und der Median der eigenen früheren Messungen sind gelesen. Die Schwelle von 12 °C ist eine eigene Annahme, und die früheren Messungen können unter anderer Last oder Umgebung entstanden sein.",
-          "en": "The current temperature and the median of your own earlier measurements are read. The 12 °C threshold is our own assumption, and the earlier measurements may have been taken under a different load or environment."
+          "de": "Jetzige Temperatur und Median der früheren Messungen sind gelesen. Die Schwelle von 12 °C ist eine eigene Annahme; frühere Messungen können unter anderer Last oder Umgebung entstanden sein.",
+          "en": "The current temperature and the median of earlier measurements are read. The 12 °C threshold is our own assumption; earlier measurements may have been taken under a different load or environment."
         }
       }
     },
@@ -1992,8 +1993,8 @@
         ]
       },
       "text": {
-        "de": "Ein .exfat-Image ist kleiner als das Dateisystem, das sein Kopf beschreibt (VolumeLength im Boot-Sektor): Die Kopie ist unvollständig, die letzten Daten fehlen. Häufige Ursachen sind ein abgebrochenes Kopieren, ein volles Laufwerk oder ein Dateisystem mit Größenlimit (z. B. FAT32 mit höchstens 4 GiB je Datei). Spiele, die auf fehlende Bereiche zugreifen, starten nicht oder stürzen ab. Das Image erneut kopieren (am besten auf ein exFAT-Laufwerk) und die Größe mit der Quelle vergleichen. Medic ändert das Image nicht.",
-        "en": "An .exfat image is smaller than the file system its header describes (VolumeLength in the boot sector): the copy is incomplete, the last data is missing. Common causes are an interrupted copy, a full drive or a file system with a size limit (e.g. FAT32 with at most 4 GiB per file). Games that touch the missing areas do not start or crash. Copy the image again (preferably to an exFAT drive) and compare the size with the source. Medic does not change the image."
+        "de": "Ein .exfat-Image ist kleiner, als sein Kopf angibt (VolumeLength): Die Kopie ist unvollständig. Häufige Ursachen: abgebrochenes Kopieren, volles Laufwerk oder FAT32 (höchstens 4 GiB je Datei). Das Spiel startet dann nicht oder stürzt ab. Image erneut kopieren, am besten auf ein exFAT-Laufwerk, und die Größe mit der Quelle vergleichen. Medic ändert das Image nicht.",
+        "en": "An .exfat image is smaller than its header says (VolumeLength): the copy is incomplete. Common causes: an interrupted copy, a full drive or FAT32 (at most 4 GiB per file). The game then does not start or crashes. Copy the image again, preferably to an exFAT drive, and compare the size with the source. Medic does not change the image."
       },
       "evidence": "smp.images[].path",
       "fix": null,
@@ -2020,12 +2021,12 @@
         ]
       },
       "text": {
-        "de": "Ein Image (.exfat, .ffpfs oder .ffpfsc) ist kleiner als 512 Byte, also leer oder nach einem Abbruch nur ein Rest: Es kann kein Dateisystem enthalten und sich nicht einhängen lassen. Das Image neu kopieren oder neu bauen; der Fix legt die Datei in den versteckten Ordner .medic_broken daneben (nie löschen, Rückgängig holt sie zurück). Läuft gerade eine Übertragung auf die Konsole, diese erst beenden lassen: sonst bricht sie ab.",
-        "en": "An image (.exfat, .ffpfs or .ffpfsc) is smaller than 512 bytes, so it is empty or only a remnant after an abort: it cannot contain a file system and cannot be mounted. Copy or build the image again; the fix moves the file into the hidden folder .medic_broken next to it (never deleted, undo brings it back). If a transfer to the console is running right now, let it finish first: otherwise it fails."
+        "de": "Ein Image (.exfat, .ffpfs oder .ffpfsc) ist kleiner als 512 Byte, also leer oder nur ein Rest nach einem Abbruch, und lässt sich nicht einhängen. Neu kopieren oder bauen. Der Fix verschiebt die Datei in den versteckten Ordner .medic_broken daneben (nie gelöscht, Rückgängig holt sie zurück). Läuft gerade eine Übertragung auf die Konsole, diese erst beenden lassen.",
+        "en": "An image (.exfat, .ffpfs or .ffpfsc) is smaller than 512 bytes, so it is empty or only a remnant after an abort, and cannot be mounted. Copy or build it again. The fix moves the file into the hidden folder .medic_broken next to it (never deleted, undo brings it back). If a transfer to the console is running, let it finish first."
       },
       "evidence": "smp.images[].path",
       "fix": "quarantine_empty_image",
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "medium",
@@ -2051,19 +2052,19 @@
         ]
       },
       "text": {
-        "de": "Die eboot.bin eines Spielordners ist unbrauchbar: Sie ist kleiner als 64 Byte oder eine reine Textdatei (z. B. eine gespeicherte Fehlerseite statt der Datei). Eine gültige eboot.bin beginnt als ELF oder SELF. Das Spiel kann so nicht starten; der Ordner stammt vermutlich aus einem fehlgeschlagenen Download oder Kopiervorgang. Die Datei aus der Quelle neu kopieren. Medic prüft nur den Anfang der Datei und entschlüsselt oder liest nichts darüber hinaus.",
-        "en": "The eboot.bin of a game folder is unusable: it is smaller than 64 bytes or a plain text file (e.g. a saved error page instead of the file). A valid eboot.bin starts as ELF or SELF. The game cannot start that way; the folder probably comes from a failed download or copy. Copy the file from the source again. Medic only checks the start of the file and decrypts or reads nothing beyond it."
+        "de": "Die eboot.bin eines Spielordners ist unbrauchbar: kleiner als 64 Byte oder reiner Text (z. B. eine gespeicherte Fehlerseite). Eine gültige eboot.bin beginnt als ELF oder SELF. Vermutlich ein fehlgeschlagener Download oder Kopiervorgang; das Spiel kann so nicht starten. Datei aus der Quelle neu kopieren. Medic prüft nur den Dateianfang.",
+        "en": "The eboot.bin of a game folder is unusable: smaller than 64 bytes or plain text (e.g. a saved error page). A valid eboot.bin starts as ELF or SELF. Probably a failed download or copy; the game cannot start that way. Copy the file from the source again. Medic only checks the start of the file."
       },
       "evidence": "games.eboot_problems[].path",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "medium",
         "basis": "derived",
         "reason": {
-          "de": "Größe und erste Bytes sind gelesen. Dass das Spiel deshalb nicht startet, folgt aus dem Dateiformat, ist aber an der Test-Konsole nicht beobachtet; unbekannte, nicht textartige Formate werden bewusst nicht gemeldet.",
-          "en": "Size and first bytes are read. That the game therefore does not start follows from the file format but was not observed on the test console; unknown, non-text formats are deliberately not reported."
+          "de": "Größe und erste Bytes sind gelesen. Dass das Spiel deshalb nicht startet, folgt aus dem Dateiformat, ist aber an der Test-Konsole nicht beobachtet; unbekannte Nicht-Text-Formate werden bewusst nicht gemeldet.",
+          "en": "Size and first bytes are read. That the game therefore does not start follows from the file format but was not observed on the test console; unknown non-text formats are deliberately not reported."
         }
       }
     },
@@ -2079,12 +2080,12 @@
         ]
       },
       "text": {
-        "de": "Ein Selbsttest ist beim letzten Lauf fehlgeschlagen (Evidenz: Test und Grund). Bei einem Lesetest („read_error“, „short_read“) trat beim Lesen einer vorhandenen Datei ein Fehler auf: Laufwerk, Kabel, Anschluss oder die Datei selbst können die Ursache sein. Den Test einmal wiederholen; bleibt es dabei, das Laufwerk an einem anderen Anschluss oder am PC prüfen und die Datei neu kopieren. Bei einem Datenbanktest siehe die Befunde zu den Datenbanken. Bei einem Rechen- oder Speicherfehler („compute_mismatch“, „mem_mismatch“) lieferte die Hardware unter Last oder im Arbeitsspeicher ein anderes Ergebnis als erwartet: ein ernstes Zeichen für ein Hardwareproblem (CPU, Speicher, Stromversorgung oder Kühlung). Dann zuerst die Spielstände sichern und den Test an einem anderen Tag wiederholen. Ein bestandener Selbsttest heißt nur „nicht aufgefallen“, nie „gesund“.",
-        "en": "A self-test failed in the last run (evidence: test and reason). For a read test (“read_error”, “short_read”) an error occurred while reading an existing file: the drive, cable, port or the file itself can be the cause. Repeat the test once; if it stays that way, check the drive on another port or on a PC and copy the file again. For a database test see the findings about the databases. For a calculation or memory error (“compute_mismatch”, “mem_mismatch”) the hardware returned a different result than expected under load or in working memory: a serious sign of a hardware problem (CPU, memory, power supply or cooling). Back up the saves first and repeat the test on another day. A passed self-test only means “nothing stood out”, never “healthy”."
+        "de": "Ein Selbsttest ist fehlgeschlagen (Evidenz: Test, Grund). Lesefehler („read_error“, „short_read“): Laufwerk, Kabel, Anschluss und Datei prüfen; Test wiederholen, anderen Anschluss probieren, Datei neu kopieren. Rechen- oder Speicherfehler („compute_mismatch“, „mem_mismatch“): ernstes Zeichen für ein Hardwareproblem; erst Spielstände sichern, Test an einem anderen Tag wiederholen.",
+        "en": "A self-test failed (evidence: test, reason). Read error (“read_error”, “short_read”): check drive, cable, port and file; repeat the test, try another port, copy the file again. Calculation or memory error (“compute_mismatch”, “mem_mismatch”): a serious sign of a hardware problem; back up the saves first and repeat the test on another day."
       },
       "evidence": "selftest.failed[].id",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "medium",
@@ -2108,12 +2109,12 @@
         ]
       },
       "text": {
-        "de": "Der letzte Selbsttest (gestartet, Evidenz) wurde nicht ordentlich beendet: Die Markierung „läuft“ steht noch in /data/ps5medic/selftest. Das passt zu einem Absturz, einem Neustart oder einem Stromverlust während des Tests, kann aber auch heißen, dass die Konsole mit dem Ausschalter oder der Powertaste ausgeschaltet wurde. Ein Hinweis auf Probleme bei Laufwerk, Speicher oder Stromversorgung, kein Beweis. Den Selbsttest erneut laufen lassen; die Markierung wird dabei neu gesetzt.",
-        "en": "The last self-test (started, evidence) did not end properly: the “running” marker is still in /data/ps5medic/selftest. That fits a crash, a restart or a power loss during the test, but can also mean the console was switched off with the power switch or button. A hint of problems with the drive, memory or power supply, not proof. Run the self-test again; the marker is reset in the process."
+        "de": "Der letzte Selbsttest wurde nicht ordentlich beendet (Markierung „läuft“ noch in /data/ps5medic/selftest). Das passt zu Absturz, Neustart oder Stromverlust, kann aber auch bloßes Ausschalten sein: ein Hinweis auf Probleme bei Laufwerk, Speicher oder Stromversorgung, kein Beweis. Lass den Selbsttest erneut laufen; die Markierung wird dabei neu gesetzt.",
+        "en": "The last self-test did not end properly (“running” marker still in /data/ps5medic/selftest). That fits a crash, restart or power loss, but may also be a plain power-off: a hint of problems with the drive, memory or power supply, not proof. Run the self-test again; the marker is reset in the process."
       },
       "evidence": "selftest.interrupted.started",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "low",
@@ -2136,19 +2137,19 @@
         ]
       },
       "text": {
-        "de": "Beim Schreibtest des Selbsttests ist etwas schiefgegangen (Evidenz: Grund): Entweder ließ sich die Testdatei unter /data/ps5medic/selftest nicht schreiben („write_error“), nicht zurücklesen („read_error“) oder die zurückgelesenen Daten wichen von den geschriebenen ab („verify_mismatch“). Das ist ein ernstes Zeichen für ein Problem mit dem Speicher oder dem Dateisystem. Zuerst alle Spielstände und wichtigen Daten sichern (per FTP kopieren), dann den Test einmal an einem anderen Tag wiederholen. Bleibt es dabei, ist Hardware oder Dateisystem verdächtig; Medic ändert nichts am Speicher. Ein einzelner Fehler kann auch ein Zufall sein (z. B. voller Speicher während des Tests).",
-        "en": "Something went wrong in the self-test's write test (evidence: reason): either the test file under /data/ps5medic/selftest could not be written (“write_error”), could not be read back (“read_error”) or the data read back differed from what was written (“verify_mismatch”). That is a serious sign of a problem with the storage or the file system. First back up all saves and important data (copy via FTP), then repeat the test once on another day. If it stays that way, hardware or file system is suspect; Medic changes nothing on the storage. A single failure can also be a coincidence (e.g. full storage during the test)."
+        "de": "Schreibtest des Selbsttests fehlgeschlagen (Evidenz: Grund): Die Testdatei unter /data/ps5medic/selftest ließ sich nicht schreiben („write_error“), nicht zurücklesen („read_error“) oder wich vom Geschriebenen ab („verify_mismatch“). Ernstes Zeichen für ein Speicher- oder Dateisystemproblem: erst Spielstände und wichtige Daten per FTP sichern, Test an einem anderen Tag wiederholen. Ein Einzelfall kann Zufall sein. Medic ändert nichts.",
+        "en": "The self-test's write test failed (evidence: reason): the test file under /data/ps5medic/selftest could not be written (“write_error”), could not be read back (“read_error”) or differed from what was written (“verify_mismatch”). A serious sign of a storage or file system problem: first back up saves and important data via FTP, then repeat the test on another day. A single failure can be a coincidence. Medic changes nothing."
       },
       "evidence": "test.hw.storage.write_verify.reason",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "medium",
         "basis": "observed",
         "reason": {
-          "de": "Das Ergebnis ist an dieser Konsole gemessen (geschriebene und zurückgelesene Daten verglichen). Der Rücklesevergleich kann teilweise aus dem Zwischenspeicher stammen, ein Fehler im Test selbst ist nie ganz auszuschließen, und die Ursache lässt sich daraus nicht bestimmen.",
-          "en": "The result is measured on this console (written and read-back data compared). The read-back may partly come from a cache, a fault in the test itself can never be fully ruled out, and the cause cannot be determined from it."
+          "de": "An dieser Konsole gemessen (Geschriebenes und Zurückgelesenes verglichen). Zurückgelesen wird teils aus dem Zwischenspeicher; ein Testfehler ist nie ganz auszuschließen, die Ursache bleibt offen.",
+          "en": "Measured on this console (written and read-back data compared). The read-back may partly come from a cache; a fault in the test itself cannot be ruled out, and the cause stays open."
         }
       }
     },
@@ -2171,19 +2172,19 @@
         ]
       },
       "text": {
-        "de": "Beim Wärmetest des Selbsttests ist die Konsole unter kurzer CPU-Last auffällig geworden (Evidenz: Grund): Sie erreichte die Temperaturgrenze von 85 °C oder stieg zu schnell an („ceiling“, „rise_rate“; der Test wurde dann abgebrochen), kühlte nach der Last langsam ab („slow_cooldown“) oder die Rechenleistung fiel unter Last um mehr als 10 % („throughput_drop“, mögliche Drosselung). Mögliche Ursachen sind eingeschränkte Belüftung, Staub, eine warme Umgebung oder ein Problem mit Kühlung oder Wärmeleitmaterial. Lüftungsschlitze freihalten, die Konsole nicht einbauen und den Test in kühler Umgebung wiederholen; bleibt es dabei, die Konsole reinigen lassen. Die Schwellen sind eigene Annahmen, Sony nennt keine.",
-        "en": "In the self-test's heat test the console stood out under short CPU load (evidence: reason): it reached the 85 °C limit or rose too fast (“ceiling”, “rise_rate”; the test was then stopped), cooled down slowly after the load (“slow_cooldown”) or the compute rate dropped by more than 10 % under load (“throughput_drop”, possible throttling). Possible causes are restricted ventilation, dust, a warm room or a problem with the cooling or thermal paste. Keep the vents clear, do not build the console in, and repeat the test in a cool room; if it stays that way, have the console cleaned. The thresholds are our own assumptions, Sony names none."
+        "de": "Im Wärmetest des Selbsttests fiel die Konsole unter kurzer CPU-Last auf: Sie erreichte 85 °C, stieg zu schnell an, kühlte langsam ab oder verlor über 10 % Rechenleistung (mögliche Drosselung). Mögliche Ursachen: Staub, eingeschränkte Belüftung, warme Umgebung. Lüftungsschlitze freihalten, in kühler Umgebung erneut testen; bleibt es so, die Konsole reinigen lassen. Die Schwellen sind eigene Annahmen.",
+        "en": "In the self-test's heat test the console stood out under a short CPU load: it reached 85 °C, rose too fast, cooled down slowly or lost more than 10 % compute rate (possible throttling). Possible causes: dust, restricted ventilation, a warm room. Keep the vents clear and repeat the test in a cool room; if it stays that way, have the console cleaned. The thresholds are our own assumptions."
       },
       "evidence": "test.hw.thermal.short_soak.reason",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "low",
         "basis": "derived",
         "reason": {
-          "de": "Temperaturen und Rechenleistung sind gemessen. Die Schwellen (85 °C, 15 °C in fünf Messintervallen, 10 % Leistungsabfall) sind eigene Annahmen, ohne Baseline der eigenen Konsole, und die Umgebung beeinflusst das Ergebnis stark.",
-          "en": "Temperatures and compute rate are measured. The thresholds (85 °C, 15 °C in five measurement intervals, 10 % rate drop) are our own assumptions, without a baseline of this console, and the environment influences the result strongly."
+          "de": "Temperaturen und Rechenleistung sind gemessen. Die Schwellen (85 °C, 15 °C in fünf Messintervallen, 10 % Leistungsabfall) sind eigene Annahmen ohne Baseline; die Umgebung beeinflusst das Ergebnis stark.",
+          "en": "Temperatures and compute rate are measured. The thresholds (85 °C, 15 °C in five measurement intervals, 10 % rate drop) are our own assumptions without a baseline; the environment strongly influences the result."
         }
       }
     },
@@ -2199,19 +2200,19 @@
         ]
       },
       "text": {
-        "de": "Beim Netztest des Selbsttests war die Verbindung zwischen Konsole und Router auffällig (Evidenz: Grund): Entweder blieben mindestens 20 % der Verbindungsversuche ohne Antwort („packet_loss“) oder der Router antwortete im Mittel erst nach mehr als 100 ms („slow_gateway“). Im eigenen Netz ist beides ungewöhnlich und deutet bei WLAN auf schwachen Empfang oder Störungen, bei Kabel auf ein schlechtes Kabel, einen schlechten Anschluss oder einen überlasteten Router. Näher an den Router rücken, ein LAN-Kabel verwenden, den Router neu starten und den Test wiederholen. Gemessen wurde nur der Weg zum Router, nicht das Internet. Die Schwellen sind eigene Annahmen.",
-        "en": "In the self-test's network test the link between console and router stood out (evidence: reason): either at least 20 % of the connection attempts went unanswered (“packet_loss”) or the router answered only after more than 100 ms on average (“slow_gateway”). In your own network both are unusual and point to weak reception or interference on Wi-Fi, or to a bad cable, a bad port or an overloaded router on a wired link. Move closer to the router, use a LAN cable, restart the router and repeat the test. Only the path to the router was measured, not the internet. The thresholds are our own assumptions."
+        "de": "Im Netztest war die Verbindung zum Router auffällig: Mindestens 20 % der Verbindungsversuche blieben unbeantwortet oder der Router antwortete im Mittel erst nach über 100 ms (schwacher WLAN-Empfang, schlechtes Kabel oder überlasteter Router). Näher an den Router rücken oder LAN-Kabel nutzen, Router neu starten, Test wiederholen. Gemessen wird nur der Weg zum Router, nicht das Internet.",
+        "en": "In the network test the link to the router stood out: at least 20 % of the connection attempts went unanswered or the router answered only after more than 100 ms on average (hint of weak Wi-Fi reception, a bad cable or an overloaded router). Move closer to the router or use a LAN cable, restart the router and repeat the test. Only the path to the router is measured, not the internet."
       },
       "evidence": "test.sw.net.local.reason",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "low",
         "basis": "derived",
         "reason": {
-          "de": "Antwortzeit und Verlust sind gemessen, aber mit wenigen Versuchen (20) und einem Port am Router. Die Schwellen sind eigene Annahmen, und der Router kann Verbindungsversuche absichtlich langsam oder gar nicht beantworten.",
-          "en": "Response time and loss are measured, but with few attempts (20) and one router port. The thresholds are our own assumptions, and the router may deliberately answer connection attempts slowly or not at all."
+          "de": "Antwortzeit und Verlust sind gemessen, aber nur mit 20 Versuchen an einem Router-Port. Die Schwellen sind eigene Annahmen; ein Router kann absichtlich langsam oder gar nicht antworten.",
+          "en": "Response time and loss are measured, but only with 20 attempts on one router port. The thresholds are our own assumptions; a router may deliberately answer slowly or not at all."
         }
       }
     },
@@ -2232,8 +2233,8 @@
         ]
       },
       "text": {
-        "de": "Die Konsole ist gerade sehr heiß (CPU oder SoC über 85 °C). Unter Last ist das nicht ungewöhnlich, im Leerlauf deutet es auf schlechte Belüftung oder Staub hin: Lüftungsschlitze freihalten, die Konsole nicht einbauen, bei Dauerproblemen reinigen. Ein niedrigeres Lüfterziel lässt sich in ShadowMount+ setzen ([fan] target_temperature, 50 bis 91 °C; Standard der Konsole laut Entwickler 91 °C). Die Schwelle ist eine eigene Annahme; Sony nennt keine Grenze, und es ist eine Momentaufnahme.",
-        "en": "The console is very hot right now (CPU or SoC above 85 °C). Under load that is not unusual; when idle it points to poor ventilation or dust: keep the vents clear, do not build the console in, clean it if the problem persists. A lower fan target can be set in ShadowMount+ ([fan] target_temperature, 50 to 91 °C; the console's default is 91 °C according to the developer). The threshold is our own assumption; Sony names no limit, and this is a snapshot."
+        "de": "Die Konsole ist gerade sehr heiß (CPU oder SoC über 85 °C). Unter Last normal, im Leerlauf ein Hinweis auf schlechte Belüftung oder Staub: Lüftungsschlitze freihalten, Konsole nicht einbauen, bei Dauerproblemen reinigen. Niedrigeres Lüfterziel: in ShadowMount+ ([fan] target_temperature, 50 bis 91 °C). Nur eine Momentaufnahme.",
+        "en": "The console is very hot right now (CPU or SoC above 85 °C). Normal under load, but when idle a sign of poor ventilation or dust: keep the vents clear, don't build the console in, clean it if the problem persists. Lower fan target: in ShadowMount+ ([fan] target_temperature, 50 to 91 °C). Only a snapshot."
       },
       "evidence": "sys.temp.cpu_c",
       "fix": null,
@@ -2260,8 +2261,8 @@
         ]
       },
       "text": {
-        "de": "Ein eigener Scanpfad in der config.ini liegt auf einem Laufwerk (/mnt/usbN oder /mnt/extN), das nicht angeschlossen ist: die Spiele dort werden nicht gefunden. Ist [library] remove_missing eingeschaltet, entfernt ShadowMount+ die Registrierungen nach der eingestellten Wartezeit (Standard: aus). Das Laufwerk neu einstecken (ohne USB-Hub, anderer Port) oder den Scanpfad entfernen.",
-        "en": "A custom scan path in config.ini is on a drive (/mnt/usbN or /mnt/extN) that is not connected: the games there are not found. If [library] remove_missing is on, ShadowMount+ removes the registrations after the configured delay (default: off). Plug the drive in again (without a USB hub, another port) or remove the scan path."
+        "de": "Ein eigener Scanpfad in der config.ini liegt auf einem nicht angeschlossenen Laufwerk (/mnt/usbN oder /mnt/extN): Die Spiele dort werden nicht gefunden. Ist [library] remove_missing an, entfernt ShadowMount+ die Registrierungen nach der eingestellten Wartezeit (Standard: aus). Stecke das Laufwerk neu ein (ohne USB-Hub, anderer Port) oder entferne den Scanpfad.",
+        "en": "A custom scan path in config.ini is on a drive that is not connected (/mnt/usbN or /mnt/extN): the games there are not found. If [library] remove_missing is on, ShadowMount+ removes the registrations after the configured delay (default: off). Plug the drive in again (without a USB hub, another port) or remove the scan path."
       },
       "evidence": "smp.missing_drive_paths[].path",
       "fix": null,
@@ -2280,12 +2281,12 @@
         ]
       },
       "text": {
-        "de": "Die Datenbank der Systemsoftware (app.db) führt einen Titel, dessen Ordner unter /user/app oder /system_ex/app fehlt (Evidenz: Titel-ID). Das ist eine Kachel ohne Spiel: Sie lässt sich nicht starten und bleibt in der Bibliothek, bis der Eintrag entfernt wird. Häufige Ursachen sind ein abgezogenes oder ausgeschaltetes Laufwerk, von dem ShadowMount+ den Titel eingebunden hatte, eine abgebrochene Deinstallation oder von Hand gelöschte Ordner. Zuerst prüfen, ob das Laufwerk angeschlossen ist und ShadowMount+ den Titel wieder findet; sonst die Kachel in der Spielebibliothek über das Optionsmenü löschen. Das kann auch vorkommen, wenn PS4Mount PKG-Spiele eingebunden hatte und das Einbinden abgeschaltet wurde. Medic ändert die Datenbank nicht.",
-        "en": "The system software's database (app.db) lists a title whose folder under /user/app or /system_ex/app is missing (evidence: title ID). That is a tile without a game: it cannot be started and stays in the library until the entry is removed. Common causes are an unplugged or switched-off drive from which ShadowMount+ had mounted the title, an aborted uninstall or manually deleted folders. First check whether the drive is connected and ShadowMount+ finds the title again; otherwise delete the tile in the game library through the options menu. This can also happen when PS4Mount had mounted PKG games and mounting was switched off. Medic does not change the database."
+        "de": "Die Datenbank der Systemsoftware (app.db) führt einen Titel, dessen Ordner unter /user/app oder /system_ex/app fehlt (Evidenz: Titel-ID): eine Kachel ohne Spiel. Meist fehlt das Laufwerk, von dem ShadowMount+ den Titel eingebunden hatte (auch nach abgeschaltetem PS4Mount oder abgebrochener Deinstallation). Laufwerk prüfen, sonst die Kachel über das Optionsmenü löschen. Medic ändert die Datenbank nicht.",
+        "en": "The system software's database (app.db) lists a title whose folder under /user/app or /system_ex/app is missing (evidence: title ID): a tile without a game. Usually the drive from which ShadowMount+ had mounted the title is missing (also after PS4Mount was switched off or an aborted uninstall). Check the drive, otherwise delete the tile through the options menu. Medic does not change the database."
       },
       "evidence": "appdb.orphans[].titleid",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "medium",
@@ -2308,12 +2309,12 @@
         ]
       },
       "text": {
-        "de": "Unter /user/app liegt ein Titelordner (PPSA/CUSA), den die Datenbank der Systemsoftware nicht kennt (Evidenz). Das Spiel erscheint dann nicht in der Bibliothek. Bei einem per ShadowMount+ eingebundenen Titel heißt das meist, dass die Registrierung scheitert oder noch läuft (siehe die Befunde zu „Register failed“); bei einem Rest einer Deinstallation ist der Ordner ein Überbleibsel. Das kann auch vorkommen, wenn PS4Mount PKG-Spiele eingebunden hatte und das Einbinden abgeschaltet wurde. Medic ändert nichts daran.",
-        "en": "Under /user/app there is a title folder (PPSA/CUSA) that the system software's database does not know (evidence). The game then does not appear in the library. For a title mounted by ShadowMount+ this usually means registration fails or is still running (see the findings about “Register failed”); for the rest of an uninstall the folder is a leftover. This can also happen when PS4Mount had mounted PKG games and mounting was switched off. Medic changes nothing here."
+        "de": "Unter /user/app liegt ein Titelordner (PPSA/CUSA), den die Datenbank der Konsole nicht kennt; das Spiel fehlt in der Bibliothek. Bei einem per ShadowMount+ eingebundenen Titel scheitert meist die Registrierung oder läuft noch (siehe „Register failed“); sonst ist es ein Überbleibsel einer Deinstallation oder einer abgeschalteten PS4Mount-PKG-Einbindung. Medic ändert nichts.",
+        "en": "Under /user/app there is a title folder (PPSA/CUSA) that the console's database does not know; the game is missing from the library. For a title mounted by ShadowMount+ this usually means registration fails or is still running (see “Register failed”); otherwise it is a leftover of an uninstall or of a PS4Mount PKG mount that was switched off. Medic changes nothing here."
       },
       "evidence": "appdb.unregistered[].titleid",
       "fix": null,
-      "source": "https://github.com/strongt1me/ps5-medic",
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
         "level": "low",

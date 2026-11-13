@@ -89,6 +89,11 @@ RuleDownloadResult download_rule_update(Platform& p, IHttpClient& http, const st
         return r;
     }
 
+    // Ein '#' oder '?' in der Adresse haengt der Dateiname sonst hinter Fragment oder Abfrage ("http://h/x#f/rules.json"): beide Abrufe gingen an dieselbe Adresse
+    if (base_url.find_first_of("#?") != std::string::npos) {
+        r.error = "bad_url";
+        return r;
+    }
     // 1. Beide Dateien in den Speicher holen. Scheitert eine, bleibt der Dateibaum unberuehrt.
     struct Item {
         const char* name;

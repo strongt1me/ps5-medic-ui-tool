@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <cstring>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -43,6 +44,82 @@ std::string mask_user_home(const std::string& s) {
             continue;
         }
         out += s[i++];
+    }
+    return out;
+}
+
+// Zugangsdaten in Logzeilen: "smb://benutzer:passwort@host", "password=x", "user: bob", {"token": "x"}. Nur der Wert wird ersetzt; Schluessel und der Rest der
+// Zeile bleiben lesbar. (Frueher wurden nur Seriennummern und Kennungen geschwaerzt: eine Zeile wie "smb connect failed user=bob password=hunter2" ging in
+// den Bericht und den QR-Code.)
+std::string mask_credentials(const std::string& s) {
+    // Starke Namen zaehlen auch mitten im Wort ("mypassword", "userPassword") und mit ':' oder '='. Schwache ("user", "login", "pass", "username") nur am Wortanfang und
+    // nur mit '=' oder als JSON-Feld ("user": ...): "Tests: pass: 12" oder "Error: user: not found" sind keine Zugangsdaten.
+    struct Name {
+        const char* text;
+        bool strong;
+    };
+    static const Name kNames[] = {{"password", true}, {"passwd", true}, {"passphrase", true}, {"secret", true}, {"token", true}, {"api_key", true}, {"apikey", true},
+                                  {"credential", true}, {"username", false}, {"user", false}, {"login", false}, {"pass", false}};
+    // 1) Benutzerdaten in Adressen: scheme://user:pass@host
+    std::string t = s;
+    for (std::size_t at = t.find("://"); at != std::string::npos; at = t.find("://", at + 3)) {
+        const std::size_t start = at + 3;
+        const std::size_t end = t.find_first_of("/?# \t\r\n\"'", start);
+        const std::size_t stop = end == std::string::npos ? t.size() : end;
+        const std::size_t amp = start < stop ? t.substr(start, stop - start).rfind('@') : std::string::npos;  // nur im Host-Teil suchen, nicht bis zum Textanfang
+        if (amp != std::string::npos && t.compare(start, amp, "***") != 0) t.replace(start, amp, "[CREDENTIALS]");  // "***": schon geschwaerzt (Export)
+    }
+    // 2) Schluessel = Wert (auch hinter '_' wie smb_user, auch JSON)
+    std::string lower;
+    lower.reserve(t.size());
+    for (char c : t) lower += low(c);
+    std::string out;
+    std::size_t i = 0;
+    while (i < t.size()) {
+        bool done = false;
+        {
+            const bool word_start = i == 0 || !std::isalnum(static_cast<unsigned char>(t[i - 1]));
+            for (const Name& nm : kNames) {
+                if (!word_start && !nm.strong) continue;
+                const char* name = nm.text;
+                const std::size_t len = std::char_traits<char>::length(name);
+                if (lower.compare(i, len, name) != 0) continue;
+                std::size_t j = i + len;
+                const bool quoted = j < t.size() && (t[j] == '"' || t[j] == '\'');  // JSON-/Python-Feld
+                if (quoted) ++j;
+                while (j < t.size() && (t[j] == ' ' || t[j] == '\t')) ++j;
+                if (j >= t.size() || (t[j] != ':' && t[j] != '=')) continue;
+                if (t[j] == ':' && !nm.strong && !quoted) continue;
+                ++j;
+                while (j < t.size() && (t[j] == ' ' || t[j] == '\t')) ++j;
+                out.append(t, i, j - i);  // Schluessel samt Trenner
+                if (j < t.size() && (t[j] == '"' || t[j] == '\'')) {
+                    const char q = t[j];
+                    std::size_t close = j + 1;  // ein mit Backslash maskiertes Anfuehrungszeichen beendet den Wert nicht
+                    while (close < t.size() && t[close] != q) close += t[close] == '\\' ? 2 : 1;
+                    if (close > t.size()) close = std::string::npos;
+                    out += q;
+                    out += "[SECRET]";
+                    j = close == std::string::npos ? t.size() : close;  // das schliessende Anfuehrungszeichen bleibt
+                } else if (t.compare(j, 3, "***") == 0) {  // schon geschwaerzt (Export): unveraendert lassen
+                    out += "***";
+                    j += 3;
+                } else {
+                    out += "[SECRET]";
+                    const std::size_t vstart = j;
+                    while (j < t.size() && std::strchr(" \t\r\n&,;)\"'", t[j]) == nullptr) ++j;
+                    const std::string word = lower.substr(vstart, j - vstart);
+                    if ((word == "bearer" || word == "basic") && j < t.size() && t[j] == ' ') {  // "token: Bearer abc": das eigentliche Geheimnis folgt dem Schema-Wort
+                        ++j;
+                        while (j < t.size() && std::strchr(" \t\r\n&,;)\"'", t[j]) == nullptr) ++j;
+                    }
+                }
+                i = j;
+                done = true;
+                break;
+            }
+        }
+        if (!done) out += t[i++];
     }
     return out;
 }
@@ -361,9 +438,11 @@ std::string md_code(std::string s) {
 
 }  // namespace
 
+std::string redact_credentials(const std::string& text) { return mask_credentials(text); }
+
 std::string anonymize(const std::string& text) {
     // Reihenfolge: erst Schluessel/Wert und Pfade, dann Adressen, zuletzt lose 16-Hex-Kennungen.
-    return mask_account_hex(mask_ipv4(mask_ipv6(mask_mac(mask_user_home(mask_key_values(text))))));
+    return mask_account_hex(mask_ipv4(mask_ipv6(mask_mac(mask_user_home(mask_key_values(mask_credentials(text)))))));
 }
 
 std::vector<UnknownLine> unknown_error_lines(const Facts& facts, const std::vector<Finding>& findings, std::size_t max_groups) {

@@ -29,7 +29,9 @@ FSELF_MAGIC=0x1D3D154F
 
 OUTROOT=$REPO/build-native
 B=$OUTROOT/obj
-rm -rf "$OUTROOT"
+# Nur den Zwischenordner leeren: ein Abbruch der Importpruefung darf build-native/FAKE42007 (vom Installer eingebunden) nicht loeschen,
+# und ein Testbau mit anderer NATIVE_ID soll die eigentliche Kachel nicht entfernen
+rm -rf "$B"
 mkdir -p "$B"
 
 common=(-target x86_64-sie-ps5 -fvisibility-nodllstorageclass=default -isysroot "$SDK"
@@ -73,6 +75,9 @@ if command -v nm >/dev/null; then
             exit 3
         fi
     fi
+elif [[ ${ALLOW_NEW_IMPORTS:-0} != 1 ]]; then
+    echo "nm fehlt: die Importpruefung (title/native_imports.txt) ist nicht moeglich. binutils installieren oder ALLOW_NEW_IMPORTS=1 setzen." >&2
+    exit 3
 fi
 
 "$TOOL" link --in "$B/pie.elf" --out "$B/eboot.elf" --stub-dir "$SDK/target/lib" \
@@ -81,6 +86,7 @@ fi
 "$TOOL" self --inspect --file "$B/eboot.bin"
 
 OUT=$OUTROOT/$ID
+rm -rf "$OUT"
 mkdir -p "$OUT/sce_sys" "$OUT/sce_module"
 cp "$B/eboot.bin" "$OUT/eboot.bin"
 cp "$LIBC" "$OUT/sce_module/libc.prx"

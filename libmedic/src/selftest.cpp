@@ -29,6 +29,9 @@ namespace {
 using json = nlohmann::json;
 using Clock = std::chrono::steady_clock;
 
+// Sekunden einer monotonen Uhr: die harte Frist der Rechenthreads darf nicht von der Wanduhr abhaengen (Netzzeit, manuelle Aenderung)
+std::int64_t steady_seconds() { return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+
 double seconds_since(Clock::time_point t) { return std::chrono::duration<double>(Clock::now() - t).count(); }
 
 TestResult make_result(const TestDef& def, TestStatus s, const std::string& reason = {}) {
@@ -217,6 +220,7 @@ public:
         std::string reason;
         TestStatus st = TestStatus::Passed;
         bool stop = false;
+        const auto step_t0 = Clock::now();
         const std::uint64_t step_end = std::min<std::uint64_t>(want_, got_ + (16u << 20));
         while (!stop && got_ < step_end) {
             if (aborted_) {
@@ -245,6 +249,7 @@ public:
                 got_ += chunk.size();
             }
         }
+        active_ += seconds_since(step_t0);
         progress_ = want_ ? static_cast<double>(got_) / static_cast<double>(want_) : 1.0;
         if (aborted_ && !stop) {
             st = TestStatus::Cancelled;
@@ -255,7 +260,9 @@ public:
             const double secs = std::max(seconds_since(t0_), 1e-6);
             result_.measurements.push_back({"bytes_read", static_cast<double>(got_), "B"});
             result_.measurements.push_back({"seconds", secs, "s"});
-            if (st == TestStatus::Passed && got_ >= (8u << 20)) result_.measurements.push_back({"mb_per_s", static_cast<double>(got_) / 1e6 / secs, "MB/s"});  // erst ab 8 MiB aussagekraeftig
+            // Durchsatz aus der reinen Lesezeit: die Schritte laufen im Takt der Oberflaeche (alle 33 ms), die Pausen dazwischen gehoeren nicht dazu
+            // (sonst erschiene jedes schnelle Laufwerk als hoechstens ~0,5 GB/s)
+            if (st == TestStatus::Passed && got_ >= (8u << 20)) result_.measurements.push_back({"mb_per_s", static_cast<double>(got_) / 1e6 / std::max(active_, 1e-6), "MB/s"});  // erst ab 8 MiB aussagekraeftig
             if (st == TestStatus::Passed && reason == "time_limit" && got_ < (8u << 20)) {  // in der Zeit kaum etwas gelesen: kein glattes "bestanden"
                 st = TestStatus::Warn;
                 reason = "slow_read";
@@ -269,6 +276,7 @@ private:
     Platform& p_;
     std::string path_;
     std::uint64_t want_ = 0, got_ = 0;
+    double active_ = 0;  // Sekunden, in denen wirklich gelesen wurde
 };
 
 // ---- Gruendlich: Waermetest (Last) --------------------------------------------------------------------------------------------------
@@ -280,7 +288,7 @@ struct Burners {
     std::uint32_t reference = 0;
     bool use_fma = false, inject = false;
     std::atomic<std::uint64_t> iters[kMax];
-    std::time_t deadline = 0;  // harte Frist nach der Uhr: unabhaengig vom Hauptthread, die Threads beenden sich selbst
+    std::int64_t deadline = 0;  // harte Frist nach der Uhr: unabhaengig vom Hauptthread, die Threads beenden sich selbst
     pthread_t th[kMax];
     int started = 0;
 
@@ -358,7 +366,7 @@ void* burn_main(void* p) {
         if (bits != a->b->reference) a->b->errors.fetch_add(1, std::memory_order_relaxed);
         ++round;
         a->b->iters[a->index].fetch_add(1, std::memory_order_relaxed);  // eine Runde = ein Zaehler (Einheit egal: nur das Verhaeltnis zaehlt)
-        if (a->b->stop.load(std::memory_order_relaxed) || std::time(nullptr) >= a->b->deadline) break;
+        if (a->b->stop.load(std::memory_order_relaxed) || steady_seconds() >= a->b->deadline) break;
     }
     return nullptr;
 }
@@ -454,7 +462,7 @@ private:
         burning_ = true;
         phase_start_ = Clock::now();
         last_sample_ = 0;
-        burners_.deadline = std::time(nullptr) + ctx_.thermal_burn_s + 3;  // harte Frist: Last plus 3 Sekunden Spielraum
+        burners_.deadline = steady_seconds() + ctx_.thermal_burn_s + 3;  // harte Frist: Last plus 3 Sekunden Spielraum
         burners_.use_fma = have_fma();
         burners_.reference = round_bits(burners_.use_fma);  // Referenz im Hauptthread, vor den Rechenthreads
         burners_.inject = ctx_.inject_compute_fault;
@@ -720,6 +728,11 @@ public:
             finalize(TestStatus::Cancelled, "time_limit");
             return true;
         }
+        struct Active {  // zaehlt nur die Zeit in step(), nicht die Pausen zwischen den Schritten (Takt der Oberflaeche)
+            WriteSession* s;
+            ~Active() { s->active_ += seconds_since(s->step_t0_); }
+        } active{this};
+        step_t0_ = Clock::now();
         IFileSystemRW* rw = p_.fs_rw();
         if (phase_ == 0) {  // schreiben
             const std::string data = pattern_block(index_, kWriteBlock);
@@ -731,7 +744,7 @@ public:
             written_ += data.size();
             if (++index_ >= blocks_) {
                 phase_ = 1;
-                write_secs_ = seconds_since(t0_);
+                write_secs_ = active_ + seconds_since(step_t0_);
                 index_ = 0;
             }
         } else {  // zuruecklesen und vergleichen
@@ -776,6 +789,8 @@ private:
     std::uint64_t size_, blocks_ = 0, index_ = 0, written_ = 0, budget_total_ = 0, bad_blocks_ = 0;
     int budget_runs_ = 0, phase_ = 0;
     double write_secs_ = 0, first_bad_ = -1;
+    double active_ = 0;
+    Clock::time_point step_t0_ = Clock::now();
     std::string today_, prior_date_;
 };
 

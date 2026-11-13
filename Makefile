@@ -68,7 +68,7 @@ TILE_DIR := build-title/FAKE42007
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
 
-.PHONY: ps5-service host test clean ps5-image-probe ps5-update-probe ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
+.PHONY: native-ui deploy-native ps5-service host test clean ps5-image-probe ps5-update-probe ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
 
 # UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
 SNAP ?=
@@ -217,7 +217,7 @@ dist: ps5 ps5-service native-ui ps5-launcher
 	cp knowledge/error_codes.json $(DIST_DIR)/PS5MEDIC/error_codes.json
 	cp ps5/homebrew/sce_sys/icon0.png $(DIST_DIR)/PS5MEDIC/sce_sys/icon0.png
 	cp -r build-native/$(NATIVE_ID) $(DIST_DIR)/$(NATIVE_ID)
-	cp LICENSE README.md README.en.md THIRD_PARTY.md docs/TESTER.md $(DIST_DIR)/
+	cp LICENSE README.md README.en.md README.fr.md README.it.md README.es.md THIRD_PARTY.md docs/TESTER.md $(DIST_DIR)/
 	cd $(DIST_DIR) && find . -type f ! -name SHA256SUMS.txt | sort | xargs sha256sum > SHA256SUMS.txt
 	cd dist && python3 -m zipfile -c $(DIST_ZIP) $(DIST_NAME)
 	cp $(PS5_LAUNCHER_ELF) dist/ps5medic-launcher.elf

@@ -33,7 +33,7 @@ Jede Phase endet mit lauffähigem Stand + kurzem Status an Marc.
 > Stand: Bericht, Anonymisierung, QR-Code, □-Taste, READMEs und `make dist` sind fertig und getestet (siehe `docs/PHASE4.md`). Lizenz GPL-3.0-or-later; kein öffentliches Release, das Repository bleibt privat (Entscheidung vom 8. Nov. 2026).
 1. Markdown-Bericht + Anonymisierung + QR-Code. – erledigt.
 2. ~~`param.json`, Icon, PPSA-Ordner~~ entfällt: Launcher-Eintrag `ps5/homebrew/` (siehe `docs/PHASE3.md`). Installation per FTP nach `/data/homebrew/PS5MEDIC/`.
-3. README (DE/EN/FR/IT/ES, mit Bildern unter `docs/images/`), `THIRD_PARTY.md` – erledigt. GitHub-Release – entfällt (Repository privat).
+3. README (DE/EN/FR/IT/ES, mit Bildern unter `docs/images/`), `THIRD_PARTY.md` – erledigt. GitHub-Release – nur auf Marcs Anweisung (Repository privat; Pre-Release `v0.4.0-dev.2` am 13. Nov. 2026).
 
 ## Phase 5 – Community
 > Stand: Regel-Update (Datei-Update und signierter Download), unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung sind fertig und getestet (siehe `docs/PHASE5.md`). Foren-Beiträge und GitHub-Release entfallen (Repository privat). Der signierte Regel-Download ist umgesetzt (Ed25519, siehe `docs/PHASE5.md`).

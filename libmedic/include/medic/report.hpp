@@ -59,6 +59,9 @@ ReportInput make_report_input(const Platform& p, const Facts& facts, const RuleS
 // "serial: ...", "account id: ..." u. ae.) durch Platzhalter wie [IP], [MAC], [ID], [ACCOUNT-ID], [SERIAL].
 std::string anonymize(const std::string& text);
 
+// Nur Zugangsdaten schwaerzen (password=, user:, token, smb://benutzer:passwort@host): fuer Logs und Konfigurationen im Schnappschuss-Export.
+std::string redact_credentials(const std::string& text);
+
 // Voller Bericht als Markdown.
 std::string build_report(const ReportInput& in, ReportLang lang);
 

@@ -16,6 +16,7 @@
 #include <cstring>
 
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -41,6 +42,19 @@ inline void put16(std::uint8_t* p, std::uint16_t v) {
 }
 inline std::uint16_t get16(const std::uint8_t* p) { return static_cast<std::uint16_t>(p[0] | p[1] << 8); }
 
+// Kleine Nachrichten sofort senden: ohne TCP_NODELAY wartet der zweite kleine Send (Nutzlast hinter dem Kopf) auf die Bestaetigung des ersten, und die
+// Gegenstelle verzoegert sie (bis zu 100 ms) -- Tasten kamen so gebuendelt und spaet an.
+inline void set_nodelay(int s) {
+    const int one = 1;
+    setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
+}
+
+// Sendezeitlimit je blockierendem send(): eine Gegenstelle, die nicht mehr liest, haelt den Sender sonst fuer immer fest.
+inline void set_send_timeout(int s, int seconds) {
+    timeval tv{seconds, 0};
+    setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv);
+}
+
 // Verbindung zu 127.0.0.1:port; -1 bei Fehler. Das Sendezeitlimit verhindert endloses Warten.
 inline int connect_local(int port, int send_timeout_s = 5) {
     sockaddr_in sa;
@@ -51,8 +65,8 @@ inline int connect_local(int port, int send_timeout_s = 5) {
     sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     const int s = socket(AF_INET, SOCK_STREAM, 0);
     if (s < 0) return -1;
-    timeval tv{send_timeout_s, 0};
-    setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv);
+    set_send_timeout(s, send_timeout_s);
+    set_nodelay(s);
     if (connect(s, reinterpret_cast<const sockaddr*>(&sa), sizeof sa) < 0) {
         close(s);
         return -1;
@@ -76,7 +90,13 @@ inline bool send_message(int s, char type, const void* payload, std::uint32_t le
     std::uint8_t head[5];
     head[0] = static_cast<std::uint8_t>(type);
     put32(head + 1, len);
-    return send_all(s, head, sizeof head) && (len == 0 || send_all(s, payload, len));
+    if (len <= 64) {  // Kopf und kleine Nutzlast in einem Send (ein Paket)
+        std::uint8_t buf[5 + 64];
+        std::memcpy(buf, head, sizeof head);
+        if (len) std::memcpy(buf + sizeof head, payload, len);
+        return send_all(s, buf, sizeof head + len);
+    }
+    return send_all(s, head, sizeof head) && send_all(s, payload, len);
 }
 
 }  // namespace medic::proto

@@ -664,6 +664,7 @@ int main() {
     error_code_tests();
     codes_update_tests();
     text_policy_tests();
+    review2_tests();
     history_tests();
     selftest_tests();
     ui_tests();

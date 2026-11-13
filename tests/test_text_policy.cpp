@@ -57,7 +57,13 @@ void text_policy_tests() {
                           "Update the system software to the latest version.", "Die Firmware des Routers aktualisieren.", "Firmware-Update einspielen",
                           "Auf eine neuere Firmware updaten: firmware upgrade", "Die neueste Systemsoftware installieren", "System-Update im Safe Mode",
                           "Sony empfiehlt Updates für Systemsoftware und App.", "Führe die Systemaktualisierung durch.", "Die Firmware auf 12.02 aktualisieren.",
-                          "https://x.de - Bitte das Systemupdate installieren."})
+                          "https://x.de - Bitte das Systemupdate installieren.",
+                          "Neue Firmware installieren.", "Eine neuere Firmware einspielen.", "Install a newer firmware.", "Flash the latest FW.",
+                          "Die aktuelle Systemsoftware installieren.", "Update your PS5.", "Auf FW 12.00 aktualisieren.", "Die Konsole aktualisieren.",
+                          "Eine neuere Firmware-Version installieren.", "Eine neuere Firmware-Version einspielen.", "Install the latest PS5 firmware.", "Install PS5 firmware 12.02.",
+                          "Install the official firmware from Sony.", "Update FW.", "FW aktualisieren.", "Die FW auf 12.00 aktualisieren.", "Update to the latest FW.",
+                          "Updaten auf FW 13.00.", "Mettez à jour votre console.", "Aggiorna la tua PS5.", "Actualiza la consola.", "Installez le micrologiciel.",
+                          "Installa il firmware.", "Instala el firmware.", "Mettez à jour le micrologiciel.", "Mets à jour le firmware.", "METTEZ À JOUR LE MICROLOGICIEL."})
         CHECK(!find_system_update_advice(s).empty(), std::string("Textregel erkennt: ") + s);
 
     // Dieselbe Regel in Franzoesisch, Italienisch und Spanisch
@@ -73,7 +79,14 @@ void text_policy_tests() {
     for (const char* s : {"Das Spiel aktualisieren.", "ShadowMount+ aktualisieren.", "ps5-theme auf Version 1.53 oder neuer aktualisieren.",
                           "Hilft nichts davon, die Konsole zurücksetzen („Settings > System > System Software > Reset Options > Reset Your Console“). Danach das Spiel neu installieren.",
                           "Das Spiel ist für eine höhere Firmware-Version gebaut als die der Konsole. Es braucht einen Backport.", "Firmware: 12.00",
-                          "Fakelib-Updates ausschalten", "Update ps5-theme to version 1.53 or newer.", "Das Dateisystem aktualisieren wir nicht.", "Mise à jour du système de fichiers du disque."})
+                          "Die installierte Firmware ist 12.00.", "Auf der Konsole ist Firmware 12.00 installiert.", "Installiere BackPork, damit das Spiel auf der Firmware läuft.",
+                          "Backport installieren, wenn das Spiel eine höhere Firmware braucht.", "The game needs a higher firmware; install BackPork.",
+                          "Check the firmware version, then install ps5-theme 1.53.", "Update the PS5 Medic rules.", "Aktualisiere die PS5 Medic Regeln.",
+                          "Update the PlayStation Network settings.", "PS5 Update-Server nicht erreichbar", "PS5 updates are blocked by DNS", "Update the console's DNS settings.",
+                          "Update kstuff on FW 12.00", "kstuff-lite aktualisieren (FW 4.03)", "Der Payload ist für FW 12.00 gebaut; installiere ihn trotzdem.",
+                          "Install the firmware backport plugin (BackPork).", "Install a Firmware Backport so the game starts.", "Installiere ein Firmware-Backport, damit das Spiel startet.",
+                          "Install firmware-independent payloads only.", "Spielstände sichern und danach die Konsole aktualisieren wir nicht.",
+                          "Fakelib-Updates ausschalten", "Spiel neu installieren.", "ShadowMount+ installieren.", "Install ps5-theme 1.53.", "Update ps5-theme to version 1.53 or newer.", "Das Dateisystem aktualisieren wir nicht.", "Mise à jour du système de fichiers du disque."})
         CHECK(find_system_update_advice(s).empty(), std::string("Textregel erlaubt: ") + s + " -> " + find_system_update_advice(s));
 
     // Baumpruefung: '_'-Felder (Kommentare) und https-Adressen sind ausgenommen

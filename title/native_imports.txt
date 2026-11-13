@@ -48,6 +48,7 @@ sceKernelGetDirectMemorySize
 sceKernelMapDirectMemory
 sceKernelSendNotificationRequest
 sceKernelUsleep
+scePadClose
 scePadInit
 scePadOpen
 scePadReadState

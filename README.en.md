@@ -48,7 +48,7 @@
   <tr>
     <td valign="top">
       <h3>📚 Error codes</h3>
-      Reference for 40 messages such as CE-108262-9: explanation, steps according to Sony, source as text and QR code. After a check-up, the entry shows what Medic sees on the console.
+      Reference for 150 messages such as CE-108262-9: explanation, steps according to Sony, source as text and QR code. After a check-up, the entry shows what Medic sees on the console.
     </td>
     <td valign="top">
       <h3>🕑 History and comparison</h3>
@@ -87,8 +87,8 @@
 ## Safety
 
 - **Never deletes**, only moves or renames. Files that are changed are backed up beforehand (`/data/ps5medic/backups/`), and every change is recorded in the journal (`/data/ps5medic/journal.jsonl`).
-- **No writing without ✕**: repair and undo happen only after explicit confirmation on the preview. Other write actions: the report (□), the rule update (✕ on the offer), the selected language in `/data/ps5medic/config.ini`.
-- Repairs write only within a whitelist (ShadowMount+ folder, autoload lists, the app's own scan paths, `/data/ps5medic`). Never under `/system`, `/system_ex`, `/dev` or in flash. The tile is a folder that you copy to `/data/homebrew/` yourself; ShadowMount+ creates the tile, PS5 Medic does not.
+- **No writing without ✕**: repair and undo happen only after explicit confirmation on the preview. Other write actions: the report (□), the rule update (✕ on the offer), the selected language in `/data/ps5medic/config.ini`, the results of every check-up (`/data/ps5medic/checks/`, for the history and the comparison), the journal and the one test file of the thorough self-test in `/data/ps5medic` (overwritten, never deleted).
+- Repairs write only within a whitelist (ShadowMount+ folder, autoload lists, the app's own scan paths, `/data/ps5medic`). Never under `/system`, `/system_ex`, `/dev` or in flash. The tile is a folder under `/data/homebrew/` that you copy yourself or that the installer `ps5medic-launcher.elf` creates; ShadowMount+ creates the tile itself.
 - **The network is used only for the rule download**, only on □ and confirmation, only to the address from your `config.ini`, and nothing is sent except a GET request. In addition there is a local network test in the self-test: only a connection set-up to the router in the private address range, without data, never to the internet.
 - No exploits, no firmware changes, no functions for obtaining, unlocking or distributing games, keys or firmware. PS5 Medic repairs the **environment**, not content. It never recommends a system software update.
 

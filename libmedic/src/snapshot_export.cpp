@@ -2,6 +2,7 @@
 #include "medic/snapshot_export.hpp"
 
 #include "medic/exfat.hpp"
+#include "medic/report.hpp"
 #include "medic/sqlite_check.hpp"
 
 #include <nlohmann/json.hpp>
@@ -134,7 +135,7 @@ std::string redact_secrets(const std::string& text) {
             const std::size_t amp = line.rfind('@', stop);
             if (amp != std::string::npos && amp >= start && amp < stop) line.replace(start, amp - start, "***");
         }
-        out += mask_addresses(line);
+        out += mask_addresses(redact_credentials(line));
         if (nl != std::string::npos) out += '\n';
         pos = nl == std::string::npos ? text.size() : nl + 1;
     }
@@ -356,7 +357,7 @@ public:
                         for (int i = 0; i < 8; ++i) head[72 + static_cast<std::size_t>(i)] = i == 0 ? 1 : 0;
                 }
                 write(path, head.size() > e.size ? head.substr(0, static_cast<std::size_t>(e.size)) : head);
-            } else if (lower_ext(e.name) == ".ffpfs" || lower_ext(e.name) == ".ffpfsc") {
+            } else if (lower_ext(e.name) == ".ffpfs" || lower_ext(e.name) == ".ffpfsc" || lower_ext(e.name) == ".ffpkg") {
                 write(path, std::string(static_cast<std::size_t>(std::min<std::uint64_t>(e.size, 512)), '\0'));  // nur die Groessenklasse (leer oder nicht) bleibt erhalten
             } else {
                 write(path, std::string());

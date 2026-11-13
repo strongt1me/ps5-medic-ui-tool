@@ -45,7 +45,8 @@ std::string extension_of(const std::string& name) {
     return pos == std::string::npos || pos == 0 ? std::string() : lower(name.substr(pos));
 }
 
-bool starts_with_dir(const std::string& path, const std::string& dir) {
+bool starts_with_dir(const std::string& path, std::string dir) {
+    while (dir.size() > 1 && dir.back() == '/') dir.pop_back();  // "/data/homebrew/" im Scanpfad ist derselbe Ordner wie "/data/homebrew"
     return path == dir || (path.size() > dir.size() && path.compare(0, dir.size(), dir) == 0 && path[dir.size()] == '/');
 }
 
@@ -86,7 +87,7 @@ std::vector<std::string> default_scan_paths() {
     return v;
 }
 
-const std::set<std::string> kImageExts = {".ffpfs", ".ffpfsc", ".exfat", ".dat"};
+const std::set<std::string> kImageExts = {".ffpfs", ".ffpfsc", ".exfat", ".ffpkg", ".dat"};
 
 constexpr int kMaxScanLevel = 4;       // wie tief wir zur Faktensammlung suchen (Ebene 1 = direkt im Scanpfad)
 constexpr std::size_t kMaxLogLines = 2000;
@@ -463,8 +464,23 @@ void collect_mounts(const IFileSystem& fs, Facts& f) {
 
 }  // namespace
 
+bool smp_v2_value_valid(const std::string& section, const std::string& key, const std::string& value) {
+    IniLine l;
+    l.section = section;
+    l.key = key;
+    l.value = value;
+    return invalid_v2_value(l).empty();
+}
+
 void collect_firmware(const Platform& p, Facts& f) {
-    f.set("fw.version", p.sys().firmware());
+    // Ein nicht lesbarer Rohwert ("0x00000000" u. ae., siehe format_ps5_fw) ist keine Version: dann gilt die Firmware als unbekannt (leer), damit keine Regel
+    // mit applies_fw unterdrueckt und kein Spiel nach ihr beurteilt wird; der Rohwert bleibt als fw.raw sichtbar
+    std::string fw = p.sys().firmware();
+    if (fw.compare(0, 2, "0x") == 0) {
+        f.set("fw.raw", fw);
+        fw.clear();
+    }
+    f.set("fw.version", fw);
     f.set("fw.model", p.sys().model());
 }
 
@@ -1469,8 +1485,10 @@ void collect_game_files(const Platform& p, Facts& f) {
                 if (e.is_dir || lower(e.name) != "il2cppuserassemblies.prx" || e.name == "Il2CppUserAssemblies.prx") continue;
                 const std::string type = fstype_of(dir);
                 const bool insensitive = type == "exfatfs" || type == "msdosfs";
+                // Dateisystemart unbekannt (Mount nicht gefunden): case_sensitive -1, damit weder der Befund fuer unterscheidende noch fuer nicht unterscheidende
+                // Dateisysteme zutrifft
                 mismatches.push_back({{"titleid", t["titleid"]}, {"path", join_path(dir, e.name)}, {"expected", "Il2CppUserAssemblies.prx"}, {"actual", e.name},
-                                      {"fstype", type}, {"case_sensitive", insensitive ? 0 : 1}});
+                                      {"fstype", type}, {"case_sensitive", type.empty() ? -1 : (insensitive ? 0 : 1)}});
             }
         }
     f.set("games.case_mismatch", std::move(mismatches));
@@ -1646,13 +1664,14 @@ void collect_app_registry(const Platform& p, Facts& f) {
     const bool wal_used = wal_size > 32;
     if (!fs.read_file(path, first) || !fs.read_file(path, second) || (wal_used && (!fs.read_file(path + "-wal", wal1) || !fs.read_file(path + "-wal", wal2)))) return;
     if (first != second || wal1 != wal2 || first.size() != size) return;
-    const SqliteRows rows = sqlite_select_text(first, wal1, "SELECT titleId, metaDataPath FROM tbl_contentinfo", 2, 2000);
+    constexpr std::size_t kRegistryRows = 2000;  // bei mehr Zeilen waere "kein Eintrag" kein Beweis: dann keine Titel als "nicht registriert" melden
+    const SqliteRows rows = sqlite_select_text(first, wal1, "SELECT titleId, metaDataPath FROM tbl_contentinfo", 2, kRegistryRows);
     if (!rows.ran) return;
     json entries = json::array(), orphans = json::array(), unregistered = json::array();
     std::set<std::string> known;  // Ordnernamen und Titel-IDs der Eintraege
     static const std::regex under_app(R"(^(/user/app|/system_ex/app)/([^/]+)/)");
     for (const auto& r : rows.rows) {
-        if (entries.size() < 500) entries.push_back({{"titleid", r[0]}, {"path", r[1]}});
+        if (entries.size() < kRegistryRows) entries.push_back({{"titleid", r[0]}, {"path", r[1]}});
         known.insert(r[0]);
         std::smatch m;
         if (std::regex_search(r[1], m, under_app)) {
@@ -1663,8 +1682,9 @@ void collect_app_registry(const Platform& p, Facts& f) {
     }
     static const std::regex game_id(R"(^(PPSA|CUSA)[0-9]{5}$)");
     for (const auto& e : fs.list_dir("/user/app"))
-        if (e.is_dir && std::regex_match(e.name, game_id) && !known.count(e.name) && unregistered.size() < 100) unregistered.push_back({{"titleid", e.name}, {"path", "/user/app/" + e.name}});
+        if (e.is_dir && std::regex_match(e.name, game_id) && !known.count(e.name) && !rows.truncated && unregistered.size() < 100) unregistered.push_back({{"titleid", e.name}, {"path", "/user/app/" + e.name}});
     f.set("appdb.registered", static_cast<long>(rows.rows.size()));
+    f.set("appdb.truncated", rows.truncated);
     f.set("appdb.entries", std::move(entries));
     f.set("appdb.orphans", std::move(orphans));
     f.set("appdb.unregistered", std::move(unregistered));

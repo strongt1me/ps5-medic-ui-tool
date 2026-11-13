@@ -48,7 +48,7 @@
   <tr>
     <td valign="top">
       <h3>📚 Códigos de error</h3>
-      Obra de consulta con 40 mensajes como CE-108262-9: explicación, pasos según Sony, fuente como texto y como código QR. Después de un chequeo, la entrada muestra lo que Medic ve en la consola.
+      Obra de consulta con 150 mensajes como CE-108262-9: explicación, pasos según Sony, fuente como texto y como código QR. Después de un chequeo, la entrada muestra lo que Medic ve en la consola.
     </td>
     <td valign="top">
       <h3>🕑 Historial y comparación</h3>
@@ -87,8 +87,8 @@
 ## Seguridad
 
 - **Nunca se borra**, solo se mueve o se renombra. Los archivos que se van a cambiar se respaldan antes (`/data/ps5medic/backups/`) y cada cambio queda en el diario (`/data/ps5medic/journal.jsonl`).
-- **Nada se escribe sin ✕**: la reparación y el deshacer solo ocurren tras una confirmación expresa en la vista previa. Otras acciones de escritura: el informe (□), la actualización de reglas (✕ en la oferta) y el idioma elegido en `/data/ps5medic/config.ini`.
-- Las reparaciones solo escriben dentro de una lista blanca (carpetas de ShadowMount+, listas de autocarga, las propias rutas de escaneo, `/data/ps5medic`). Nunca bajo `/system`, `/system_ex`, `/dev` ni en la flash. El mosaico es una carpeta que copias tú mismo a `/data/homebrew/`; lo crea ShadowMount+, no PS5 Medic.
+- **Nada se escribe sin ✕**: la reparación y el deshacer solo ocurren tras una confirmación expresa en la vista previa. Otras acciones de escritura: el informe (□), la actualización de reglas (✕ en la oferta) y el idioma elegido en `/data/ps5medic/config.ini`, los resultados de cada chequeo (`/data/ps5medic/checks/`, para el historial y la comparación), el diario y el único archivo de prueba del autotest a fondo en `/data/ps5medic` (se sobrescribe, nunca se borra).
+- Las reparaciones solo escriben dentro de una lista blanca (carpetas de ShadowMount+, listas de autocarga, las propias rutas de escaneo, `/data/ps5medic`). Nunca bajo `/system`, `/system_ex`, `/dev` ni en la flash. El mosaico es una carpeta en `/data/homebrew/` que copias tú mismo o que crea el instalador `ps5medic-launcher.elf`; el mosaico en sí lo crea ShadowMount+.
 - **La red solo se usa para la descarga de reglas**, solo con □ y confirmación, solo hacia la dirección de tu `config.ini`, y no se envía nada salvo una solicitud GET. Aparte hay una prueba de red local en el autotest: solo un intento de conexión al router en el rango de direcciones privado, sin datos, nunca hacia internet.
 - Sin exploits, sin cambios de firmware, sin funciones para obtener, desbloquear o distribuir juegos, claves o firmware. PS5 Medic repara el **entorno**, no los contenidos. Nunca recomienda una actualización del software del sistema.
 
@@ -126,9 +126,9 @@ El mosaico `FAKE42007` sustituye a las vías anteriores (launcher, websrv, mosai
 Linux o WSL, CMake, un compilador de C++20. El núcleo y las reglas también se ejecutan en el PC contra carpetas de fixtures.
 
 ```bash
-make test        # Unit-, Regel-, UI- und Berichts-Tests gegen alle Fixtures
-make host        # medic-cli und die PC-Vorschau der UI
-make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # Bilder der UI am PC (de en fr it es)
+make test        # pruebas unitarias, de reglas, de interfaz y de informe sobre todas las fixtures
+make host        # medic-cli y la vista previa de la interfaz en PC
+make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # imágenes de la interfaz en PC (de en fr it es)
 ```
 
 Para la consola se necesita el [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versión 0.45** (`PS5_PAYLOAD_SDK`) y SDL2 para la PS5 (solo para la interfaz de reserva); las instrucciones de compilación están en [docs/PHASE3.md](docs/PHASE3.md), y la estructura y compilación de la aplicación nativa en [docs/NATIVE.md](docs/NATIVE.md).
@@ -139,15 +139,15 @@ make ps5-service                    # servicio (ps5medicservice.elf)
 make ps5                            # payload de diagnóstico (ps5medic.elf)
 make deploy-native PS5_HOST=192.168.1.x # aplicación y servicio a /data/homebrew por FTP (la aplicación debe estar cerrada)
 make send-launcher PS5_HOST=192.168.1.x # enviar el instalador al puerto 9021: escribe él mismo la aplicación y el servicio en /data/homebrew (sin FTP)
-make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
+make dist                           # carpeta de versión y zip en dist/ (solo en local)
 ```
 
 Herramientas en el PC (`build/medic-cli`):
 
 ```bash
-medic-cli check   <snapshot-ordner>            # Befunde
-medic-cli report  <snapshot-ordner> [--qr]     # Bericht, optional QR-Code im Terminal
-medic-cli fix     <snapshot-ordner> <regel-id> # Plan ansehen (mit --apply --yes ausführen, nur an einer Kopie!)
+medic-cli check   <snapshot-ordner>            # hallazgos
+medic-cli report  <snapshot-ordner> [--qr]     # informe, código QR opcional en el terminal
+medic-cli fix     <snapshot-ordner> <regel-id> # ver el plan (ejecutar con --apply --yes, ¡solo sobre una copia!)
 medic-cli history|undo|export ...
 ```
 

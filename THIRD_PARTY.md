@@ -18,6 +18,8 @@ Im Repo (`third_party/libdeflate/`): libdeflate 1.26 (MIT, Eric Biggers, Lizenzt
 
 Im Repo (`third_party/stb/`): `stb_image.h` (Sean Barrett, stb_image 2.30, MIT oder Public Domain, Lizenztext in `third_party/stb/LICENSE`, Stand der Quelle in `UPSTREAM`), nur JPEG und PNG aus dem Speicher; entschlüsselt das Startbild (`ui/src/splash.cpp`). Die Kopie stammt aus dem Quelltext von PS5 Cooling & System Center (tvapp, GPL-3.0-or-later, unverändert).
 
+Im Repo (`ps5/native_tilemap.inc`): die Kachelung des Bildspeichers, aus dem VideoOut-Treiber von [ps5-payload-dev/SDL](https://github.com/ps5-payload-dev/SDL) übernommen (Simple DirectMedia Layer, Copyright 1997-2018 Sam Lantinga, zlib-Lizenz; der Lizenzhinweis steht im Kopf der Datei). Gehört zur nativen App.
+
 Übersetzungen: Die französischen, italienischen und spanischen Texte in `ui/i18n/` und `knowledge/l10n/` sind eigene Übersetzungen der deutschen und englischen Texte dieses Projekts (GPL-3.0-or-later).
 
 Startbild: `ui/assets/splash.jpg` ist ein vom Autor bereitgestelltes Bild für die App.

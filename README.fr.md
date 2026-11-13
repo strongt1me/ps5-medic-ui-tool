@@ -48,7 +48,7 @@
   <tr>
     <td valign="top">
       <h3>📚 Codes d'erreur</h3>
-      Ouvrage de référence sur 40 messages tels que CE-108262-9 : explication, étapes selon Sony, source sous forme de texte et de code QR. Après un diagnostic, l'entrée indique ce que Medic constate sur la console.
+      Ouvrage de référence sur 150 messages tels que CE-108262-9 : explication, étapes selon Sony, source sous forme de texte et de code QR. Après un diagnostic, l'entrée indique ce que Medic constate sur la console.
     </td>
     <td valign="top">
       <h3>🕑 Historique et comparaison</h3>
@@ -87,8 +87,8 @@
 ## Sécurité
 
 - **Jamais de suppression**, uniquement déplacer ou renommer. Les fichiers qui sont modifiés sont sauvegardés au préalable (`/data/ps5medic/backups/`), chaque modification est inscrite au journal (`/data/ps5medic/journal.jsonl`).
-- **Aucune écriture sans ✕** : la réparation et l'annulation n'ont lieu qu'après une confirmation explicite sur l'aperçu. Autres actions d'écriture : le rapport (□), la mise à jour des règles (✕ sur la proposition), la langue choisie dans `/data/ps5medic/config.ini`.
-- Les réparations n'écrivent que dans une liste d'autorisation (dossiers de ShadowMount+, listes d'Autoload, ses propres chemins d'analyse, `/data/ps5medic`). Jamais sous `/system`, `/system_ex`, `/dev` ni dans la mémoire flash. La tuile est un dossier que vous copiez vous-même dans `/data/homebrew/` ; c'est ShadowMount+ qui la crée, pas PS5 Medic.
+- **Aucune écriture sans ✕** : la réparation et l'annulation n'ont lieu qu'après une confirmation explicite sur l'aperçu. Autres actions d'écriture : le rapport (□), la mise à jour des règles (✕ sur la proposition), la langue choisie dans `/data/ps5medic/config.ini`, les résultats de chaque diagnostic (`/data/ps5medic/checks/`, pour l'historique et la comparaison), le journal et l'unique fichier de test de l'autotest approfondi dans `/data/ps5medic` (écrasé, jamais supprimé).
+- Les réparations n'écrivent que dans une liste d'autorisation (dossiers de ShadowMount+, listes d'Autoload, ses propres chemins d'analyse, `/data/ps5medic`). Jamais sous `/system`, `/system_ex`, `/dev` ni dans la mémoire flash. La tuile est un dossier sous `/data/homebrew/` que vous copiez vous-même ou que l'installateur `ps5medic-launcher.elf` crée ; la tuile elle-même est créée par ShadowMount+.
 - **Le réseau n'est utilisé que pour le téléchargement des règles**, uniquement sur □ et après confirmation, uniquement vers l'adresse de votre `config.ini`, et rien n'est envoyé hormis une requête GET. En outre, l'autotest comporte un test de réseau local : uniquement l'établissement d'une connexion vers le routeur, dans la plage d'adresses privées, sans données, jamais vers Internet.
 - Aucun exploit, aucune modification du firmware, aucune fonction pour se procurer, déverrouiller ou distribuer des jeux, des clés ou des firmwares. PS5 Medic répare l'**environnement**, pas les contenus. Il ne recommande jamais d'installer une nouvelle version du logiciel système.
 
@@ -126,9 +126,9 @@ La tuile `FAKE42007` remplace les anciennes méthodes (Launcher, websrv, tuiles 
 Linux ou WSL, CMake, un compilateur C++20. Le cœur et les règles fonctionnent aussi sur PC avec des dossiers de fixtures.
 
 ```bash
-make test        # Unit-, Regel-, UI- und Berichts-Tests gegen alle Fixtures
-make host        # medic-cli und die PC-Vorschau der UI
-make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # Bilder der UI am PC (de en fr it es)
+make test        # tests unitaires, de règles, d'interface et de rapport sur toutes les fixtures
+make host        # medic-cli et l'aperçu de l'interface sur PC
+make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # images de l'interface sur PC (de en fr it es)
 ```
 
 Pour la console, il faut le [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **version 0.45** (`PS5_PAYLOAD_SDK`) et SDL2 pour la PS5 (uniquement pour l'interface de secours) ; la procédure de compilation correspondante se trouve dans [docs/PHASE3.md](docs/PHASE3.md), la structure et la compilation de l'application native dans [docs/NATIVE.md](docs/NATIVE.md).
@@ -139,15 +139,15 @@ make ps5-service                    # service (ps5medicservice.elf)
 make ps5                            # payload de diagnostic (ps5medic.elf)
 make deploy-native PS5_HOST=192.168.1.x # application et service vers /data/homebrew par FTP (l'application doit être fermée)
 make send-launcher PS5_HOST=192.168.1.x # envoyer l'installateur au port 9021 : il écrit lui-même l'application et le service dans /data/homebrew (sans FTP)
-make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
+make dist                           # dossier de version et zip sous dist/ (uniquement en local)
 ```
 
 Outils sur PC (`build/medic-cli`) :
 
 ```bash
-medic-cli check   <snapshot-ordner>            # Befunde
-medic-cli report  <snapshot-ordner> [--qr]     # Bericht, optional QR-Code im Terminal
-medic-cli fix     <snapshot-ordner> <regel-id> # Plan ansehen (mit --apply --yes ausführen, nur an einer Kopie!)
+medic-cli check   <snapshot-ordner>            # constats
+medic-cli report  <snapshot-ordner> [--qr]     # rapport, code QR facultatif dans le terminal
+medic-cli fix     <snapshot-ordner> <regel-id> # voir le plan (exécuter avec --apply --yes, uniquement sur une copie !)
 medic-cli history|undo|export ...
 ```
 

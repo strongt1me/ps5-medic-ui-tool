@@ -41,6 +41,13 @@ json to_json(const StoredCheck& c) {
     return {{"version", 1}, {"ts", c.ts}, {"fw", c.fw}, {"model", c.model}, {"rules_version", c.rules_version}, {"findings", f}, {"coverage", cov}, {"resolved", c.resolved}, {"metrics", m}};
 }
 
+namespace {
+// Zahlen und Wahrheitswerte ohne Ausnahme bei falschem Typ (json::value() wirft dann type_error): eine von Hand veraenderte Datei darf nicht die ganze Liste verwerfen
+double num_of(const json& x, const char* k, double d) { return x.is_object() && x.contains(k) && x[k].is_number() ? x[k].get<double>() : d; }
+int int_of(const json& x, const char* k, int d) { return static_cast<int>(std::clamp(num_of(x, k, d), 0.0, 1e9)); }
+bool bool_of(const json& x, const char* k, bool d) { return x.is_object() && x.contains(k) && x[k].is_boolean() ? x[k].get<bool>() : d; }
+}  // namespace
+
 bool from_json(const json& j, StoredCheck& c) {
     if (!j.is_object() || !j.contains("findings") || !j["findings"].is_array()) return false;
     c = StoredCheck{};
@@ -72,13 +79,13 @@ bool from_json(const json& j, StoredCheck& c) {
         }
         f.status = str_of(x, "status");
         f.first_seen = str_of(x, "first_seen");
-        f.seen_runs = x.value("seen_runs", 0);
-        f.confirm_runs = x.value("confirm_runs", 1);
+        f.seen_runs = int_of(x, "seen_runs", 0);
+        f.confirm_runs = int_of(x, "confirm_runs", 1);
         if (!f.rule_id.empty()) c.findings.push_back(std::move(f));
     }
     if (j.contains("coverage") && j["coverage"].is_array())
         for (const auto& x : j["coverage"])
-            if (x.is_object()) c.coverage.push_back({str_of(x, "id"), str_of(x, "text_de"), str_of(x, "text_en"), x.value("tested", false)});
+            if (x.is_object()) c.coverage.push_back({str_of(x, "id"), str_of(x, "text_de"), str_of(x, "text_en"), bool_of(x, "tested", false)});
     if (j.contains("resolved") && j["resolved"].is_array())
         for (const auto& x : j["resolved"])
             if (x.is_string()) c.resolved.push_back(x.get<std::string>());
@@ -90,12 +97,12 @@ bool from_json(const json& j, StoredCheck& c) {
             m.unit = str_of(x, "unit");
             m.text_de = str_of(x, "text_de");
             m.text_en = str_of(x, "text_en");
-            m.now = x.value("now", 0.0);
-            m.has_prev = x.value("has_prev", false);
-            m.prev = x.value("prev", 0.0);
-            m.has_typical = x.value("has_typical", false);
-            m.typical = x.value("typical", 0.0);
-            m.samples = x.value("samples", std::size_t{0});
+            m.now = num_of(x, "now", 0.0);
+            m.has_prev = bool_of(x, "has_prev", false);
+            m.prev = num_of(x, "prev", 0.0);
+            m.has_typical = bool_of(x, "has_typical", false);
+            m.typical = num_of(x, "typical", 0.0);
+            m.samples = static_cast<std::size_t>(int_of(x, "samples", 0));
             c.metrics.push_back(std::move(m));
         }
     return true;

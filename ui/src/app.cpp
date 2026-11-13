@@ -772,6 +772,7 @@ void App::begin_fix(int index, Screen origin) {
         if (!previews_[i].diff_ok) previews_[i].changed.push_back({'!', Strings::get(lang_)("preview.too_big")});  // sonst stuende dort nichts und die Datei wuerde trotzdem geschrieben
     }
     fix_origin_ = origin;
+    prev_top_ = 0;
     screen_ = Screen::FixPreview;
 }
 
@@ -841,7 +842,11 @@ void App::handle(Button b) {
             else if (b == Button::Circle) screen_ = detail_from_game_ ? Screen::GameDetail : Screen::Findings;
             break;
         case Screen::FixPreview:
-            if (b == Button::Cross && !plan_.empty()) {
+            if (b == Button::Up || b == Button::L1) {  // viele Aenderungen: blaettern (Kreuz wendet immer ALLE an, die Vorschau muss sie zeigen koennen); L1/R1 springen um 2
+                prev_top_ = std::max(0, prev_top_ - (b == Button::L1 ? 2 : 1));
+            } else if (b == Button::Down || b == Button::R1) {
+                prev_top_ = std::min(std::max(static_cast<int>(plan_.changes.size()) - 1, 0), prev_top_ + (b == Button::R1 ? 2 : 1));
+            } else if (b == Button::Cross && !plan_.empty()) {
                 const medic::ApplyResult r = svc_.apply_fix(plan_);
                 detail_from_game_ = false;
                 done_kind_ = DoneKind::Fix;
@@ -1319,7 +1324,7 @@ void App::draw_selftest(Canvas& c) const {
     }
 
     // Liste: letztes Ergebnis je Test (bei Done das frische)
-    small().draw(c, M + 4, 196, S("selftest.sub"), kDim);
+    small().draw(c, M + 4, 196, S("selftest.sub"), kDim, W - 2 * M - 8);  // die franzoesische Fassung ist gekuerzt, damit der Satz in eine Zeile passt
     int y = 230;
     int passed = 0, warn = 0, failed = 0, skipped = 0;
     for (const auto& d : st_defs_) {
@@ -1467,8 +1472,13 @@ void App::draw_chrome(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     draw_icon_badge(c, Icon::Medic, M, 24, 66, kTintBlue);
     title().draw(c, M + 90, 28, S("app.title"), kText);
-    const std::string sys = has_result_ && !result_.fw.empty() ? S.fmt("header.system", {{"fw", result_.fw}, {"model", result_.model}})
-                                                                : (has_result_ ? S("header.unknown") : std::string());
+    std::string sys = has_result_ && !result_.fw.empty() ? S.fmt("header.system", {{"fw", result_.fw}, {"model", result_.model}})
+                                                          : (has_result_ ? S("header.unknown") : std::string());
+    if (result_.model.empty()) {  // ohne Modell bliebe "Firmware 12.00 · " mit haengendem Trenner stehen
+        while (!sys.empty() && sys.back() == ' ') sys.pop_back();
+        if (sys.size() >= 2 && sys.compare(sys.size() - 2, 2, "\xC2\xB7") == 0) sys.erase(sys.size() - 2);
+        while (!sys.empty() && sys.back() == ' ') sys.pop_back();
+    }
     int right = W - M;
     if (!sys.empty()) {
         const int w = small().width(sys);
@@ -1628,12 +1638,23 @@ void App::draw_findings(Canvas& c) const {
         std::string untested_names;
         for (const auto& r : result_.coverage)
             if (!r.tested) untested_names += (untested_names.empty() ? "" : ", ") + pick_text(lang_, r.text_de, r.text_en, "coverage", r.id, "text");
-        if (untested_names.empty()) {
+        if (result_.incomplete) {  // keine Regeln oder ein Pruefbereich ausgefallen: nie "Alles in Ordnung" in Gruen
+            title().draw(c, M + 60, 372, S("findings.empty_partial"), kText);
+            int ty = 460;
+            for (const auto& l : wrap_text(body(), S("start.last_incomplete"), W - 2 * M - 120, 4)) {
+                body().draw(c, M + 60, ty, l, kWarn);
+                ty += body().line_height() + 6;
+            }
+        } else if (untested_names.empty()) {
             title().draw(c, M + 60, 372, S("findings.empty"), kOk);
             body().draw(c, M + 60, 460, S("findings.empty_sub"), kDim, W - 2 * M - 120);
         } else {
             title().draw(c, M + 60, 372, S("findings.empty_partial"), kText);
-            body().draw(c, M + 60, 460, S.fmt("findings.empty_partial_sub", {{"list", untested_names}}), kDim, W - 2 * M - 120);
+            int ty = 460;  // umbrechen: einzeilig wurde der Satz abgeschnitten, bevor die Bereichsnamen kamen
+            for (const auto& l : wrap_text(body(), S.fmt("findings.empty_partial_sub", {{"list", untested_names}}), W - 2 * M - 120, 5)) {
+                body().draw(c, M + 60, ty, l, kDim);
+                ty += body().line_height() + 6;
+            }
         }
         if (viewing_old_) draw_hints(c, {{PadGlyph::Circle, S("common.back")}});
         else draw_hints(c, {{PadGlyph::Cross, S("common.retest")}, {PadGlyph::Square, S("common.report")}, {PadGlyph::Circle, S("common.back")}});
@@ -1742,14 +1763,13 @@ void App::draw_detail(Canvas& c) const {
     int y = 140;
     draw_icon(c, sev_icon(f->severity), M + 24, y + 17, 46, sev_color(f->severity), sev_color(f->severity));
     const int bw = draw_badge(c, M + 62, y, S(sev_key(f->severity)), sev_color(f->severity));
-    body().draw(c, M + 62 + bw + 20, y, elide(body(), finding_title(*f), W - 2 * M - 62 - bw - 20 - 440), kText);
     const medic::Confidence conf = medic::effective_confidence(*f);
-    {
-        // Verlaesslichkeit (hoch/mittel/niedrig) mit der Grundlage; Farbe: Gruen = hoch, Orange = niedrig (nie "in Ordnung" suggerieren)
-        const std::string lvl_key = "confidence." + conf.level, basis_key = "basis." + conf.basis;
-        const std::string line = S.fmt("confidence.line", {{"level", S.has(lvl_key) ? S(lvl_key) : conf.level}, {"basis", S.has(basis_key) ? S(basis_key) : conf.basis}});
-        text_right(c, small(), W - M, y + 4, line, conf.level == "high" ? kOk : (conf.level == "low" ? kWarn : kText));
-    }
+    // Verlaesslichkeit (hoch/mittel/niedrig) mit der Grundlage; Farbe: Gruen = hoch, Orange = niedrig (nie "in Ordnung" suggerieren)
+    const std::string lvl_key = "confidence." + conf.level, basis_key = "basis." + conf.basis;
+    const std::string conf_line = S.fmt("confidence.line", {{"level", S.has(lvl_key) ? S(lvl_key) : conf.level}, {"basis", S.has(basis_key) ? S(basis_key) : conf.basis}});
+    // Der Titel behaelt so viel Platz, wie die rechtsbuendige Zeile wirklich braucht (bis ~570 px; ein fester Wert von 440 px liess lange Titel in sie hineinlaufen)
+    body().draw(c, M + 62 + bw + 20, y, elide(body(), finding_title(*f), W - 2 * M - 62 - bw - 20 - std::max(440, small().width(conf_line) + 32)), kText);
+    text_right(c, small(), W - M, y + 4, conf_line, conf.level == "high" ? kOk : (conf.level == "low" ? kWarn : kText));
     {
         // Dringlichkeit und Verlauf (neu / seit wann), eine kleine Zeile unter der Kopfzeile
         const std::string urg = medic::urgency_of(*f);
@@ -1764,10 +1784,42 @@ void App::draw_detail(Canvas& c) const {
         y += 82;
     }
 
-    // Erklaerung
+    const std::string conf_reason = pick_text(lang_, conf.reason_de, conf.reason_en, "rules", f->rule_id, "confidence_reason");
+    const int link = linked_error_index();
+
+    // Erklaerung. Lange Regeltexte (bis 13 Zeilen) wurden frueher nach 6 Zeilen mit "..." abgeschnitten: der Hinweis am Ende (z. B. "alte Spielstaende nicht
+    // loeschen, per FTP sichern") blieb unlesbar. Jetzt bekommt der Text den Platz, der unter Evidenz, Quelle, Reparatur und Fehlercode bis zur Hinweisleiste
+    // bleibt; reicht der auch in der normalen Schrift nicht, wird die kleine Schrift genommen.
+    std::size_t kMaxEvidence = conf_reason.empty() ? 5 : 3;  // Zeilen der Evidenz; bei sehr langem Erklaerungstext nur 2 (der Schlusssatz ist wichtiger als die 3. bis 5. Zeile)
     {
-        const auto lines = wrap_text(body(), finding_text(*f), cw - 72, 6);
-        const int lh = body().line_height() + 4;
+        const std::string text = finding_text(*f);
+        const int chrome = 22 + small().line_height() + 10 + 22;
+        auto avail_for = [&](std::size_t kev) {
+            const int ev_rows = f->evidence.empty() ? 1 : static_cast<int>(std::min(f->evidence.size(), kev)) + (f->evidence.size() > kev ? 1 : 0);
+            const int below = (22 + small().line_height() + 10 + ev_rows * (small().line_height() + 6) + 18 + 16)  // Evidenz-Feld samt Abstand
+                              + (conf_reason.empty() ? 0 : small().line_height() + 4 + 10)                            // mindestens eine Zeile Verlaesslichkeitsgrund
+                              + (f->source.empty() ? 0 : small().line_height() + 14) + body().line_height() + (link >= 0 ? body().line_height() + 12 : 0);
+            return std::max(0, (H - 92 - 20) - y - below - chrome - 16);
+        };
+        {
+            const auto in_body = wrap_text(body(), text, cw - 72), in_small = wrap_text(small(), text, cw - 72);
+            const int a = avail_for(kMaxEvidence);
+            const bool fits = in_body.size() <= 6 || static_cast<int>(in_body.size()) * (body().line_height() + 4) <= a ||
+                              static_cast<int>(in_small.size()) * (small().line_height() + 6) <= a;
+            if (!fits) kMaxEvidence = 2;
+            if (!fits && avail_for(kMaxEvidence) < a + small().line_height() + 6) kMaxEvidence = 1;  // 2 Eintraege plus "... und n weitere" sparen bei 3 Eintraegen nichts
+        }
+        const int avail = avail_for(kMaxEvidence);
+        const Font* font = &body();
+        int lh = body().line_height() + 4;
+        auto lines = wrap_text(*font, text, cw - 72);
+        if (lines.size() > 6 && static_cast<int>(lines.size()) * lh > avail) {
+            font = &small();
+            lh = small().line_height() + 6;
+            lines = wrap_text(*font, text, cw - 72);
+        }
+        const std::size_t max_l = std::max<std::size_t>(font == &body() ? 6 : 8, static_cast<std::size_t>(avail / lh));
+        if (lines.size() > max_l) lines = wrap_text(*font, text, cw - 72, static_cast<int>(max_l));
         const int ph = 22 + small().line_height() + 10 + static_cast<int>(lines.size()) * lh + 22;
         c.fill_round_rect(M, y, cw, ph, 18, kPanel);
         small().draw(c, M + 36, y + 20, S("detail.explanation"), kDim);
@@ -1777,18 +1829,14 @@ void App::draw_detail(Canvas& c) const {
         }
         int ty = y + 20 + small().line_height() + 10;
         for (const auto& l : lines) {
-            body().draw(c, M + 36, ty, l, kText);
+            font->draw(c, M + 36, ty, l, kText);
             ty += lh;
         }
         y += ph + 16;
     }
 
-    const std::string conf_reason = pick_text(lang_, conf.reason_de, conf.reason_en, "rules", f->rule_id, "confidence_reason");
-    const int link = linked_error_index();
-
     // Evidenz (mit Begruendung der Verlaesslichkeit bleibt weniger Platz: dann nur drei Zeilen)
     {
-        const std::size_t kMaxEvidence = conf_reason.empty() ? 5 : 3;
         const int lh = small().line_height() + 6;
         const int rows = f->evidence.empty() ? 1 : static_cast<int>(std::min(f->evidence.size(), kMaxEvidence)) + (f->evidence.size() > kMaxEvidence ? 1 : 0);
         const int ph = 22 + small().line_height() + 10 + rows * lh + 18;
@@ -1856,7 +1904,8 @@ void App::draw_fix_preview(Canvas& c) const {
         body().draw(c, M + 36, y + 34, S("fixprev.nothing"), kText);
         y += 126;
     }
-    for (std::size_t i = 0; i < plan_.changes.size(); ++i) {
+    std::size_t last_shown = static_cast<std::size_t>(prev_top_);
+    for (std::size_t i = static_cast<std::size_t>(std::clamp(prev_top_, 0, std::max(static_cast<int>(plan_.changes.size()) - 1, 0))); i < plan_.changes.size(); ++i) {
         const auto& ch = plan_.changes[i];
         const auto& pv = previews_[i];
         const std::string note = lang_ == Lang::De ? ch.note_de : ch.note_en;  // fr/it/es: Englisch (dynamische Texte der Fix-Engine)
@@ -1873,6 +1922,7 @@ void App::draw_fix_preview(Canvas& c) const {
             break;
         }
         ++shown;
+        last_shown = i + 1;
         c.fill_round_rect(M, y, cw, ph, 18, kPanel);
         draw_badge(c, M + 30, y + 18, S(rename ? "fixprev.rename" : "fixprev.write"), kAccent);
         int ty = y + 18 + 34 + 10;
@@ -1900,6 +1950,9 @@ void App::draw_fix_preview(Canvas& c) const {
         y += ph + 14;
     }
     (void)shown;
+    if (plan_.changes.size() > 1 && (prev_top_ > 0 || last_shown < plan_.changes.size()))
+        text_right(c, small(), W - M, 192,
+                   S.fmt("fixprev.range", {{"from", std::to_string(prev_top_ + 1)}, {"to", std::to_string(last_shown)}, {"n", std::to_string(plan_.changes.size())}}), kText);
 
     for (std::size_t i = 0; i < std::min<std::size_t>(plan_.warnings.size(), 2); ++i) {
         small().draw(c, M + 8, y, elide(small(), S("fixprev.warnings") + ": " + plan_.warnings[i], cw - 16), kWarn);

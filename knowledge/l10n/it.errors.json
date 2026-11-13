@@ -2,45 +2,46 @@
  "error_codes": {
   "0x80268001": {
    "title": "Nessun audio: chiamata audio rifiutata (firmware da 6 a 9)",
-   "text": "Per questo codice non esiste una pagina Sony; le informazioni vengono dal README del PS5 Backport Toolkit. Secondo esso, sui firmware da 6 a 9 la chiamata sceAudioOut2Set3DLatency rifiuta con questo codice una modalità superiore a 1, e Wwise (software audio dei giochi) lo tratta come fatale: il gioco rinuncia all'audio. Se il codice compaia altrove non è documentato.",
+   "text": "Per questo codice non esiste una pagina Sony. Secondo il PS5 Backport Toolkit, sui firmware da 6 a 9 sceAudioOut2Set3DLatency rifiuta così una modalità superiore a 1.",
    "steps": [],
    "notes": [
-    "Il README associa il sintomo «nessun audio» sui firmware da 6 a 9 alla regola di riparazione «set3-nonfatal». Questa regola modifica i file del gioco, secondo il README non viene mai consigliata automaticamente ed è non testata su 6-9. Medic non applica nulla del genere."
+    "Il README cita la regola «set3-nonfatal» (modifica i file del gioco, non testata); Medic non la applica. Altre occorrenze non sono documentate."
    ]
   },
   "0x80551618": {
    "title": "Registrazione dei trofei fallita",
-   "text": "Per questo codice non esiste una pagina Sony; le informazioni vengono dall'issue 97 di ShadowMount+, non da Sony. Lì qualcuno segnala il messaggio «Trophy registration failed (0x80551618)» all'avvio di ogni gioco PS4 montato come immagine .ffpfsc con ShadowMount+, anche se i giochi si avviano e sono giocabili. L'issue non ha una causa o una correzione confermate.",
+   "text": "Per questo codice non esiste una pagina Sony (fonte: issue 97 di ShadowMount+). I giochi PS4 montati come immagine .ffpfsc mostrano «Trophy registration failed (0x80551618)» all'avvio, ma funzionano.",
    "steps": [],
    "notes": [
-    "Ipotesi di chi ha segnalato (non confermata, nessuna risposta degli sviluppatori nell'issue): all'avvio i file dei trofei (come npbind.dat) vengono cercati in un posto adatto ai giochi PS5, non ai giochi PS4; inoltre ShadowMount+ non richiama il meccanismo di sistema per avviare un'app. Medic non lo conferma."
+    "Ipotesi di chi ha segnalato (non confermata): i file dei trofei (es. npbind.dat) vengono cercati come per i giochi PS5, non come per la PS4. Medic non lo conferma."
    ]
   },
   "0x80960005": {
    "title": "Richiesta dei preset di gioco rifiutata (firmware 4.xx)",
-   "text": "Per questo codice non esiste una pagina Sony; le informazioni vengono dal README del PS5 Backport Toolkit. Secondo esso, il firmware 4.xx rifiuta la richiesta di un gioco per i suoi preset perché la richiesta è più grande di 8 byte rispetto a quanto accetta il 4.xx. Il legame tra il codice e la dimensione compare solo nella tabella del README; una spiegazione esplicita del codice lì non c'è.",
+   "text": "Per questo codice non esiste una pagina Sony. Secondo il README del PS5 Backport Toolkit, il firmware 4.xx rifiuta la richiesta di «Game Presets» di un gioco perché è più grande di 8 byte.",
    "steps": [],
    "notes": [
-    "Il README associa l'errore alla regola di riparazione del toolkit «gamepresets-28». Questa regola modifica i file del gioco; Medic non fornisce né giochi né backport e non applica nulla del genere."
+    "Il legame tra codice e dimensione compare solo nella tabella del README, senza spiegazione esplicita.",
+    "Medic non modifica i file di gioco e non fornisce né giochi né backport."
    ]
   },
   "0x809F8032": {
    "title": "Impossibile aprire i dati salvati (montaggio fallito)",
-   "text": "Per questo codice non esiste una pagina Sony; le informazioni vengono dal README del PS5 Backport Toolkit. Lì il codice compare nella riga di log «Failed to mount ...»: il salvataggio esiste ma non si può aprire, spesso perché un crash precedente l'ha lasciato creato a metà. Una causa sospettata per un gioco (valore 0 su un montaggio in sola lettura) è stata esclusa in un test; il README non indica la causa effettiva.",
+   "text": "Per questo codice non esiste una pagina Sony (README del PS5 Backport Toolkit). Il salvataggio non si apre, spesso dopo un crash durante la creazione.",
    "steps": [
-    "Se il salvataggio è stato lasciato creato a metà da un crash precedente: eliminalo in «Settings > Saved Data» e riprova (questo elimina quel salvataggio: se possibile fai prima un backup)."
+    "Dopo un crash precedente: elimina il salvataggio in «Settings > Saved Data» e riprova (se possibile fai prima un backup)."
    ],
    "notes": [
-    "Il percorso del menu è preso come scritto nel README; come Sony chiami esattamente il menu lì non è indicato."
+    "Percorso del menu preso dal README; il nome esatto del menu Sony lì non è indicato. Il README non indica la causa effettiva."
    ]
   },
   "CE-100002-3": {
    "title": "Aggiornamento dell'app non riuscito",
-   "text": "Il file di aggiornamento dell'app potrebbe non essere stato installato correttamente, ad esempio perché la console è stata spenta durante l'aggiornamento. Sony indica il riavvio, la ricerca di aggiornamenti dell'app e, se serve, la reinstallazione.",
+   "text": "Il file di aggiornamento dell'app potrebbe non essere stato installato correttamente, ad esempio perché la console è stata spenta durante l'aggiornamento.",
    "steps": [
     "Riavviare la console.",
     "Selezionare il gioco o l'app, premere il tasto Options e scegliere «Check for update».",
-    "Nella schermata iniziale selezionare il gioco o l'app, premere il tasto Options, scegliere «Delete» (Elimina) e poi reinstallarlo."
+    "Se non basta: selezionare il gioco o l'app, premere Options, scegliere «Delete» (Elimina) e reinstallarlo."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_KERNEL_ERROR_EPERM, codice di ritorno 0x80020001."
@@ -48,48 +49,44 @@
   },
   "CE-100005-6": {
    "title": "Impossibile caricare il gioco o l'applicazione",
-   "text": "Il gioco o l'applicazione non può essere caricato. Per questo codice Sony indica soprattutto di eliminarlo e reinstallarlo; per i giochi su disco si aggiunge la pulizia del disco.",
+   "text": "Il gioco o l'applicazione non può essere caricato. Sony consiglia soprattutto di eliminarlo e reinstallarlo.",
    "steps": [
-    "Nella schermata Home, evidenzia il gioco, premi il tasto OPTIONS e scegli «Delete».",
-    "Per la versione digitale, reinstalla il gioco dalla tua libreria.",
-    "Per un gioco su disco, pulisci il disco dal centro verso il bordo con un panno morbido e senza pelucchi, inseriscilo di nuovo e reinstalla il gioco.",
-    "Se la console è in verticale sul suo supporto, il lato con l'etichetta del disco deve essere rivolto a sinistra quando lo inserisci."
+    "Evidenzia il gioco, premi il tasto OPTIONS e scegli «Delete».",
+    "Versione digitale: reinstalla il gioco dalla tua libreria.",
+    "Gioco su disco: pulisci il disco dal centro verso il bordo con un panno morbido senza pelucchi, reinseriscilo e reinstalla il gioco.",
+    "Console in verticale sul supporto: inserisci il disco con il lato dell'etichetta a sinistra."
    ]
   },
   "CE-100006-7": {
    "title": "Unità di archiviazione esterna non riconosciuta",
-   "text": "La console non riconosce l'unità di archiviazione esterna collegata. I passaggi di Sony riguardano il collegamento USB (senza hub), la formattazione come archiviazione estesa e un possibile problema dell'unità stessa.",
+   "text": "La console non riconosce l'unità di archiviazione esterna collegata.",
    "steps": [
-    "Scollega il cavo USB e ricollegalo. Se usi un hub USB, rimuovilo e collega l'unità direttamente alla console.",
-    "Se l'unità viene usata come archiviazione estesa per la prima volta, va formattata: «Settings > Storage > Extended Storage». Attenzione: la formattazione cancella tutto sull'unità.",
-    "Se non puoi trasferire tutti i dati in una volta, trasferisci i contenuti uno alla volta.",
-    "Verifica se i dati del gioco si possono installare sull'archiviazione estesa (guida di Sony sull'archiviazione estesa).",
-    "Potrebbe esserci un problema con l'unità: prova un altro dispositivo di archiviazione."
+    "Scollega e ricollega il cavo USB; con un hub USB, collega l'unità direttamente alla console.",
+    "Primo uso come archiviazione estesa: formattala in «Settings > Storage > Extended Storage». Attenzione: cancella tutto sull'unità.",
+    "Verifica se i dati del gioco si possono installare sull'archiviazione estesa.",
+    "Prova un altro dispositivo di archiviazione: l'unità potrebbe essere difettosa."
    ]
   },
   "CE-100008-9": {
    "title": "Si è verificato un errore",
-   "text": "Si è verificato un errore generico. Sony indica due passaggi: riavviare la console e, se l'errore si verifica all'avvio di un'applicazione come un gioco, eliminare l'applicazione e reinstallarla.",
+   "text": "Si è verificato un errore generico. Sony indica solo un riavvio e una reinstallazione.",
    "steps": [
     "Riavvia la console.",
-    "Se l'errore si verifica all'avvio di un'applicazione come un gioco, elimina l'applicazione e reinstallala. Fai prima un backup dei dati salvati."
+    "Se l'errore compare all'avvio di un'app (anche un gioco): eliminala e reinstallala; prima fai un backup dei salvataggi."
    ]
   },
   "CE-100009-0": {
    "title": "Problema con il file di aggiornamento",
-   "text": "C'è un problema con il file di aggiornamento di un'app o di un gioco. Sony indica: fare prima un backup dei dati salvati, eliminare e reinstallare l'app, riavviare, uscire e rientrare con l'account e, altrimenti, attendere 24 ore.",
+   "text": "C'è un problema con il file di aggiornamento di un'app o di un gioco.",
    "steps": [
-    "Fai un backup dei dati salvati.",
-    "Elimina l'app/il gioco e reinstalla.",
-    "Riavvia la console.",
-    "Scegli «Settings > Users and Accounts > Other > Sign Out».",
-    "Accedi di nuovo.",
-    "Se l'errore continua a ripetersi, attendi 24 ore e riprova."
+    "Fai un backup dei dati salvati, poi elimina l'app o il gioco e reinstallalo.",
+    "Riavvia la console, poi esci e rientra con l'account da Settings > Users and Accounts > Other > Sign Out.",
+    "Se l'errore continua, attendi 24 ore e riprova."
    ]
   },
   "CE-100022-5": {
    "title": "Errore generico",
-   "text": "Sony indica solo «si è verificato un errore». Se compare all'avvio di un gioco o di un'app, dopo un riavvio il rimedio principale è la reinstallazione.",
+   "text": "Sony indica solo «si è verificato un errore».",
    "steps": [
     "Riavviare la console.",
     "Se l'errore compare all'avvio di un gioco o di un'app, eliminarlo e reinstallarlo."
@@ -100,39 +97,35 @@
   },
   "CE-100028-1": {
    "title": "Spazio libero insufficiente sull'SSD",
-   "text": "Non c'è abbastanza spazio libero sull'SSD della console. Per questo codice Sony non indica uno spazio preciso; dice solo di controllare lo spazio libero per il download e di eliminare dei contenuti.",
+   "text": "Non c'è abbastanza spazio libero sull'SSD della console. Per questo codice Sony non indica uno spazio preciso.",
    "steps": [
-    "Apri «Settings > Storage > System Storage» e controlla se c'è abbastanza spazio libero per il download.",
-    "Nell'archiviazione della console, evidenzia il contenuto, premi il tasto select e scegli «Delete».",
-    "Nella schermata Home, evidenzia il contenuto, premi il tasto OPTIONS e scegli «Delete»."
+    "Apri «Settings > Storage > System Storage» e controlla che ci sia abbastanza spazio libero per il download.",
+    "Evidenzia un contenuto e scegli «Delete»: con il tasto select nell'archiviazione della console, con il tasto OPTIONS nella schermata Home."
    ]
   },
   "CE-100095-5": {
    "title": "Problema all'avvio dell'applicazione",
-   "text": "Si è verificato un problema all'avvio dell'applicazione. Per questo codice Sony dice solo di eliminare l'applicazione e reinstallarla.",
+   "text": "Si è verificato un problema all'avvio dell'applicazione.",
    "steps": [
     "Evidenzia l'applicazione, premi il tasto OPTIONS e scegli «Delete».",
-    "Reinstalla l'applicazione.",
-    "Tieni la console accesa mentre l'installazione è in corso."
+    "Reinstalla l'applicazione e tieni la console accesa durante l'installazione."
    ]
   },
   "CE-100096-6": {
    "title": "Problema nel caricamento dell'applicazione",
-   "text": "Si è verificato un errore durante il caricamento dell'applicazione. Per questo codice Sony indica un solo passaggio: un riavvio dopo aver scollegato il cavo di alimentazione.",
+   "text": "Si è verificato un errore durante il caricamento dell'applicazione.",
    "steps": [
     "Spegni la console, scollega il cavo di alimentazione, ricollegalo e riavvia la console."
    ]
   },
   "CE-105638-3": {
    "title": "Attivazione del contenuto non riuscita",
-   "text": "Non è stato possibile attivare il contenuto. Sony indica il riavvio, un test di connessione, il riavvio del router e la possibilità che lo stesso account sia usato su più console contemporaneamente.",
+   "text": "Non è stato possibile attivare il contenuto. Cause possibili: la connessione, oppure lo stesso account usato su più console.",
    "steps": [
     "Riavviare la console.",
-    "In Settings > Network > Connection Status > Test Internet Connection verificare che la console sia collegata correttamente a Internet e, se serve, configurare di nuovo le impostazioni di rete.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
-    "La causa può essere lo stesso account usato su più console: attivare Settings > Users and Accounts > Other > Console Sharing and Offline Play.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Eseguire Settings > Network > Connection Status > Test Internet Connection e, se serve, configurare di nuovo la rete.",
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli; con il Wi-Fi avvicinare la console al router.",
+    "Stesso account su più console? Attivare Settings > Users and Accounts > Other > Console Sharing and Offline Play."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_DRM_ERROR_BAD_ACTIVATION, codice di ritorno 0x8087000D."
@@ -140,17 +133,17 @@
   },
   "CE-105733-9": {
    "title": "Overlay residuo impedisce l'avvio dei giochi (build di prova di ps5-theme)",
-   "text": "Per questo codice non esiste una pagina Sony (404 all'indirizzo abituale di Sony), quindi il significato viene solo dalla community. Secondo le note di rilascio di ps5-theme 1.53, un overlay rimasto nelle prime build di prova impediva l'avvio di qualsiasi gioco e app e causava questo errore.",
+   "text": "Per questo codice non esiste una pagina Sony; secondo le note di rilascio di ps5-theme 1.53, un overlay rimasto nelle prime build di prova impediva l'avvio di tutti i giochi e le app.",
    "steps": [
-    "Passa a ps5-theme versione 1.53 o successiva; secondo le note di rilascio il problema descritto è risolto da quella versione in poi."
+    "Passare a ps5-theme versione 1.53 o successiva (risolto da lì in poi, secondo le note di rilascio)."
    ],
    "notes": [
-    "Nota di Medic: il check-up segnala le build di prova di ps5-theme tra le versioni 1.30 e 1.53 (regola plugin.ps5theme_old_overlay). Il codice di errore in sé non si vede in uno snapshot."
+    "Nota di Medic: il check-up segnala le build di prova di ps5-theme da 1.30 a 1.53 (regola plugin.ps5theme_old_overlay); il codice in sé non si vede in uno snapshot."
    ]
   },
   "CE-105771-1": {
    "title": "Errore generico",
-   "text": "Sony indica solo «si è verificato un errore». Se compare all'avvio di un gioco o di un'app, dopo un riavvio il rimedio principale è la reinstallazione.",
+   "text": "Sony indica solo «si è verificato un errore».",
    "steps": [
     "Riavviare la console.",
     "Se l'errore compare all'avvio di un gioco o di un'app, eliminarlo e reinstallarlo."
@@ -161,23 +154,20 @@
   },
   "CE-105799-1": {
    "title": "Impossibile connettersi al server",
-   "text": "La console non riesce a raggiungere il server PlayStation. I passaggi di Sony vanno dalla pagina di stato, una connessione cablata e il riavvio del router fino a porte, indirizzo IP statico e server DNS pubblico.",
+   "text": "La console non riesce a raggiungere il server PlayStation; spesso la linea è solo temporaneamente occupata.",
    "steps": [
-    "Controlla sulla pagina di stato di PlayStation se c'è un guasto dei server o una manutenzione.",
-    "Riavvia la console, collegati a Internet con una connessione cablata, se possibile, e configura di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicina la console al router o rimuovi ciò che ostacola il collegamento tra i dispositivi.",
-    "Spegni router e modem, attendi almeno 5 minuti, poi riaccendili.",
-    "Se possibile, apri queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Il tuo provider Internet può aiutarti.",
-    "Nelle impostazioni di rete, inserisci manualmente un indirizzo IP statico.",
-    "Cambia temporaneamente le impostazioni DNS con un server DNS pubblico gratuito. Se nulla aiuta, Sony dice che la linea potrebbe essere temporaneamente occupata: riprova più tardi."
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi avvicinarla al router), configurare di nuovo la rete.",
+    "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli.",
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535."
    ]
   },
   "CE-105841-9": {
    "title": "Errore generico",
-   "text": "Sony indica solo «si è verificato un errore». Se compare all'avvio di un gioco o di un'app, dopo un riavvio il rimedio principale è la reinstallazione.",
+   "text": "Sony indica solo «si è verificato un errore».",
    "steps": [
     "Riavviare la console.",
-    "Se l'errore compare all'avvio di un gioco o di un'app, eliminarlo e reinstallarlo."
+    "Se l'errore compare all'avvio di un gioco o di un'app: eliminarlo e reinstallarlo."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_SSL_ERROR_OUT_OF_MEMORY, codice di ritorno 0x809517D5."
@@ -185,11 +175,11 @@
   },
   "CE-106439-3": {
    "title": "Errore dell'applicazione",
-   "text": "Sony descrive solo un «errore dell'applicazione». I passaggi sono il riavvio, la ricerca di aggiornamenti dell'app e, se serve, l'eliminazione e la reinstallazione.",
+   "text": "Sony descrive l'errore solo come «errore dell'applicazione».",
    "steps": [
     "Riavviare la console.",
     "Selezionare il gioco o l'app, premere il tasto Options e scegliere «Check for update».",
-    "Nella schermata iniziale selezionare il gioco o l'app, premere il tasto Options, scegliere «Delete» (Elimina) e poi reinstallarlo."
+    "Altrimenti: nella schermata Home selezionarlo, premere Options, scegliere «Delete» (Elimina) e reinstallarlo."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_SSL_ERROR_INVALID_ID, codice di ritorno 0x8095F006."
@@ -200,12 +190,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -214,11 +202,11 @@
   },
   "CE-106449-4": {
    "title": "Problema di connessione al server",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "La console ha problemi di connessione a PlayStation; spesso la linea è solo temporaneamente sovraccarica.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "In Settings > Network > Connection Status > Test Internet Connection verificare che la console sia collegata correttamente a Internet e, se serve, configurare di nuovo le impostazioni di rete.",
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
+    "Riavviare la console e, se possibile, collegarla con un cavo LAN.",
+    "Settings > Network > Connection Status > Test Internet Connection: provare la connessione, altrimenti configurare di nuovo la rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
    ],
    "notes": [
@@ -227,34 +215,34 @@
   },
   "CE-106485-4": {
    "title": "Dati del software di sistema o dell'app forse illeggibili",
-   "text": "Potrebbe esserci un problema nella lettura dei dati del software di sistema o dell'applicazione. Per i giochi su una console con jailbreak una possibile causa è un requisito di firmware del gioco troppo alto, vedi i passaggi.",
+   "text": "Potrebbe esserci un problema nella lettura del software di sistema o dei dati dell'applicazione. Per un gioco la causa può essere un requisito di firmware troppo alto.",
    "steps": [
-    "Per un gioco: probabilmente è stato creato per una versione di firmware più alta di quella della console. Ha quindi bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
-    "In alternativa usa AMPR Emu o AMPR Emu NG: il file libSceAmpr.sprx va nella cartella fakelib/ del gioco, il gioco viene montato con ShadowMount+ e gli aggiornamenti di fakelib vengono disattivati nelle sue impostazioni (secondo il README di AMPR Emu NG)."
+    "Se il gioco è creato per un firmware più alto, serve un backport per il firmware in uso.",
+    "In alternativa AMPR Emu o AMPR Emu NG: mettere libSceAmpr.sprx nella cartella fakelib/ del gioco.",
+    "Montare il gioco con ShadowMount+ e disattivare gli aggiornamenti di fakelib nelle sue impostazioni."
    ],
    "notes": [
-    "Nota dalla scena (non da Sony): ogni file di gioco indica il firmware per cui è stato creato e la console rifiuta di avviare qualsiasi cosa più recente di sé; un backport abbassa quel requisito. AMPR Emu e AMPR Emu NG sono reimplementazioni della libreria di sistema libSceAmpr.sprx nella cartella del gioco. Che questo codice indichi proprio questo caso non è documentato.",
-    "Nota di Medic: Medic non modifica mai il firmware e non fornisce né giochi né backport."
+    "Nota dalla scena (non da Sony): un backport abbassa il requisito di firmware di un gioco. Che questo codice indichi proprio questo non è documentato.",
+    "Medic non modifica mai il firmware e non fornisce né giochi né backport."
    ]
   },
   "CE-106487-6": {
    "title": "Problema nel download o nell'installazione del contenuto",
-   "text": "C'è stato un problema durante il download e l'installazione del contenuto. Sony indica: ripristinare le licenze, eliminare il download e riavviarlo, e ricostruire il database in modalità provvisoria.",
+   "text": "C'è stato un problema durante il download o l'installazione del contenuto.",
    "steps": [
-    "Ripristina le licenze: «Settings > Users and Accounts > Other > Restore Licenses > Restore».",
-    "Premi il tasto PS per aprire il centro di controllo, evidenzia il download, premi il tasto OPTIONS, scegli «Delete» e riavvia il download.",
-    "Avvia la console in modalità provvisoria e scegli «Clear Cache and Rebuild Database > Rebuild Database». Sony non indica perdite di dati per questa opzione, ma avverte in generale che alcune opzioni della modalità provvisoria fanno perdere dati: fai prima un backup dei tuoi dati.",
-    "Se il problema continua, riprova più tardi."
+    "Ripristinare le licenze: «Settings > Users and Accounts > Other > Restore Licenses > Restore».",
+    "Premere il tasto PS per aprire il centro di controllo, evidenziare il download, premere Options, scegliere «Delete» e riavviarlo.",
+    "Avviare la modalità provvisoria, scegliere «Clear Cache and Rebuild Database > Rebuild Database»; prima salvare i dati (altre opzioni li cancellano)."
    ],
    "notes": [
-    "Opzioni della modalità provvisoria secondo Sony: «Repair Console Storage» non cancella dati, «Restore Default Settings» non elimina giochi, app, screenshot, videoclip e dati salvati, «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati."
+    "Modalità provvisoria secondo Sony: «Repair Console Storage» non cancella dati, «Reset PS5» tutti i dati utente; per «Rebuild Database» Sony non indica perdite di dati."
    ]
   },
   "CE-107031-2": {
    "title": "Caricamento su YouTube: caratteri non consentiti",
-   "text": "Per questo codice non esiste una pagina Sony; l'informazione proviene dal PS5 Dev Wiki (community). Secondo il PS5 Dev Wiki l'errore compare quando la descrizione del video contiene caratteri non consentiti durante il caricamento su YouTube.",
+   "text": "Per questo codice non esiste una pagina Sony (PS5 Dev Wiki, community). La descrizione del video contiene caratteri non consentiti durante il caricamento su YouTube.",
    "steps": [
-    "Controllare che la descrizione del video non contenga caratteri non consentiti, rimuoverli e ripetere il caricamento."
+    "Rimuovere i caratteri non consentiti dalla descrizione del video e ripetere il caricamento."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_ABSTRACTSTORAGE_ERROR_GET_LOCATION, codice di ritorno 0x809E0204."
@@ -262,20 +250,20 @@
   },
   "CE-107098-5": {
    "title": "Salvataggio non riuscito (montaggio dei dati salvati, firmware 4.xx)",
-   "text": "Per questo codice non esiste una pagina Sony (404 all'indirizzo abituale di Sony); le informazioni vengono dal README del PS5 Backport Toolkit. Secondo esso, il codice compare quando un gioco passa al montaggio dei dati salvati un valore che il firmware 4.xx rifiuta, e quindi il salvataggio fallisce. Se il codice possa avere altre cause non è documentato.",
+   "text": "Per questo codice non esiste una pagina Sony. Secondo il PS5 Backport Toolkit, il firmware 4.xx rifiuta un valore passato da un gioco al montaggio dei dati salvati: il salvataggio fallisce.",
    "steps": [],
    "notes": [
-    "Il README associa l'errore alla regola di riparazione del toolkit «savedata-mount» (poi «savedata-prepare» e «savedata-dirsearch»). Queste regole modificano i file del gioco; Medic non fornisce né giochi né backport e non applica nulla del genere.",
-    "Il README indica il caso solo per il firmware 4.xx."
+    "Il README cita le regole del toolkit «savedata-mount», «savedata-prepare» e «savedata-dirsearch»; modificano i file del gioco, Medic non le applica.",
+    "Il README indica il caso solo per il firmware 4.xx; altre cause non sono documentate."
    ]
   },
   "CE-107255-0": {
    "title": "Abbonamento PlayStation Plus non confermato",
-   "text": "Non è possibile confermare l'abbonamento PlayStation Plus. Sony indica di controllare la connessione a Internet, l'accesso a PSN e la scadenza dell'abbonamento.",
+   "text": "Non è possibile confermare l'abbonamento PlayStation Plus.",
    "steps": [
     "Assicurarsi che la console sia collegata a Internet e abbia effettuato l'accesso a PlayStation Network.",
     "Verificare in Settings > Users and Accounts > Account > Payment and Subscriptions > Subscriptions se l'abbonamento PlayStation Plus è scaduto.",
-    "Se l'accesso è possibile e l'abbonamento PlayStation Plus è ancora attivo, il problema è probabilmente temporaneo: riprovare più tardi."
+    "Se è tutto a posto, il problema è probabilmente temporaneo: riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_SAVE_DATA_I_ERROR_ENTRY_NOT_FOUND, codice di ritorno 0x809F8500."
@@ -283,42 +271,40 @@
   },
   "CE-107520-5": {
    "title": "Il gioco richiede una versione di firmware più alta",
-   "text": "Sony non spiega ulteriormente questo codice. Per i giochi su una console con jailbreak una possibile causa è: il gioco è creato per una versione di firmware più alta di quella della console. La soluzione è un backport per il firmware in uso, oppure AMPR Emu / AMPR Emu NG, vedi i passaggi.",
+   "text": "Sony non spiega ulteriormente questo codice. Su una console con jailbreak il gioco è probabilmente creato per un firmware più alto di quello della console.",
    "steps": [
-    "Per un gioco: probabilmente è stato creato per una versione di firmware più alta di quella della console. Ha quindi bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
-    "In alternativa usa AMPR Emu o AMPR Emu NG: il file libSceAmpr.sprx va nella cartella fakelib/ del gioco, il gioco viene montato con ShadowMount+ e gli aggiornamenti di fakelib vengono disattivati nelle sue impostazioni (secondo il README di AMPR Emu NG)."
+    "Il gioco ha bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
+    "In alternativa usa AMPR Emu o AMPR Emu NG: metti libSceAmpr.sprx nella cartella fakelib/ del gioco.",
+    "Monta il gioco con ShadowMount+ e disattiva lì gli aggiornamenti di fakelib (README di AMPR Emu NG)."
    ],
    "notes": [
-    "Nota dalla scena (non da Sony): ogni file di gioco indica il firmware per cui è stato creato e la console rifiuta di avviare qualsiasi cosa più recente di sé; un backport abbassa quel requisito. AMPR Emu e AMPR Emu NG sono reimplementazioni della libreria di sistema libSceAmpr.sprx nella cartella del gioco. Che questo codice indichi proprio questo caso non è documentato.",
+    "Dalla scena (non da Sony): un backport abbassa il requisito di firmware del gioco. Che questo codice indichi proprio questo caso non è documentato.",
     "Nota di Medic: Medic non modifica mai il firmware e non fornisce né giochi né backport."
    ]
   },
   "CE-107527-2": {
    "title": "Installazione non riuscita",
-   "text": "L'installazione non è riuscita; potrebbe esserci un problema con i dati da installare. I passaggi di Sony riguardano un riavvio, la connessione di rete e l'eliminazione e il nuovo download del gioco.",
+   "text": "L'installazione non è riuscita; potrebbe esserci un problema con i dati da installare.",
    "steps": [
-    "Riavvia la console.",
-    "Collegati a Internet con una connessione cablata, se possibile.",
-    "Apri «Settings > Network > Set Up Internet Connection» e configura di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicina la console al router o rimuovi ciò che ostacola il collegamento tra i dispositivi.",
+    "Riavvia la console; se possibile collegala con un cavo di rete (con il Wi-Fi, avvicinala al router).",
+    "Apri «Settings > Network > Set Up Internet Connection» e configura di nuovo la rete.",
     "Spegni il router, attendi almeno 5 minuti, poi riaccendilo.",
     "Controlla «Settings > Storage»: se i dati del gioco non si sono installati, elimina il gioco e scaricalo di nuovo."
    ]
   },
   "CE-107622-8": {
    "title": "Avvio dell'applicazione non riuscito",
-   "text": "Non è stato possibile avviare l'applicazione; il file di aggiornamento potrebbe non essere stato applicato correttamente all'avvio. Sony indica: riavviare e avviare di nuovo e, se nulla migliora, eliminare il contenuto e reinstallare i dati del gioco, perché potrebbero essere danneggiati.",
+   "text": "Non è stato possibile avviare l'applicazione; il file di aggiornamento potrebbe non essere stato applicato correttamente all'avvio.",
    "steps": [
     "Riavvia la console e avvia di nuovo l'applicazione.",
-    "Se nulla migliora, i dati del gioco potrebbero essere danneggiati: evidenzia l'applicazione, premi il tasto OPTIONS ed elimina il contenuto («Delete»).",
-    "Reinstalla i dati del gioco."
+    "Altrimenti i dati del gioco potrebbero essere danneggiati: evidenzia l'applicazione, tasto OPTIONS, «Delete», poi reinstalla."
    ]
   },
   "CE-107649-7": {
    "title": "Il disco differisce dai dati installati",
-   "text": "Il disco inserito contiene contenuti diversi dai dati installati, ad esempio dati aggiuntivi come DLC. Sony indica di eliminare il gioco e le applicazioni correlate e di reinstallare da un altro disco dello stesso gioco, se disponibile.",
+   "text": "Il disco inserito contiene contenuti diversi dai dati installati, ad esempio dati aggiuntivi come DLC.",
    "steps": [
-    "Se si ha un altro disco dello stesso gioco, eliminare il gioco e le applicazioni correlate e reinstallarlo da quel disco."
+    "Con un altro disco dello stesso gioco: eliminare il gioco e le applicazioni correlate e reinstallarlo da quel disco."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_PROCESS_STARTER_ERROR_DISAGREE_DISC_VERSION, codice di ritorno 0x80A40057."
@@ -328,13 +314,10 @@
    "title": "Errore durante il gioco",
    "text": "Si è verificato un errore durante il gioco. Sony indica una lunga catena: scollegare il cavo di alimentazione, aggiornare il gioco, reinstallare il gioco, ricostruire il database in modalità provvisoria e solo come ultimo passaggio ripristinare la console.",
    "steps": [
-    "Spegni la console e scollega il cavo di alimentazione. Attendi cinque minuti, ricollega il cavo e riavvia la console.",
-    "Assicurati che il gioco sia all'ultima versione.",
-    "Se l'errore persiste, elimina il gioco in «Settings > Storage» e reinstallalo.",
-    "Avvia la console in modalità provvisoria e scegli «Clear Cache and Rebuild Database > Rebuild Database». Sony non indica perdite di dati per questa opzione, ma avverte in generale che alcune opzioni della modalità provvisoria fanno perdere dati: fai prima un backup dei tuoi dati.",
-    "Se il problema continua, ripristina la console. Ciò cancella tutti i dati nell'archiviazione della console: fai prima un backup dei dati della console.",
-    "Dopo il backup, scegli «Settings > System > System Software > Reset Options > Reset Your Console».",
-    "Dopo il ripristino, installa di nuovo il gioco."
+    "Spegnere la console, scollegare il cavo di alimentazione, attendere cinque minuti, ricollegarlo e riavviare.",
+    "Verificare che il gioco sia all'ultima versione; se l'errore persiste, eliminare il gioco in «Settings > Storage» e reinstallarlo.",
+    "In modalità provvisoria scegliere «Clear Cache and Rebuild Database > Rebuild Database» (prima salvare i dati).",
+    "Se nulla aiuta, ripristinare la console («Settings > System > System Software > Reset Options > Reset Your Console»). Cancella tutti i dati nella memoria della console: prima fare un backup, poi reinstallare il gioco."
    ],
    "notes": [
     "Opzioni della modalità provvisoria secondo Sony: «Repair Console Storage» non cancella dati, «Restore Default Settings» non elimina giochi, app, screenshot, videoclip e dati salvati, «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati."
@@ -342,24 +325,22 @@
   },
   "CE-107857-8": {
    "title": "Impossibile caricare o aggiornare l'applicazione",
-   "text": "Si è verificato un errore durante il caricamento o l'aggiornamento dell'applicazione. Sony consiglia prima un riavvio, poi un aggiornamento dell'app e solo dopo una reinstallazione e la ricostruzione del database in modalità provvisoria.",
+   "text": "Si è verificato un errore durante il caricamento o l'aggiornamento dell'applicazione.",
    "steps": [
-    "Riavvia la console.",
-    "Porta l'app/il gioco interessato all'ultima versione.",
-    "Se l'errore continua a ripetersi dopo l'avvio: elimina l'app/il gioco in «Settings > Storage» e reinstallalo.",
-    "Avvia la console in modalità provvisoria e scegli «Clear Cache and Rebuild Database > Rebuild Database». Sony non indica perdite di dati per questa opzione, ma avverte in generale che alcune opzioni della modalità provvisoria fanno perdere dati: fai prima un backup dei tuoi dati."
+    "Riavvia la console e porta l'app/il gioco interessato all'ultima versione.",
+    "Se l'errore continua: elimina l'app/il gioco in «Settings > Storage» e reinstallalo.",
+    "Infine, in modalità provvisoria, scegli «Clear Cache and Rebuild Database > Rebuild Database»; fai prima un backup dei tuoi dati."
    ],
    "notes": [
-    "Opzioni della modalità provvisoria secondo Sony: «Repair Console Storage» non cancella dati, «Restore Default Settings» non elimina giochi, app, screenshot, videoclip e dati salvati, «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati."
+    "Secondo Sony «Repair Console Storage» non cancella dati e «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati."
    ]
   },
   "CE-107863-5": {
    "title": "Errore di connessione di rete",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "La console ha problemi di connessione a PlayStation; spesso la linea è solo temporaneamente sovraccarica.",
    "steps": [
-    "Riavviare la console.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se l'errore compare durante il download o la copia di un contenuto, reinstallarlo dalla libreria dopo i passaggi precedenti.",
+    "Riavviare la console, poi spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
+    "Se l'errore è comparso durante il download o la copia di un contenuto, reinstallarlo poi dalla libreria.",
     "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
    ],
    "notes": [
@@ -368,31 +349,28 @@
   },
   "CE-107872-5": {
    "title": "Spazio libero insufficiente nell'archiviazione della console",
-   "text": "Non c'è abbastanza spazio libero nell'archiviazione della console, quindi non si può scaricare né copiare nulla. Sony consiglia di riservare circa il doppio dello spazio libero necessario ai dati stessi durante l'installazione.",
+   "text": "Non c'è abbastanza spazio libero nell'archiviazione della console. Sony consiglia, per un'installazione, circa il doppio dello spazio necessario ai dati stessi.",
    "steps": [
-    "Controlla lo spazio libero in «Settings > Storage». Un'installazione può richiedere circa il doppio dello spazio.",
-    "Se lo spazio non basta, valuta un'archiviazione estesa in base alle tue esigenze.",
-    "Se l'errore si verifica anche con spazio libero sufficiente: cambia la destinazione di salvataggio sull'archiviazione della console o sull'archiviazione estesa. Se hai una seconda archiviazione estesa, prova anche quella."
+    "Controlla lo spazio libero in «Settings > Storage»; se non basta, valuta un'archiviazione estesa.",
+    "Errore nonostante lo spazio sufficiente: cambia la destinazione di salvataggio sull'archiviazione della console o su quella estesa; prova anche una seconda archiviazione estesa."
    ]
   },
   "CE-107891-6": {
    "title": "Il contenuto non si installa correttamente",
-   "text": "Il contenuto non si installa correttamente sulla console. Per questo codice Sony dice solo di eliminare il contenuto interessato e reinstallarlo; se non aiuta, riprovare più tardi.",
+   "text": "Un contenuto non si installa correttamente; per questo Sony indica solo di eliminarlo e reinstallarlo.",
    "steps": [
-    "Apri «Settings > Storage».",
-    "Seleziona l'archiviazione in cui si trova il contenuto.",
-    "Elimina il gioco che ha l'errore.",
-    "Reinstalla il gioco.",
-    "Se hai ancora problemi, riprova più tardi."
+    "Apri «Settings > Storage» e seleziona l'archiviazione in cui si trova il contenuto.",
+    "Elimina il gioco con l'errore e reinstallalo.",
+    "Se il problema persiste, riprova più tardi."
    ]
   },
   "CE-107928-7": {
    "title": "Download del gioco interrotto",
-   "text": "Un errore ha interrotto il download del gioco, ad esempio per problemi di connessione o perché la console è stata spenta nel frattempo. Sony indica l'eliminazione, un nuovo download, un test di connessione e il riavvio del router.",
+   "text": "Un errore ha interrotto il download del gioco, ad esempio per problemi di connessione o per la console spenta.",
    "steps": [
-    "Premere il tasto PS del controller per aprire il centro di controllo, selezionare il contenuto scaricato, premere il tasto Options e scegliere «Delete». Poi riavviare il download.",
+    "Centro di controllo (tasto PS): selezionare il download, premere Options, scegliere «Delete».",
     "Riavviare il download senza spegnere la console mentre è in corso.",
-    "In Settings > Network > Connection Status > Test Internet Connection verificare che la console sia collegata correttamente a Internet e, se serve, configurare di nuovo le impostazioni di rete.",
+    "Settings > Network > Connection Status > Test Internet Connection: provare la connessione, altrimenti configurare di nuovo la rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
    ],
    "notes": [
@@ -401,11 +379,11 @@
   },
   "CE-107938-8": {
    "title": "Aggiornamento dell'app non riuscito",
-   "text": "Il file di aggiornamento dell'app potrebbe non essere stato installato correttamente, ad esempio perché la console è stata spenta durante l'aggiornamento. Sony indica il riavvio, la ricerca di aggiornamenti dell'app e, se serve, la reinstallazione.",
+   "text": "Il file di aggiornamento dell'app potrebbe non essere stato installato correttamente, ad esempio perché la console è stata spenta durante l'aggiornamento.",
    "steps": [
     "Riavviare la console.",
     "Selezionare il gioco o l'app, premere il tasto Options e scegliere «Check for update».",
-    "Nella schermata iniziale selezionare il gioco o l'app, premere il tasto Options, scegliere «Delete» (Elimina) e poi reinstallarlo."
+    "Se non basta: selezionare il gioco o l'app, premere Options, scegliere «Delete» (Elimina) e reinstallarlo."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_PLAYGO_ERROR_CORE_CONTENT_NOT_FOUND, codice di ritorno 0x80B21401."
@@ -413,7 +391,7 @@
   },
   "CE-107958-0": {
    "title": "Archivio esterno rimosso forzatamente",
-   "text": "Per questo codice non esiste una pagina Sony; l'informazione proviene dal PS5 Dev Wiki (community). Secondo il PS5 Dev Wiki l'errore si è verificato durante un download o una copia dopo la disconnessione di un'unità esterna. Non è documentato altro.",
+   "text": "Per questo codice non esiste una pagina Sony. Secondo il PS5 Dev Wiki l'errore si è verificato durante un download o una copia dopo la disconnessione di un'unità esterna.",
    "steps": [
     "Ricollegare l'archivio esterno (se possibile direttamente alla console, senza hub) e ripetere l'operazione."
    ],
@@ -423,7 +401,7 @@
   },
   "CE-108255-1": {
    "title": "Errore con il gioco/l'applicazione",
-   "text": "Si è verificato un errore con il gioco o l'applicazione. Per questo Sony dà un solo passaggio: aggiornare il gioco. Per ulteriore aiuto Sony rimanda alla sua pagina delle riparazioni.",
+   "text": "Si è verificato un errore con il gioco o l'applicazione; per questo Sony indica solo un aggiornamento del gioco.",
    "steps": [
     "Aggiorna il gioco.",
     "Per ulteriore aiuto Sony rimanda a «PlayStation Repairs»."
@@ -431,25 +409,23 @@
   },
   "CE-108262-9": {
    "title": "Impossibile leggere i dati del software di sistema o dell'app",
-   "text": "Si è verificato un errore durante la lettura dei dati del software di sistema o dell'applicazione. Sony indica: reinstallare l'app interessata, ricostruire il database in modalità provvisoria e solo come ultimo passaggio ripristinare la console.",
+   "text": "Si è verificato un errore durante la lettura dei dati del software di sistema o dell'applicazione.",
    "steps": [
-    "Se l'errore si verifica dopo l'avvio di un gioco o di un'app: eliminalo in «Settings > Storage» e reinstallalo.",
-    "Avvia la console in modalità provvisoria e scegli «Clear Cache and Rebuild Database > Rebuild Database». Sony non indica perdite di dati per questa opzione, ma avverte in generale che alcune opzioni della modalità provvisoria fanno perdere dati: fai prima un backup (unità USB o cloud).",
-    "Se nulla aiuta, ripristina la console («Settings > System > System Software > Reset Options > Reset Your Console»). Ciò cancella tutti i dati nell'archiviazione della console: solo come ultimo passaggio e, se possibile, dopo un backup.",
-    "Dopo il ripristino, installa di nuovo il gioco o l'app."
+    "Dopo l'avvio di un gioco o di un'app: eliminalo in «Settings > Storage» e reinstallalo.",
+    "In modalità provvisoria scegli «Clear Cache and Rebuild Database > Rebuild Database»; prima fai un backup dei dati (USB o cloud).",
+    "Se nulla aiuta: «Settings > System > System Software > Reset Options > Reset Your Console» cancella tutti i dati, solo come ultimo passaggio e dopo un backup."
    ],
    "notes": [
-    "Nota di Medic (segnalazione della community, non di Sony): con ShadowMount+ 1.7beta9 e 1.7beta10 questo errore compariva dopo ore di funzionamento (perdita di memoria, corretta nella 1.7beta11). Il check-up mostra se la versione installata è interessata (regola smp.leak_pre_beta11).",
-    "Opzioni della modalità provvisoria secondo Sony: «Repair Console Storage» non cancella dati, «Restore Default Settings» non elimina giochi, app, screenshot, videoclip e dati salvati, «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati."
+    "Nota di Medic (community, non di Sony): ShadowMount+ 1.7beta9 e 1.7beta10 causavano questo errore dopo ore di funzionamento (perdita di memoria, corretta nella 1.7beta11).",
+    "Modalità provvisoria secondo Sony: «Repair Console Storage» non cancella dati, «Reset PS5» elimina tutti i dati utente; per «Rebuild Database» Sony non indica perdite di dati."
    ]
   },
   "CE-108360-8": {
    "title": "Controllare il collegamento della telecamera",
-   "text": "La telecamera (HD Camera o PS Camera) non è collegata correttamente o le condizioni non sono adatte. Sony indica l'adattatore, una buona luce, la posizione e le impostazioni della telecamera.",
+   "text": "La telecamera (HD Camera o PS Camera) non è collegata correttamente o le condizioni non sono adatte.",
    "steps": [
-    "Una PS Camera richiede per la PS5 un adattatore dedicato; verificare il tipo di collegamento adatto al dispositivo.",
-    "Usare la telecamera possibilmente in una stanza luminosa.",
-    "Regolare la distanza e l'angolazione della telecamera.",
+    "Una PS Camera richiede per la PS5 un adattatore dedicato; verificare il tipo di collegamento.",
+    "Usare la telecamera in una stanza luminosa e regolare distanza e angolazione.",
     "Controllare le impostazioni della telecamera sulla console."
    ],
    "notes": [
@@ -474,9 +450,9 @@
   },
   "CE-108877-1": {
    "title": "Server sovraccarico o in manutenzione",
-   "text": "Il problema potrebbe essere lato server. Sony consiglia di controllare la pagina di stato e di riprovare dopo alcune ore.",
+   "text": "Il problema potrebbe essere lato server; spesso basta aspettare.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Controllare nella pagina di stato di PlayStation se ci sono guasti o manutenzione.",
     "Potrebbe essere un problema temporaneo: riprovare dopo alcune ore."
    ],
    "notes": [
@@ -485,23 +461,22 @@
   },
   "CE-108889-4": {
    "title": "Il gioco richiede una versione di firmware più alta",
-   "text": "Sony non spiega ulteriormente questo codice. Per i giochi su una console con jailbreak una possibile causa è: il gioco è creato per una versione di firmware più alta di quella della console. La soluzione è un backport per il firmware in uso, oppure AMPR Emu / AMPR Emu NG, vedi i passaggi.",
+   "text": "Sony non spiega ulteriormente questo codice. Per un gioco: probabilmente è creato per una versione di firmware più alta di quella della console.",
    "steps": [
-    "Per un gioco: probabilmente è stato creato per una versione di firmware più alta di quella della console. Ha quindi bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
-    "In alternativa usa AMPR Emu o AMPR Emu NG: il file libSceAmpr.sprx va nella cartella fakelib/ del gioco, il gioco viene montato con ShadowMount+ e gli aggiornamenti di fakelib vengono disattivati nelle sue impostazioni (secondo il README di AMPR Emu NG)."
+    "Il gioco ha probabilmente bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
+    "In alternativa AMPR Emu o AMPR Emu NG: mettere libSceAmpr.sprx nella cartella fakelib/ del gioco, montarlo con ShadowMount+ e disattivarvi gli aggiornamenti di fakelib."
    ],
    "notes": [
-    "Nota dalla scena (non da Sony): ogni file di gioco indica il firmware per cui è stato creato e la console rifiuta di avviare qualsiasi cosa più recente di sé; un backport abbassa quel requisito. AMPR Emu e AMPR Emu NG sono reimplementazioni della libreria di sistema libSceAmpr.sprx nella cartella del gioco. Che questo codice indichi proprio questo caso non è documentato.",
+    "Dalla scena (non da Sony): una console non avvia un gioco creato per un firmware più recente, un backport abbassa quel requisito. Che questo codice indichi questo caso non è documentato.",
     "Nota di Medic: Medic non modifica mai il firmware e non fornisce né giochi né backport."
    ]
   },
   "CE-109245-1": {
    "title": "Impossibile confermare le informazioni sulla licenza",
-   "text": "Le informazioni sulla licenza del contenuto non possono essere confermate. I passaggi di Sony sono un riavvio, l'accesso con l'account che possiede il contenuto e l'attivazione di Console Sharing and Offline Play.",
+   "text": "Le informazioni sulla licenza del contenuto non possono essere confermate.",
    "steps": [
-    "Riavvia la console.",
-    "Accedi a PSN con l'account che possiede il contenuto a cui stai cercando di accedere.",
-    "Apri «Settings > Users & Accounts > Other > Console Sharing and Offline Play» e attiva «Console Sharing and Offline Play»."
+    "Riavvia la console e accedi a PSN con l'account che possiede il contenuto.",
+    "Apri «Settings > Users & Accounts > Other > Console Sharing and Offline Play» e attiva l'opzione."
    ]
   },
   "CE-109258-5": {
@@ -520,11 +495,10 @@
   },
   "CE-109503-8": {
    "title": "Errore di connessione a PlayStation",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica la pagina di stato, un riavvio, un cavo al posto del Wi-Fi, una migliore ricezione Wi-Fi e il riavvio di router e modem.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi avvicinarla al router), configurare di nuovo la rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
    ],
    "notes": [
@@ -547,42 +521,37 @@
   },
   "CE-109531-9": {
    "title": "Dispositivo audio non compatibile",
-   "text": "Il dispositivo audio Bluetooth che prova a collegarsi non è compatibile con la PS5. Sony indica di usare un altro dispositivo audio.",
+   "text": "Il dispositivo audio Bluetooth che prova a collegarsi non è compatibile con la PS5.",
    "steps": [
-    "Provare un altro dispositivo audio: il dispositivo Bluetooth non è compatibile con la PS5."
+    "Provare un altro dispositivo audio."
    ]
   },
   "CE-109573-5": {
    "title": "Errore all'avvio del gioco",
-   "text": "Si è verificato un errore all'avvio del gioco. Sony indica: riavviare, eliminare e reinstallare il gioco, ricostruire il database in modalità provvisoria.",
+   "text": "Si è verificato un errore all'avvio del gioco.",
    "steps": [
-    "Riavvia la console.",
-    "Nella libreria dei giochi, evidenzia il gioco, premi il tasto OPTIONS e scegli «Delete».",
-    "Reinstalla il gioco.",
-    "Se non aiuta, ricostruisci il database. Avvia la console in modalità provvisoria e scegli «Clear Cache and Rebuild Database > Rebuild Database». Sony non indica perdite di dati per questa opzione, ma avverte in generale che alcune opzioni della modalità provvisoria fanno perdere dati: fai prima un backup dei tuoi dati.",
-    "Avvia il gioco."
+    "Riavviare la console.",
+    "Nella libreria dei giochi evidenzia il gioco, premi il tasto OPTIONS, scegli «Delete» e reinstallalo.",
+    "Altrimenti, in modalità provvisoria scegli «Clear Cache and Rebuild Database > Rebuild Database»; prima fai un backup dei dati."
    ],
    "notes": [
-    "Opzioni della modalità provvisoria secondo Sony: «Repair Console Storage» non cancella dati, «Restore Default Settings» non elimina giochi, app, screenshot, videoclip e dati salvati, «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati."
+    "Modalità provvisoria secondo Sony: «Repair Console Storage» non cancella dati, «Reset PS5» elimina tutti i dati utente; per «Rebuild Database» Sony non indica perdite di dati."
    ]
   },
   "CE-109737-7": {
    "title": "Dispositivo di archiviazione USB non riconosciuto",
-   "text": "La console non riconosce il dispositivo di archiviazione USB. I passaggi di Sony riguardano il collegamento del cavo, un hub USB, un'altra porta USB, un altro dispositivo di archiviazione e un'app durante la quale si verifica il problema.",
+   "text": "La console non riconosce il dispositivo di archiviazione USB.",
    "steps": [
-    "Scollega il cavo USB e ricollegalo. Assicurati che sia inserito a fondo.",
-    "Se usi un hub USB, rimuovilo e collega il dispositivo di archiviazione USB direttamente alla console.",
-    "Prova un'altra porta USB.",
-    "Verifica se un altro dispositivo di archiviazione USB viene riconosciuto.",
-    "Se il dispositivo di archiviazione USB non viene riconosciuto mentre è in esecuzione una determinata applicazione, elimina l'applicazione, reinstallala e riprova."
+    "Scollega il cavo USB e ricollegalo a fondo; con un hub, collega il dispositivo direttamente alla console.",
+    "Prova un'altra porta USB e un altro dispositivo di archiviazione USB.",
+    "Se non viene riconosciuto solo durante una determinata applicazione, eliminala, reinstallala e riprova."
    ]
   },
   "CE-110032-7": {
    "title": "Le informazioni dell'ID online non corrispondono",
-   "text": "L'ID online registrato per l'account non corrisponde, ad esempio perché è stato cambiato di recente. Sony indica di uscire da tutti gli altri dispositivi PlayStation e di riprovare.",
+   "text": "L'ID online registrato per l'account non corrisponde, ad esempio perché è stato cambiato di recente.",
    "steps": [
-    "Uscire da tutti gli altri dispositivi PlayStation (anche PlayStation 3 e PlayStation Vita) e riprovare sulla PS5.",
-    "Se non cambia nulla, uscire da tutti i dispositivi e riprovare più tardi."
+    "Uscire da tutti gli altri dispositivi PlayStation (anche PlayStation 3 e PlayStation Vita), poi riprovare sulla PS5."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_REMOTEPLAY_ERROR_INTERNAL_NP_ONLINE_ID_INVALID, codice di ritorno 0x80FC1040."
@@ -590,11 +559,10 @@
   },
   "CE-110538-8": {
    "title": "Impossibile leggere il disco Blu-ray",
-   "text": "Non è stato possibile leggere il disco Blu-ray. Sony indica la pulizia del disco, un inserimento corretto, la prova di un altro disco e, se serve, l'assistenza.",
+   "text": "Non è stato possibile leggere il disco Blu-ray.",
    "steps": [
-    "Controllare che il disco non abbia impronte, macchie o graffi e pulirlo con un panno morbido e pulito dal centro verso il bordo.",
-    "Verificare che il disco sia inserito correttamente.",
-    "Provare un altro disco supportato per vedere se la console legge altri dischi.",
+    "Controllare che il disco non abbia impronte, macchie o graffi e pulirlo con un panno morbido dal centro verso il bordo.",
+    "Verificare che il disco sia inserito correttamente e provare un altro disco supportato.",
     "Se il problema persiste, contattare l'assistenza PlayStation o usare lo strumento di riparazione PlayStation."
    ],
    "notes": [
@@ -603,12 +571,11 @@
   },
   "CE-110551-3": {
    "title": "Impossibile leggere il disco",
-   "text": "Non è stato possibile leggere il disco. Sony indica un riavvio, la pulizia del disco e la prova di un altro disco supportato; con un disco non supportato aiuta solo un altro disco.",
+   "text": "Non è stato possibile leggere il disco; con un disco non supportato aiuta solo un altro disco.",
    "steps": [
     "Riavviare la console.",
-    "Controllare che il disco non abbia impronte, macchie o graffi e pulirlo con un panno morbido e pulito dal centro verso il bordo.",
-    "Verificare che il disco possa essere riprodotto sulla console.",
-    "Provare un altro disco supportato per vedere se la console legge altri dischi."
+    "Controllare impronte, sporco e graffi sul disco; pulirlo con un panno morbido dal centro verso il bordo.",
+    "Verificare che il disco possa essere riprodotto sulla console e provare un altro disco supportato."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_DISC_PLAYER_ERROR_CPS_ERROR, codice di ritorno 0x8114001B."
@@ -616,10 +583,10 @@
   },
   "CE-110552-4": {
    "title": "Disco non leggibile (non supportato)",
-   "text": "La console potrebbe non supportare il disco, ad esempio per un diverso codice regionale. Sony indica di provare altri dischi e di pulire il disco.",
+   "text": "La console potrebbe non supportare il disco, ad esempio per un diverso codice regionale.",
    "steps": [
     "Provare un altro disco supportato per vedere se la console legge altri dischi.",
-    "Controllare che il disco non abbia impronte, macchie o graffi e pulirlo con un panno morbido e pulito dal centro verso il bordo.",
+    "Controllare impronte, macchie e graffi; pulire il disco con un panno morbido dal centro verso il bordo.",
     "Se il problema persiste, contattare l'assistenza PlayStation o usare lo strumento di riparazione PlayStation."
    ],
    "notes": [
@@ -628,10 +595,10 @@
   },
   "CE-110555-7": {
    "title": "Disco non leggibile (non supportato)",
-   "text": "La console potrebbe non supportare il disco, ad esempio per un diverso codice regionale. Sony indica di provare altri dischi e di pulire il disco.",
+   "text": "La console potrebbe non supportare il disco, ad esempio per un diverso codice regionale.",
    "steps": [
     "Provare un altro disco supportato per vedere se la console legge altri dischi.",
-    "Controllare che il disco non abbia impronte, macchie o graffi e pulirlo con un panno morbido e pulito dal centro verso il bordo."
+    "Controllare che il disco non abbia impronte, macchie o graffi e pulirlo dal centro verso il bordo."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_DISC_PLAYER_ERROR_INVALID_REGION, codice di ritorno 0x8114001F."
@@ -639,11 +606,10 @@
   },
   "CE-111161-1": {
    "title": "Controllare il collegamento della telecamera",
-   "text": "La telecamera (HD Camera o PS Camera) non è collegata correttamente o le condizioni non sono adatte. Sony indica l'adattatore, una buona luce, la posizione e le impostazioni della telecamera.",
+   "text": "La telecamera (HD Camera o PS Camera) non è collegata correttamente o le condizioni non sono adatte.",
    "steps": [
-    "Una PS Camera richiede per la PS5 un adattatore dedicato; verificare il tipo di collegamento adatto al dispositivo.",
-    "Usare la telecamera possibilmente in una stanza luminosa.",
-    "Regolare la distanza e l'angolazione della telecamera.",
+    "Una PS Camera richiede per la PS5 un adattatore dedicato; verificare il collegamento adatto.",
+    "Usare la telecamera possibilmente in una stanza luminosa e regolare distanza e angolazione.",
     "Controllare le impostazioni della telecamera sulla console."
    ],
    "notes": [
@@ -652,12 +618,12 @@
   },
   "CE-112069-9": {
    "title": "Errore durante il trasferimento dati in rete",
-   "text": "Si è verificato un errore durante il trasferimento di dati da PS4 a PS5 in rete. Sony indica un collegamento via cavo, il riavvio del router, un nuovo trasferimento e un altro metodo per i dati di salvataggio.",
+   "text": "Si è verificato un errore durante il trasferimento di dati da PS4 a PS5 in rete.",
    "steps": [
-    "Se PS4 e PS5 sono collegate in Wi-Fi, collegare ciascuna alla rete con un cavo LAN oppure collegare le due console direttamente con un cavo Ethernet.",
+    "Se PS4 e PS5 sono in Wi-Fi, collegarle ciascuna con cavo LAN oppure direttamente tra loro con un cavo Ethernet.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
     "Riavviare il trasferimento dati in Settings > System > Data Transfer.",
-    "Se si vogliono trasferire solo i dati di salvataggio, usare un altro supporto, come l'archiviazione online o un dispositivo USB."
+    "Solo salvataggi: usare invece l'archiviazione online o un dispositivo USB."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_AESOCKET_ERROR_SOCKET_RECV_INCOMPLETED, codice di ritorno 0x81640011."
@@ -665,11 +631,11 @@
   },
   "CE-112839-4": {
    "title": "Errore di connessione a PlayStation",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "La console non riesce a connettersi a PlayStation; spesso la linea è solo temporaneamente sovraccarica.",
    "steps": [
     "Verificare che l'accesso funzioni in Settings > Users and Accounts > Account > Sign In.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN e configurare di nuovo le impostazioni di rete.",
+    "Con il Wi-Fi, avvicinare la console al router.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
    ],
    "notes": [
@@ -678,10 +644,10 @@
   },
   "CE-112840-6": {
    "title": "Problema di connessione al server",
-   "text": "Il problema potrebbe essere lato server. Sony consiglia di controllare la pagina di stato e di riprovare dopo alcune ore.",
+   "text": "Il problema potrebbe essere lato server.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo alcune ore."
+    "Riprovare dopo alcune ore."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_RNPS_UNIVERSAL_CHECKOUT_ERROR_UNHANDLED_SERVER_ERROR, codice di ritorno 0x81760003."
@@ -689,11 +655,11 @@
   },
   "CE-112841-7": {
    "title": "Accesso non effettuato",
-   "text": "La console non ha effettuato l'accesso o ha perso la connessione a PlayStation. Sony indica il controllo dell'accesso, un riavvio, una migliore ricezione e il riavvio del router.",
+   "text": "La console non ha effettuato l'accesso o ha perso la connessione a PlayStation.",
    "steps": [
     "Verificare che l'accesso funzioni in Settings > Users and Accounts > Account > Sign In.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN e configurare di nuovo le impostazioni di rete.",
+    "Con il Wi-Fi, avvicinare la console al router.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
    ],
    "notes": [
@@ -702,11 +668,10 @@
   },
   "CE-112987-8": {
    "title": "Problema con l'acquisto, il download o l'installazione del contenuto",
-   "text": "Si è verificato un problema con l'acquisto, il download o l'installazione del contenuto. Sony indica l'eliminazione e un nuovo download, l'uscita e un nuovo accesso, un riavvio e «Restore Licenses».",
+   "text": "Si è verificato un problema con l'acquisto, il download o l'installazione del contenuto.",
    "steps": [
-    "Premere il tasto PS del controller per aprire il centro di controllo, selezionare il contenuto scaricato, premere il tasto Options e scegliere «Delete». Poi riavviare il download.",
-    "Uscire dall'account PlayStation e accedere di nuovo.",
-    "Riavviare la console.",
+    "Premere il tasto PS, selezionare il contenuto nel centro di controllo, premere Options, scegliere «Delete» e riavviare il download.",
+    "Uscire dall'account PlayStation, accedere di nuovo e riavviare la console.",
     "Ripristinare le licenze in Settings > Users and Accounts > Other > Restore Licenses."
    ],
    "notes": [
@@ -715,10 +680,10 @@
   },
   "CE-112988-9": {
    "title": "Contenuto non acquistabile",
-   "text": "Il contenuto non può essere acquistato. Sony indica di verificare se è già stato acquistato e se serve anche un servizio come PlayStation Plus o il gioco base.",
+   "text": "Il contenuto non può essere acquistato, ad esempio perché è già stato acquistato o serve anche un servizio o il gioco base.",
    "steps": [
     "Verificare se il contenuto è già stato acquistato.",
-    "Nella pagina PlayStation Store del contenuto verificare se serve anche un servizio come PlayStation Plus o il gioco base. Il motivo compare in «View product» > «More details» nella schermata di acquisto."
+    "Nel PlayStation Store verificare se serve un servizio come PlayStation Plus o il gioco base («View product» > «More details»)."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_RNPS_GAME_CTA_ERROR_INELIGIBLE_PRODUCT, codice di ritorno 0x81761301."
@@ -729,12 +694,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -743,7 +706,7 @@
   },
   "CE-113227-6": {
    "title": "Errore generico",
-   "text": "Sony indica solo «si è verificato un errore». Il passaggio sicuro che resta è il riavvio della console.",
+   "text": "Sony indica solo «si è verificato un errore».",
    "steps": [
     "Riavviare la console."
    ],
@@ -753,7 +716,7 @@
   },
   "CE-113511-2": {
    "title": "Errore generico",
-   "text": "Sony indica solo «si è verificato un errore». Il passaggio sicuro che resta è il riavvio della console.",
+   "text": "Sony indica solo «si è verificato un errore»; il passaggio sicuro che resta è il riavvio della console.",
    "steps": [
     "Riavviare la console."
    ],
@@ -777,7 +740,7 @@
   },
   "CE-113661-8": {
    "title": "Registrazione troppo breve",
-   "text": "Per questo codice non esiste una pagina Sony; l'informazione proviene dal PS5 Dev Wiki (community). Secondo il PS5 Dev Wiki l'errore compare quando una registrazione viene avviata e fermata subito; è quindi troppo breve per essere salvata.",
+   "text": "Per questo codice non esiste una pagina Sony (PS5 Dev Wiki, community). Una registrazione fermata subito dopo l'avvio è troppo breve per essere salvata.",
    "steps": [
     "Avviare una registrazione e fermarla solo dopo alcuni secondi."
    ],
@@ -787,11 +750,11 @@
   },
   "CE-116799-3": {
    "title": "Abbonamento PlayStation Plus non confermato",
-   "text": "Non è possibile confermare l'abbonamento PlayStation Plus. Sony indica di controllare la connessione a Internet, l'accesso a PSN e la scadenza dell'abbonamento.",
+   "text": "Non è possibile confermare l'abbonamento PlayStation Plus.",
    "steps": [
     "Assicurarsi che la console sia collegata a Internet e abbia effettuato l'accesso a PlayStation Network.",
-    "Verificare in Settings > Users and Accounts > Account > Payment and Subscriptions > Subscriptions se l'abbonamento PlayStation Plus è scaduto.",
-    "Se l'accesso è possibile e l'abbonamento PlayStation Plus è ancora attivo, il problema è probabilmente temporaneo: riprovare più tardi."
+    "Verificare in Settings > Users and Accounts > Account > Payment and Subscriptions > Subscriptions se l'abbonamento è scaduto.",
+    "Se tutto è a posto, il problema è probabilmente temporaneo: riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_SAVE_DATA_I_ERROR_ENTRY_NOT_ADDED, codice di ritorno 0x809F801C."
@@ -799,7 +762,7 @@
   },
   "CE-117625-2": {
    "title": "Caricamento su YouTube: limite raggiunto",
-   "text": "Per questo codice non esiste una pagina Sony; l'informazione proviene dal PS5 Dev Wiki (community). Secondo il PS5 Dev Wiki sono stati caricati troppi video su YouTube in poco tempo. Dopo 24 ore sono di nuovo possibili altri caricamenti.",
+   "text": "Per questo codice non esiste una pagina Sony. Secondo il PS5 Dev Wiki sono stati caricati troppi video su YouTube in poco tempo.",
    "steps": [
     "Attendere 24 ore prima di caricare altri video."
    ],
@@ -809,14 +772,12 @@
   },
   "CE-117722-0": {
    "title": "Errore della connessione di streaming",
-   "text": "La connessione di streaming ha un errore. Sony indica un test di connessione, il riavvio, un cavo al posto del Wi-Fi, il riavvio del router e il download del gioco come alternativa.",
+   "text": "La connessione di streaming ha un errore; i passaggi di Sony riguardano la rete.",
    "steps": [
-    "In Settings > Network > Connection Status > Test Internet Connection verificare che la console sia collegata correttamente a Internet e, se serve, configurare di nuovo le impostazioni di rete.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se il gioco è scaricabile, scaricarlo e giocarlo in locale; serve abbastanza spazio libero sulla console.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "In Settings > Network > Connection Status > Test Internet Connection provare la connessione e, se serve, configurare di nuovo la rete.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router).",
+    "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli.",
+    "Altrimenti scaricare il gioco e giocarlo in locale (serve spazio libero) oppure riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_CLOUD_CLIENT_ERROR_SERVER_SIGNIN_FAILED_ATTRIBUTE_MISSING, codice di ritorno 0x811A0029."
@@ -824,25 +785,23 @@
   },
   "CE-117740-0": {
    "title": "Il gioco potrebbe avere un errore",
-   "text": "Il gioco potrebbe avere un errore. Sony indica: eliminare e reinstallare il gioco, ricostruire il database in modalità provvisoria e, altrimenti, contattare l'assistenza clienti.",
+   "text": "Il gioco potrebbe avere un errore.",
    "steps": [
-    "Apri «Settings > Storage» ed elimina il gioco in «Games and Apps».",
-    "Reinstalla il gioco.",
-    "Avvia la console in modalità provvisoria e scegli «Clear Cache and Rebuild Database > Rebuild Database». Sony non indica perdite di dati per questa opzione, ma avverte in generale che alcune opzioni della modalità provvisoria fanno perdere dati: fai prima un backup dei tuoi dati.",
+    "Apri «Settings > Storage», elimina il gioco in «Games and Apps» e reinstallalo.",
+    "Altrimenti: avvia la console in modalità provvisoria e scegli «Clear Cache and Rebuild Database > Rebuild Database»; fai prima un backup dei tuoi dati.",
     "Se il problema continua, contatta l'assistenza clienti di PlayStation."
    ],
    "notes": [
-    "Opzioni della modalità provvisoria secondo Sony: «Repair Console Storage» non cancella dati, «Restore Default Settings» non elimina giochi, app, screenshot, videoclip e dati salvati, «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati."
+    "Secondo Sony «Repair Console Storage» non cancella dati e «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati."
    ]
   },
   "CE-117773-6": {
    "title": "Errore sulla console (connessione, accesso, PlayStation Plus)",
-   "text": "Sony non indica una causa precisa. Vanno controllati la connessione a Internet, l'accesso a PlayStation e l'abbonamento PlayStation Plus; altrimenti il problema è probabilmente temporaneo.",
+   "text": "Sony non indica una causa precisa. Controllare la connessione a Internet, l'accesso a PlayStation e l'abbonamento PlayStation Plus; altrimenti è probabilmente temporaneo.",
    "steps": [
-    "In Settings > Network > Connection Status > Test Internet Connection verificare che la console sia collegata correttamente a Internet e, se serve, configurare di nuovo le impostazioni di rete.",
-    "Assicurarsi che la console sia collegata a Internet e abbia effettuato l'accesso a PlayStation Network.",
-    "Verificare in Settings > Users and Accounts > Account > Payment and Subscriptions > Subscriptions se l'abbonamento PlayStation Plus è scaduto.",
-    "Se l'accesso è possibile e l'abbonamento PlayStation Plus è ancora attivo, il problema è probabilmente temporaneo: riprovare più tardi."
+    "Eseguire Settings > Network > Connection Status > Test Internet Connection e, se serve, configurare di nuovo la rete.",
+    "Assicurarsi che la console abbia effettuato l'accesso a PlayStation Network.",
+    "Verificare in Settings > Users and Accounts > Account > Payment and Subscriptions > Subscriptions se l'abbonamento PlayStation Plus è scaduto."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_RNPS_UNIVERSAL_CHECKOUT_ERROR_EMS_NO_VIEW, codice di ritorno 0x8176000C."
@@ -850,12 +809,11 @@
   },
   "CE-118415-0": {
    "title": "L'abbonamento potrebbe dover essere verificato",
-   "text": "L'abbonamento potrebbe dover essere verificato. Sony indica la pagina di stato, il controllo della scadenza dell'abbonamento PlayStation Plus, un riavvio e un nuovo tentativo più tardi.",
+   "text": "L'abbonamento potrebbe dover essere verificato.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Verificare in Settings > Users and Accounts > Account > Payment and Subscriptions > Subscriptions se l'abbonamento PlayStation Plus è scaduto.",
-    "Riavviare la console.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Riavviare la console e riprovare dopo un po'."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_RNPS_PSNOW_PLAYER_ERROR_NO_SUBSCRIPTION, codice di ritorno 0x81762B08."
@@ -863,22 +821,21 @@
   },
   "CE-118527-4": {
    "title": "Problema nella risoluzione del nome host",
-   "text": "Il nome di un server non ha potuto essere risolto in un indirizzo, forse a causa della connessione di rete. Tra l'altro Sony dice di controllare il DNS primario e secondario se hai inserito manualmente gli indirizzi DNS.",
+   "text": "Il nome di un server non ha potuto essere risolto in un indirizzo, forse a causa della rete.",
    "steps": [
-    "Esegui «Settings > Network > Connection Status > Test Internet Connection» e, se necessario, ricollegati.",
+    "Esegui «Settings > Network > Connection Status > Test Internet Connection».",
     "Spegni router e modem, attendi almeno 5 minuti, poi riaccendili.",
-    "Se hai impostato manualmente l'indirizzo IP o il DNS: controlla che il DNS primario e secondario siano corretti.",
-    "Chiedi al tuo provider Internet se è in corso una manutenzione.",
-    "Attendi qualche minuto e riprova, perché il problema potrebbe essere temporaneo."
+    "Se hai inserito IP o DNS a mano: controlla il DNS primario e secondario.",
+    "Chiedi al provider se c'è una manutenzione, oppure riprova più tardi."
    ]
   },
   "CE-118851-4": {
    "title": "La console non riesce a sincronizzare i salvataggi con l'archivio cloud",
-   "text": "La console non riesce a sincronizzare i salvataggi con l'archivio cloud. Sony indica «Try Again» nella schermata «Sync Status», la disattivazione e riattivazione della sincronizzazione automatica e, se serve, l'assistenza.",
+   "text": "La console non riesce a sincronizzare i salvataggi con l'archivio cloud.",
    "steps": [
     "Scegliere «Try Again» nella schermata «Sync Status».",
-    "Se l'errore compare con più giochi, disattivare e riattivare «Enable Auto-Sync».",
-    "Se tutti i giochi mostrano «Synced» ma l'errore ricompare dopo un riavvio, disattivare «Log In to PS5 Automatically» in Settings > Users and Accounts > Login Settings.",
+    "Se sono coinvolti più giochi, disattivare e riattivare «Enable Auto-Sync».",
+    "Se l'errore ricompare dopo un riavvio nonostante «Synced», disattivare «Log In to PS5 Automatically» (Settings > Users and Accounts > Login Settings).",
     "Se il problema persiste, contattare l'assistenza PlayStation."
    ],
    "notes": [
@@ -887,11 +844,10 @@
   },
   "CE-119224-9": {
    "title": "Errore durante l'aggiornamento dei controller PS VR2 Sense",
-   "text": "Si è verificato un errore durante l'aggiornamento del software dei controller PS VR2 Sense (non della console). Sony indica di scollegare il cavo USB, riavviare, associare i controller e seguire le istruzioni sullo schermo.",
+   "text": "Si è verificato un errore durante l'aggiornamento del software dei controller PS VR2 Sense (non della console).",
    "steps": [
-    "Scollegare il cavo USB dalla console.",
-    "Riavviare la console.",
-    "Associare i controller PS VR2 Sense e poi scollegarli.",
+    "Scollegare il cavo USB dalla console e riavviare la console.",
+    "Associare i controller PS VR2 Sense, poi scollegare il cavo USB.",
     "Seguire le istruzioni sullo schermo per aggiornare il software dei controller."
    ],
    "notes": [
@@ -900,12 +856,11 @@
   },
   "CE-120706-6": {
    "title": "Aggiornamento del gioco non riuscito",
-   "text": "Un errore ha interrotto l'installazione dell'aggiornamento del gioco. Sony indica il ripristino delle licenze, un riavvio, «Rebuild Database» in modalità provvisoria e, se serve, l'eliminazione e la reinstallazione.",
+   "text": "Un errore ha interrotto l'installazione dell'aggiornamento del gioco.",
    "steps": [
-    "Ripristinare le licenze in Settings > Users and Accounts > Other > Restore Licenses.",
-    "Riavviare la console.",
-    "Avviare la console in modalità provvisoria e scegliere «Clear Cache and Rebuild Database > Rebuild Database». Sony non indica perdite di dati per questa opzione; conviene comunque salvare prima i dati, perché altre opzioni della modalità provvisoria li cancellano.",
-    "Nella schermata iniziale selezionare il gioco o l'app, premere il tasto Options, scegliere «Delete» (Elimina) e poi reinstallarlo."
+    "Ripristinare le licenze in Settings > Users and Accounts > Other > Restore Licenses, poi riavviare la console.",
+    "Avviare la modalità provvisoria, scegliere «Clear Cache and Rebuild Database > Rebuild Database»; prima salvare i dati (altre opzioni li cancellano).",
+    "Se non basta: selezionare il gioco o l'app, premere Options, scegliere «Delete» (Elimina) e reinstallarlo."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_PLAYGO_ERROR_CORE_STATE_AFTER_COMMITPATCH, codice di ritorno 0x80B2140B."
@@ -913,19 +868,19 @@
   },
   "CE-122154-5": {
    "title": "La console non riesce a sincronizzare i salvataggi con l'archivio cloud",
-   "text": "La console non riesce a sincronizzare i salvataggi con l'archivio cloud. Sony indica «Try Again» nella schermata «Sync Status», la disattivazione e riattivazione della sincronizzazione automatica e, se serve, l'assistenza.",
+   "text": "La console non riesce a sincronizzare i salvataggi con l'archivio cloud.",
    "steps": [
-    "Attendere almeno 15 minuti, poi scegliere «Try Again» nella schermata «Sync Status».",
+    "Attendere almeno 15 minuti, poi scegliere «Try Again» nella schermata «Sync Status», oppure disattivare e riattivare la sincronizzazione automatica.",
     "Se il problema persiste, contattare l'assistenza PlayStation."
    ]
   },
   "NP-102937-2": {
    "title": "Disconnesso",
-   "text": "La console è disconnessa da PlayStation Network. Sony indica un nuovo accesso, il riavvio del router e la pagina di riparazione PlayStation.",
+   "text": "La console è disconnessa da PlayStation Network.",
    "steps": [
     "Verificare che l'accesso funzioni in Settings > Users and Accounts > Account > Sign In.",
-    "Se l'accesso è già effettuato, uscire da Settings > Users and Accounts > Other > Sign Out e poi accedere di nuovo.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
+    "Se l'accesso è già effettuato: uscire da Settings > Users and Accounts > Other > Sign Out e poi accedere di nuovo.",
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli.",
     "Se il problema persiste, contattare l'assistenza PlayStation o usare lo strumento di riparazione PlayStation."
    ],
    "notes": [
@@ -934,7 +889,7 @@
   },
   "NP-102942-8": {
    "title": "Funzione non disponibile per limiti di età",
-   "text": "L'account non rispetta il limite di età dell'applicazione. Sony indica di controllare l'età registrata e il controllo genitori.",
+   "text": "L'account non rispetta il limite di età dell'applicazione.",
    "steps": [
     "Verificare che l'età registrata sull'account rispetti il limite di età dell'applicazione.",
     "Controllare le impostazioni del controllo genitori."
@@ -945,9 +900,9 @@
   },
   "NP-102943-9": {
    "title": "L'applicazione non può essere avviata per questo utente",
-   "text": "Non è possibile confermare il diritto d'uso per l'utente connesso. Sony indica l'uscita e un nuovo accesso e la prova con un altro utente.",
+   "text": "Non è possibile confermare il diritto d'uso per l'utente connesso.",
    "steps": [
-    "Se l'accesso è già effettuato, uscire da Settings > Users and Accounts > Other > Sign Out e poi accedere di nuovo.",
+    "Uscire da Settings > Users and Accounts > Other > Sign Out e poi accedere di nuovo.",
     "Verificare se l'applicazione può essere usata con un altro utente."
    ],
    "notes": [
@@ -956,34 +911,35 @@
   },
   "NP-102944-0": {
    "title": "Il gioco richiede una versione di firmware più alta",
-   "text": "Sony non spiega ulteriormente questo codice. Per i giochi su una console con jailbreak una possibile causa è: il gioco è creato per una versione di firmware più alta di quella della console. La soluzione è un backport per il firmware in uso, oppure AMPR Emu / AMPR Emu NG, vedi i passaggi.",
+   "text": "Sony non spiega ulteriormente questo codice. Per un gioco la causa può essere che sia creato per un firmware più alto di quello della console.",
    "steps": [
-    "Per un gioco: probabilmente è stato creato per una versione di firmware più alta di quella della console. Ha quindi bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
-    "In alternativa usa AMPR Emu o AMPR Emu NG: il file libSceAmpr.sprx va nella cartella fakelib/ del gioco, il gioco viene montato con ShadowMount+ e gli aggiornamenti di fakelib vengono disattivati nelle sue impostazioni (secondo il README di AMPR Emu NG)."
+    "Se il gioco è creato per un firmware più alto, serve un backport per il firmware in uso.",
+    "In alternativa AMPR Emu o AMPR Emu NG: mettere libSceAmpr.sprx nella cartella fakelib/ del gioco.",
+    "Montare il gioco con ShadowMount+ e disattivare gli aggiornamenti di fakelib nelle sue impostazioni."
    ],
    "notes": [
-    "Nota dalla scena (non da Sony): ogni file di gioco indica il firmware per cui è stato creato e la console rifiuta di avviare qualsiasi cosa più recente di sé; un backport abbassa quel requisito. AMPR Emu e AMPR Emu NG sono reimplementazioni della libreria di sistema libSceAmpr.sprx nella cartella del gioco. Che questo codice indichi proprio questo caso non è documentato.",
-    "Nota di Medic: Medic non modifica mai il firmware e non fornisce né giochi né backport."
+    "Nota dalla scena (non da Sony): un backport abbassa il requisito di firmware di un gioco. Che questo codice indichi proprio questo non è documentato.",
+    "Medic non modifica mai il firmware e non fornisce né giochi né backport."
    ]
   },
   "NP-102945-1": {
    "title": "Il gioco richiede una versione di firmware più alta",
-   "text": "Sony non spiega ulteriormente questo codice. Per i giochi su una console con jailbreak una possibile causa è: il gioco è creato per una versione di firmware più alta di quella della console. La soluzione è un backport per il firmware in uso, oppure AMPR Emu / AMPR Emu NG, vedi i passaggi.",
+   "text": "Sony non spiega ulteriormente questo codice. Per i giochi su una console con jailbreak una possibile causa: il gioco è creato per un firmware più alto di quello della console.",
    "steps": [
-    "Per un gioco: probabilmente è stato creato per una versione di firmware più alta di quella della console. Ha quindi bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
-    "In alternativa usa AMPR Emu o AMPR Emu NG: il file libSceAmpr.sprx va nella cartella fakelib/ del gioco, il gioco viene montato con ShadowMount+ e gli aggiornamenti di fakelib vengono disattivati nelle sue impostazioni (secondo il README di AMPR Emu NG)."
+    "Ha quindi bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
+    "In alternativa AMPR Emu o AMPR Emu NG: mettere libSceAmpr.sprx nella cartella fakelib/ del gioco, montare il gioco con ShadowMount+ e disattivare lì gli aggiornamenti di fakelib."
    ],
    "notes": [
-    "Nota dalla scena (non da Sony): ogni file di gioco indica il firmware per cui è stato creato e la console rifiuta di avviare qualsiasi cosa più recente di sé; un backport abbassa quel requisito. AMPR Emu e AMPR Emu NG sono reimplementazioni della libreria di sistema libSceAmpr.sprx nella cartella del gioco. Che questo codice indichi proprio questo caso non è documentato.",
+    "Nota dalla scena (non da Sony): AMPR Emu (NG) è una reimplementazione di libSceAmpr.sprx. Che questo codice indichi proprio questo non è documentato.",
     "Nota di Medic: Medic non modifica mai il firmware e non fornisce né giochi né backport."
    ]
   },
   "NP-102946-2": {
    "title": "Serve l'ultimo file di aggiornamento dell'applicazione",
-   "text": "L'applicazione richiede il suo ultimo file di aggiornamento. Sony indica una connessione a Internet, abbastanza spazio libero e di attendere se l'aggiornamento è già in corso.",
+   "text": "L'applicazione richiede il suo ultimo file di aggiornamento.",
    "steps": [
     "Collegare la console a Internet e installare l'ultimo file di aggiornamento dell'applicazione.",
-    "In caso di errore durante l'aggiornamento verificare che ci sia abbastanza spazio libero; in caso contrario eliminare il superfluo e riprovare. Se l'aggiornamento è già in corso, attenderne la fine."
+    "Se l'aggiornamento fallisce: verificare lo spazio libero (eliminare il superfluo) e riprovare; se è già in corso, attendere."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_ERROR_LATEST_PATCH_PKG_EXIST, codice di ritorno 0x8055000F."
@@ -991,10 +947,9 @@
   },
   "NP-102947-3": {
    "title": "Connessione troppo lenta o instabile per l'aggiornamento dell'app",
-   "text": "La connessione a Internet non basta per scaricare l'ultimo file di aggiornamento dell'applicazione. Sony indica un cavo al posto del Wi-Fi, una migliore ricezione, il riavvio del router e poi una nuova ricerca di aggiornamenti.",
+   "text": "La connessione a Internet non basta per scaricare l'ultimo file di aggiornamento dell'applicazione.",
    "steps": [
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi avvicinarla al router), configurare di nuovo la rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
     "Una volta ripristinata la connessione, cercare gli aggiornamenti dell'applicazione."
    ],
@@ -1004,7 +959,7 @@
   },
   "NP-102955-2": {
    "title": "Dati dell'account errati",
-   "text": "I dati inseriti potrebbero essere diversi da quelli dell'account registrato sulla console. Sony consiglia di ricontrollare ID di accesso e password.",
+   "text": "I dati inseriti potrebbero essere diversi da quelli dell'account registrato sulla console.",
    "steps": [
     "Ricontrollare con attenzione ID di accesso e password dell'account."
    ],
@@ -1014,11 +969,10 @@
   },
   "NP-103019-4": {
    "title": "Errore dell'applicazione",
-   "text": "Sony descrive solo un «errore dell'applicazione». I passaggi sono il riavvio, la ricerca di aggiornamenti dell'app e, se serve, l'eliminazione e la reinstallazione.",
+   "text": "Sony descrive solo un «errore dell'applicazione»: riavvio, aggiornamento dell'app, se serve eliminazione e reinstallazione.",
    "steps": [
-    "Chiudere l'applicazione e riavviarla.",
-    "Riavviare la console.",
-    "Nella schermata iniziale selezionare il gioco o l'app, premere il tasto Options, scegliere «Delete» (Elimina) e poi reinstallarlo."
+    "Chiudere l'applicazione e riavviarla; altrimenti riavviare la console.",
+    "Nella schermata iniziale selezionare il gioco o l'app, premere Options, scegliere «Delete» (Elimina) e reinstallarlo."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_COMMUNITY_ERROR_TOO_MANY_OBJECTS, codice di ritorno 0x80550706."
@@ -1026,10 +980,10 @@
   },
   "NP-103028-4": {
    "title": "Problema di accesso",
-   "text": "Si è verificato un problema durante l'accesso. Sony indica il controllo dell'accesso, l'uscita e un nuovo accesso e il riavvio della console.",
+   "text": "Si è verificato un problema durante l'accesso.",
    "steps": [
     "Verificare che l'accesso funzioni in Settings > Users and Accounts > Account > Sign In.",
-    "Se l'accesso è già effettuato, uscire da Settings > Users and Accounts > Other > Sign Out e poi accedere di nuovo.",
+    "Uscire da Settings > Users and Accounts > Other > Sign Out e poi accedere di nuovo.",
     "Riavviare la console."
    ],
    "notes": [
@@ -1038,11 +992,11 @@
   },
   "NP-103047-5": {
    "title": "Impossibile connettersi al server",
-   "text": "Il problema potrebbe essere lato server. Sony consiglia di controllare la pagina di stato, riavviare il router e riprovare più tardi.",
+   "text": "Il problema potrebbe essere lato server.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli.",
+    "Altrimenti riprovare più tardi: spesso la linea è solo temporaneamente sovraccarica."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_COMMUNITY_SERVER_ERROR_INTERNAL_SERVER_ERROR, codice di ritorno 0x80550807."
@@ -1050,12 +1004,11 @@
   },
   "NP-103105-0": {
    "title": "Servizio in manutenzione",
-   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico. Sony consiglia di controllare lo stato dei server e poi di impostare e provare di nuovo la connessione.",
+   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Reimpostare le impostazioni di connessione a Internet della console e provare la connessione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli; altrimenti riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_BEFORE_SERVICE, codice di ritorno 0x805508A3."
@@ -1063,12 +1016,11 @@
   },
   "NP-103107-2": {
    "title": "Impossibile connettersi al server",
-   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico. Sony consiglia di controllare lo stato dei server e poi di impostare e provare di nuovo la connessione.",
+   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
     "Reimpostare le impostazioni di connessione a Internet della console e provare la connessione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli e riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_MAINTENANCE, codice di ritorno 0x805508A5."
@@ -1076,12 +1028,11 @@
   },
   "NP-103109-4": {
    "title": "Servizio in manutenzione",
-   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico. Sony consiglia di controllare lo stato dei server e poi di impostare e provare di nuovo la connessione.",
+   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
     "Reimpostare le impostazioni di connessione a Internet della console e provare la connessione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli e riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_COMMUNITY_SERVER_ERROR_TITLE_USER_STORAGE_BEFORE_SERVICE, codice di ritorno 0x805508AA."
@@ -1089,12 +1040,11 @@
   },
   "NP-103111-7": {
    "title": "Servizio in manutenzione",
-   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico. Sony consiglia di controllare lo stato dei server e poi di impostare e provare di nuovo la connessione.",
+   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico; spesso è solo temporaneo.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Controllare nella pagina di stato di PlayStation se ci sono guasti o manutenzione.",
     "Reimpostare le impostazioni di connessione a Internet della console e provare la connessione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli e riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_COMMUNITY_SERVER_ERROR_TITLE_USER_STORAGE_MAINTENANCE, codice di ritorno 0x805508AC."
@@ -1102,12 +1052,11 @@
   },
   "NP-103117-3": {
    "title": "Servizio in manutenzione",
-   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico. Sony consiglia di controllare lo stato dei server e poi di impostare e provare di nuovo la connessione.",
+   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Reimpostare le impostazioni di connessione a Internet della console e provare la connessione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli; altrimenti riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_COMMUNITY_SERVER_ERROR_UBS_MAINTENANCE, codice di ritorno 0x805508B2."
@@ -1115,9 +1064,9 @@
   },
   "NP-103148-7": {
    "title": "Problema di connessione della console a Internet",
-   "text": "La connessione della console a Internet si è interrotta, di solito durante un gioco. Sony indica di chiudere completamente l'applicazione e riavviarla, di riavviare la console e di riavviare il router.",
+   "text": "La connessione della console a Internet si è interrotta, di solito durante un gioco.",
    "steps": [
-    "Selezionare il gioco, premere il tasto Options e scegliere «Close Application» per chiuderlo del tutto, poi riavviarlo. Se possibile, salvare prima.",
+    "Selezionare il gioco, premere Options, scegliere «Close Application» e riavviarlo; se possibile, salvare prima.",
     "Riavviare la console.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
    ],
@@ -1127,12 +1076,11 @@
   },
   "NP-103172-4": {
    "title": "Errore di connessione di rete",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "La console ha problemi di connessione a PlayStation; spesso la linea è solo temporaneamente sovraccarica.",
    "steps": [
     "Riavviare la console.",
-    "In Settings > Network > Connection Status > Test Internet Connection verificare che la console sia collegata correttamente a Internet e, se serve, configurare di nuovo le impostazioni di rete.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi."
+    "Eseguire Settings > Network > Connection Status > Test Internet Connection e, se serve, configurare di nuovo la rete.",
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli; con il Wi-Fi avvicinare la console al router."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_MATCHING2_ERROR_TIMEDOUT, codice di ritorno 0x80550C36."
@@ -1140,11 +1088,10 @@
   },
   "NP-103539-1": {
    "title": "Impossibile connettersi al server",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "La console ha problemi di connessione a PlayStation; spesso la linea è solo temporaneamente sovraccarica.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi avvicinarla al router), configurare di nuovo la rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
    ],
    "notes": [
@@ -1153,20 +1100,19 @@
   },
   "NP-104291-7": {
    "title": "Impossibile confermare la licenza del contenuto (lato server)",
-   "text": "Le informazioni sulla licenza del contenuto non possono essere confermate; secondo Sony le informazioni sul titolo potrebbero non essere riportate correttamente lato server. Sony indica: accedere con l'account che possiede il diritto sul contenuto, attendere se il titolo è appena uscito e, altrimenti, contattare l'assistenza.",
+   "text": "La licenza del contenuto non può essere confermata; secondo Sony le informazioni sul titolo potrebbero non essere ancora arrivate lato server.",
    "steps": [
     "Assicurati di aver effettuato l'accesso con l'account che possiede il diritto sul contenuto.",
-    "Se l'errore compare con un titolo appena uscito: attendi un po' e riprova.",
-    "Se il problema persiste dopo un po', contatta l'assistenza PlayStation."
+    "Per un titolo appena uscito: attendi un po' e riprova.",
+    "Se il problema persiste, contatta l'assistenza PlayStation."
    ]
   },
   "NP-104303-1": {
    "title": "Problema di connessione al server",
-   "text": "Il problema potrebbe essere lato server. Sony consiglia di controllare la pagina di stato, riavviare il router e riprovare più tardi.",
+   "text": "Il problema potrebbe essere lato server.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli e riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_KDC_SERVER_ERROR_UNKNOWN, codice di ritorno 0x80558380."
@@ -1174,10 +1120,10 @@
   },
   "NP-104433-5": {
    "title": "Problema di accesso",
-   "text": "Si è verificato un problema durante l'accesso. Sony indica il controllo dell'accesso, l'uscita e un nuovo accesso e il riavvio della console.",
+   "text": "Si è verificato un problema durante l'accesso.",
    "steps": [
     "Verificare che l'accesso funzioni in Settings > Users and Accounts > Account > Sign In.",
-    "Se l'accesso è già effettuato, uscire da Settings > Users and Accounts > Other > Sign Out e poi accedere di nuovo.",
+    "Se l'accesso è già effettuato: uscire da Settings > Users and Accounts > Other > Sign Out e riaccedere.",
     "Riavviare la console."
    ],
    "notes": [
@@ -1186,13 +1132,12 @@
   },
   "NP-104627-0": {
    "title": "Connessione al server persa",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "La console ha problemi di connessione a PlayStation; spesso la linea è solo temporaneamente sovraccarica.",
    "steps": [
     "Verificare che l'accesso funzioni in Settings > Users and Accounts > Account > Sign In.",
-    "In Settings > Network > Connection Status > Test Internet Connection verificare che la console sia collegata correttamente a Internet e, se serve, configurare di nuovo le impostazioni di rete.",
+    "Provare la connessione in Settings > Network > Connection Status > Test Internet Connection e, se serve, configurare di nuovo la rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi."
+    "Riavviare la console e collegarla se possibile con un cavo LAN; con il Wi-Fi, avvicinarla al router."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_PUSH_ERROR_NETWORK_NOT_AVAILABLE, codice di ritorno 0x8055A02A."
@@ -1200,26 +1145,25 @@
   },
   "NW-102216-2": {
    "title": "Errore durante la connessione a PlayStation",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. I passaggi di Sony vanno dalla pagina di stato, una connessione cablata e il riavvio del router fino alle porte aperte.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controlla sulla pagina di stato di PlayStation se ci sono problemi di rete.",
-    "Usa una connessione cablata, se possibile.",
-    "Con il Wi-Fi, avvicina la console al router o rimuovi ciò che ostacola il collegamento tra i dispositivi.",
+    "Usa se possibile una connessione cablata; con il Wi-Fi avvicina la console al router o rimuovi gli ostacoli.",
     "Spegni il router, attendi almeno 5 minuti, poi riaccendilo.",
-    "Se possibile, apri queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Il tuo provider Internet può aiutarti."
+    "Se possibile, apri queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il tuo provider Internet può aiutare)."
    ]
   },
   "NW-102254-4": {
    "title": "Errore di connessione a PlayStation",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica la pagina di stato, un riavvio, un cavo al posto del Wi-Fi, una migliore ricezione Wi-Fi e il riavvio di router e modem.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Controllare nella pagina di stato di PlayStation se ci sono guasti o manutenzione.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN e configurare di nuovo le impostazioni di rete.",
+    "Con il Wi-Fi, avvicinare la console al router.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
    ],
    "notes": [
-    "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
+    "Nota di Medic: se un filtro DNS come nanoDNS blocca gli indirizzi Sony, questo errore è prevedibile (non è un'affermazione di Sony, non confermato).",
     "Nome interno secondo il PS5 Dev Wiki: SCE_NET_ERROR_ECONNRESET, codice di ritorno 0x80410136."
    ]
   },
@@ -1227,13 +1171,11 @@
    "title": "Impossibile connettersi al server",
    "text": "Si è verificato un errore durante la connessione a PlayStation: la console non riesce a raggiungere il server. Sony indica la stessa catena di WV-109145-0: pagina di stato, riavvio, cavo invece del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
-    "Controlla sulla pagina di stato di PlayStation se c'è un guasto dei server o una manutenzione.",
-    "Riavvia la console, collegati a Internet con un cavo LAN, se possibile, e configura di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicina la console al router o rimuovi ciò che disturba il collegamento tra i dispositivi.",
-    "Spegni router e modem, attendi almeno cinque minuti e riaccendili.",
-    "Se possibile, apri queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per aiuto con l'apertura delle porte e le impostazioni del router, rivolgiti al tuo provider Internet.",
-    "Imposta manualmente un indirizzo IP statico nelle impostazioni di rete.",
-    "Se nulla aiuta, la linea è probabilmente occupata per un po': attendi e riprova più tardi."
+    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
+    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS."
@@ -1241,28 +1183,24 @@
   },
   "NW-102265-6": {
    "title": "Impossibile connettersi al server",
-   "text": "La console non riesce a raggiungere il server PlayStation. I passaggi di Sony vanno dalla pagina di stato, una connessione cablata e il riavvio del router fino a porte, indirizzo IP statico e server DNS pubblico.",
+   "text": "La console non riesce a raggiungere il server PlayStation; spesso la linea è solo temporaneamente sovraccarica.",
    "steps": [
-    "Controlla sulla pagina di stato di PlayStation se c'è un guasto dei server o una manutenzione.",
-    "Riavvia la console, collegati a Internet con una connessione cablata, se possibile, e configura di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicina la console al router o rimuovi ciò che ostacola il collegamento tra i dispositivi.",
+    "Controlla la pagina di stato, riavvia la console e collegala se possibile via cavo di rete; con il Wi-Fi, avvicinala al router.",
     "Spegni router e modem, attendi almeno 5 minuti, poi riaccendili.",
-    "Se possibile, apri queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Il tuo provider Internet può aiutarti.",
-    "Nelle impostazioni di rete, inserisci manualmente un indirizzo IP statico.",
-    "Cambia temporaneamente le impostazioni DNS con un server DNS pubblico gratuito. Se nulla aiuta, Sony dice che la linea potrebbe essere temporaneamente occupata: riprova più tardi."
+    "Se possibile, apri queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il tuo provider può aiutarti).",
+    "Inserisci manualmente un indirizzo IP statico; se non basta, imposta temporaneamente il DNS su un server DNS pubblico."
    ]
   },
   "NW-102307-3": {
    "title": "Errore di comunicazione durante la connessione",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica la pagina di stato, un riavvio, un cavo al posto del Wi-Fi, una migliore ricezione Wi-Fi e il riavvio di router e modem.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
+    "Riavviare la console, se possibile collegarla con un cavo LAN e configurare di nuovo la rete; con il Wi-Fi avvicinarla al router.",
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli."
    ],
    "notes": [
-    "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
+    "Nota di Medic: con un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile (non confermato da Sony).",
     "Nome interno secondo il PS5 Dev Wiki: SCE_NET_ERROR_RESOLVER_ENODNS, codice di ritorno 0x804101E1."
    ]
   },
@@ -1271,12 +1209,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -1285,29 +1221,28 @@
   },
   "NW-102311-8": {
    "title": "Errore di comunicazione durante la connessione",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica la pagina di stato, un riavvio, un cavo al posto del Wi-Fi, una migliore ricezione Wi-Fi e il riavvio di router e modem.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Controllare nella pagina di stato di PlayStation se ci sono guasti o manutenzione.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN e configurare di nuovo le impostazioni di rete.",
+    "Con il Wi-Fi, avvicinare la console al router.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
    ],
    "notes": [
-    "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
+    "Nota di Medic: se un filtro DNS come nanoDNS blocca gli indirizzi Sony, questo errore è prevedibile (non è un'affermazione di Sony, non confermato).",
     "Nome interno secondo il PS5 Dev Wiki: SCE_NET_ERROR_RESOLVER_ESERVERFAILURE, codice di ritorno 0x804101E5."
    ]
   },
   "NW-102314-1": {
    "title": "Errore di comunicazione durante la connessione",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica la pagina di stato, un riavvio, un cavo al posto del Wi-Fi, una migliore ricezione Wi-Fi e il riavvio di router e modem.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo la rete.",
+    "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli."
    ],
    "notes": [
-    "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
+    "Nota di Medic (non da Sony, non confermata): se un filtro DNS come nanoDNS blocca gli indirizzi Sony, l'errore è prevedibile; un DNS pubblico lo aggirerebbe.",
     "Nome interno secondo il PS5 Dev Wiki: SCE_NET_ERROR_RESOLVER_ESERVERREFUSED, codice di ritorno 0x804101E8."
    ]
   },
@@ -1316,12 +1251,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -1330,12 +1263,11 @@
   },
   "NW-102379-2": {
    "title": "Errore di connessione a PlayStation",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica la pagina di stato, un riavvio, un cavo al posto del Wi-Fi, una migliore ricezione Wi-Fi e il riavvio di router e modem.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo la rete.",
+    "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NET_ERROR_CONFIG_WLAN_JOIN_ASSOC_RESP_TIMEOUT, codice di ritorno 0x80411604."
@@ -1346,12 +1278,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -1360,27 +1290,24 @@
   },
   "NW-102633-5": {
    "title": "Errore di connessione a PlayStation",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica la pagina di stato, un riavvio, un cavo al posto del Wi-Fi, una migliore ricezione Wi-Fi e il riavvio di router e modem.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi avvicinarla al router), configurare di nuovo la rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
    ],
    "notes": [
-    "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
+    "Nota di Medic (non di Sony, non confermata): se un filtro DNS come nanoDNS blocca gli indirizzi Sony, questo errore è prevedibile (browser, store).",
     "Nome interno secondo il PS5 Dev Wiki: SCE_HTTP_ERROR_BAD_RESPONSE, codice di ritorno 0x80431064."
    ]
   },
   "NW-102636-8": {
    "title": "Timeout della connessione di rete",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "La console ha problemi di connessione a PlayStation; spesso la linea è solo temporaneamente sovraccarica.",
    "steps": [
     "Controllare le impostazioni della connessione a Internet.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
-    "Controllare lo stato del server del gioco sul sito dello sviluppatore e la pagina di stato di PlayStation.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli; con il Wi-Fi avvicinare la console al router.",
+    "Controllare lo stato del server del gioco sul sito dello sviluppatore e la pagina di stato di PlayStation; altrimenti riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_HTTP_ERROR_TIMEOUT, codice di ritorno 0x80431068."
@@ -1391,12 +1318,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -1405,11 +1330,11 @@
   },
   "NW-102655-9": {
    "title": "Errore dell'applicazione legato alla connessione di rete",
-   "text": "L'errore si verifica lato applicazione quando c'è un problema con la connessione di rete. Sony indica la pagina di stato, un riavvio, un test di connessione e il riavvio del router.",
+   "text": "L'errore si verifica lato applicazione quando c'è un problema con la connessione di rete.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
     "Riavviare la console.",
-    "In Settings > Network > Connection Status > Test Internet Connection verificare che la console sia collegata correttamente a Internet e, se serve, configurare di nuovo le impostazioni di rete.",
+    "Settings > Network > Connection Status > Test Internet Connection: provare la connessione, altrimenti configurare di nuovo la rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
    ],
    "notes": [
@@ -1418,10 +1343,10 @@
   },
   "WS-113947-5": {
    "title": "Controllare il metodo di pagamento",
-   "text": "Il metodo di pagamento registrato potrebbe essere errato o scaduto. Sony indica di controllare i dati di pagamento, provare un altro metodo di pagamento o attendere 24 ore.",
+   "text": "Il metodo di pagamento registrato potrebbe essere errato o scaduto.",
    "steps": [
-    "In Settings > Users and Accounts > Account > Payment and Subscriptions > Payment Methods selezionare un metodo di pagamento registrato, premere il tasto Options e scegliere «Edit» o «Remove». Controllare con attenzione i dati di pagamento, compresi scadenza e indirizzo di fatturazione.",
-    "Se non aiuta, provare un altro metodo di pagamento oppure attendere 24 ore e riprovare."
+    "Settings > Users and Accounts > Account > Payment and Subscriptions > Payment Methods: selezionare un metodo di pagamento, tasto Options, «Edit» o «Remove»; controllare scadenza e indirizzo di fatturazione.",
+    "Se non aiuta: provare un altro metodo di pagamento oppure attendere 24 ore e riprovare."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_CART_ORDERS_BAD_REQUEST, codice di ritorno 0x82106030."
@@ -1443,10 +1368,10 @@
   },
   "WS-114298-5": {
    "title": "Potresti non essere online",
-   "text": "L'errore compare quando si usa un servizio online ma la console non è online. Sony indica la modalità online nel gioco, un test di connessione e la pagina di stato.",
+   "text": "L'errore compare quando si usa un servizio online ma la console non è online.",
    "steps": [
     "Selezionare nel gioco la modalità di gioco online.",
-    "In Settings > Network > Connection Status > Test Internet Connection verificare che la console sia collegata correttamente a Internet e, se serve, configurare di nuovo le impostazioni di rete.",
+    "Provare la connessione in Settings > Network > Connection Status > Test Internet Connection e, se serve, configurare di nuovo la rete.",
     "Controllare lo stato del server del gioco sul sito dello sviluppatore e la pagina di stato di PlayStation."
    ],
    "notes": [
@@ -1455,12 +1380,11 @@
   },
   "WS-115019-7": {
    "title": "Impossibile connettersi al server",
-   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico. Sony consiglia di controllare lo stato dei server e poi di impostare e provare di nuovo la connessione.",
+   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
     "Reimpostare le impostazioni di connessione a Internet della console e provare la connessione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli e riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_FOLLOW_RATE_LIMIT_EXCEEDED, codice di ritorno 0x8221720B."
@@ -1468,12 +1392,11 @@
   },
   "WS-115195-2": {
    "title": "Impossibile connettersi al server",
-   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico. Sony consiglia di controllare lo stato dei server e poi di impostare e provare di nuovo la connessione.",
+   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico; spesso è solo temporaneo.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Controllare nella pagina di stato di PlayStation se ci sono guasti o manutenzione.",
     "Reimpostare le impostazioni di connessione a Internet della console e provare la connessione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli e riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_GROUPS_RATE_LIMIT_EXCEEDED, codice di ritorno 0x8221B20B."
@@ -1481,12 +1404,11 @@
   },
   "WS-115338-1": {
    "title": "Impossibile connettersi al server",
-   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico. Sony consiglia di controllare lo stato dei server e poi di impostare e provare di nuovo la connessione.",
+   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico; spesso è solo temporaneo.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Controllare nella pagina di stato di PlayStation se ci sono guasti o manutenzione.",
     "Reimpostare le impostazioni di connessione a Internet della console e provare la connessione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli e riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_USER_PROFILE_GATEWAY_RATE_LIMIT_EXCEEDED, codice di ritorno 0x8221E20B."
@@ -1494,10 +1416,9 @@
   },
   "WS-116327-0": {
    "title": "Accesso a PlayStation Network non effettuato",
-   "text": "Per questo codice non esiste una pagina Sony; l'informazione proviene dal PS5 Dev Wiki (community). Secondo il PS5 Dev Wiki il messaggio è: «Non hai effettuato l'accesso. Connettiti a PlayStation Network per usare questa funzione.» La causa non è indicata più nel dettaglio.",
+   "text": "Per questo codice non esiste una pagina Sony (PS5 Dev Wiki, community). Il messaggio indica che non hai effettuato l'accesso a PlayStation Network.",
    "steps": [
-    "Assicurarsi che la console sia collegata a Internet e abbia effettuato l'accesso a PlayStation Network.",
-    "Verificare che l'accesso funzioni in Settings > Users and Accounts > Account > Sign In."
+    "Verificare la connessione a Internet, poi accedere a PlayStation Network in Settings > Users and Accounts > Account > Sign In."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_OAUTH_2_UNKNOWN_ERROR_HAS_OCCURRED, codice di ritorno 0x82E00002."
@@ -1505,22 +1426,22 @@
   },
   "WS-116328-1": {
    "title": "Il gioco richiede una versione di firmware più alta",
-   "text": "Sony non spiega ulteriormente questo codice. Per i giochi su una console con jailbreak una possibile causa è: il gioco è creato per una versione di firmware più alta di quella della console. La soluzione è un backport per il firmware in uso, oppure AMPR Emu / AMPR Emu NG, vedi i passaggi.",
+   "text": "Sony non spiega ulteriormente questo codice. Su una console con jailbreak il gioco è probabilmente creato per un firmware più alto di quello della console.",
    "steps": [
-    "Per un gioco: probabilmente è stato creato per una versione di firmware più alta di quella della console. Ha quindi bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
-    "In alternativa usa AMPR Emu o AMPR Emu NG: il file libSceAmpr.sprx va nella cartella fakelib/ del gioco, il gioco viene montato con ShadowMount+ e gli aggiornamenti di fakelib vengono disattivati nelle sue impostazioni (secondo il README di AMPR Emu NG)."
+    "Il gioco ha bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
+    "In alternativa usa AMPR Emu o AMPR Emu NG: metti libSceAmpr.sprx nella cartella fakelib/ del gioco.",
+    "Monta il gioco con ShadowMount+ e disattiva lì gli aggiornamenti di fakelib (README di AMPR Emu NG)."
    ],
    "notes": [
-    "Nota dalla scena (non da Sony): ogni file di gioco indica il firmware per cui è stato creato e la console rifiuta di avviare qualsiasi cosa più recente di sé; un backport abbassa quel requisito. AMPR Emu e AMPR Emu NG sono reimplementazioni della libreria di sistema libSceAmpr.sprx nella cartella del gioco. Che questo codice indichi proprio questo caso non è documentato.",
+    "Dalla scena (non da Sony): un backport abbassa il requisito di firmware del gioco. Che questo codice indichi proprio questo caso non è documentato.",
     "Nota di Medic: Medic non modifica mai il firmware e non fornisce né giochi né backport."
    ]
   },
   "WS-116329-2": {
    "title": "ID di accesso o password non corrispondono",
-   "text": "L'ID di accesso o la password inseriti sono probabilmente errati. Sony indica di controllare entrambi, di fare attenzione a maiuscole e minuscole e di provare l'accesso su un altro dispositivo.",
+   "text": "L'ID di accesso o la password inseriti sono probabilmente errati.",
    "steps": [
-    "Ricontrollare con attenzione ID di accesso e password dell'account.",
-    "La password distingue tra maiuscole e minuscole.",
+    "Ricontrollare ID di accesso e password dell'account; la password distingue tra maiuscole e minuscole.",
     "Verificare se l'accesso funziona su un altro dispositivo, per esempio un PC."
    ],
    "notes": [
@@ -1529,10 +1450,10 @@
   },
   "WS-116330-4": {
    "title": "Accesso a PlayStation sospeso",
-   "text": "Secondo Sony l'account potrebbe essere sospeso (temporaneamente). Sony indica di provare l'accesso su un altro dispositivo e di leggere i termini di servizio.",
+   "text": "Secondo Sony l'account potrebbe essere sospeso (temporaneamente).",
    "steps": [
     "Verificare se l'accesso funziona su un altro dispositivo, per esempio un PC.",
-    "Se l'accesso non riesce nemmeno lì, secondo Sony l'account è sospeso per violazione dei termini di servizio. Leggere i termini di servizio e il contratto d'uso di PlayStation."
+    "Se non riesce nemmeno lì, secondo Sony l'account è sospeso per violazione dei termini di servizio; leggerli insieme al contratto d'uso."
    ],
    "notes": [
     "Nota di Medic: riguarda l'accesso dell'account o della console presso Sony e non può essere risolto con Medic.",
@@ -1541,23 +1462,23 @@
   },
   "WS-116331-5": {
    "title": "Accesso a PlayStation sospeso",
-   "text": "Secondo Sony l'account potrebbe essere sospeso (temporaneamente). Sony indica di provare l'accesso su un altro dispositivo e di leggere i termini di servizio.",
+   "text": "Secondo Sony l'account potrebbe essere sospeso (temporaneamente).",
    "steps": [
-    "Verificare se l'accesso funziona su un altro dispositivo, per esempio un PC.",
-    "Se l'accesso non riesce nemmeno lì, secondo Sony l'account è sospeso per violazione dei termini di servizio. Leggere i termini di servizio e il contratto d'uso di PlayStation.",
+    "Provare ad accedere su un altro dispositivo, per esempio un PC.",
+    "Se non funziona nemmeno lì, secondo Sony l'account è sospeso per violazione dei termini di servizio: leggerli.",
     "Maggiori informazioni sono nell'e-mail inviata all'ID di accesso (indirizzo e-mail)."
    ],
    "notes": [
-    "Nota di Medic: riguarda l'accesso dell'account o della console presso Sony e non può essere risolto con Medic.",
+    "Nota di Medic: riguarda l'accesso dell'account o della console presso Sony; Medic non può risolverlo.",
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_OAUTH_28_ACCOUNT_HAS_BEEN_BANNED, codice di ritorno 0x82E0001C."
    ]
   },
   "WS-116332-6": {
    "title": "Accesso della console vietato o temporaneamente non disponibile",
-   "text": "Secondo Sony l'accesso a PlayStation dalla console è vietato, ad esempio per violazione dei termini di servizio, oppure il server è temporaneamente irraggiungibile. Sony indica di controllare le pagine di stato e di riprovare più tardi.",
+   "text": "Secondo Sony l'accesso a PlayStation dalla console è vietato (ad es. per violazione dei termini di servizio) oppure il server è temporaneamente irraggiungibile.",
    "steps": [
     "Controllare lo stato del server del gioco sul sito dello sviluppatore e la pagina di stato di PlayStation.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Potrebbe essere temporaneo: riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: riguarda l'accesso dell'account o della console presso Sony e non può essere risolto con Medic.",
@@ -1566,9 +1487,9 @@
   },
   "WS-116334-8": {
    "title": "Verifica via e-mail necessaria (Sony Pictures Core)",
-   "text": "L'accesso a Sony Pictures Core richiede la verifica via e-mail dell'account. Sony indica di completarla in Account Management e poi di accedere di nuovo.",
+   "text": "L'accesso a Sony Pictures Core richiede la verifica via e-mail dell'account.",
    "steps": [
-    "Accedere ad Account Management, scegliere «Security» nella barra laterale, completare la verifica via e-mail come indicato e poi accedere di nuovo."
+    "Accedere ad Account Management, scegliere «Security» nella barra laterale, completare la verifica via e-mail e poi accedere di nuovo."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_OAUTH_51_NEEDS_EMAIL_VERIFICATION, codice di ritorno 0x82E00033."
@@ -1576,24 +1497,23 @@
   },
   "WS-116367-4": {
    "title": "Accesso a PlayStation sospeso",
-   "text": "Secondo Sony l'account potrebbe essere sospeso (temporaneamente). Sony indica di provare l'accesso su un altro dispositivo e di leggere i termini di servizio.",
+   "text": "Secondo Sony l'account potrebbe essere sospeso (temporaneamente).",
    "steps": [
-    "Verificare se l'accesso funziona su un altro dispositivo, per esempio un PC.",
-    "Se l'accesso non riesce nemmeno lì, secondo Sony l'account è sospeso per violazione dei termini di servizio. Leggere i termini di servizio e il contratto d'uso di PlayStation."
+    "Provare ad accedere su un altro dispositivo, per esempio un PC.",
+    "Se non funziona nemmeno lì, secondo Sony l'account è sospeso per violazione dei termini di servizio: leggerli."
    ],
    "notes": [
-    "Nota di Medic: riguarda l'accesso dell'account o della console presso Sony e non può essere risolto con Medic.",
+    "Nota di Medic: riguarda l'accesso dell'account o della console presso Sony; Medic non può risolverlo.",
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_OAUTH_4176_ACCOUNT_HAS_BEEN_BANNED, codice di ritorno 0x82E01050."
    ]
   },
   "WS-116414-7": {
    "title": "Errore di connessione di rete",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "La console ha problemi di connessione a PlayStation; spesso la linea è solo temporaneamente sovraccarica.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli; altrimenti riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_OAUTH_HTTP_STATUS_CODE_403_FORBIDDEN, codice di ritorno 0x82E10193."
@@ -1601,15 +1521,14 @@
   },
   "WS-116417-0": {
    "title": "Errore di connessione a PlayStation",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica la pagina di stato, un riavvio, un cavo al posto del Wi-Fi, una migliore ricezione Wi-Fi e il riavvio di router e modem.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
+    "Riavviare la console, se possibile collegarla con un cavo LAN e configurare di nuovo la rete; con il Wi-Fi avvicinarla al router.",
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli."
    ],
    "notes": [
-    "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
+    "Nota di Medic: con un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile (non confermato da Sony).",
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_OAUTH_HTTP_STATUS_CODE_406_NOT_ACCEPTABLE, codice di ritorno 0x82E10196."
    ]
   },
@@ -1618,12 +1537,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -1632,12 +1549,11 @@
   },
   "WS-116439-4": {
    "title": "Impossibile connettersi al server",
-   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico. Sony consiglia di controllare lo stato dei server e poi di impostare e provare di nuovo la connessione.",
+   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Reimpostare le impostazioni di connessione a Internet della console e provare la connessione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli; altrimenti riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_OAUTH_HTTP_STATUS_CODE_429_TOO_MANY_REQUESTS, codice di ritorno 0x82E101AD."
@@ -1645,12 +1561,11 @@
   },
   "WS-116449-5": {
    "title": "Servizio in manutenzione",
-   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico. Sony consiglia di controllare lo stato dei server e poi di impostare e provare di nuovo la connessione.",
+   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
     "Reimpostare le impostazioni di connessione a Internet della console e provare la connessione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli e riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_OAUTH_HTTP_STATUS_CODE_503_SERVICE_UNAVAILABLE, codice di ritorno 0x82E101F7."
@@ -1658,12 +1573,11 @@
   },
   "WS-116483-3": {
    "title": "Problema di connessione al server",
-   "text": "Il problema potrebbe essere lato server. Sony consiglia di controllare la pagina di stato, riavviare il router e riprovare più tardi.",
+   "text": "Il problema potrebbe essere lato server.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
     "Riavviare la console.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli e riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_HTTP_STATUS_CODE_400_BAD_REQUEST, codice di ritorno 0x82F00190."
@@ -1671,12 +1585,11 @@
   },
   "WS-116486-6": {
    "title": "Problema di connessione al server",
-   "text": "Il problema potrebbe essere lato server. Sony consiglia di controllare la pagina di stato, riavviare il router e riprovare più tardi.",
+   "text": "Il problema potrebbe essere lato server; spesso basta aspettare.",
    "steps": [
-    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Controllare nella pagina di stato di PlayStation se ci sono guasti o manutenzione.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se più dispositivi sono sulla stessa rete, spegnerli e riprovare.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Se più dispositivi sono sulla stessa rete, spegnerli e riprovare; altrimenti riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_HTTP_STATUS_CODE_403_FORBIDDEN, codice di ritorno 0x82F00193."
@@ -1684,11 +1597,11 @@
   },
   "WS-116489-9": {
    "title": "Errore di connessione a PlayStation",
-   "text": "Il problema potrebbe essere lato server. Sony consiglia di controllare la pagina di stato, riavviare il router e riprovare più tardi.",
+   "text": "Il problema potrebbe essere lato server.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli.",
+    "Altrimenti riprovare più tardi: spesso la linea è solo temporaneamente sovraccarica."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_HTTP_STATUS_CODE_406_NOT_ACCEPTABLE, codice di ritorno 0x82F00196."
@@ -1699,12 +1612,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -1713,12 +1624,11 @@
   },
   "WS-116521-6": {
    "title": "Servizio in manutenzione",
-   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico. Sony consiglia di controllare lo stato dei server e poi di impostare e provare di nuovo la connessione.",
+   "text": "Il servizio potrebbe essere in manutenzione o sovraccarico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Reimpostare le impostazioni di connessione a Internet della console e provare la connessione.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli; altrimenti riprovare più tardi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_HTTP_STATUS_CODE_503_SERVICE_UNAVAILABLE, codice di ritorno 0x82F001F7."
@@ -1726,9 +1636,9 @@
   },
   "WS-117176-3": {
    "title": "Problema con la verifica in due passaggi (numero di telefono)",
-   "text": "Durante l'impostazione della verifica in due passaggi il numero di telefono potrebbe essere già registrato su un altro account. Sony indica di eliminarlo lì o di usarne un altro.",
+   "text": "Durante l'impostazione della verifica in due passaggi il numero di telefono potrebbe essere già registrato su un altro account.",
    "steps": [
-    "Se il numero di telefono è registrato su un altro account, eliminarlo lì e riprovare, oppure usare un altro numero. Il numero si modifica in Settings > Users and Accounts > Account > Security > Mobile Number."
+    "Eliminare il numero dall'altro account oppure usarne un altro: Settings > Users and Accounts > Account > Security > Mobile Number."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_ACCOUNTS_PHONE_NUMBER_IS_ALREADY_VERIFIED, codice di ritorno 0x8210102B."
@@ -1736,9 +1646,9 @@
   },
   "WS-117224-7": {
    "title": "Problema con la verifica in due passaggi (ID collegato)",
-   "text": "L'ID di accesso dell'account potrebbe essere unificato con un altro servizio del gruppo Sony. Sony indica di scollegarlo e di impostare di nuovo la verifica in due passaggi.",
+   "text": "L'ID di accesso dell'account potrebbe essere unificato con un altro servizio del gruppo Sony.",
    "steps": [
-    "Scollegare l'ID di accesso dall'altro servizio del gruppo Sony e impostare di nuovo la verifica in due passaggi."
+    "Scollegare l'ID di accesso dall'altro servizio del gruppo Sony e impostare di nuovo la verifica in 2 passaggi."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_ACCOUNTS_CANNOT_ENABLE_2SV_DCIMS_DO_NOT_SUPPORT, codice di ritorno 0x82101092."
@@ -1746,12 +1656,11 @@
   },
   "WS-119699-5": {
    "title": "Creazione dell'account non riuscita",
-   "text": "Non è stato possibile creare un account sulla console. Sony indica di controllare l'indirizzo e-mail, di impostare di nuovo la connessione e di riprovare più tardi o con un altro indirizzo.",
+   "text": "Non è stato possibile creare un account sulla console.",
    "steps": [
     "Verificare che l'indirizzo e-mail inserito sia corretto, oppure usarne un altro.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
-    "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
+    "Riavviare la console, se possibile collegarla con un cavo LAN e configurare di nuovo la rete; con il Wi-Fi avvicinarla al router.",
+    "Riprovare dopo un po'."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_ACCOUNTS_ACCOUNT_CREATION_REJECTED, codice di ritorno 0x82101143."
@@ -1762,12 +1671,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -1778,13 +1685,11 @@
    "title": "Impossibile connettersi a Internet",
    "text": "Si è verificato un errore durante la connessione a PlayStation: la console non riesce a raggiungere Internet. Sony indica una catena di pagina di stato, riavvio, cavo invece del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
-    "Controlla sulla pagina di stato di PlayStation se c'è un guasto dei server o una manutenzione.",
-    "Riavvia la console, collegati a Internet con un cavo LAN, se possibile, e configura di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicina la console al router o rimuovi ciò che disturba il collegamento tra i dispositivi.",
-    "Spegni router e modem, attendi almeno cinque minuti e riaccendili.",
-    "Se possibile, apri queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per aiuto con l'apertura delle porte e le impostazioni del router, rivolgiti al tuo provider Internet.",
-    "Imposta manualmente un indirizzo IP statico nelle impostazioni di rete.",
-    "Se nulla aiuta, la linea è probabilmente occupata per un po': attendi e riprova più tardi."
+    "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
+    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS."
@@ -1795,12 +1700,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -1812,12 +1715,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -1829,12 +1730,10 @@
    "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
+    "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535. Per l'apertura delle porte e le impostazioni del router rivolgersi al provider.",
-    "Nelle impostazioni di rete impostare manualmente un indirizzo IP statico.",
-    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': attendere e riprovare più tardi."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535 (il provider può aiutare), oppure impostare un indirizzo IP statico nelle impostazioni di rete.",
+    "Se nulla di ciò aiuta, la linea è probabilmente sovraccarica per un po': riprovare più tardi."
    ],
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
@@ -1843,18 +1742,15 @@
   },
   "WV-109168-5": {
    "title": "Errore durante la connessione a PlayStation",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica la pagina di stato, il riavvio, il cavo invece del Wi-Fi, il riavvio di router e modem, la disattivazione del filtro porte del router e un indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
-    "Controlla sulla pagina di stato di PlayStation se c'è un guasto dei server o una manutenzione.",
-    "Riavvia la console, collegati a Internet con un cavo LAN, se possibile, e configura di nuovo le impostazioni di rete.",
-    "Con il Wi-Fi, metti la console il più vicino possibile al router o rimuovi gli oggetti che bloccano o disturbano il collegamento.",
+    "Controlla sulla pagina di stato di PlayStation se ci sono guasti o manutenzione.",
+    "Riavvia la console e collegala se possibile con un cavo LAN; con il Wi-Fi, mettila il più vicino possibile al router.",
     "Spegni router e modem, attendi almeno cinque minuti e riaccendili.",
-    "Chiedi al tuo provider Internet come disattivare la funzione di filtro delle porte del router.",
-    "Imposta manualmente un indirizzo IP statico in «Settings > Network > Settings > Set Up Internet Connection».",
-    "Se il problema persiste, riprova più tardi."
+    "Disattiva il filtro porte del router (chiedi al tuo provider); imposta un indirizzo IP statico in «Settings > Network > Settings > Set Up Internet Connection»."
    ],
    "notes": [
-    "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS."
+    "Nota di Medic: se un filtro DNS come nanoDNS blocca gli indirizzi Sony, questo errore è prevedibile (non è un'affermazione di Sony, non confermato)."
    ]
   }
  }

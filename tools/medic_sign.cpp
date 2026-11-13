@@ -9,6 +9,7 @@
 // Die Schluesseldatei enthaelt den geheimen Seed (eine Zeile "ps5medic-ed25519-seed <64 Hex>"). Sie gehoert NICHT ins
 // Repository; wer sie hat, kann Regeln signieren, die jede PS5 Medic mit dem eingebauten Schluessel annimmt.
 #include "medic/error_codes.hpp"
+#include "medic/rule_update.hpp"
 #include "medic/rules.hpp"
 #include "medic/signature.hpp"
 
@@ -91,6 +92,7 @@ int cmd_keygen(const std::string& path) {
         return 1;
     }
     Ed25519Seed seed{};
+    umask(077);  // die Schluesseldatei ist von Anfang an nur fuer den Besitzer lesbar (chmod folgt erst nach dem Schreiben)
     std::ifstream rnd("/dev/urandom", std::ios::binary);
     if (!rnd.read(reinterpret_cast<char*>(seed.data()), seed.size())) {
         std::cerr << "/dev/urandom nicht lesbar\n";
@@ -126,6 +128,10 @@ int cmd_sign(const std::string& keyfile, const std::string& rules_path, std::str
     std::string rules;
     if (!read_file(rules_path, rules)) {
         std::cerr << "rules.json nicht lesbar: " << rules_path << "\n";
+        return 1;
+    }
+    if (rules.size() > kMaxRulesBytes) {  // jede Konsole lehnt eine groessere Datei mit "too_large" ab
+        std::cerr << "Datei zu gross (" << rules.size() << " Byte, erlaubt sind " << kMaxRulesBytes << "): " << rules_path << "\n";
         return 1;
     }
     // Die Datei kann die Regeln (rules.json) oder die Fehlercodes (error_codes.json) sein; beide werden mit demselben Schluessel

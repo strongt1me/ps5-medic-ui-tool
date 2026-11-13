@@ -1262,6 +1262,18 @@ void pad_nav_tests() {
         n.stick(0, -30000, 2100, out);
         CHECK(out == Buttons{Button::Up}, "Stick: nach oben (Y negativ)");
     }
+    {  // Zurueckfedern beim Loslassen: zwischen kOff und kOn darf keine NEUE Richtung entstehen
+        PadNav n;
+        Buttons out;
+        n.stick(30000, 0, 100, out);
+        CHECK(out == Buttons{Button::Right}, "Stick: nach rechts");
+        out.clear();
+        n.stick(8000, 9500, 120, out);  // Down waere nur 9500 > kOff, aber unter kOn
+        n.poll(500, out);
+        CHECK(out.empty(), "Stick: beim Zurueckfedern keine neue Richtung unterhalb von kOn");
+        n.stick(0, 20000, 600, out);
+        CHECK(out == Buttons{Button::Down}, "Stick: eine echte neue Richtung (ueber kOn) zaehlt weiter");
+    }
     {  // Links/Rechts: genau ein Schritt, keine Wiederholung (in den Einstellungen wuerde sonst die Sprache flackern)
         PadNav n;
         Buttons out;

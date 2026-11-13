@@ -48,13 +48,14 @@ Siehe `knowledge/rules.schema.json`. Kurzform:
   "id": "smp.parentheses_in_pfs_name",
   "severity": "critical",
   "when": { "all": [
-    { "fact": "smp.images[].name", "matches": "\\(.*\\)", "ext_in": [".ffpfs", ".ffpfsc"] }
+    { "fact": "smp.images[].name", "matches": "[()]" },
+    { "fact": "smp.images[].ext", "in": [".ffpfs", ".ffpfsc"] }
   ]},
   "text": { "de": "…", "en": "…" },
   "evidence": "smp.images[].path",
   "fix": "rename_image_parentheses",
   "source": "https://github.com/drakmor/ShadowMountPlus/issues/66",
-  "verified": "community-report"
+  "verified": "community"
 }
 ```
 

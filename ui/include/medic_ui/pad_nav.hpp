@@ -12,6 +12,7 @@
 #pragma once
 #include "medic_ui/input.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <optional>
@@ -44,14 +45,12 @@ public:
     // Neue Werte des linken Sticks (SDL: -32768..32767, Y positiv = unten).
     void stick(int x, int y, std::uint32_t now_ms, std::vector<Button>& out) {
         const int ax = std::abs(x), ay = std::abs(y);
-        const int threshold = stick_dir_ ? kOff : kOn;
-        if (ax < threshold && ay < threshold) {
-            stick_dir_.reset();
-        } else if (ax >= ay) {
-            stick_dir_ = x < 0 ? Button::Left : Button::Right;
-        } else {
-            stick_dir_ = y < 0 ? Button::Up : Button::Down;
-        }
+        // Die niedrigere Schwelle kOff gilt nur, um die laufende Richtung zu halten; eine neue Richtung braucht kOn (sonst loest das Zurueckfedern des
+        // Sticks beim Loslassen einen Schritt in eine andere Richtung aus)
+        const int dominant = std::max(ax, ay);
+        const Button cand = ax >= ay ? (x < 0 ? Button::Left : Button::Right) : (y < 0 ? Button::Up : Button::Down);
+        if (dominant >= kOn || (stick_dir_ && *stick_dir_ == cand && dominant >= kOff)) stick_dir_ = cand;
+        else stick_dir_.reset();
         refresh(now_ms, out);
     }
 

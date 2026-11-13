@@ -7,3 +7,5 @@ build-title/
 *.key
 rules-signing*
 build-native/
+__pycache__/
+*.pyc

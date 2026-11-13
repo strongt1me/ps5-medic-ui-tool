@@ -40,6 +40,7 @@ int sceUserServiceInitialize(void*);
 int sceUserServiceGetInitialUser(int* user_id);
 int scePadInit();
 int scePadOpen(int user_id, int type, int index, void* param);
+int scePadClose(int handle);
 int scePadReadState(int handle, void* data);
 }
 
@@ -426,6 +427,30 @@ int main() {
             if (pad >= 0) trace("Pad geoeffnet");
         }
     };
+    // Das Pad wird geschlossen und neu geoeffnet, wenn das Lesen 5 s lang fehlschlaegt (Handle ungueltig, anderer Benutzer) oder es 30 s lang
+    // nur "nicht verbunden" meldet (ein ausgeschalteter oder abgezogener Controller soll nicht dauernd neu geoeffnet werden; meldet er sich
+    // wieder, wird bad_since 0 und nichts geschieht).
+    std::uint32_t bad_since = 0;
+    bool bad_is_error = false;
+    auto pad_ok = [&](int rc, bool connected) {
+        if (rc == 0 && connected) {
+            bad_since = 0;
+            return;
+        }
+        const std::uint32_t t = now_ms();
+        const bool is_error = rc != 0;
+        if (bad_since == 0 || (is_error && !bad_is_error)) {  // neuer Zustand (ein Lesefehler zaehlt ab jetzt mit der kuerzeren Frist)
+            bad_since = t ? t : 1;
+            bad_is_error = is_error;
+        }
+        if (pad >= 0 && t - bad_since >= (bad_is_error ? 5000u : 30000u)) {
+            (void)scePadClose(pad);
+            pad = -1;
+            next_pad_try = 0;
+            bad_since = 0;
+            trace("Pad neu geoeffnet (keine Antwort)");
+        }
+    };
     // Wartet ms Millisekunden, waehrend ein Fehlerbild steht; Kreis beendet die App (sonst ginge das nur ueber die PS-Taste)
     auto wait_with_circle = [&](int ms) {
         for (int waited = 0; waited < ms; waited += 50) {
@@ -516,7 +541,10 @@ int main() {
             PadData d{};
             std::uint8_t msg[8];
             bool send = false;
-            if (scePadReadState(pad, &d) == 0 && d.connected) {
+            const int read_rc = scePadReadState(pad, &d);
+            const bool pad_good = read_rc == 0 && d.connected;
+            pad_ok(read_rc, d.connected != 0);
+            if (pad_good) {
                 medic::proto::put32(msg, d.buttons);
                 msg[4] = d.lx;
                 msg[5] = d.ly;
@@ -530,6 +558,12 @@ int main() {
                 pad_sent = false;
             }
             if (send && !medic::proto::send_message(sock, medic::proto::kPad, msg, sizeof msg)) {
+                // Der Dienst hat vielleicht gerade 'Q' gesendet und geschlossen: vor dem Neuverbinden noch einmal lesen
+                (void)reader.pump(sock);
+                if (reader.quit) {
+                    trace("Dienst meldet: beendet");
+                    break;
+                }
                 close(sock);
                 sock = -1;
                 continue;

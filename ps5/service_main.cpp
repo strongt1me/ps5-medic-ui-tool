@@ -312,6 +312,16 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
         pressed.clear();
         if (app.quit_requested()) {
             proto::send_message(client, proto::kQuit, nullptr, 0);
+            // Nicht sofort schliessen: liegt noch ein Pad-Paket ungelesen im Puffer, wuerde close() ein RST senden statt FIN, und die App verwirft das 'Q'
+            // (sie meldete dann "Verbindung verloren" und startete den Dienst neu). Schreibseite beenden und warten, bis die App ihre Seite schliesst.
+            shutdown(client, SHUT_WR);
+            for (int i = 0; i < 30; ++i) {  // hoechstens ~0,5 s
+                pollfd in{client, POLLIN, 0};
+                if (poll(&in, 1, 16) > 0) {
+                    const ssize_t n = recv(client, buf, sizeof buf, MSG_DONTWAIT);
+                    if (n == 0 || (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)) break;
+                }
+            }
             trace("Oberflaeche beendet");
             return true;
         }
@@ -366,6 +376,8 @@ int main() {
                 continue;
             }
             trace("App verbunden");
+            proto::set_nodelay(client);
+            proto::set_send_timeout(client, 30);  // liest die App nicht mehr, bleibt der Dienst nicht fuer immer in send() haengen (30 s: eine App im Hintergrund nach der PS-Taste soll nicht gleich ihre Sitzung verlieren)
             const bool finished = serve(client, *platform, http);
             close(client);
             last_client = now_ms();

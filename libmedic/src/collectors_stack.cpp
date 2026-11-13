@@ -187,7 +187,9 @@ std::uint64_t le(const std::string& b, std::size_t off, int bytes) {
 // Dateiende: die Pruefung des Loaders elfldr_sanity_check) oder "unreadable".
 std::string elf_state(const IFileSystem& fs, const std::string& path, std::uint64_t size) {
     std::string h;
-    if (size == 0 || !fs.read_range(path, 0, 64, h)) return size == 0 ? "too_small" : "unreadable";
+    // Groesse 0: eine wirklich leere Datei (abgebrochene Uebertragung) ist "too_small"; existiert sie nicht (haengender Link, stat fehlgeschlagen), ist es ein Lesefehler
+    if (size == 0) return fs.exists(path) ? "too_small" : "unreadable";
+    if (!fs.read_range(path, 0, 64, h)) return "unreadable";  // Lesefehler (Rechte) ist kein Befund
     if (size < 64 || h.size() < 64) return "too_small";
     if (std::memcmp(h.data(), "\x7f" "ELF", 4) != 0 || h[4] != 2) return "not_elf";
     const std::uint64_t phoff = le(h, 0x20, 8), phentsize = le(h, 0x36, 2), phnum = le(h, 0x38, 2);
@@ -231,7 +233,7 @@ void collect_elfs(const IFileSystem& fs, Facts& f) {
     for (int i = 0; i < 8; ++i) find_elfs(fs, "/mnt/usb" + std::to_string(i), 0, files);
     json broken = json::array();
     for (const auto& e : files)
-        if (e["state"] != "ok") broken.push_back({{"path", e["path"]}, {"reason", e["state"]}});
+        if (e["state"] != "ok" && e["state"] != "unreadable") broken.push_back({{"path", e["path"]}, {"reason", e["state"]}});
     f.set("payload.elf_files", std::move(files));
     f.set("payload.broken_elfs", std::move(broken));
 }

@@ -211,6 +211,7 @@ SqliteRows sqlite_select_text(const std::string& image, const std::string& wal, 
             r.rows.push_back(std::move(row));
         }
         r.ran = step == SQLITE_ROW || step == SQLITE_DONE;
+        r.truncated = step == SQLITE_ROW;  // die Schleife endete wegen max_rows, nicht am Tabellenende
     }
     sqlite3_finalize(st);
     sqlite3_close(db);
