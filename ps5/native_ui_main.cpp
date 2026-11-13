@@ -557,7 +557,10 @@ int main() {
                 send = true;
                 pad_sent = false;
             }
-            if (send && !medic::proto::send_message(sock, medic::proto::kPad, msg, sizeof msg)) {
+            if (send && !medic::proto::send_message_drop(sock, medic::proto::kPad, msg, sizeof msg)) {
+                char why[80];
+                std::snprintf(why, sizeof why, "Senden an den Dienst fehlgeschlagen (errno %d)", errno);
+                trace(why);
                 // Der Dienst hat vielleicht gerade 'Q' gesendet und geschlossen: vor dem Neuverbinden noch einmal lesen
                 (void)reader.pump(sock);
                 if (reader.quit) {

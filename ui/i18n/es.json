@@ -107,7 +107,7 @@
   "selftest.tier_thorough": "Exhaustivo",
   "selftest.thorough": "Exhaustivo (carga, escritura)",
   "selftest.confirm_title_thorough": "¿Iniciar el autotest exhaustivo? Carga la consola.",
-  "selftest.confirm_thorough": "Prueba exhaustiva: unos 45 s de carga en todos los núcleos (se detiene a 85 °C, solo arranca por debajo de 70 °C), luego prueba de memoria de 128 MiB y 256 MiB escritos en UN archivo de prueba en /data/ps5medic/selftest y releídos (se sobrescribe, nunca se borra; como máximo una vez al día). No inicies ningún juego ni apagues la consola; procura buena ventilación. Dura unos {s} s. Círculo cancela.",
+  "selftest.confirm_thorough": "Prueba exhaustiva: unos 20 s de carga en casi todos los núcleos (se detiene a 85 °C, solo arranca por debajo de 70 °C), luego prueba de memoria de 128 MiB y 256 MiB escritos en UN archivo de prueba en /data/ps5medic/selftest y releídos (se sobrescribe, nunca se borra; como máximo una vez al día). No inicies ningún juego ni apagues la consola; procura buena ventilación. Dura unos {s} s. Círculo cancela.",
   "selftest.reason.too_warm": "consola ya muy caliente",
   "selftest.reason.ceiling": "parado: límite de temperatura",
   "selftest.reason.rise_rate": "parado: temperatura sube muy rápido",

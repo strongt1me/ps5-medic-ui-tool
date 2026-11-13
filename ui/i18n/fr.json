@@ -107,7 +107,7 @@
   "selftest.tier_thorough": "Approfondi",
   "selftest.thorough": "Approfondi (charge)",
   "selftest.confirm_title_thorough": "Lancer l'autotest approfondi ? Il sollicite la console.",
-  "selftest.confirm_thorough": "Test approfondi : environ 45 s de charge sur tous les coeurs (arrêt à 85 °C, démarrage seulement sous 70 °C), puis test mémoire de 128 MiB et 256 MiB écrits dans UN SEUL fichier de test sous /data/ps5medic/selftest, relus ensuite (écrasé, jamais supprimé ; une fois par jour au plus). Ne lancez pas de jeu, n'éteignez pas la console, assurez une bonne aération. Dure environ {s} s. Rond annule.",
+  "selftest.confirm_thorough": "Test approfondi : environ 20 s de charge sur presque tous les coeurs (arrêt à 85 °C, démarrage seulement sous 70 °C), puis test mémoire de 128 MiB et 256 MiB écrits dans UN SEUL fichier de test sous /data/ps5medic/selftest, relus ensuite (écrasé, jamais supprimé ; une fois par jour au plus). Ne lancez pas de jeu, n'éteignez pas la console, assurez une bonne aération. Dure environ {s} s. Rond annule.",
   "selftest.reason.too_warm": "console déjà trop chaude",
   "selftest.reason.ceiling": "arrêt : limite de température atteinte",
   "selftest.reason.rise_rate": "arrêt : la température monte trop vite",

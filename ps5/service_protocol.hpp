@@ -12,6 +12,7 @@
 //                   'X' Dienst beenden (leer)
 #pragma once
 #include <cstddef>
+#include <cerrno>
 #include <cstdint>
 #include <cstring>
 
@@ -84,6 +85,22 @@ inline bool send_all(int s, const void* data, std::size_t n) {
         n -= static_cast<std::size_t>(w);
     }
     return true;
+}
+
+// Nicht blockierend (fuer Momentaufnahmen wie den Pad-Zustand): ist der Sendepuffer voll, wird die Nachricht verworfen und true geliefert; false nur bei einem
+// echten Fehler (Gegenstelle weg). Vorher blockierte die App bis zu 2 s im send(), wenn der Dienst gerade nicht las, kam nicht dazu, Bilder zu lesen, und
+// beide warteten aufeinander, bis die App die Verbindung abbrach.
+inline bool send_message_drop(int s, char type, const void* payload, std::uint32_t len) {
+    if (len > 64) return false;
+    std::uint8_t buf[5 + 64];
+    buf[0] = static_cast<std::uint8_t>(type);
+    put32(buf + 1, len);
+    if (len) std::memcpy(buf + 5, payload, len);
+    const std::size_t n = 5 + len;
+    const ssize_t w = send(s, buf, n, MSG_NOSIGNAL | MSG_DONTWAIT);
+    if (w == static_cast<ssize_t>(n)) return true;
+    if (w < 0) return errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR;
+    return send_all(s, buf + w, n - static_cast<std::size_t>(w));  // Teilschreibung: den Rest nachsenden, sonst ist der Strom kaputt
 }
 
 inline bool send_message(int s, char type, const void* payload, std::uint32_t len) {

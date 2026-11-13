@@ -107,7 +107,7 @@
   "selftest.tier_thorough": "Gründlich",
   "selftest.thorough": "Gründlich (Last, Schreiben)",
   "selftest.confirm_title_thorough": "Gründlichen Selbsttest starten? Er belastet die Konsole.",
-  "selftest.confirm_thorough": "Gründlicher Test: etwa 45 s Last auf allen Kernen (Abbruch bei 85 °C, Start nur unter 70 °C), dann 128 MiB Speichertest und 256 MiB in EINE Testdatei unter /data/ps5medic/selftest schreiben und zurücklesen (wird überschrieben, nie gelöscht; höchstens einmal pro Tag). Kein Spiel starten, Konsole nicht ausschalten, für Belüftung sorgen. Dauer etwa {s} s. Kreis bricht ab.",
+  "selftest.confirm_thorough": "Gründlicher Test: etwa 20 s Last auf fast allen Kernen (Abbruch bei 85 °C, Start nur unter 70 °C), dann 128 MiB Speichertest und 256 MiB in EINE Testdatei unter /data/ps5medic/selftest schreiben und zurücklesen (wird überschrieben, nie gelöscht; höchstens einmal pro Tag). Kein Spiel starten, Konsole nicht ausschalten, für Belüftung sorgen. Dauer etwa {s} s. Kreis bricht ab.",
   "selftest.reason.too_warm": "Konsole schon zu warm",
   "selftest.reason.ceiling": "Abbruch: Temperaturgrenze erreicht",
   "selftest.reason.rise_rate": "Abbruch: Temperatur steigt zu schnell",

@@ -8,6 +8,7 @@
 #include "medic/selftest.hpp"
 #include "medic/text_policy.hpp"
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -300,6 +301,31 @@ void selftest_tests() {
         const Facts none;
         auto ab = run("hw.thermal.short_soak", none, sp2, stop);
         CHECK(ab.status == TestStatus::Cancelled && ab.reason == "cancelled", "Waermetest: Nutzerabbruch = cancelled");
+    }
+    {  // Der Waermetest blockiert die Hauptschleife des Dienstes nicht: jeder step() kehrt nach kurzer Zeit zurueck (frueher schlief er ein ganzes Intervall)
+        Sandbox b3;
+        ScriptedPlatform sp3(make_snapshot_platform(b3.dir.string(), false), false);
+        sp3.sys_.temps = {40};
+        TestContext c3;
+        c3.thermal_burn_s = 1;
+        c3.thermal_cool_s = 1;
+        c3.step_ms = 600;
+        const Facts none3;
+        const TestDef* d3 = find_test("hw.thermal.short_soak");
+        auto sess = d3 ? begin_selftest_session(sp3, none3, *d3, c3) : nullptr;
+        CHECK(sess != nullptr, "Waermetest: Sitzung beginnt");
+        double longest = 0;
+        int steps = 0;
+        if (sess) {
+            for (; steps < 100000 && !sess->step(); ++steps) {
+                static thread_local std::chrono::steady_clock::time_point last{};
+                const auto now = std::chrono::steady_clock::now();
+                if (steps > 0) longest = std::max(longest, std::chrono::duration<double, std::milli>(now - last).count());
+                last = now;
+            }
+        }
+        CHECK(sess && longest < 100, "Waermetest: kein einzelner step() dauert ein ganzes Messintervall (laengster Abstand " + std::to_string(longest) + " ms)");
+        CHECK(sess && sess->result().status == TestStatus::Passed, "Waermetest: laeuft in kleinen Schritten durch und besteht");
     }
     {  // Schreibtest (Gruendlich): Schutzregeln, Pruefmuster, nie loeschen
         TestContext ctx;

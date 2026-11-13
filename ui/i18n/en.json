@@ -107,7 +107,7 @@
   "selftest.tier_thorough": "Thorough",
   "selftest.thorough": "Thorough (load, write)",
   "selftest.confirm_title_thorough": "Start the thorough self-test? It puts load on the console.",
-  "selftest.confirm_thorough": "Thorough test: about 45 s of load on all cores (stops at 85 °C, starts only below 70 °C), then a 128 MiB memory test and 256 MiB written to ONE test file under /data/ps5medic/selftest and read back (overwritten, never deleted; at most once a day). Do not start a game or switch the console off; keep it ventilated. Takes about {s} s. Circle cancels.",
+  "selftest.confirm_thorough": "Thorough test: about 20 s of load on almost all cores (stops at 85 °C, starts only below 70 °C), then a 128 MiB memory test and 256 MiB written to ONE test file under /data/ps5medic/selftest and read back (overwritten, never deleted; at most once a day). Do not start a game or switch the console off; keep it ventilated. Takes about {s} s. Circle cancels.",
   "selftest.reason.too_warm": "console already too warm",
   "selftest.reason.ceiling": "stopped: temperature limit reached",
   "selftest.reason.rise_rate": "stopped: temperature rises too fast",

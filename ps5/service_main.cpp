@@ -262,9 +262,13 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
                 rx.insert(rx.end(), buf, buf + n);
                 continue;
             }
-            if (n == 0) return false;  // App hat geschlossen
+            if (n == 0) {
+                trace("Sitzung endet: App hat die Verbindung geschlossen");
+                return false;
+            }
             if (errno == EAGAIN || errno == EWOULDBLOCK) break;
             if (errno == EINTR) continue;
+            trace("Sitzung endet: Lesefehler (errno " + std::to_string(errno) + ")");
             return false;
         }
         while (rx.size() >= 5) {
@@ -333,10 +337,16 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
             app.update();
         }
         // Gezeichnet wird sofort nach einer Taste, sonst alle 16 ms (die App schickt den Pad-Zustand staendig, auch unveraendert: das allein loest kein Bild aus)
-        if (!link_ok) return false;
+        if (!link_ok) {
+            trace("Sitzung endet: Senden eines Bilds fehlgeschlagen (Check-up)");
+            return false;
+        }
         if (had_input || t0 - last_emit >= 16) {
             last_emit = t0;
-            if (!emit_frame()) return false;
+            if (!emit_frame()) {
+                trace("Sitzung endet: Senden eines Bilds fehlgeschlagen (errno " + std::to_string(errno) + ")");
+                return false;
+            }
         }
 
         // Warten, bis die App etwas sendet (weckt sofort), hoechstens bis zum naechsten Takt; vorher schlief der Dienst fest 33 ms: bis zu 33 ms Verzoegerung pro Tastendruck

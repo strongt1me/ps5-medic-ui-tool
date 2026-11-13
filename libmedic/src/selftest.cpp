@@ -393,7 +393,9 @@ public:
         peak_ = t;
         temps_.push_back(t);
         long cores = sysconf(_SC_NPROCESSORS_ONLN);
-        cores_ = static_cast<int>(std::max(1L, std::min<long>(cores, Burners::kMax)));
+        // Zwei Kerne bleiben frei (Dienst, App, ShadowMount+): bei voller Last auf allen Kernen kam der Dienst zeitweise nicht mehr zum Lesen seiner Eingaben,
+        // die App brach die Verbindung ab und die Oberflaeche startete mitten im Test neu (Konsole, 13. Nov. 2026)
+        cores_ = static_cast<int>(std::max(1L, std::min<long>(cores > 2 ? cores - 2 : cores, Burners::kMax)));
     }
     ~ThermalSession() override { stop_burners(); }
 
@@ -406,7 +408,14 @@ public:
         }
         if (!burning_ && !cooling_) start_burners();
         if (done_) return true;
-        sleep_ms(ctx_.step_ms);  // ein Messintervall
+        // Ein Messintervall dauert step_ms, aber step() schlaeft nur kurz (hoechstens 20 ms) und kehrt dann zurueck: der Dienst ruft es aus seiner
+        // Hauptschleife, die zwischendurch Eingaben lesen und Bilder senden muss (frueher schlief sie eine ganze Sekunde je Aufruf)
+        if (Clock::now() < next_sample_) {
+            const auto wait = std::chrono::duration_cast<std::chrono::milliseconds>(next_sample_ - Clock::now()).count();
+            sleep_ms(static_cast<int>(std::min<long long>(std::max<long long>(wait, 0), 20)));
+            if (Clock::now() < next_sample_) return false;
+        }
+        next_sample_ = Clock::now() + std::chrono::milliseconds(ctx_.step_ms);
         const double now = seconds_since(phase_start_);
         const int t = temp();
         if (t >= 0) {
@@ -442,6 +451,7 @@ public:
                 burning_ = false;
                 cooling_ = true;
                 phase_start_ = Clock::now();
+                next_sample_ = phase_start_ + std::chrono::milliseconds(ctx_.step_ms);
             }
         } else if (cooling_) {
             progress_ = std::min(0.99, 0.6 + 0.4 * now / std::max(1, ctx_.thermal_cool_s));
@@ -461,6 +471,7 @@ private:
     void start_burners() {
         burning_ = true;
         phase_start_ = Clock::now();
+        next_sample_ = phase_start_ + std::chrono::milliseconds(ctx_.step_ms);
         last_sample_ = 0;
         burners_.deadline = steady_seconds() + ctx_.thermal_burn_s + 3;  // harte Frist: Last plus 3 Sekunden Spielraum
         burners_.use_fma = have_fma();
@@ -535,6 +546,7 @@ private:
     std::uint64_t last_total_ = 0;
     double last_sample_ = 0;
     Clock::time_point phase_start_ = Clock::now();
+    Clock::time_point next_sample_ = Clock::now();
     int rest_ = 0, peak_ = 0, cores_ = 1;
     bool burning_ = false, cooling_ = false;
     bool fan_controller_ = false;
@@ -904,7 +916,7 @@ const std::vector<Entry>& entries() {
         {{"sw.files.sanity", TestTier::Quick, "none", 2, "Payloads, Images und eboot.bin (Kopf)", "Payloads, images and eboot.bin (header)", "Inhalt der Dateien, Entschlüsseln, Start des Spiels", "file contents, decryption, whether a game starts"}, test_files_sanity},
         {{"hw.storage.read_throughput", TestTier::Standard, "read", 20, "Lesetest einer Image-Datei", "Read test of an image file", "Schreibleistung, Verschleiß, ungelesene Bereiche; wiederholte Läufe können aus dem Zwischenspeicher lesen", "write speed, wear, unread areas; repeated runs may read from the cache"}, nullptr},
         {{"sw.net.local", TestTier::Standard, "net_local", 12, "Lokales Netz (Antwortzeit zum Router)", "Local network (response time to the router)", "Internet, Download-Geschwindigkeit, WLAN-Signalstärke, andere Geräte im Netz; nur die Verbindung zwischen Konsole und Router, ohne Daten zu senden", "internet, download speed, Wi-Fi signal strength, other devices; only the link between console and router, without sending data"}, nullptr},
-        {{"hw.thermal.short_soak", TestTier::Thorough, "load", 80, "Wärmetest (kurze CPU-Last)", "Heat test (short CPU load)", "GPU-/Speicherwärme, die Standardkühlung bei laufendem Lüfterregler (er hält die Konsole kühl), Ursache (Staub, Wärmeleitmaterial); in kühler Umgebung bleiben Probleme verborgen", "GPU/memory heat, the standard cooling while a fan controller runs (it keeps the console cool), cause (dust, thermal paste); in a cool room problems stay hidden"}, nullptr},
+        {{"hw.thermal.short_soak", TestTier::Thorough, "load", 35, "Wärmetest (kurze CPU-Last)", "Heat test (short CPU load)", "GPU-/Speicherwärme, die Standardkühlung bei laufendem Lüfterregler (er hält die Konsole kühl), Ursache (Staub, Wärmeleitmaterial); in kühler Umgebung bleiben Probleme verborgen", "GPU/memory heat, the standard cooling while a fan controller runs (it keeps the console cool), cause (dust, thermal paste); in a cool room problems stay hidden"}, nullptr},
         {{"hw.mem.userland_pattern", TestTier::Thorough, "load", 20, "Speicher-Muster-Test (128 MiB Arbeitsspeicher)", "Memory pattern test (128 MiB of working memory)", "Gesamter GDDR6, GPU-Zugriff, ECC; nur der Speicher, den ein Prozess bekommt", "all GDDR6, GPU access, ECC; only the memory a process gets"}, nullptr},
         {{"hw.storage.write_verify", TestTier::Thorough, "write", 30, "Schreibtest (eine Testdatei, 256 MiB)", "Write test (one test file, 256 MiB)", "Restlebensdauer, Verschleiß, Leistung außerhalb des Schreib-Caches; der Rücklesevergleich kann aus dem Zwischenspeicher kommen", "remaining lifetime, wear, speed beyond the write cache; the read-back may come from cache"}, nullptr},
         {{"hw.pad.buttons", TestTier::User, "none", 60, "Controller-Tasten (Nutzer-Test)", "Controller buttons (user test)", "Sticks, Trigger, Drift, Funkqualität, Akkukapazität; nur ob jede Taste ankommt", "sticks, triggers, drift, radio quality, battery capacity; only whether every button arrives"}, nullptr},

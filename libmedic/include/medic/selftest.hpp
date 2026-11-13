@@ -78,7 +78,7 @@ struct TestContext {
     std::function<bool()> cancelled;  // optional: wird zwischen den Schritten abgefragt (run_selftest)
     std::string today;                // "YYYYMMDD" (UTC): Tagesbegrenzung des Schreibtests; leer = Schreibtest wird uebersprungen (no_clock)
     // Messparameter; die Voreinstellung ist der Produktwert, Tests setzen kleinere.
-    int thermal_burn_s = 45, thermal_cool_s = 30, step_ms = 1000;
+    int thermal_burn_s = 20, thermal_cool_s = 10, step_ms = 1000;  // 13. Nov. 2026: vorher 45 + 30 s
     int net_gap_ms = 150;  // Pause zwischen den Verbindungsversuchen des Netztests (Tests setzen 0)
     std::uint64_t write_bytes = kWriteTestBytes;
     std::uint64_t mem_bytes = kMemTestBytes;  // Speicher-Muster-Test: so viel wird belegt (bei Allokationsfehler halbiert)
