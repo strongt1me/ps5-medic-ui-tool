@@ -100,7 +100,7 @@
 ## Installation
 
 1. Copier les deux dossiers de la release par FTP vers `/data/homebrew/` : `PS5MEDIC` (service `ps5medicservice.elf`, payload de diagnostic `ps5medic.elf`, `rules.json`, `error_codes.json`, icône) et `FAKE42007` (l'application native).
-   Alternative sans FTP : envoyer `ps5medic-launcher.elf` de la release au chargeur d'ELF (port 9021) (Payload Manager ou `nc <ip> 9021 < ps5medic-launcher.elf`). Il écrit lui-même les deux dossiers, ne démarre rien et ne supprime rien ; journal : `/data/ps5medic/installer.log`.
+   Alternative sans FTP : envoyer `ps5medic-launcher.elf` (fichier séparé de la release, pas dans le zip) au chargeur d'ELF (port 9021) (Payload Manager ou `nc <ip> 9021 < ps5medic-launcher.elf`). Il écrit lui-même les deux dossiers, ne démarre rien et ne supprime rien ; journal : `/data/ps5medic/installer.log`.
 2. ShadowMount+ crée en quelques secondes la tuile **PS5 Medic** sous « Médias ».
 3. Une pression sur la tuile lance l'application (d'abord l'écran de démarrage, puis l'écran d'accueil). Au démarrage, elle envoie le service au chargeur d'ELF (port 9021), qui doit fonctionner ; un redémarrage de la console n'y change rien, la tuile reste. ◯ sur l'écran d'accueil ferme l'application et le service.
 
