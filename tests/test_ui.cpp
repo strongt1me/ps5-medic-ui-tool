@@ -1706,10 +1706,89 @@ void error_codes_flow_tests() {
 
 // Mit der echten Datei und dem echten Dienst: jeder Code laesst sich in beiden Sprachen oeffnen, durchscrollen und zeichnen,
 // ohne dass auf der (beschreibbaren) Konsole etwas geschieht; alle Zeichen der Texte gibt es in der Schrift.
+// Code-Eingabe in der Fehlercode-Liste (Quadrat): Hoch/Runter waehlt die Ziffer, Kreuz uebernimmt, die Liste springt mit.
+void error_search_tests() {
+    const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+    const ErrorCodeSet codes = load_error_codes_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/error_codes.json");
+    TempCopy t("b8_pos");
+    const auto before = full_tree(t.dir);
+    auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
+    LocalService svc(*platform, rules, [] { return std::string("20261113T120000Z"); });
+    svc.set_error_codes(codes);
+    Canvas cv(App::kWidth, App::kHeight);
+    Strings::missing().clear();
+
+    // tippt die Zeichen von `digits`: Hoch bis zur Ziffer, Kreuz uebernimmt
+    auto type = [](App& a, const std::string& digits) {
+        for (char ch : digits) {
+            const std::string alpha = a.error_input_group() == 6 ? "0123456789ABCDEF" : "0123456789";
+            const int want = static_cast<int>(alpha.find(ch));
+            int guard = 0;
+            while (a.error_input_digit() != want && guard++ < 20) press(a, {Button::Up});
+            press(a, {Button::Cross});
+        }
+    };
+    for (Lang l : {Lang::De, Lang::En, Lang::Fr, Lang::It, Lang::Es}) {
+        App a(svc, l);
+        open_error_codes_via_ui(a);
+        CHECK(!a.error_input_active(), "Code-Eingabe: beim Oeffnen der Liste zu");
+        a.render(cv);
+        press(a, {Button::Square});
+        CHECK(a.error_input_active() && a.error_input_text() == "1" && a.error_input_group() == 0, "Code-Eingabe: Quadrat oeffnet sie (Gruppe alle, Ziffer 1)");
+        a.render(cv);
+        const std::uint64_t open_hash = canvas_hash(cv);
+        type(a, "107863");
+        CHECK(a.selected_error_id() == "CE-107863-5", "Code-Eingabe: 107863 waehlt CE-107863-5 (" + a.selected_error_id() + ")");
+        CHECK(a.error_input_text() == "107863", "Code-Eingabe: Text nach sechs Ziffern");
+        a.render(cv);
+        CHECK(canvas_hash(cv) != open_hash, "Code-Eingabe: Anzeige aendert sich");
+        press(a, {Button::Cross});  // voll: nichts mehr
+        CHECK(a.error_input_text() == "107863", "Code-Eingabe: nach sechs Ziffern kommt keine weitere dazu");
+        press(a, {Button::Left, Button::Left, Button::Left});
+        CHECK(a.error_input_text() == "1078" || a.error_input_text().rfind("107", 0) == 0, "Code-Eingabe: Links nimmt Ziffern zurueck");
+        press(a, {Button::Triangle});
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail && !a.error_input_active(), "Code-Eingabe: Dreieck zeigt den Eintrag");
+        a.render(cv);
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::ErrorCodes && !a.error_input_active(), "Code-Eingabe: zurueck zur Liste, Eingabe zu");
+    }
+    {  // Gruppen und Hex-Codes
+        App a(svc, Lang::De);
+        open_error_codes_via_ui(a);
+        press(a, {Button::Square, Button::R1});
+        CHECK(a.error_input_group() == 1, "Code-Eingabe: R1 -> Gruppe CE");
+        type(a, "100028");
+        CHECK(a.selected_error_id() == "CE-100028-1", "Code-Eingabe: CE 100028");
+        press(a, {Button::L1});  // zurueck auf alle
+        CHECK(a.error_input_group() == 0, "Code-Eingabe: L1 -> alle");
+        press(a, {Button::L1});  // wieder um: 0x
+        CHECK(a.error_input_group() == 6, "Code-Eingabe: L1 von alle -> 0x");
+        press(a, {Button::Circle});
+        press(a, {Button::Square});
+        CHECK(a.error_input_group() == 6, "Code-Eingabe: neu geoeffnet, Gruppe bleibt");
+        type(a, "80551618");
+        CHECK(a.selected_error_id() == "0x80551618", "Code-Eingabe: Hex-Code 0x80551618 (" + a.selected_error_id() + ")");
+        a.render(cv);
+        // ohne Treffer bleibt die Auswahl
+        press(a, {Button::Left, Button::Left, Button::Left, Button::Left, Button::Left, Button::Left, Button::Left, Button::Left});
+        press(a, {Button::R1, Button::R1});  // 0x -> alle -> CE
+        type(a, "999");
+        const std::string kept = a.selected_error_id();
+        type(a, "9");
+        CHECK(a.selected_error_id() == kept, "Code-Eingabe: kein Treffer laesst die Auswahl stehen");
+        a.render(cv);
+        press(a, {Button::Triangle});
+        CHECK(a.screen() == App::Screen::ErrorCodes || a.screen() == App::Screen::ErrorCodeDetail, "Code-Eingabe: Dreieck ohne Treffer bleibt harmlos");
+    }
+    CHECK(Strings::missing().empty(), "Code-Eingabe: keine fehlenden Texte in fuenf Sprachen");
+    Strings::missing().clear();
+    CHECK(full_tree(t.dir) == before, "Code-Eingabe: nichts geschrieben");
+}
+
 void error_codes_real_data_tests() {
     const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
     const ErrorCodeSet codes = load_error_codes_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/error_codes.json");
-    CHECK(codes.codes.size() >= 36, "Fehlercodes (Datei): mindestens die 36 belegten Codes");
+    CHECK(codes.codes.size() >= 153, "Fehlercodes (Datei): mindestens die 153 belegten Codes");
 
     TempCopy t("b8_pos");
     const auto before = full_tree(t.dir);
@@ -1727,10 +1806,10 @@ void error_codes_real_data_tests() {
         open_error_codes_via_ui(a);
         CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes (Datei): Liste offen");
         a.render(cv);
-        for (int i = 0; i < 30 && a.error_selected() != static_cast<int>(codes.codes.size()) - 1; ++i) press(a, {Button::R1});
+        for (int i = 0; i < 60 && a.error_selected() != static_cast<int>(codes.codes.size()) - 1; ++i) press(a, {Button::R1});
         a.render(cv);
         CHECK(a.error_selected() == static_cast<int>(codes.codes.size()) - 1, "Fehlercodes (Datei): R1 bis zum letzten Code");
-        for (int i = 0; i < 30 && a.error_selected() != 0; ++i) press(a, {Button::L1});
+        for (int i = 0; i < 60 && a.error_selected() != 0; ++i) press(a, {Button::L1});
         CHECK(a.error_selected() == 0, "Fehlercodes (Datei): L1 bis zum ersten Code");
         press(a, {Button::Cross});
         for (std::size_t i = 0; i < codes.codes.size(); ++i) {
@@ -3270,6 +3349,7 @@ void ui_tests() {
     shoulder_and_stick_flow_tests();
     error_codes_flow_tests();
     error_codes_real_data_tests();
+    error_search_tests();
     error_link_tests();
     error_link_real_data_tests();
     error_source_tests();

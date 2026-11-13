@@ -167,19 +167,19 @@
    "text": "En la lista de autocarga el cargador (elfldr) va seguido directamente de la entrada siguiente. Un cargador recién iniciado acepta conexiones solo tras unos segundos: la entrada siguiente falla entonces ('Loader connection failed - 0 bytes sent') y falta tras cada arranque. Entre elfldr y el siguiente payload debe haber una pausa (!4000 = cuatro segundos). La reparación la inserta; incluye copia de seguridad y deshacer."
   },
   "autoload.entry_missing": {
-   "text": "La lista de autocarga contiene una entrada para la que no hay archivo de payload (o el nombre solo difiere en mayúsculas o minúsculas; los nombres distinguen mayúsculas). Al arrancar, el cargador notifica 'Payload not found' / 'Not found' y omite la entrada: el payload falta tras cada reinicio. Corrige la entrada o instala de nuevo el payload."
+   "text": "La lista de autocarga contiene una entrada para la que no hay archivo de payload (o el nombre solo difiere en mayúsculas o minúsculas; los nombres distinguen mayúsculas). Al arrancar, el cargador notifica 'Payload not found' / 'Not found' y omite la entrada: el payload falta tras cada reinicio. Corrige la entrada o instala de nuevo el payload. La corrección arregla la ortografía o desactiva la entrada (copia de seguridad y deshacer incluidos); los archivos no se tocan."
   },
   "autoload.entry_duplicate": {
-   "text": "Una entrada aparece varias veces en la lista de autocarga y se envía cada vez (los cargadores no eliminan duplicados). Quita las líneas duplicadas."
+   "text": "Una entrada aparece varias veces en la lista de autocarga y se envía cada vez (los cargadores no eliminan duplicados). Quita las líneas duplicadas. La corrección elimina los duplicados posteriores (copia de seguridad y deshacer incluidos)."
   },
   "pldmgr.autoload_syntax": {
    "text": "La lista de autocarga del Payload Manager tiene un formato no válido. El Payload Manager la comprueba de forma estricta: un solo error (archivo de más de 4095 bytes, línea de más de 511 caracteres, pausa no válida '!...', coma en una línea) invalida toda la secuencia y no se inicia nada en absoluto. Corrige la línea indicada."
   },
   "pldmgr.autoload_disabled": {
-   "text": "El Payload Manager tiene entradas en su lista de autocarga, pero la autocarga está desactivada (AUTOLOAD_ENABLED=0). La lista no se procesa al arrancar; los payloads hay que cargarlos a mano. Activa la autocarga en los ajustes del Payload Manager si no es lo que quieres."
+   "text": "El Payload Manager tiene entradas en su lista de autocarga, pero la autocarga está desactivada (AUTOLOAD_ENABLED=0). La lista no se procesa al arrancar; los payloads hay que cargarlos a mano. Activa la autocarga en los ajustes del Payload Manager si no es lo que quieres. La corrección activa el autoload (copia de seguridad y deshacer incluidos)."
   },
   "payload.elf_invalid": {
-   "text": "Al menos un archivo ELF es inservible: demasiado pequeño, sin firma ELF (a menudo una página de error HTML guardada) o cortado al final (transferencia interrumpida). El cargador rechaza esos archivos y el payload no arranca. Transfiere el archivo de nuevo (FTP en modo binario) o descárgalo otra vez; aparta antes el archivo roto."
+   "text": "Al menos un archivo ELF es inservible: demasiado pequeño, sin firma ELF (a menudo una página de error HTML guardada) o cortado al final (transferencia interrumpida). El cargador rechaza esos archivos y el payload no arranca. Transfiere el archivo de nuevo (FTP en modo binario) o descárgalo otra vez; aparta antes el archivo roto. La corrección no borra nada: mueve el archivo defectuoso a la carpeta oculta .medic_broken junto a él (deshacer lo devuelve)."
   },
   "nanodns.log_problem": {
    "text": "El log de nanoDNS contiene errores: no alcanza sus servidores DNS ascendentes (entonces falla toda resolución de nombres y las apps y el Payload Manager parecen 'sin conexión'), no puede abrir el puerto 53 o notifica líneas no válidas en nanodns.ini. Revisa los servidores ascendentes en nanodns.ini (p. ej. la dirección del router como primera entrada) y envía de nuevo nanoDNS. Del log solo se cuenta; los dominios que contiene nunca llegan al informe."
@@ -249,16 +249,12 @@
   "storage.scanpath_drive_missing": {
    "text": "Una ruta de escaneo personalizada de config.ini está en una unidad (/mnt/usbN o /mnt/extN) que no está conectada: los juegos de allí no se encuentran. Si [library] remove_missing está activado, ShadowMount+ quita los registros tras el retraso configurado (por defecto: desactivado). Vuelve a conectar la unidad (sin hub USB, otro puerto) o quita la ruta de escaneo."
   },
-  "kstuff.shellui_patch_failed": {
-   "text": "kstuff notifica en el log del kernel que no pudo poner el hook de trofeos en la interfaz del shell (SceShellUI) («patch_shellui failed», pruebas). En ese caso los usuarios indican que los trofeos no aparecen como aviso ni en la lista; al arrancar el hook funciona primero, y tras cambiar entre apps kstuff reintenta y a veces falla varias veces. Ningún responsable ha contestado, la causa está abierta. Sin trofeos los juegos siguen funcionando. Reiniciar la consola con el jailbreak puesto de nuevo puede lograr que el hook funcione en el siguiente arranque.",
-   "confidence_reason": "La línea está en el log del kernel (leído). Que por eso falten trofeos viene de informes sobre la versión 1.11 en FW 13.x (issues 95 y 106, el autor del 95 no está seguro de la causa); no verificado en esta consola (FW 12.00, kstuff-lite 1.10)."
-  },
   "appdb.orphan_entry": {
-   "text": "La base de datos del software del sistema (app.db) lista un título cuya carpeta en /user/app o /system_ex/app falta (pruebas: ID de título). Es un icono sin juego: no se puede iniciar y permanece en la biblioteca hasta que se quite la entrada. Causas habituales son una unidad desconectada o apagada desde la que ShadowMount+ había montado el título, una desinstalación interrumpida o carpetas borradas a mano. Primero comprueba si la unidad está conectada y si ShadowMount+ vuelve a encontrar el título; si no, borra el icono en la biblioteca de juegos con el menú de opciones. Medic no modifica la base de datos.",
+   "text": "La base de datos del software del sistema (app.db) lista un título cuya carpeta en /user/app o /system_ex/app falta (pruebas: ID de título). Es un icono sin juego: no se puede iniciar y permanece en la biblioteca hasta que se quite la entrada. Causas habituales son una unidad desconectada o apagada desde la que ShadowMount+ había montado el título, una desinstalación interrumpida o carpetas borradas a mano. Primero comprueba si la unidad está conectada y si ShadowMount+ vuelve a encontrar el título; si no, borra el icono en la biblioteca de juegos con el menú de opciones. También puede ocurrir cuando PS4Mount había montado juegos PKG y se desactivó el montaje. Medic no modifica la base de datos.",
    "confidence_reason": "Se leen la entrada y la carpeta que falta. Las causas indicadas son posibilidades habituales, no demostradas; en la consola de prueba todas las entradas coincidían con las carpetas."
   },
   "appdb.unregistered_folder": {
-   "text": "En /user/app hay una carpeta de título (PPSA/CUSA) que la base de datos del software del sistema no conoce (pruebas). El juego entonces no aparece en la biblioteca. En un título montado por ShadowMount+ suele significar que el registro falla o sigue en curso (ver los hallazgos sobre «Register failed»); en el resto de una desinstalación la carpeta es un resto. Medic no cambia nada aquí.",
+   "text": "En /user/app hay una carpeta de título (PPSA/CUSA) que la base de datos del software del sistema no conoce (pruebas). El juego entonces no aparece en la biblioteca. En un título montado por ShadowMount+ suele significar que el registro falla o sigue en curso (ver los hallazgos sobre «Register failed»); en el resto de una desinstalación la carpeta es un resto. También puede ocurrir cuando PS4Mount había montado juegos PKG y se desactivó el montaje. Medic no cambia nada aquí.",
    "confidence_reason": "Se leen la carpeta y las entradas de la base de datos. De ello no se puede saber por qué falta la entrada; mientras ShadowMount+ registra, el hallazgo puede aparecer brevemente."
   }
  },

@@ -1639,11 +1639,11 @@
         ]
       },
       "text": {
-        "de": "Die Autoload-Liste enthält einen Eintrag, zu dem es keine Payload-Datei gibt (oder der Name unterscheidet sich nur in Groß-/Kleinschreibung; Namen sind case-sensitiv). Beim Start meldet der Loader 'Payload not found' bzw. 'Not found' und überspringt den Eintrag: das Payload fehlt nach jedem Neustart. Eintrag korrigieren oder die Payload wieder installieren.",
-        "en": "The autoload list contains an entry for which there is no payload file (or the name differs only in letter case; names are case-sensitive). At startup the loader reports 'Payload not found' / 'Not found' and skips the entry: the payload is missing after every restart. Correct the entry or install the payload again."
+        "de": "Die Autoload-Liste enthält einen Eintrag, zu dem es keine Payload-Datei gibt (oder der Name unterscheidet sich nur in Groß-/Kleinschreibung; Namen sind case-sensitiv). Beim Start meldet der Loader 'Payload not found' bzw. 'Not found' und überspringt den Eintrag: das Payload fehlt nach jedem Neustart. Eintrag korrigieren oder die Payload wieder installieren. Der Fix korrigiert die Schreibweise oder schaltet den Eintrag aus (Backup und Rückgängig inklusive); Dateien werden nicht angefasst.",
+        "en": "The autoload list contains an entry for which there is no payload file (or the name differs only in letter case; names are case-sensitive). At startup the loader reports 'Payload not found' / 'Not found' and skips the entry: the payload is missing after every restart. Correct the entry or install the payload again. The fix corrects the spelling or switches the entry off (backup and undo included); files are not touched."
       },
       "evidence": "autoload.problems[].detail",
-      "fix": null,
+      "fix": "autoload_fix_missing",
       "source": "https://github.com/itsPLK/ps5-payload-manager",
       "verified": "doc"
     },
@@ -1659,11 +1659,11 @@
         ]
       },
       "text": {
-        "de": "Ein Eintrag steht mehrfach in der Autoload-Liste und wird jedes Mal gesendet (die Loader entfernen Doppelte nicht). Doppelte Zeilen entfernen.",
-        "en": "An entry appears several times in the autoload list and is sent every time (the loaders do not remove duplicates). Remove the duplicate lines."
+        "de": "Ein Eintrag steht mehrfach in der Autoload-Liste und wird jedes Mal gesendet (die Loader entfernen Doppelte nicht). Doppelte Zeilen entfernen. Der Fix entfernt die späteren Doppelten (Backup und Rückgängig inklusive).",
+        "en": "An entry appears several times in the autoload list and is sent every time (the loaders do not remove duplicates). Remove the duplicate lines. The fix removes the later duplicates (backup and undo included)."
       },
       "evidence": "autoload.problems[].detail",
-      "fix": null,
+      "fix": "autoload_remove_duplicates",
       "source": "https://github.com/itsPLK/ps5-payload-manager",
       "verified": "doc"
     },
@@ -1703,11 +1703,11 @@
         ]
       },
       "text": {
-        "de": "Der Payload Manager hat Einträge in seiner Autoload-Liste, aber Autoload ist ausgeschaltet (AUTOLOAD_ENABLED=0). Die Liste wird beim Start nicht abgearbeitet; die Payloads müssen von Hand geladen werden. Autoload in den Einstellungen des Payload Managers einschalten, falls das nicht gewollt ist.",
-        "en": "The Payload Manager has entries in its autoload list, but autoload is switched off (AUTOLOAD_ENABLED=0). The list is not processed at startup; the payloads have to be loaded by hand. Switch autoload on in the Payload Manager settings if that is not intended."
+        "de": "Der Payload Manager hat Einträge in seiner Autoload-Liste, aber Autoload ist ausgeschaltet (AUTOLOAD_ENABLED=0). Die Liste wird beim Start nicht abgearbeitet; die Payloads müssen von Hand geladen werden. Autoload in den Einstellungen des Payload Managers einschalten, falls das nicht gewollt ist. Der Fix schaltet Autoload ein (Backup und Rückgängig inklusive).",
+        "en": "The Payload Manager has entries in its autoload list, but autoload is switched off (AUTOLOAD_ENABLED=0). The list is not processed at startup; the payloads have to be loaded by hand. Switch autoload on in the Payload Manager settings if that is not intended. The fix switches autoload on (backup and undo included)."
       },
       "evidence": "pldmgr.autoload_entries",
-      "fix": null,
+      "fix": "pldmgr_enable_autoload",
       "source": "https://github.com/itsPLK/ps5-payload-manager",
       "verified": "doc"
     },
@@ -1723,11 +1723,11 @@
         ]
       },
       "text": {
-        "de": "Mindestens eine ELF-Datei ist unbrauchbar: zu klein, ohne ELF-Kennung (häufig eine gespeicherte HTML-Fehlerseite) oder am Ende abgeschnitten (abgebrochene Übertragung). Der Loader lehnt solche Dateien ab, das Payload startet nicht. Die Datei neu übertragen (FTP im Binärmodus) oder neu herunterladen; die kaputte Datei vorher wegräumen.",
-        "en": "At least one ELF file is unusable: too small, without an ELF signature (often a saved HTML error page) or cut off at the end (aborted transfer). The loader rejects such files and the payload does not start. Transfer the file again (FTP in binary mode) or download it again; move the broken file out of the way first."
+        "de": "Mindestens eine ELF-Datei ist unbrauchbar: zu klein, ohne ELF-Kennung (häufig eine gespeicherte HTML-Fehlerseite) oder am Ende abgeschnitten (abgebrochene Übertragung). Der Loader lehnt solche Dateien ab, das Payload startet nicht. Die Datei neu übertragen (FTP im Binärmodus) oder neu herunterladen; die kaputte Datei vorher wegräumen. Der Fix löscht nichts: Er legt die kaputte Datei in den versteckten Ordner .medic_broken daneben (Rückgängig holt sie zurück).",
+        "en": "At least one ELF file is unusable: too small, without an ELF signature (often a saved HTML error page) or cut off at the end (aborted transfer). The loader rejects such files and the payload does not start. Transfer the file again (FTP in binary mode) or download it again; move the broken file out of the way first. The fix deletes nothing: it moves the broken file into the hidden folder .medic_broken next to it (undo brings it back)."
       },
       "evidence": "payload.broken_elfs[].path",
-      "fix": null,
+      "fix": "quarantine_broken_elf",
       "source": "https://github.com/ps5-payload-dev/elfldr",
       "verified": "doc"
     },
@@ -2265,38 +2265,6 @@
       "verified": "doc"
     },
     {
-      "id": "kstuff.shellui_patch_failed",
-      "severity": "info",
-      "when": {
-        "all": [
-          {
-            "fact": "klog.lines",
-            "count_matches": {
-              "regex": "\\[kstuff\\.elf\\].*(patch_shellui.*failed|Failed to get libSceNpTrophy)",
-              "gte": 1
-            }
-          }
-        ]
-      },
-      "text": {
-        "de": "kstuff meldet im Kernel-Log, dass es den Trophäen-Hook in der Oberfläche (SceShellUI) nicht setzen konnte („patch_shellui failed“, Evidenz). Nutzer berichten in diesem Fall, dass Trophäen nicht aufpoppen und nicht in der Liste erscheinen; beim Start gelingt der Hook zunächst, und nach dem Wechsel zwischen Apps versucht kstuff ihn erneut und scheitert teils mehrfach. Ein Maintainer hat dazu nichts geantwortet, die Ursache ist offen. Ohne Trophäen funktionieren Spiele weiter. Hilft ein Neustart der Konsole mit neu gesetztem Jailbreak, kann der Hook beim nächsten Start gelingen.",
-        "en": "kstuff reports in the kernel log that it could not set the trophy hook in the shell UI (SceShellUI) (“patch_shellui failed”, evidence). In that case users report that trophies do not pop up and do not show in the list; at boot the hook first succeeds, and after switching between apps kstuff retries and sometimes fails several times. No maintainer has answered, the cause is open. Without trophies games keep working. A console restart with the jailbreak set again may let the hook succeed at the next start."
-      },
-      "evidence": "klog.lines",
-      "evidence_filter": "\\[kstuff\\.elf\\]",
-      "fix": null,
-      "source": "https://github.com/EchoStretch/kstuff-lite/issues/95",
-      "verified": "community",
-      "confidence": {
-        "level": "low",
-        "basis": "community",
-        "reason": {
-          "de": "Die Zeile steht im Kernel-Log (gelesen). Dass dadurch Trophäen fehlen, stammt aus Berichten zu Version 1.11 auf FW 13.x (Issues 95 und 106, der Autor von 95 ist bei der Ursache unsicher); an dieser Konsole (FW 12.00, kstuff-lite 1.10) ist es nicht nachgeprüft.",
-          "en": "The line is in the kernel log (read). That trophies go missing because of it comes from reports about version 1.11 on FW 13.x (issues 95 and 106, the author of 95 is unsure about the cause); not verified on this console (FW 12.00, kstuff-lite 1.10)."
-        }
-      }
-    },
-    {
       "id": "appdb.orphan_entry",
       "severity": "warning",
       "when": {
@@ -2308,8 +2276,8 @@
         ]
       },
       "text": {
-        "de": "Die Datenbank der Systemsoftware (app.db) führt einen Titel, dessen Ordner unter /user/app oder /system_ex/app fehlt (Evidenz: Titel-ID). Das ist eine Kachel ohne Spiel: Sie lässt sich nicht starten und bleibt in der Bibliothek, bis der Eintrag entfernt wird. Häufige Ursachen sind ein abgezogenes oder ausgeschaltetes Laufwerk, von dem ShadowMount+ den Titel eingebunden hatte, eine abgebrochene Deinstallation oder von Hand gelöschte Ordner. Zuerst prüfen, ob das Laufwerk angeschlossen ist und ShadowMount+ den Titel wieder findet; sonst die Kachel in der Spielebibliothek über das Optionsmenü löschen. Medic ändert die Datenbank nicht.",
-        "en": "The system software's database (app.db) lists a title whose folder under /user/app or /system_ex/app is missing (evidence: title ID). That is a tile without a game: it cannot be started and stays in the library until the entry is removed. Common causes are an unplugged or switched-off drive from which ShadowMount+ had mounted the title, an aborted uninstall or manually deleted folders. First check whether the drive is connected and ShadowMount+ finds the title again; otherwise delete the tile in the game library through the options menu. Medic does not change the database."
+        "de": "Die Datenbank der Systemsoftware (app.db) führt einen Titel, dessen Ordner unter /user/app oder /system_ex/app fehlt (Evidenz: Titel-ID). Das ist eine Kachel ohne Spiel: Sie lässt sich nicht starten und bleibt in der Bibliothek, bis der Eintrag entfernt wird. Häufige Ursachen sind ein abgezogenes oder ausgeschaltetes Laufwerk, von dem ShadowMount+ den Titel eingebunden hatte, eine abgebrochene Deinstallation oder von Hand gelöschte Ordner. Zuerst prüfen, ob das Laufwerk angeschlossen ist und ShadowMount+ den Titel wieder findet; sonst die Kachel in der Spielebibliothek über das Optionsmenü löschen. Das kann auch vorkommen, wenn PS4Mount PKG-Spiele eingebunden hatte und das Einbinden abgeschaltet wurde. Medic ändert die Datenbank nicht.",
+        "en": "The system software's database (app.db) lists a title whose folder under /user/app or /system_ex/app is missing (evidence: title ID). That is a tile without a game: it cannot be started and stays in the library until the entry is removed. Common causes are an unplugged or switched-off drive from which ShadowMount+ had mounted the title, an aborted uninstall or manually deleted folders. First check whether the drive is connected and ShadowMount+ finds the title again; otherwise delete the tile in the game library through the options menu. This can also happen when PS4Mount had mounted PKG games and mounting was switched off. Medic does not change the database."
       },
       "evidence": "appdb.orphans[].titleid",
       "fix": null,
@@ -2336,8 +2304,8 @@
         ]
       },
       "text": {
-        "de": "Unter /user/app liegt ein Titelordner (PPSA/CUSA), den die Datenbank der Systemsoftware nicht kennt (Evidenz). Das Spiel erscheint dann nicht in der Bibliothek. Bei einem per ShadowMount+ eingebundenen Titel heißt das meist, dass die Registrierung scheitert oder noch läuft (siehe die Befunde zu „Register failed“); bei einem Rest einer Deinstallation ist der Ordner ein Überbleibsel. Medic ändert nichts daran.",
-        "en": "Under /user/app there is a title folder (PPSA/CUSA) that the system software's database does not know (evidence). The game then does not appear in the library. For a title mounted by ShadowMount+ this usually means registration fails or is still running (see the findings about “Register failed”); for the rest of an uninstall the folder is a leftover. Medic changes nothing here."
+        "de": "Unter /user/app liegt ein Titelordner (PPSA/CUSA), den die Datenbank der Systemsoftware nicht kennt (Evidenz). Das Spiel erscheint dann nicht in der Bibliothek. Bei einem per ShadowMount+ eingebundenen Titel heißt das meist, dass die Registrierung scheitert oder noch läuft (siehe die Befunde zu „Register failed“); bei einem Rest einer Deinstallation ist der Ordner ein Überbleibsel. Das kann auch vorkommen, wenn PS4Mount PKG-Spiele eingebunden hatte und das Einbinden abgeschaltet wurde. Medic ändert nichts daran.",
+        "en": "Under /user/app there is a title folder (PPSA/CUSA) that the system software's database does not know (evidence). The game then does not appear in the library. For a title mounted by ShadowMount+ this usually means registration fails or is still running (see the findings about “Register failed”); for the rest of an uninstall the folder is a leftover. This can also happen when PS4Mount had mounted PKG games and mounting was switched off. Medic changes nothing here."
       },
       "evidence": "appdb.unregistered[].titleid",
       "fix": null,

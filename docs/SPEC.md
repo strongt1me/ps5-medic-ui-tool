@@ -24,7 +24,7 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 - **Pro Spiel:** Titelliste mit Quellen, Systemdatenbank, verlangter Firmware, Backport (auch im Spiel eingebaut), Dateiprüfung, Fehlern der Konsole, Spielständen und möglichen Gründen.
 - Läuft auf den Firmwares 4.00 bis 14.10 (soweit der Jailbreak dort läuft); getestet ist bisher nur FW 12.00.
 
-### 4.2 Reparieren (7 sichere Fixes)
+### 4.2 Reparieren (11 sichere Fixes)
 | Fix-ID | Aktion | Reversibel durch |
 |---|---|---|
 | `rename_image_parentheses` | Klammern aus `.ffpfs`/`.ffpfsc`-Dateinamen entfernen | Rückbenennung aus Journal |
@@ -33,6 +33,10 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 | `move_duplicate_titleid` | Doppelte Quelle gleicher TITLE_ID nach `.duplicates/` im Scanpfad verschieben (Punkt-Ordner scannt SM+ nicht) | Zurückverschieben |
 | `smp_translate_v1_keys` | Flache v1-Zeilen in einer v2-`config.ini` (die SM+ 1.7beta12 ignoriert) in die richtige Sektion übertragen | Backup der config.ini |
 | `autoload_insert_delay` | `!4000` hinter elfldr in die Autoload-Liste einfügen | Backup der Autoload-Liste |
+| `autoload_remove_duplicates` | Doppelte Zeilen einer Autoload-Liste entfernen (erste bleibt) | Backup der Autoload-Liste |
+| `autoload_fix_missing` | Autoload-Eintrag ohne Datei: Schreibweise korrigieren, sonst auskommentieren (WebKit-Liste) bzw. entfernen (Payload Manager) | Backup der Autoload-Liste |
+| `pldmgr_enable_autoload` | `AUTOLOAD_ENABLED=1` in `/data/pldmgr/pldmgr_config.txt` setzen | Backup der Datei |
+| `quarantine_broken_elf` | Unbrauchbare ELF-Datei nach `.medic_broken/` daneben verschieben (nur Whitelist-Ordner, nie löschen) | Zurückverschieben |
 | `fix_image_nesting_hint` | Nur Hinweis + Anleitung (kein Auto-Fix, Images werden nicht verändert) | – |
 
 ### 4.3 Bericht

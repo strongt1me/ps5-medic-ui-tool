@@ -168,7 +168,27 @@ void content_tests() {
         "CE-100005-6", "CE-100009-0", "CE-100095-5", "CE-100096-6", "CE-106487-6", "CE-107527-2", "CE-107622-8",      // Spiele und Apps: laden, starten,
         "CE-107750-0", "CE-107891-6", "CE-109573-5", "CE-117740-0", "NP-104291-7",                                    // installieren, Fehler beim Spielen, Lizenz
         "CE-105733-9", "CE-107098-5", "0x80268001", "0x80551618", "0x80960005", "0x809F8032",                        // nur Community (keine Sony-Seite)
-        "CE-100008-9", "NW-102261-2", "WV-109145-0", "WV-109168-5"};                                                  // aus dem Fehlerverlauf der Konsole (11. Nov. 2026), Sony-Seiten
+        "CE-100008-9", "NW-102261-2", "WV-109145-0", "WV-109168-5",                                                 // aus dem Fehlerverlauf der Konsole (11. Nov. 2026), Sony-Seiten
+        // 13. Nov. 2026: Sony-Seiten und PS5 Dev Wiki (ohne Codes, die nur ein Update der Systemsoftware nennen, und ohne E2-Codes)
+        "CE-100002-3", "CE-100022-5", "CE-105638-3", "CE-105771-1", "CE-105841-9", "CE-106439-3",
+        "CE-106444-9", "CE-106449-4", "CE-107031-2", "CE-107255-0", "CE-107649-7", "CE-107863-5",
+        "CE-107928-7", "CE-107938-8", "CE-107958-0", "CE-108360-8", "CE-108862-5", "CE-108877-1",
+        "CE-109258-5", "CE-109503-8", "CE-109506-1", "CE-109531-9", "CE-110032-7", "CE-110538-8",
+        "CE-110551-3", "CE-110552-4", "CE-110555-7", "CE-111161-1", "CE-112069-9", "CE-112839-4",
+        "CE-112840-6", "CE-112841-7", "CE-112987-8", "CE-112988-9", "CE-113212-0", "CE-113227-6",
+        "CE-113511-2", "CE-113524-6", "CE-113661-8", "CE-116799-3", "CE-117625-2", "CE-117722-0",
+        "CE-117773-6", "CE-118415-0", "CE-118851-4", "CE-119224-9", "CE-120706-6", "CE-122154-5",
+        "NP-102937-2", "NP-102942-8", "NP-102943-9", "NP-102946-2", "NP-102947-3", "NP-102955-2",
+        "NP-103019-4", "NP-103028-4", "NP-103047-5", "NP-103105-0", "NP-103107-2", "NP-103109-4",
+        "NP-103111-7", "NP-103117-3", "NP-103148-7", "NP-103172-4", "NP-103191-2", "NP-103539-1",
+        "NP-104303-1", "NP-104433-5", "NP-104627-0", "NW-102254-4", "NW-102307-3", "NW-102308-4",
+        "NW-102311-8", "NW-102314-1", "NW-102315-2", "NW-102379-2", "NW-102417-5", "NW-102468-2",
+        "NW-102633-5", "NW-102636-8", "NW-102650-4", "NW-102655-9", "WS-113947-5", "WS-114241-3",
+        "WS-114298-5", "WS-115019-7", "WS-115195-2", "WS-115338-1", "WS-116327-0", "WS-116329-2",
+        "WS-116330-4", "WS-116331-5", "WS-116332-6", "WS-116334-8", "WS-116367-4", "WS-116414-7",
+        "WS-116417-0", "WS-116420-4", "WS-116439-4", "WS-116449-5", "WS-116483-3", "WS-116486-6",
+        "WS-116489-9", "WS-116518-5", "WS-116520-5", "WS-116521-6", "WS-117176-3", "WS-117224-7",
+        "WS-119699-5", "WV-109144-9", "WV-109146-1", "WV-109153-9", "WV-109166-3"};
     std::set<std::string> have;
     for (const ErrorCode& c : set.codes) have.insert(c.id);
     CHECK(have == expected, "error_codes.json: genau die belegten Codes (" + std::to_string(set.codes.size()) + ")");
@@ -177,7 +197,8 @@ void content_tests() {
     CHECK(std::is_sorted(set.codes.begin(), set.codes.end(), [](const ErrorCode& a, const ErrorCode& b) { return a.id < b.id; }),
           "error_codes.json: nach id sortiert (die Liste in der UI sucht man so)");
 
-    const std::set<std::string> community = {"CE-105733-9", "CE-107098-5", "0x80268001", "0x80551618", "0x80960005", "0x809F8032"};
+    const std::set<std::string> community = {"CE-105733-9", "CE-107098-5", "0x80268001", "0x80551618", "0x80960005", "0x809F8032",
+                                           "CE-107031-2", "CE-107958-0", "CE-113661-8", "CE-117625-2", "NP-103191-2", "NW-102468-2", "WS-116327-0", "WS-116518-5"};
     for (const ErrorCode& c : set.codes) {
         const std::string tag = "error_codes.json " + c.id + ": ";
         CHECK(!c.source.empty(), tag + "Quelle vorhanden");
@@ -259,7 +280,8 @@ void content_tests() {
         {"NP-102944-0", {"fw", "need_backport"}}, {"NP-102945-1", {"fw", "need_backport"}}, {"CE-108889-4", {"fw", "need_backport"}},
         {"WS-116328-1", {"fw", "need_backport"}}, {"CE-107520-5", {"fw", "need_backport"}}, {"CE-106485-4", {"fw", "need_backport"}},
         {"CE-100028-1", {"storage"}}, {"CE-107872-5", {"storage"}}, {"CE-107527-2", {"storage"}}, {"CE-107891-6", {"storage"}},
-        {"CE-100006-7", {"drives"}}, {"CE-109737-7", {"drives"}}, {"CE-108262-9", {"smp"}}};
+        {"CE-100006-7", {"drives"}}, {"CE-109737-7", {"drives"}}, {"CE-108262-9", {"smp"}},
+        {"NP-102946-2", {"storage"}}, {"CE-107928-7", {"storage"}}, {"CE-107958-0", {"drives"}}};  // 13. Nov. 2026
     for (const ErrorCode& c : set.codes) {
         auto it = expected_context.find(c.id);
         CHECK(c.context == (it == expected_context.end() ? std::vector<std::string>() : it->second), "error_codes.json " + c.id + ": context wie vorgesehen");

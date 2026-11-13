@@ -77,6 +77,12 @@ int text_right(Canvas& c, const Font& f, int right, int y, const std::string& s,
     return w;
 }
 
+// Code-Eingabe der Fehlercodes: Gruppe (Vorsilbe) und die Ziffern in der Mitte (CE-107863-5 -> 107863; 0x80268001 -> 80268001).
+const char* const kErrGroups[] = {"", "CE", "NP", "NW", "WS", "WV", "0x"};
+constexpr int kErrGroupCount = 7;
+bool is_hex_id(const std::string& id) { return id.size() > 2 && id[0] == '0' && id[1] == 'x'; }
+std::string error_key(const std::string& id) { return is_hex_id(id) ? id.substr(2) : (id.size() >= 9 ? id.substr(3, 6) : std::string()); }
+
 void card(Canvas& c, int x, int y, int w, int h, bool selected) {
     c.fill_round_rect(x, y, w, h, 16, selected ? kPanelHi : kPanel);
     if (selected) c.stroke_round_rect(x, y, w, h, 16, 3, kAccent);
@@ -570,7 +576,75 @@ void App::open_error_codes() {
     errors_ = svc_.error_codes();
     err_sel_ = err_top_ = err_scroll_ = 0;
     err_from_finding_ = false;
+    err_input_ = false;
     screen_ = Screen::ErrorCodes;
+}
+
+const char* App::error_alphabet() const { return err_group_ == kErrGroupCount - 1 ? "0123456789ABCDEF" : "0123456789"; }
+int App::error_input_max() const { return err_group_ == kErrGroupCount - 1 ? 8 : 6; }
+
+std::string App::error_input_text() const {
+    if (static_cast<int>(err_typed_.size()) >= error_input_max()) return err_typed_;
+    return err_typed_ + error_alphabet()[err_digit_];
+}
+
+int App::error_match() const {
+    const std::string cand = error_input_text();
+    for (std::size_t i = 0; i < errors_.codes.size(); ++i) {
+        const std::string& id = errors_.codes[i].id;
+        const bool hex = is_hex_id(id);
+        if (err_group_ == 0 ? hex : id.compare(0, 2, kErrGroups[err_group_]) != 0) continue;
+        if (error_key(id).compare(0, cand.size(), cand) == 0) return static_cast<int>(i);
+    }
+    return -1;
+}
+
+void App::error_input_apply() {
+    const int idx = error_match();
+    if (idx < 0) return;
+    const int n = static_cast<int>(errors_.codes.size());
+    err_sel_ = idx;
+    err_top_ = std::clamp(idx - (kErrVisible - 1) / 2, 0, std::max(n - kErrVisible, 0));
+}
+
+// Hoch/Runter waehlt die Ziffer (die Liste springt sofort zum Code), Kreuz oder Rechts uebernimmt sie, Links nimmt die letzte zurueck
+// (leer: Eingabe schliessen), L1/R1 wechselt die Gruppe, Dreieck zeigt den Treffer, Kreis schliesst. Nur Anzeige: nichts wird geaendert.
+void App::handle_error_input(Button b) {
+    const int len = static_cast<int>(std::string(error_alphabet()).size());
+    if (b == Button::Up || b == Button::Down) {
+        err_digit_ = (err_digit_ + (b == Button::Up ? 1 : len - 1)) % len;
+        error_input_apply();
+    } else if (b == Button::Cross || b == Button::Right) {
+        if (static_cast<int>(err_typed_.size()) < error_input_max()) {
+            err_typed_ += error_alphabet()[err_digit_];
+            err_digit_ = 0;
+        }
+        error_input_apply();
+    } else if (b == Button::Left) {
+        if (err_typed_.empty()) {
+            err_input_ = false;
+        } else {
+            err_typed_.pop_back();
+            err_digit_ = 0;
+            error_input_apply();
+        }
+    } else if (b == Button::L1 || b == Button::R1) {
+        err_group_ = (err_group_ + (b == Button::R1 ? 1 : kErrGroupCount - 1)) % kErrGroupCount;
+        if (static_cast<int>(err_typed_.size()) > error_input_max()) err_typed_.resize(static_cast<std::size_t>(error_input_max()));
+        err_digit_ = std::min(err_digit_, static_cast<int>(std::string(error_alphabet()).size()) - 1);
+        error_input_apply();
+    } else if (b == Button::Triangle) {
+        if (error_match() >= 0) {
+            error_input_apply();
+            err_input_ = false;
+            err_scroll_ = 0;
+            err_from_finding_ = false;
+            refresh_error_context();
+            screen_ = Screen::ErrorCodeDetail;
+        }
+    } else if (b == Button::Circle) {
+        err_input_ = false;
+    }
 }
 
 // Nennt der Text des gewaehlten Befunds einen Fehlercode aus dem Nachschlagewerk, dessen Index (sonst -1).
@@ -921,7 +995,15 @@ void App::handle(Button b) {
             if (b == Button::Circle) screen_ = Screen::Findings;
             break;
         case Screen::ErrorCodes:  // Nachschlagen: nur lesen, keine Taste loest etwas aus
-            if (b == Button::Up) move_selection(err_sel_, err_top_, static_cast<int>(errors_.codes.size()), kErrVisible, -1);
+            if (err_input_) {
+                handle_error_input(b);
+                break;
+            }
+            if (b == Button::Square) {  // Code eingeben: die Liste springt zum Code
+                err_input_ = true;
+                err_typed_.clear();
+                err_digit_ = 1;
+            } else if (b == Button::Up) move_selection(err_sel_, err_top_, static_cast<int>(errors_.codes.size()), kErrVisible, -1);
             else if (b == Button::Down) move_selection(err_sel_, err_top_, static_cast<int>(errors_.codes.size()), kErrVisible, 1);
             else if (b == Button::L1) page_selection(err_sel_, err_top_, static_cast<int>(errors_.codes.size()), kErrVisible, -1);
             else if (b == Button::R1) page_selection(err_sel_, err_top_, static_cast<int>(errors_.codes.size()), kErrVisible, 1);
@@ -2454,13 +2536,52 @@ void App::draw_error_codes(Canvas& c) const {
         c.fill_round_rect(W - 64, y0, 8, track_h, 4, kPanel);
         c.fill_round_rect(W - 64, thumb_y, 8, thumb_h, 4, kDim);
     }
+    if (err_input_) {
+        draw_error_input(c);
+        draw_hints(c, {{PadGlyph::UpDown, S("errors.search.digit")}, {PadGlyph::Cross, S("errors.search.take")}, {PadGlyph::LeftRight, S("errors.search.lr")},
+                       {PadGlyph::Shoulders, S("errors.search.group")}, {PadGlyph::Triangle, S("errors.search.show")}, {PadGlyph::Circle, S("common.back")}});
+        return;
+    }
     small().draw(c, M + 8, H - 138, elide(small(), S("errors.readonly"), cw - 16), kDim);
 
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
     if (n > kErrVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
     hints.emplace_back(PadGlyph::Cross, S("common.open"));
+    hints.emplace_back(PadGlyph::Square, S("errors.search"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
+}
+
+// Eingabefeld unter der Liste: Gruppe, dann die Ziffern (eingegebene gefuellt, die gerade gewaehlte mit Rahmen) und der Treffer.
+void App::draw_error_input(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    const int cw = W - 2 * M, py = H - 214, ph = 112;
+    c.fill_round_rect(M, py, cw, ph, 20, kPanel);
+    c.stroke_round_rect(M, py, cw, ph, 20, 2, kAccent);
+    small().draw(c, M + 28, py + 12, S("errors.search.title"), kDim);
+    const int fy = py + 46, fh = 52;
+    const std::string g = err_group_ == 0 ? S("errors.search.group.all") : std::string(kErrGroups[err_group_]);
+    int x = M + 28;
+    c.fill_round_rect(x, fy, 120, fh, 12, kPanelHi);
+    body().draw(c, x + (120 - body().width(g)) / 2, fy + (fh - body().line_height()) / 2, g, kTintOrange);
+    x += 136;
+    if (err_group_ != kErrGroupCount - 1) {
+        body().draw(c, x, fy + (fh - body().line_height()) / 2, "-", kDim);
+        x += 28;
+    }
+    const int cells = error_input_max(), cell_w = 52;
+    for (int i = 0; i < cells; ++i, x += cell_w + 8) {
+        const bool typed = i < static_cast<int>(err_typed_.size()), cur = i == static_cast<int>(err_typed_.size());
+        c.fill_round_rect(x, fy, cell_w, fh, 10, typed ? kPanelHi : kBg);
+        if (cur) c.stroke_round_rect(x, fy, cell_w, fh, 10, 3, kAccent);
+        std::string ch;
+        if (typed) ch = std::string(1, err_typed_[static_cast<std::size_t>(i)]);
+        else if (cur) ch = std::string(1, error_alphabet()[err_digit_]);
+        if (!ch.empty()) body().draw(c, x + (cell_w - body().width(ch)) / 2, fy + (fh - body().line_height()) / 2, ch, typed ? kText : kAccent);
+    }
+    const int idx = error_match();
+    const std::string res = idx >= 0 ? S.fmt("errors.search.match", {{"id", errors_.codes[static_cast<std::size_t>(idx)].id}}) : S("errors.search.nomatch");
+    text_right(c, body(), M + cw - 28, fy + (fh - body().line_height()) / 2, res, idx >= 0 ? kOk : kWarn);
 }
 
 void App::draw_error_detail(Canvas& c) const {

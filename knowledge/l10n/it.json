@@ -167,19 +167,19 @@
    "text": "Nell'elenco autoload il loader (elfldr) è seguito direttamente dalla voce successiva. Un loader appena avviato accetta connessioni solo dopo qualche secondo: la voce successiva allora fallisce ('Loader connection failed ... 0 bytes sent') e manca a ogni avvio. Tra elfldr e il payload successivo serve un ritardo (!4000 = quattro secondi). La riparazione lo inserisce; backup e annullamento inclusi."
   },
   "autoload.entry_missing": {
-   "text": "L'elenco autoload contiene una voce per cui non esiste alcun file di payload (oppure il nome differisce solo per maiuscole/minuscole; i nomi distinguono maiuscole e minuscole). All'avvio il loader segnala 'Payload not found' / 'Not found' e salta la voce: il payload manca a ogni riavvio. Correggi la voce o installa di nuovo il payload."
+   "text": "L'elenco autoload contiene una voce per cui non esiste alcun file di payload (oppure il nome differisce solo per maiuscole/minuscole; i nomi distinguono maiuscole e minuscole). All'avvio il loader segnala 'Payload not found' / 'Not found' e salta la voce: il payload manca a ogni riavvio. Correggi la voce o installa di nuovo il payload. La correzione sistema l'ortografia o disattiva la voce (backup e annullamento inclusi); i file non vengono toccati."
   },
   "autoload.entry_duplicate": {
-   "text": "Una voce compare più volte nell'elenco autoload e viene inviata ogni volta (i loader non rimuovono i duplicati). Rimuovi le righe duplicate."
+   "text": "Una voce compare più volte nell'elenco autoload e viene inviata ogni volta (i loader non rimuovono i duplicati). Rimuovi le righe duplicate. La correzione rimuove i duplicati successivi (backup e annullamento inclusi)."
   },
   "pldmgr.autoload_syntax": {
    "text": "L'elenco autoload del Payload Manager ha un formato non valido. Il Payload Manager lo controlla in modo rigoroso: un solo errore (file oltre 4095 byte, riga oltre 511 caratteri, ritardo '!...' non valido, virgola in una riga) invalida l'intera sequenza e non viene avviato nulla. Correggi la riga indicata."
   },
   "pldmgr.autoload_disabled": {
-   "text": "Il Payload Manager ha voci nel suo elenco autoload, ma l'autoload è disattivato (AUTOLOAD_ENABLED=0). L'elenco non viene elaborato all'avvio; i payload vanno caricati a mano. Attiva l'autoload nelle impostazioni del Payload Manager se non è voluto."
+   "text": "Il Payload Manager ha voci nel suo elenco autoload, ma l'autoload è disattivato (AUTOLOAD_ENABLED=0). L'elenco non viene elaborato all'avvio; i payload vanno caricati a mano. Attiva l'autoload nelle impostazioni del Payload Manager se non è voluto. La correzione attiva l'autoload (backup e annullamento inclusi)."
   },
   "payload.elf_invalid": {
-   "text": "Almeno un file ELF è inutilizzabile: troppo piccolo, senza firma ELF (spesso una pagina di errore HTML salvata) o troncato alla fine (trasferimento interrotto). Il loader rifiuta tali file e il payload non si avvia. Trasferisci di nuovo il file (FTP in modalità binaria) o scaricalo di nuovo; sposta prima da parte il file difettoso."
+   "text": "Almeno un file ELF è inutilizzabile: troppo piccolo, senza firma ELF (spesso una pagina di errore HTML salvata) o troncato alla fine (trasferimento interrotto). Il loader rifiuta tali file e il payload non si avvia. Trasferisci di nuovo il file (FTP in modalità binaria) o scaricalo di nuovo; sposta prima da parte il file difettoso. La correzione non elimina nulla: sposta il file difettoso nella cartella nascosta .medic_broken accanto (l'annullamento lo ripristina)."
   },
   "nanodns.log_problem": {
    "text": "Il log di nanoDNS contiene errori: non raggiunge i suoi server DNS upstream (allora ogni risoluzione di nomi fallisce e le app e il Payload Manager sembrano 'offline'), non riesce ad aprire la porta 53 o segnala righe non valide in nanodns.ini. Controlla i server upstream in nanodns.ini (per esempio l'indirizzo del router come prima voce) e invia di nuovo nanoDNS. Il log viene solo conteggiato; i domini al suo interno non finiscono mai nel rapporto."
@@ -249,16 +249,12 @@
   "storage.scanpath_drive_missing": {
    "text": "Un percorso di scansione personalizzato in config.ini si trova su un'unità (/mnt/usbN o /mnt/extN) non collegata: i giochi lì non vengono trovati. Se [library] remove_missing è attivo, ShadowMount+ rimuove le registrazioni dopo il ritardo configurato (predefinito: disattivato). Ricollega l'unità (senza hub USB, un'altra porta) o rimuovi il percorso di scansione."
   },
-  "kstuff.shellui_patch_failed": {
-   "text": "kstuff segnala nel log del kernel di non essere riuscito a impostare l'hook dei trofei nella shell UI (SceShellUI) («patch_shellui failed», prova). In tal caso gli utenti riferiscono che i trofei non compaiono e non si vedono nell'elenco; all'avvio l'hook all'inizio riesce, e dopo il passaggio tra app kstuff riprova e a volte fallisce più volte. Nessun maintainer ha risposto, la causa è aperta. Senza trofei i giochi continuano a funzionare. Un riavvio della console con il jailbreak rieseguito può far riuscire l'hook al successivo avvio.",
-   "confidence_reason": "La riga è nel log del kernel (letto). Che i trofei manchino per questo viene da segnalazioni sulla versione 1.11 su FW 13.x (issue 95 e 106, l'autore della 95 non è sicuro della causa); non verificato su questa console (FW 12.00, kstuff-lite 1.10)."
-  },
   "appdb.orphan_entry": {
-   "text": "Il database del software di sistema (app.db) elenca un titolo la cui cartella sotto /user/app o /system_ex/app manca (prova: ID titolo). È un'icona senza gioco: non si può avviare e resta nella libreria finché la voce non viene rimossa. Cause comuni sono un'unità scollegata o spenta da cui ShadowMount+ aveva montato il titolo, una disinstallazione interrotta o cartelle eliminate a mano. Controlla prima se l'unità è collegata e se ShadowMount+ ritrova il titolo; altrimenti elimina l'icona nella libreria dei giochi tramite il menu delle opzioni. Medic non modifica il database.",
+   "text": "Il database del software di sistema (app.db) elenca un titolo la cui cartella sotto /user/app o /system_ex/app manca (prova: ID titolo). È un'icona senza gioco: non si può avviare e resta nella libreria finché la voce non viene rimossa. Cause comuni sono un'unità scollegata o spenta da cui ShadowMount+ aveva montato il titolo, una disinstallazione interrotta o cartelle eliminate a mano. Controlla prima se l'unità è collegata e se ShadowMount+ ritrova il titolo; altrimenti elimina l'icona nella libreria dei giochi tramite il menu delle opzioni. Può succedere anche quando PS4Mount aveva montato giochi PKG e il montaggio è stato disattivato. Medic non modifica il database.",
    "confidence_reason": "La voce e la cartella mancante vengono entrambe lette. Le cause elencate sono possibilità comuni, non dimostrate; sulla console di prova tutte le voci corrispondevano alle cartelle."
   },
   "appdb.unregistered_folder": {
-   "text": "Sotto /user/app c'è una cartella di titolo (PPSA/CUSA) che il database del software di sistema non conosce (prova). Il gioco allora non compare nella libreria. Per un titolo montato da ShadowMount+ di solito significa che la registrazione fallisce o è ancora in corso (vedi i rilevamenti su «Register failed»); nel caso del resto di una disinstallazione la cartella è un residuo. Medic qui non modifica nulla.",
+   "text": "Sotto /user/app c'è una cartella di titolo (PPSA/CUSA) che il database del software di sistema non conosce (prova). Il gioco allora non compare nella libreria. Per un titolo montato da ShadowMount+ di solito significa che la registrazione fallisce o è ancora in corso (vedi i rilevamenti su «Register failed»); nel caso del resto di una disinstallazione la cartella è un residuo. Può succedere anche quando PS4Mount aveva montato giochi PKG e il montaggio è stato disattivato. Medic qui non modifica nulla.",
    "confidence_reason": "Cartella e voci del database vengono lette. Da questo non si capisce perché la voce manchi; mentre ShadowMount+ sta registrando, il rilevamento può comparire per breve tempo."
   }
  },

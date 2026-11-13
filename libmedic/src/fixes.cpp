@@ -159,8 +159,8 @@ void plan_set_key(FixPlan& plan, const Finding& f, const Facts& facts, const IFi
     c.base_existed = existed;
     c.base_sha = existed ? sha256_hex(old_text) : std::string();
     const std::string shown = (t.section.empty() ? "" : "[" + t.section + "] ") + t.key + "=" + values.front() + (values.size() > 1 ? " ..." : "");
-    c.note_de = "config.ini aendern: " + shown + " (vorher Backup)";
-    c.note_en = "Change config.ini: " + shown + " (backup first)";
+    c.note_de = base_of(file) + " aendern: " + shown + " (vorher Backup)";
+    c.note_en = "Change " + base_of(file) + ": " + shown + " (backup first)";
     plan.changes.push_back(std::move(c));
 }
 
@@ -349,6 +349,164 @@ void plan_disable_backpork(FixPlan& plan, const Finding& f, const IFileSystem& f
                                          : "Keine Autoload-Liste gefunden (Pfad auf der Konsole noch zu verifizieren)");
 }
 
+// ---- Autoload-Listen: doppelte und fehlende Eintraege ---------------------------------------------------------------------
+// Beide Listen (WebKit-Autoloader und Payload Manager) werden zeilenweise bearbeitet; was nicht betroffen ist, bleibt Byte fuer Byte
+// erhalten (Zeilenenden, Kommentare, Wartezeiten). Das Original liegt im Backup, Rueckgaengig stellt es her.
+
+// Eintrag einer Zeile (ohne Kommentar bei der WebKit-Liste; beim Payload Manager ist "#" KEIN Kommentar). Leer bei Anweisungen und Wartezeiten.
+std::string autoload_entry_of(const std::string& raw, bool comments) {
+    std::string l = raw;
+    if (comments)
+        if (const auto c = l.find('#'); c != std::string::npos) l.erase(c);
+    while (!l.empty() && std::isspace(static_cast<unsigned char>(l.back()))) l.pop_back();
+    while (!l.empty() && std::isspace(static_cast<unsigned char>(l.front()))) l.erase(l.begin());
+    if (l.empty() || l[0] == '@' || l[0] == '!') return {};
+    return l;
+}
+
+bool loader_list_has_comments(const std::string& file) { return file.find("ps5_autoloader") != std::string::npos; }
+
+void push_list_write(FixPlan& plan, const std::string& file, const std::string& old_text, std::string content, const std::string& de, const std::string& en) {
+    Change c;
+    c.kind = Change::Kind::WriteFile;
+    c.path = file;
+    c.content = std::move(content);
+    c.check_base = true;
+    c.base_existed = true;
+    c.base_sha = sha256_hex(old_text);
+    c.note_de = de;
+    c.note_en = en;
+    plan.changes.push_back(std::move(c));
+}
+
+// autoload_remove_duplicates: behalten wird die erste Zeile eines Eintrags, spaetere Zeilen mit demselben Eintrag entfallen.
+void plan_autoload_duplicates(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    std::set<std::string> files;
+    for (const auto& p : array_fact(facts, "autoload.problems"))
+        if (str_of(p, "kind") == "duplicate") files.insert(str_of(p, "file"));
+    for (const auto& file : files) {
+        std::string text;
+        if (file.empty() || !fs.read_file(file, text)) continue;
+        const bool comments = loader_list_has_comments(file);
+        std::set<std::string> seen;
+        std::string out;
+        int removed = 0;
+        for (const auto& raw : split_keep_eol(text)) {
+            const std::string entry = autoload_entry_of(raw, comments);
+            if (!entry.empty() && !seen.insert(entry).second) {
+                ++removed;
+                continue;
+            }
+            out += raw;
+        }
+        if (removed == 0) continue;
+        push_list_write(plan, file, text, out, "Autoload-Liste: " + std::to_string(removed) + " doppelte Zeile(n) entfernen (Original im Backup)",
+                        "Autoload list: remove " + std::to_string(removed) + " duplicate line(s) (original kept in the backup)");
+    }
+    if (plan.changes.empty()) plan.warnings.push_back("Keine doppelte Zeile gefunden");
+    plan.hint_de = "Je Eintrag bleibt die erste Zeile; Wartezeiten und alle anderen Zeilen bleiben unveraendert.";
+    plan.hint_en = "The first line of each entry stays; delays and all other lines stay unchanged.";
+}
+
+// autoload_fix_missing: Eintrag ohne Datei. Unterscheidet sich der Name nur in der Schreibweise, wird er auf den vorhandenen Dateinamen
+// gebracht (Namen sind case-sensitiv); sonst wird die Zeile ausgeschaltet: in der WebKit-Liste mit vorangestelltem "# ", beim Payload Manager
+// (dort gibt es keine Kommentare) entfaellt sie. Dateien werden nie angefasst.
+void plan_autoload_missing(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    std::map<std::string, std::map<std::string, std::string>> per_file;  // Datei -> Eintrag -> Art
+    for (const auto& p : array_fact(facts, "autoload.problems")) {
+        const std::string kind = str_of(p, "kind");
+        if (kind == "missing_slot" || kind == "missing_file" || kind == "entry_case") per_file[str_of(p, "file")][str_of(p, "detail")] = kind;
+    }
+    for (const auto& [file, entries] : per_file) {
+        std::string text;
+        if (file.empty() || !fs.read_file(file, text)) continue;
+        const bool comments = loader_list_has_comments(file);
+        const std::string dir = dir_of(file);
+        std::string out;
+        int fixed = 0, off = 0;
+        for (const auto& raw : split_keep_eol(text)) {
+            const std::string entry = autoload_entry_of(raw, comments);
+            const auto it = entries.find(entry);
+            if (entry.empty() || it == entries.end()) {
+                out += raw;
+                continue;
+            }
+            if (it->second == "entry_case") {
+                std::string actual;
+                for (const auto& e : fs.list_dir(dir))
+                    if (!e.is_dir && e.name.size() == entry.size() && std::equal(e.name.begin(), e.name.end(), entry.begin(), [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b)); }))
+                        actual = e.name;
+                if (!actual.empty() && actual != entry) {
+                    out += raw.substr(0, raw.find(entry)) + actual + raw.substr(raw.find(entry) + entry.size());
+                    ++fixed;
+                    continue;
+                }
+                out += raw;
+                continue;
+            }
+            ++off;
+            if (comments) out += "# " + raw;  // der ganze Eintrag bleibt lesbar und laesst sich wieder einschalten
+        }
+        if (fixed + off == 0) continue;
+        std::string de = "Autoload-Liste: ", en = "Autoload list: ";
+        if (fixed > 0) {
+            de += std::to_string(fixed) + " Name(n) auf die vorhandene Schreibweise bringen";
+            en += "correct the spelling of " + std::to_string(fixed) + " name(s)";
+        }
+        if (off > 0) {
+            de += std::string(fixed > 0 ? ", " : "") + std::to_string(off) + " Eintrag/Eintraege ohne Datei " + (comments ? "auskommentieren" : "entfernen");
+            en += std::string(fixed > 0 ? ", " : "") + (comments ? "comment out " : "remove ") + std::to_string(off) + " entry/entries without a file";
+        }
+        push_list_write(plan, file, text, out, de + " (Original im Backup)", en + " (original kept in the backup)");
+    }
+    if (plan.changes.empty()) plan.warnings.push_back("Kein Eintrag gefunden, der sich sicher korrigieren laesst");
+    plan.hint_de = "Payload-Dateien werden nicht angefasst. Fehlt ein Payload wirklich, muss es von Hand wieder installiert werden.";
+    plan.hint_en = "Payload files are not touched. If a payload is really missing, it has to be installed again by hand.";
+}
+
+// ---- quarantine_broken_elf ----------------------------------------------------------------------------------------------
+// Eine unbrauchbare ELF-Datei (zu klein, keine ELF-Kennung, abgeschnitten) wird nicht geloescht, sondern in den versteckten Ordner
+// .medic_broken neben sie verschoben. Versteckt, damit sie weder Loader noch Payload Manager noch die naechste Pruefung wieder findet.
+// "unreadable" (Lesefehler) ist kein Beweis fuer eine kaputte Datei und bleibt unberuehrt. Nur Pfade der Whitelist.
+
+void plan_quarantine_elf(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    const PathPolicy policy = policy_from_facts(facts);
+    std::set<std::string> targets;
+    for (const auto& b : array_fact(facts, "payload.broken_elfs")) {
+        const std::string path = str_of(b, "path"), reason = str_of(b, "reason");
+        if (path.empty() || reason == "unreadable") continue;
+        std::string why;
+        if (!policy.allowed(path, &why)) {
+            plan.warnings.push_back("Uebersprungen (ausserhalb der erlaubten Ordner): " + path);
+            continue;
+        }
+        const std::string to = join_path(join_path(dir_of(path), ".medic_broken"), base_of(path));
+        if (fs.exists(to) || !targets.insert(to).second) {
+            plan.warnings.push_back("Uebersprungen (Ziel existiert bereits): " + to);
+            continue;
+        }
+        Change c;
+        c.kind = Change::Kind::Rename;
+        c.path = path;
+        c.to = to;
+        c.note_de = "Defekte ELF-Datei (" + reason + ") in den Ordner .medic_broken verschieben: " + base_of(path);
+        c.note_en = "Move the broken ELF file (" + reason + ") into the folder .medic_broken: " + base_of(path);
+        plan.changes.push_back(std::move(c));
+    }
+    if (plan.changes.empty()) plan.warnings.push_back("Keine defekte ELF-Datei in den erlaubten Ordnern gefunden");
+    plan.hint_de = "Die Datei wird nicht geloescht, sondern in den versteckten Ordner .medic_broken daneben verschoben; Rueckgaengig holt sie zurueck. Danach das Payload neu uebertragen (FTP im Binaermodus) oder neu herunterladen.";
+    plan.hint_en = "The file is not deleted but moved to the hidden folder .medic_broken next to it; undo brings it back. Then transfer the payload again (FTP in binary mode) or download it again.";
+}
+
+// ---- pldmgr_enable_autoload ---------------------------------------------------------------------------------------------------
+void plan_pldmgr_enable(FixPlan& plan, const Finding& finding, const Facts& facts, const IFileSystem& fs) {
+    Finding f = finding;
+    f.fix_params = {{"file", "/data/pldmgr/pldmgr_config.txt"}, {"section", ""}, {"key", "AUTOLOAD_ENABLED"}, {"value", "1"}};
+    plan_set_key(plan, f, facts, fs);
+    plan.hint_de = "Nur die Zeile AUTOLOAD_ENABLED in der Einstellungsdatei des Payload Managers wird auf 1 gesetzt; Rueckgaengig stellt die Datei wieder her.";
+    plan.hint_en = "Only the line AUTOLOAD_ENABLED in the settings file of the Payload Manager is set to 1; undo restores the file.";
+}
+
 // ---- move_duplicate_titleid ---------------------------------------------
 
 void plan_move_duplicates(FixPlan& plan, const Facts& facts, const IFileSystem& fs, const FixOptions& opt) {
@@ -415,6 +573,14 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
         plan_translate_v1(plan, facts, fs);
     } else if (finding.fix == "autoload_insert_delay") {
         plan_autoload_delay(plan, facts, fs);
+    } else if (finding.fix == "autoload_remove_duplicates") {
+        plan_autoload_duplicates(plan, facts, fs);
+    } else if (finding.fix == "autoload_fix_missing") {
+        plan_autoload_missing(plan, facts, fs);
+    } else if (finding.fix == "quarantine_broken_elf") {
+        plan_quarantine_elf(plan, facts, fs);
+    } else if (finding.fix == "pldmgr_enable_autoload") {
+        plan_pldmgr_enable(plan, finding, facts, fs);
     } else if (finding.fix == "smp_disable_conflicting_backpork") {
         plan_disable_backpork(plan, finding, fs);
     } else if (finding.fix == "move_duplicate_titleid") {

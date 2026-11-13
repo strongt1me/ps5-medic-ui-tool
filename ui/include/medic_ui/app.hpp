@@ -52,6 +52,10 @@ public:
     std::string selected_error_id() const { return current_error() ? current_error()->id : std::string(); }
     const std::string& reported_error() const { return reported_error_; }  // fuer den Bericht vermerkter Code (leer: keiner)
     int error_source_index() const { return err_src_; }                     // Fehlercodes, Quelle: welche Quelle der QR-Code zeigt
+    bool error_input_active() const { return err_input_; }                  // Fehlercodes: Code-Eingabe offen (Quadrat)
+    std::string error_input_text() const;                                   // eingegebene Zeichen samt der gerade gewaehlten (ohne Gruppe)
+    int error_input_group() const { return err_group_; }                    // 0 = alle, 1 CE, 2 NP, 3 NW, 4 WS, 5 WV, 6 0x
+    int error_input_digit() const { return err_digit_; }                    // Index der gerade gewaehlten Ziffer im Zeichenvorrat
 
 private:
     struct Preview {  // Darstellung einer geplanten Aenderung
@@ -79,6 +83,12 @@ private:
     const medic::ErrorCode* current_error() const;
     void refresh_error_context();
     void open_error_source();
+    void handle_error_input(Button b);
+    int error_match() const;          // Index des ersten Codes zur Eingabe, sonst -1
+    void error_input_apply();         // Auswahl der Liste auf den Treffer setzen
+    int error_input_max() const;
+    const char* error_alphabet() const;
+    void draw_error_input(Canvas& c) const;
     void open_selftest();
     void start_selftest(int tier_limit);  // 0 Schnell, 1 Standard, 2 Gruendlich
     void step_selftest();
@@ -233,6 +243,9 @@ private:
     medic::QrCode src_qr_;
     bool src_qr_ok_ = false;
     int scroll_dir_ = 0, scroll_streak_ = 0, last_scroll_tick_ = -1000;  // Scrollen beschleunigt beim Halten
+    bool err_input_ = false;       // Code-Eingabe: Hoch/Runter waehlt die Ziffer, Kreuz uebernimmt, die Liste springt mit
+    int err_group_ = 0, err_digit_ = 1;
+    std::string err_typed_;
     bool err_from_finding_ = false;  // Code kam per Quadrat aus einem Befund: Kreis geht dorthin zurueck, kein Blaettern
 
     ReportResult report_;

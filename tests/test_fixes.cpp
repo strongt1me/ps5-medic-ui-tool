@@ -407,6 +407,37 @@ void plan_content_tests() {
         CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].path == "/data/pldmgr/autoload.txt" && c.plan.changes[0].content == "!3000\n",
               "backpork: auch die Autoload-Liste des Payload Managers wird gefunden");
     }
+    {  // Marcs Entscheidungen 13. Nov. 2026: Autoload-Listen, defekte ELF, Schreibweise auf exFAT
+        TempCopy tmp("al3_pos_duplicate");
+        Ctx c = make_ctx(tmp.dir, "autoload.entry_duplicate");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].content == "local/a\n!1000\n", "autoload_remove_duplicates: erste Zeile bleibt, die doppelte entfaellt, Wartezeit bleibt");
+    }
+    {
+        TempCopy tmp("al2_pos_loader_missing");
+        Ctx c = make_ctx(tmp.dir, "autoload.entry_missing");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].content == "# gibt-es-nicht.elf\n", "autoload_fix_missing: WebKit-Liste: Eintrag ohne Datei wird auskommentiert");
+    }
+    {
+        TempCopy tmp("al2_pos_missing_slot");
+        Ctx c = make_ctx(tmp.dir, "autoload.entry_missing");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].content.empty(), "autoload_fix_missing: Payload Manager: Zeile ohne Ordner entfaellt (dort gibt es keine Kommentare)");
+    }
+    {
+        TempCopy tmp("al5_pos_disabled");
+        Ctx c = make_ctx(tmp.dir, "pldmgr.autoload_disabled");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].path == "/data/pldmgr/pldmgr_config.txt" && c.plan.changes[0].content == "AUTOLOAD_ENABLED=1\nAUTOLOAD_DELAY=5\n",
+              "pldmgr_enable_autoload: nur AUTOLOAD_ENABLED wird auf 1 gesetzt");
+    }
+    {
+        TempCopy tmp("elf_pos_pldmgr");
+        Ctx c = make_ctx(tmp.dir, "payload.elf_invalid");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].to == "/data/pldmgr/payloads/local/bad/.medic_broken/bad.elf", "quarantine_broken_elf: Datei geht in .medic_broken daneben");
+    }
+    {
+        TempCopy tmp("elf_pos_tiny");  // /mnt/usb0/x.elf: ein erlaubter USB-Ordner
+        Ctx c = make_ctx(tmp.dir, "payload.elf_invalid");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].to == "/mnt/usb0/.medic_broken/x.elf", "quarantine_broken_elf: auch auf einem USB-Laufwerk, nur in den Ordner daneben");
+    }
 }
 
 // ---- Snapshot-Export -----------------------------------------------------
@@ -894,6 +925,10 @@ void fix_tests() {
         {"b13_pos", "smp.debug_off", true},
         {"smp2_pos_blackbox", "smp.v1_keys_in_v2", true}, {"al1_pos_pldmgr", "autoload.elfldr_without_delay", true},
         {"al1_pos_loader", "autoload.elfldr_without_delay", true},
+        // 13. Nov. 2026 (Marcs Entscheidungen): neue Reparaturen
+        {"al3_pos_duplicate", "autoload.entry_duplicate", true}, {"al2_pos_loader_missing", "autoload.entry_missing", true},
+        {"al2_pos_missing_slot", "autoload.entry_missing", true},
+        {"al5_pos_disabled", "pldmgr.autoload_disabled", true}, {"elf_pos_pldmgr", "payload.elf_invalid", true},
     };
     int i = 0;
     for (auto& fc : cases) roundtrip(fc, i++);

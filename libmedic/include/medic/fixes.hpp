@@ -21,6 +21,11 @@
 //   move_duplicate_titleid              keine (optional FixOptions::keep); Ziel: <Scanpfad>/.duplicates/ (SM+ scannt Punkt-Ordner nicht)
 //   smp_translate_v1_keys               keine; liest smp.v1_keys[] (flache v1-Zeilen in einer v2-config.ini)
 //   autoload_insert_delay               keine; liest autoload.problems[] (kind elfldr_no_delay), fuegt "!4000" ein
+//   autoload_remove_duplicates          keine; liest autoload.problems[] (kind duplicate), behaelt je Eintrag die erste Zeile
+//   autoload_fix_missing                keine; liest autoload.problems[] (missing_slot, missing_file, entry_case): Schreibweise korrigieren,
+//                                       sonst Zeile auskommentieren (WebKit-Liste) bzw. entfernen (Payload Manager)
+//   quarantine_broken_elf               keine; liest payload.broken_elfs[], verschiebt nach <Ordner>/.medic_broken/ (nur Whitelist-Pfade)
+//   pldmgr_enable_autoload              keine; setzt AUTOLOAD_ENABLED=1 in /data/pldmgr/pldmgr_config.txt
 //   fix_image_nesting_hint              keine (nur Hinweis)
 #pragma once
 #include "medic/facts.hpp"
