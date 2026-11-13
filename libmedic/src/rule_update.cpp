@@ -109,7 +109,7 @@ bool append_log(Platform& p, const json& rec) {
     // Ein vorhandenes, aber nicht lesbares Protokoll nie durch eine Zeile ersetzen: es haelt den Rollback-Stand und den Rollback-Schutz
     if (!p.fs().read_file(kRulesUpdateLog, text) && p.fs().exists(kRulesUpdateLog)) return false;
     if (!text.empty() && text.back() != '\n') text += '\n';
-    text += rec.dump() + "\n";
+    text += rec.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace) + "\n";
     return p.fs_rw()->write_file(kRulesUpdateLog, text);
 }
 
@@ -223,6 +223,9 @@ RuleUpdateResult install_rule_update(Platform& p, const std::string& current_ver
             r.error = "backup_failed";
             return r;
         }
+    } else if (p.fs().exists(spec.active)) {  // vorhanden, aber nicht lesbar: nicht ohne Backup ueberschreiben
+        r.error = "backup_failed";
+        return r;
     }
 
     // 2. Neue Datei atomar schreiben und gegenlesen.

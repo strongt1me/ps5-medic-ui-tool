@@ -66,15 +66,17 @@ std::string mask_key_values(const std::string& s) {
     std::size_t i = 0;
     while (i < s.size()) {
         bool replaced = false;
-        if (before_ok(s, i)) {
+        if (i == 0 || !std::isalnum(static_cast<unsigned char>(s[i - 1]))) {  // auch hinter '_' (console_serial, default_user_id)
             for (const Key& k : kKeys) {
                 const std::size_t len = std::char_traits<char>::length(k.name);
                 if (lower.compare(i, len, k.name) != 0) continue;
                 std::size_t j = i + len;
+                if (j < s.size() && s[j] == '"') ++j;  // JSON: "serial_number":
                 while (j < s.size() && (s[j] == ' ' || s[j] == '\t')) ++j;
                 if (j >= s.size() || (s[j] != ':' && s[j] != '=')) continue;
                 ++j;
                 while (j < s.size() && (s[j] == ' ' || s[j] == '\t')) ++j;
+                if (j < s.size() && s[j] == '"') ++j;  // JSON: Wert in Anfuehrungszeichen
                 std::size_t v = j;
                 while (v < s.size() && !std::isspace(static_cast<unsigned char>(s[v])) && s[v] != ',' && s[v] != ';' && s[v] != '"' && s[v] != '\'') ++v;
                 if (v == j) continue;
@@ -352,6 +354,7 @@ std::string normalize_log_line(const std::string& line) {
 }
 
 std::string md_code(std::string s) {
+    s = anonymize(s);  // vor dem Kuerzen: eine am Schnitt halbierte Kennung passt sonst auf kein Muster mehr
     std::replace(s.begin(), s.end(), '`', '\'');
     return "`" + one_line(clip(s, 240)) + "`";
 }
@@ -611,7 +614,7 @@ std::string build_report_compact(const ReportInput& in, ReportLang lang, std::si
         const std::string label_text = evidence_label(x.evidence_path);
         for (const auto& e : x.evidence) {
             if (n++ >= 3) break;
-            block += line(" > " + (label_text.empty() ? "" : label_text + ": ") + clip(e, 90));
+            block += line(" > " + (label_text.empty() ? "" : label_text + ": ") + clip(anonymize(e), 90));
         }
         const std::string more = line(de ? "... weitere Befunde im Bericht" : "... more findings in the report");
         const bool last = shown + 1 == in.findings.size();

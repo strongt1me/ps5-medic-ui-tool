@@ -126,6 +126,7 @@ pfsc_block(pfsc_bs_t *p, uint64_t i) {
   size_t len = (size_t)(b - a);
   if(len == 0) { memset(p->raw, 0, (size_t)p->lbs); p->cached = (int64_t)i; return 0; }
   if(p->under->rd(p->under, p->base + a, p->comp, len) != 0) return -1;
+  p->cached = -1;  /* raw wird gleich ueberschrieben: schlaegt das fehl, darf kein alter Blockindex als gueltig stehen bleiben */
   if(len == p->lbs) {
     memcpy(p->raw, p->comp, len);
   } else {

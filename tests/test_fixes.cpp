@@ -141,6 +141,15 @@ void ini_tests() {
     CHECK(ini_set_value("debug=1\n", {"scan", "depth", "scan_depth"}, "2") == "debug=1\nscan_depth=2\n", "ini: legacy flach bei Datei ohne Sektionen");
     // vorhandener flacher Legacy-Schluessel gewinnt
     CHECK(ini_set_value("[scan]\npath=/a\n", {"scan", "depth", "scan_depth"}, "2") == "[scan]\npath=/a\ndepth=2\n", "ini: Sektion bei Datei mit Sektionen");
+    // v2: ein Wert in Anfuehrungszeichen gilt als derselbe Pfad; Sonderzeichen werden beim Schreiben maskiert (Befund Review 13. Nov. 2026)
+    {
+        const std::string v2q = "[config]\nversion = 2\n[scan]\npath=\"/mnt/usb0/games\"\n";
+        CHECK(ini_add_value(v2q, {"scan", "path", "scanpath"}, "/mnt/usb0/games") == v2q, "ini v2: Pfad in Anfuehrungszeichen wird nicht doppelt ergaenzt");
+        CHECK(ini_set_value(v2q, {"scan", "path", "scanpath"}, "/mnt/usb0/games") == v2q, "ini v2: gleicher Wert in Anfuehrungszeichen bleibt unveraendert");
+        CHECK(ini_add_value("[config]\nversion = 2\n[scan]\n", {"scan", "path", "scanpath"}, "/mnt/usb0/a;b") == "[config]\nversion = 2\n[scan]\npath=\"/mnt/usb0/a;b\"\n",
+              "ini v2: Wert mit ';' wird in Anfuehrungszeichen geschrieben (sonst schneidet ShadowMount+ ab)");
+        CHECK(ini_add_value("[scan]\n", {"scan", "path", "scanpath"}, "/mnt/usb0/a;b") == "[scan]\npath=/mnt/usb0/a;b\n", "ini v1: ohne Format v2 bleibt es beim rohen Wert");
+    }
     // CRLF bleibt
     CHECK(ini_set_value("a=1\r\ndebug=1\r\n", {"", "debug", ""}, "0") == "a=1\r\ndebug=0\r\n", "ini: CRLF erhalten");
     // fehlendes Zeilenende am Dateiende
@@ -832,7 +841,7 @@ void stack_tests() {
         const std::string cfg = slurp(dest / "fs/data/shadowmount/config.ini"), prof = slurp(dest / "fs/data/shadowmount/profiles.ini");
         CHECK(cfg.find("geheim123") == std::string::npos && cfg.find("auch") == std::string::npos && prof.find("s3") == std::string::npos, "Export: Passwoerter geschwaerzt");
         CHECK(cfg.find("password = ***") != std::string::npos || cfg.find("password=***") != std::string::npos || cfg.find("password= ***") != std::string::npos, "Export: Schluessel bleibt, Wert ist ***");
-        CHECK(cfg.find("host = x.x.x.x") != std::string::npos && cfg.find("192.0.2.1") == std::string::npos && cfg.find("# password = kommentar") != std::string::npos, "Export: IP-Adresse maskiert, uebrige Zeilen und Kommentare unveraendert");
+        CHECK(cfg.find("host = x.x.x.x") != std::string::npos && cfg.find("192.0.2.1") == std::string::npos && cfg.find("kommentar") == std::string::npos && cfg.find("# password = ***") != std::string::npos, "Export: IP-Adresse maskiert, auch ein auskommentiertes Passwort wird geschwaerzt");
     }
     // Ein Symlink als Zwischenordner fuehrt Schreiben nicht aus den erlaubten Ordnern hinaus (ab der dritten Pfadstufe)
     {

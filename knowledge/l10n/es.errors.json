@@ -95,7 +95,7 @@
     "Si el error aparece al iniciar un juego o una app, elimínalo y vuelve a instalarlo."
    ],
    "notes": [
-    "Nombre interno según el PS5 Dev Wiki: SCE_KERNEL_ERROR_EINVA, código de retorno 0x80020016."
+    "Nombre interno según el PS5 Dev Wiki: SCE_KERNEL_ERROR_EINVAL, código de retorno 0x80020016."
    ]
   },
   "CE-100028-1": {
@@ -474,7 +474,7 @@
   },
   "CE-108877-1": {
    "title": "Servidor saturado o en mantenimiento",
-   "text": "El problema puede estar en el servidor. Sony aconseja revisar la página de estado, reiniciar el router e intentarlo de nuevo más tarde.",
+   "text": "El problema puede estar en el servidor. Sony aconseja revisar la página de estado e intentarlo de nuevo pasadas unas horas.",
    "steps": [
     "Comprueba en la página de estado de PlayStation si hay una caída de servidor o mantenimiento.",
     "Puede ser un problema temporal: inténtalo de nuevo pasadas unas horas."
@@ -550,9 +550,6 @@
    "text": "El dispositivo de audio Bluetooth que intenta conectarse no es compatible con la PS5. Sony nombra usar otro dispositivo de audio.",
    "steps": [
     "Prueba con otro dispositivo de audio: el dispositivo Bluetooth no es compatible con la PS5."
-   ],
-   "notes": [
-    "Nombre interno según el PS5 Dev Wiki: SCE_SETTINGS_NETWORK_ERROR_CONN_TEST_IPV6_ONLY_NETWORK, código de retorno 0x80EC020E."
    ]
   },
   "CE-109573-5": {
@@ -618,8 +615,8 @@
    ]
   },
   "CE-110552-4": {
-   "title": "No se pudo leer el disco",
-   "text": "No se pudo leer el disco. Sony nombra reiniciar, limpiar el disco y probar otro disco compatible; con un disco no compatible solo ayuda otro disco.",
+   "title": "Disco ilegible (no compatible)",
+   "text": "Puede que la consola no admita el disco, por ejemplo por un código de región distinto. Sony nombra probar otros discos y limpiar el disco.",
    "steps": [
     "Prueba con otro disco compatible para ver si la consola lee otros discos.",
     "Comprueba que el disco no tiene huellas, manchas ni arañazos y límpialo con un paño suave y limpio del centro al borde.",
@@ -681,7 +678,7 @@
   },
   "CE-112840-6": {
    "title": "Problema al conectar con el servidor",
-   "text": "El problema puede estar en el servidor. Sony aconseja revisar la página de estado, reiniciar el router e intentarlo de nuevo más tarde.",
+   "text": "El problema puede estar en el servidor. Sony aconseja revisar la página de estado e intentarlo de nuevo pasadas unas horas.",
    "steps": [
     "Comprueba en la página de estado de PlayStation si hay una caída de servidor o mantenimiento.",
     "Puede ser un problema temporal: inténtalo de nuevo pasadas unas horas."
@@ -1141,18 +1138,6 @@
     "Nombre interno según el PS5 Dev Wiki: SCE_NP_MATCHING2_ERROR_TIMEDOUT, código de retorno 0x80550C36."
    ]
   },
-  "NP-103191-2": {
-   "title": "Falló la conexión online de la aplicación",
-   "text": "Para este código no hay página de Sony; la información procede del PS5 Dev Wiki (comunidad). Según el PS5 Dev Wiki falló la conexión de red de la aplicación. Se nombran cerrar y reiniciar la aplicación, reiniciar la consola y reiniciar el router.",
-   "steps": [
-    "Cierra la aplicación y vuelve a iniciarla.",
-    "Reinicia la consola.",
-    "Apaga el router y el módem, espera al menos cinco minutos y vuélvelos a encender."
-   ],
-   "notes": [
-    "Nombre interno según el PS5 Dev Wiki: SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_CONTEXT, código de retorno 0x80550D0E."
-   ]
-  },
   "NP-103539-1": {
    "title": "No se puede conectar con el servidor",
    "text": "La consola tiene problemas para conectar con PlayStation. Sony nombra la página de estado, un reinicio y reiniciar el router; a menudo la línea solo está ocupada un rato.",
@@ -1371,20 +1356,6 @@
    "notes": [
     "Nota de Medic: si la consola usa un filtro DNS como nanoDNS que bloquea direcciones de Sony, este error es de esperar, sobre todo en aplicaciones del sistema como el navegador o la tienda. No es una afirmación de Sony y el historial de errores por sí solo no lo confirma. El paso de Sony de introducir temporalmente un servidor DNS público no se lista aquí: eludiría un filtro DNS así.",
     "Nombre interno según el PS5 Dev Wiki: SCE_NET_CTL_ERROR_DISCONNECT_REQ, código de retorno 0x8041210E."
-   ]
-  },
-  "NW-102468-2": {
-   "title": "Prueba de red (STUN) agotada",
-   "text": "Para este código no hay página de Sony; la información procede del PS5 Dev Wiki (comunidad). Según el PS5 Dev Wiki hay un problema al conectar la consola a la red (tiempo de espera STUN). Se nombran reiniciar, mejor recepción, reiniciar el router, un cable LAN y quitar varios routers NAT.",
-   "steps": [
-    "Reinicia la consola.",
-    "Con Wi-Fi, acerca la consola al router o quita lo que interfiera en la conexión entre los dispositivos.",
-    "Apaga el router y el módem, espera al menos cinco minutos y vuélvelos a encender.",
-    "Reinicia la consola, conéctate a internet con un cable LAN si es posible y configura de nuevo los ajustes de red.",
-    "Si hay varios routers NAT encadenados, quita los que sobren."
-   ],
-   "notes": [
-    "Nombre interno según el PS5 Dev Wiki: SCE_NET_STUN_ERROR_TIMEOUT, código de retorno 0x80412403."
    ]
   },
   "NW-102633-5": {
@@ -1721,17 +1692,6 @@
    ],
    "notes": [
     "Nombre interno según el PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_HTTP_STATUS_CODE_406_NOT_ACCEPTABLE, código de retorno 0x82F00196."
-   ]
-  },
-  "WS-116518-5": {
-   "title": "Error interno (HTTP 500)",
-   "text": "Para este código no hay página de Sony; la información procede del PS5 Dev Wiki (comunidad). Según el PS5 Dev Wiki se produjo un error interno (HTTP 500). Se nombra reiniciar la consola; si el error continúa, el soporte de PlayStation puede ayudar.",
-   "steps": [
-    "Reinicia la consola.",
-    "Si el problema continúa, contacta con el soporte de PlayStation."
-   ],
-   "notes": [
-    "Nombre interno según el PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_HTTP_STATUS_CODE_500_INTERNAL_SERVER_ERROR, código de retorno 0x82F001F4."
    ]
   },
   "WS-116520-5": {

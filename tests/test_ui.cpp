@@ -1780,6 +1780,15 @@ void error_search_tests() {
         press(a, {Button::Triangle});
         CHECK(a.screen() == App::Screen::ErrorCodes || a.screen() == App::Screen::ErrorCodeDetail, "Code-Eingabe: Dreieck ohne Treffer bleibt harmlos");
     }
+    {  // Gruppenwechsel von 0x nach alle: Hex-Buchstaben bleiben nicht stehen (Review 13. Nov. 2026)
+        App a(svc, Lang::De);
+        open_error_codes_via_ui(a);
+        press(a, {Button::Square, Button::L1});
+        CHECK(a.error_input_group() == 6, "Code-Eingabe: L1 von alle nach 0x");
+        type(a, "809F");
+        press(a, {Button::R1});
+        CHECK(a.error_input_group() == 0 && a.error_input_text().find('F') == std::string::npos, "Code-Eingabe: Hex-Buchstaben verschwinden beim Wechsel in eine dezimale Gruppe");
+    }
     {  // ohne Fehlercode-Datei: Quadrat oeffnet kein unsichtbares Eingabefeld
         LocalService empty_svc(*platform, rules, [] { return std::string("20261113T120000Z"); });
         App a(empty_svc, Lang::De);
@@ -1797,7 +1806,7 @@ void error_search_tests() {
 void error_codes_real_data_tests() {
     const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
     const ErrorCodeSet codes = load_error_codes_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/error_codes.json");
-    CHECK(codes.codes.size() >= 153, "Fehlercodes (Datei): mindestens die 153 belegten Codes");
+    CHECK(codes.codes.size() >= 150, "Fehlercodes (Datei): mindestens die 150 belegten Codes");
 
     TempCopy t("b8_pos");
     const auto before = full_tree(t.dir);

@@ -135,7 +135,7 @@ RuleDownloadResult download_rule_update(Platform& p, IHttpClient& http, const st
     std::string log;
     if (p.fs().read_file(kRulesUpdateLog, log) || !p.fs().exists(kRulesUpdateLog)) {  // ein nicht lesbares Protokoll bleibt unberuehrt
         if (!log.empty() && log.back() != '\n') log += '\n';
-        log += nlohmann::json({{"type", "rules_download"}, {"ts", timestamp}, {"url", base_url}, {"bytes", items[0].body.size()}, {"sha256", sha256_hex(items[0].body)}}).dump() + "\n";
+        log += nlohmann::json({{"type", "rules_download"}, {"ts", timestamp}, {"url", base_url}, {"bytes", items[0].body.size()}, {"sha256", sha256_hex(items[0].body)}}).dump(-1, ' ', false, nlohmann::json::error_handler_t::replace) + "\n";
         p.fs_rw()->write_file(kRulesUpdateLog, log);
     }
 
@@ -179,7 +179,7 @@ RuleDownloadResult download_rule_update(Platform& p, IHttpClient& http, const st
     std::string log2;
     if (p.fs().read_file(kRulesUpdateLog, log2) || !p.fs().exists(kRulesUpdateLog)) {
         if (!log2.empty() && log2.back() != '\n') log2 += '\n';
-        log2 += nlohmann::json({{"type", "error_codes_download"}, {"ts", timestamp}, {"url", base_url}, {"bytes", codes[0].body.size()}, {"sha256", sha256_hex(codes[0].body)}}).dump() + "\n";
+        log2 += nlohmann::json({{"type", "error_codes_download"}, {"ts", timestamp}, {"url", base_url}, {"bytes", codes[0].body.size()}, {"sha256", sha256_hex(codes[0].body)}}).dump(-1, ' ', false, nlohmann::json::error_handler_t::replace) + "\n";
         p.fs_rw()->write_file(kRulesUpdateLog, log2);
     }
     r.codes_ok = true;

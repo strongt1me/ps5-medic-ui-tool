@@ -36,6 +36,7 @@ constexpr const char* kSelftestBudgetPath = "/data/ps5medic/selftest/write_budge
 
 constexpr std::uint64_t kReadTestMaxBytes = 128ull << 20;  // Lesetest: hoechstens 128 MiB je Lauf
 constexpr int kReadTestMaxSeconds = 15;                    // und hoechstens 15 Sekunden
+constexpr int kWriteTestMaxSeconds = 300;                  // Schreibtest (256 MiB schreiben und zuruecklesen): hoechstens fuenf Minuten, dann Abbruch
 constexpr std::uint64_t kWriteTestBytes = 256ull << 20;    // Schreibtest: 256 MiB, einmal geschrieben und einmal zurueckgelesen
 constexpr std::uint64_t kWriteBudgetBytes = 50ull << 30;   // kumulatives Schreibbudget des Tests (50 GiB)
 constexpr std::uint64_t kMemTestBytes = 128ull << 20;     // Speicher-Muster-Test: 128 MiB

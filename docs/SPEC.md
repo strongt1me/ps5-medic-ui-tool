@@ -24,10 +24,11 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 - **Pro Spiel:** Titelliste mit Quellen, Systemdatenbank, verlangter Firmware, Backport (auch im Spiel eingebaut), Dateiprüfung, Fehlern der Konsole, Spielständen und möglichen Gründen.
 - Läuft auf den Firmwares 4.00 bis 14.10 (soweit der Jailbreak dort läuft); getestet ist bisher nur FW 12.00.
 
-### 4.2 Reparieren (11 sichere Fixes)
+### 4.2 Reparieren (12 sichere Fixes)
 | Fix-ID | Aktion | Reversibel durch |
 |---|---|---|
 | `rename_image_parentheses` | Klammern aus `.ffpfs`/`.ffpfsc`-Dateinamen entfernen | Rückbenennung aus Journal |
+| `rename_case_prx` | `Il2cppUserAssemblies.prx` → `Il2CppUserAssemblies.prx` (nur auf der internen SSD, wo die Schreibweise zählt) | Rückbenennung aus Journal |
 | `smp_set_key` | Einzelnen Key in `/data/shadowmount/config.ini` setzen (z. B. `kstuff_game_auto_toggle=0`) | Backup der config.ini |
 | `smp_disable_conflicting_backpork` | BackPork-Autostart deaktivieren, wenn `backport_fakelib=1` | Backup Autoload-Liste |
 | `move_duplicate_titleid` | Doppelte Quelle gleicher TITLE_ID nach `.duplicates/` im Scanpfad verschieben (Punkt-Ordner scannt SM+ nicht) | Zurückverschieben |

@@ -38,7 +38,7 @@
   <tr>
     <td valign="top">
       <h3>🛠 Repair with undo</h3>
-      Seven reversible fixes (rename an image, set the ShadowMount+ key, carry v1 lines over into the v2 sections, take BackPork out of autoload, move duplicates, autoload wait time, file name with wrong capitalisation) and a guide for nested images. The preview shows exactly what changes; nothing happens without ✕. Every change is recorded in the journal and can be reverted. <b>Never deletes</b>, only moves or renames.
+      Eleven reversible fixes (rename an image, set the ShadowMount+ key, carry v1 lines over into the v2 sections, take BackPork out of autoload, move duplicates, autoload wait time, duplicate or missing autoload entries, switch autoload on, set a broken ELF file aside, file name with wrong capitalisation) and a guide for nested images. The preview shows exactly what changes; nothing happens without ✕. Every change is recorded in the journal and can be reverted. <b>Never deletes</b>, only moves or renames.
     </td>
     <td valign="top">
       <h3>🧪 Self-test</h3>

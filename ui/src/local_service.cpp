@@ -185,6 +185,15 @@ medic::RuleUpdateResult LocalService::rollback_rule_update() {
         if (!reload_rules()) r.error = "reload_failed";
     }
     else if (rules_before_install_) rules_ = *rules_before_install_;  // es galten die mitgelieferten Regeln
+    else {  // neue Sitzung seit der Installation: die mitgelieferte Datei einlesen
+        std::string text;
+        if (p_.fs().read_file("/data/homebrew/PS5MEDIC/rules.json", text)) {
+            try {
+                rules_ = medic::load_rules_from_string(text);
+            } catch (const std::exception&) {
+            }
+        }
+    }
     return r;
 }
 
@@ -293,6 +302,15 @@ medic::RuleUpdateResult LocalService::rollback_codes_update() {
         if (!reload_error_codes()) r.error = "reload_failed";
     }
     else if (codes_before_install_) error_codes_ = *codes_before_install_;  // es galt die mitgelieferte Datei
+    else {  // neue Sitzung seit der Installation: die mitgelieferte Datei einlesen
+        std::string text;
+        if (p_.fs().read_file("/data/homebrew/PS5MEDIC/error_codes.json", text)) {
+            try {
+                error_codes_ = medic::load_error_codes_from_string(text);
+            } catch (const std::exception&) {
+            }
+        }
+    }
     return r;
 }
 

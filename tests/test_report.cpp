@@ -20,6 +20,11 @@ void anonymize_tests() {
 
     // IPv4
     CHECK(anonymize("http://192.168.1.94:10101") == "http://[IP]:10101", "IPv4 in URL");
+    // Review 13. Nov. 2026: Schluessel nach Unterstrich und in JSON
+    CHECK(anonymize("console_serial: F123456789") == "console_serial: [SERIAL]", "Seriennummer hinter Unterstrich im Schluessel");
+    CHECK(anonymize("ps5_serial=F123456789") == "ps5_serial=[SERIAL]", "ps5_serial=...");
+    CHECK(anonymize("{\"serial_number\":\"F123456789\",\"accountId\":\"1234567890123456\"}").find("F123456789") == std::string::npos, "JSON: serial_number maskiert");
+    CHECK(anonymize("default_user_id = 0x1000000") == "default_user_id = [ID]", "default_user_id maskiert");
     CHECK(anonymize("api=0.0.0.0:10101") == "api=[IP]:10101", "IPv4 0.0.0.0");
     CHECK(anonymize("von 10.0.0.1 nach 10.0.0.2.") == "von [IP] nach [IP].", "mehrere IPv4, Satzpunkt danach");
     CHECK(same("kstuff 1.10.2, FW 12.00, SM+ v1.7beta11"), "Versionen bleiben");

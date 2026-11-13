@@ -55,6 +55,26 @@ constexpr std::size_t kPldmgrMaxBytes = 4095;
 constexpr std::size_t kPldmgrMaxLine = 511;
 constexpr long kPldmgrMaxDelayMs = 3600000;
 
+// "/a/b/../c" -> "/a/c" (nur Text; Eintraege wie "../etaHEN/etaHEN.elf" zeigen aus dem Autoloader-Ordner hinaus, die Dateisicht lehnt ".." ab).
+std::string resolve_dots(const std::string& path) {
+    std::vector<std::string> parts;
+    std::size_t i = 0;
+    while (i <= path.size()) {
+        std::size_t j = path.find('/', i);
+        if (j == std::string::npos) j = path.size();
+        const std::string seg = path.substr(i, j - i);
+        if (seg == "..") {
+            if (!parts.empty()) parts.pop_back();
+        } else if (!seg.empty() && seg != ".") {
+            parts.push_back(seg);
+        }
+        i = j + 1;
+    }
+    std::string out;
+    for (const auto& s : parts) out += "/" + s;
+    return out.empty() ? "/" : out;
+}
+
 void add_problem(json& arr, const char* kind, const std::string& file, const std::string& detail) {
     arr.push_back({{"kind", kind}, {"file", file}, {"detail", detail}});
 }
@@ -143,7 +163,7 @@ void collect_loader_autoload(const IFileSystem& fs, json& problems) {
     const auto names = fs.list_dir(kLoaderDir);
     for (const auto& l : lines) {
         if (l[0] == '!') continue;
-        const std::string path = l[0] == '/' ? l : join_path(kLoaderDir, l);
+        const std::string path = resolve_dots(l[0] == '/' ? l : join_path(kLoaderDir, l));
         if (fs.exists(path)) continue;
         bool case_only = false;
         if (l[0] != '/')

@@ -56,13 +56,15 @@ void text_policy_tests() {
     for (const char* s : {"Die Systemsoftware auf die neueste Version aktualisieren.", "Ein Systemupdate ist hier nicht der Weg.", "Install a system update.",
                           "Update the system software to the latest version.", "Die Firmware des Routers aktualisieren.", "Firmware-Update einspielen",
                           "Auf eine neuere Firmware updaten: firmware upgrade", "Die neueste Systemsoftware installieren", "System-Update im Safe Mode",
-                          "Sony empfiehlt Updates für Systemsoftware und App."})
+                          "Sony empfiehlt Updates für Systemsoftware und App.", "Führe die Systemaktualisierung durch.", "Die Firmware auf 12.02 aktualisieren.",
+                          "https://x.de - Bitte das Systemupdate installieren."})
         CHECK(!find_system_update_advice(s).empty(), std::string("Textregel erkennt: ") + s);
 
     // Dieselbe Regel in Franzoesisch, Italienisch und Spanisch
     for (const char* s : {"Mettre à jour le micrologiciel de la console.", "Faire une mise à jour du firmware.", "Actualiser le logiciel système.",
                           "Aggiorna il firmware della console.", "Un aggiornamento del software di sistema risolve il problema.", "Il firmware va aggiornato.",
-                          "Actualiza el firmware de la consola.", "Una actualización del software del sistema lo arregla.", "El firmware se debe actualizar."})
+                          "Actualiza el firmware de la consola.", "Una actualización del software del sistema lo arregla.", "El firmware se debe actualizar.",
+                          "Installa l'ultimo aggiornamento di sistema.", "Instala la última actualización del sistema.", "Faites la mise à jour du système."})
         CHECK(!find_system_update_advice(s).empty(), std::string("Textregel erkennt (fr/it/es): ") + s);
     for (const char* s : {"Mettre à jour le jeu.", "Firmware requis : 13.60", "Aggiornare ShadowMount+.", "Firmware richiesto: 13.60", "Actualizar ShadowMount+.", "Firmware requerido: 13.60"})
         CHECK(find_system_update_advice(s).empty(), std::string("Textregel erlaubt (fr/it/es): ") + s + " -> " + find_system_update_advice(s));
@@ -71,7 +73,7 @@ void text_policy_tests() {
     for (const char* s : {"Das Spiel aktualisieren.", "ShadowMount+ aktualisieren.", "ps5-theme auf Version 1.53 oder neuer aktualisieren.",
                           "Hilft nichts davon, die Konsole zurücksetzen („Settings > System > System Software > Reset Options > Reset Your Console“). Danach das Spiel neu installieren.",
                           "Das Spiel ist für eine höhere Firmware-Version gebaut als die der Konsole. Es braucht einen Backport.", "Firmware: 12.00",
-                          "Fakelib-Updates ausschalten", "Update ps5-theme to version 1.53 or newer."})
+                          "Fakelib-Updates ausschalten", "Update ps5-theme to version 1.53 or newer.", "Das Dateisystem aktualisieren wir nicht.", "Mise à jour du système de fichiers du disque."})
         CHECK(find_system_update_advice(s).empty(), std::string("Textregel erlaubt: ") + s + " -> " + find_system_update_advice(s));
 
     // Baumpruefung: '_'-Felder (Kommentare) und https-Adressen sind ausgenommen

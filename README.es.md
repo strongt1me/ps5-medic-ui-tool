@@ -38,7 +38,7 @@
   <tr>
     <td valign="top">
       <h3>🛠 Reparar con deshacer</h3>
-      Siete reparaciones reversibles (renombrar una imagen, fijar una clave de ShadowMount+, pasar líneas v1 a las secciones v2, quitar BackPork de la autocarga, mover duplicados, pausa de espera de la autocarga, nombre de archivo con mayúsculas erróneas) y una guía para imágenes anidadas. La vista previa muestra exactamente qué cambia; no ocurre nada sin ✕. Cada cambio queda en el diario y se puede revertir. <b>Nunca se borra</b>, solo se mueve o se renombra.
+      Once reparaciones reversibles (renombrar una imagen, fijar una clave de ShadowMount+, pasar líneas v1 a las secciones v2, quitar BackPork de la autocarga, mover duplicados, pausa de espera de la autocarga, entradas de autocarga duplicadas o ausentes, activar la autocarga, apartar un archivo ELF defectuoso, nombre de archivo con mayúsculas erróneas) y una guía para imágenes anidadas. La vista previa muestra exactamente qué cambia; no ocurre nada sin ✕. Cada cambio queda en el diario y se puede revertir. <b>Nunca se borra</b>, solo se mueve o se renombra.
     </td>
     <td valign="top">
       <h3>🧪 Autotest</h3>

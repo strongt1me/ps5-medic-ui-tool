@@ -250,10 +250,10 @@
       },
       "notes": {
         "de": [
-          "Interner Name laut PS5 Dev Wiki: SCE_KERNEL_ERROR_EINVA, Rückgabecode 0x80020016."
+          "Interner Name laut PS5 Dev Wiki: SCE_KERNEL_ERROR_EINVAL, Rückgabecode 0x80020016."
         ],
         "en": [
-          "Internal name according to the PS5 Dev Wiki: SCE_KERNEL_ERROR_EINVA, return code 0x80020016."
+          "Internal name according to the PS5 Dev Wiki: SCE_KERNEL_ERROR_EINVAL, return code 0x80020016."
         ]
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-100022-5/",
@@ -1282,8 +1282,8 @@
       "id": "CE-108877-1",
       "title": { "de": "Server überlastet oder in Wartung", "en": "Server busy or under maintenance" },
       "text": {
-        "de": "Das Problem liegt möglicherweise beim Server. Sony rät, die Statusseite zu prüfen, den Router neu zu starten und es später noch einmal zu versuchen.",
-        "en": "The problem may be on the server side. Sony advises checking the status page, restarting the router and trying again later."
+        "de": "Das Problem liegt möglicherweise beim Server. Sony rät, die Statusseite zu prüfen und es nach einigen Stunden noch einmal zu versuchen.",
+        "en": "The problem may be on the server side. Sony advises checking the status page and trying again after a few hours."
       },
       "steps": {
         "de": [
@@ -1494,16 +1494,7 @@
           "Try a different audio device: the Bluetooth device is not compatible with the PS5."
         ]
       },
-      "notes": {
-        "de": [
-          "Interner Name laut PS5 Dev Wiki: SCE_SETTINGS_NETWORK_ERROR_CONN_TEST_IPV6_ONLY_NETWORK, Rückgabecode 0x80EC020E."
-        ],
-        "en": [
-          "Internal name according to the PS5 Dev Wiki: SCE_SETTINGS_NETWORK_ERROR_CONN_TEST_IPV6_ONLY_NETWORK, return code 0x80EC020E."
-        ]
-      },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-109531-9/",
-      "more_sources": ["https://www.psdevwiki.com/ps5/Error_Codes"],
       "source_sha256": "4212012175aabdec402043b6b1acb3a93edfee9154dae5d9c8a2e2e74c4b82af",
       "checked": "2026-11-13",
       "level": "doc"
@@ -1677,10 +1668,10 @@
     },
     {
       "id": "CE-110552-4",
-      "title": { "de": "Disc nicht lesbar", "en": "Failed to read the disc" },
+      "title": { "de": "Disc nicht lesbar (nicht unterstützt)", "en": "Disc cannot be read (not supported)" },
       "text": {
-        "de": "Die Disc ließ sich nicht lesen. Sony nennt Neustart, Disc reinigen und eine andere unterstützte Disc probieren; bei einer nicht unterstützten Disc hilft nur eine andere.",
-        "en": "The disc could not be read. Sony names a restart, cleaning the disc and trying another supported disc; with an unsupported disc only another disc helps."
+        "de": "Die Disc wird von der Konsole möglicherweise nicht unterstützt, etwa wegen eines anderen Regionscodes. Sony nennt, andere Discs zu probieren und die Disc zu reinigen.",
+        "en": "The console may not support the disc, for example because of a different region code. Sony names trying other discs and cleaning the disc."
       },
       "steps": {
         "de": [
@@ -1848,8 +1839,8 @@
       "id": "CE-112840-6",
       "title": { "de": "Problem bei der Verbindung zum Server", "en": "Problem connecting to the server" },
       "text": {
-        "de": "Das Problem liegt möglicherweise beim Server. Sony rät, die Statusseite zu prüfen, den Router neu zu starten und es später noch einmal zu versuchen.",
-        "en": "The problem may be on the server side. Sony advises checking the status page, restarting the router and trying again later."
+        "de": "Das Problem liegt möglicherweise beim Server. Sony rät, die Statusseite zu prüfen und es nach einigen Stunden noch einmal zu versuchen.",
+        "en": "The problem may be on the server side. Sony advises checking the status page and trying again after a few hours."
       },
       "steps": {
         "de": [
@@ -3110,37 +3101,6 @@
       "level": "doc"
     },
     {
-      "id": "NP-103191-2",
-      "title": { "de": "Online-Verbindung der Anwendung fehlgeschlagen", "en": "Online connection of the application failed" },
-      "text": {
-        "de": "Zu diesem Code gibt es keine Sony-Seite; die Angabe stammt aus dem PS5 Dev Wiki (Community). Laut PS5 Dev Wiki ist die Netzwerkverbindung der Anwendung fehlgeschlagen. Genannt werden Anwendung schließen und neu starten, Konsole neu starten und Router neu starten.",
-        "en": "There is no Sony page for this code; the information comes from the PS5 Dev Wiki (community). According to the PS5 Dev Wiki the network connection of the application failed. Named are closing and restarting the application, restarting the console and restarting the router."
-      },
-      "steps": {
-        "de": [
-          "Die Anwendung schließen und neu starten.",
-          "Die Konsole neu starten.",
-          "Router und Modem ausschalten, mindestens fünf Minuten warten und wieder einschalten."
-        ],
-        "en": [
-          "Close the application and start it again.",
-          "Restart the console.",
-          "Turn off the router and the modem, wait at least five minutes and turn them on again."
-        ]
-      },
-      "notes": {
-        "de": [
-          "Interner Name laut PS5 Dev Wiki: SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_CONTEXT, Rückgabecode 0x80550D0E."
-        ],
-        "en": [
-          "Internal name according to the PS5 Dev Wiki: SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_CONTEXT, return code 0x80550D0E."
-        ]
-      },
-      "source": "https://www.psdevwiki.com/ps5/Error_Codes",
-      "checked": "2026-11-13",
-      "level": "community"
-    },
-    {
       "id": "NP-103539-1",
       "title": { "de": "Keine Verbindung zum Server", "en": "Unable to connect to the server" },
       "text": {
@@ -3713,41 +3673,6 @@
       "source_sha256": "1ad39b00e89c2eb11c05be40bfc2912899ddd76abb2d55c1bf0b208ea577ee3a",
       "checked": "2026-11-13",
       "level": "doc"
-    },
-    {
-      "id": "NW-102468-2",
-      "title": { "de": "Netzwerktest (STUN) abgelaufen", "en": "Network test (STUN) timed out" },
-      "text": {
-        "de": "Zu diesem Code gibt es keine Sony-Seite; die Angabe stammt aus dem PS5 Dev Wiki (Community). Laut PS5 Dev Wiki gibt es ein Problem beim Verbinden der Konsole mit dem Netzwerk (Zeitüberschreitung bei STUN). Genannt werden Neustart, besserer Empfang, Router neu starten, LAN-Kabel und das Entfernen mehrerer NAT-Router.",
-        "en": "There is no Sony page for this code; the information comes from the PS5 Dev Wiki (community). According to the PS5 Dev Wiki there is a problem connecting the console to the network (STUN timeout). Named are a restart, better reception, restarting the router, a LAN cable and removing multiple NAT routers."
-      },
-      "steps": {
-        "de": [
-          "Die Konsole neu starten.",
-          "Bei WLAN die Konsole näher an den Router stellen oder Dinge entfernen, die die Verbindung zwischen den Geräten stören.",
-          "Router und Modem ausschalten, mindestens fünf Minuten warten und wieder einschalten.",
-          "Die Konsole neu starten, wenn möglich per LAN-Kabel mit dem Internet verbinden und die Netzwerkeinstellungen neu einrichten.",
-          "Hängen mehrere NAT-Router hintereinander, die überzähligen entfernen."
-        ],
-        "en": [
-          "Restart the console.",
-          "On Wi-Fi, move the console closer to the router or remove anything that interferes with the connection between the devices.",
-          "Turn off the router and the modem, wait at least five minutes and turn them on again.",
-          "Restart the console, connect to the internet with a LAN cable if possible and set up the network settings again.",
-          "If several NAT routers are chained, remove the extra ones."
-        ]
-      },
-      "notes": {
-        "de": [
-          "Interner Name laut PS5 Dev Wiki: SCE_NET_STUN_ERROR_TIMEOUT, Rückgabecode 0x80412403."
-        ],
-        "en": [
-          "Internal name according to the PS5 Dev Wiki: SCE_NET_STUN_ERROR_TIMEOUT, return code 0x80412403."
-        ]
-      },
-      "source": "https://www.psdevwiki.com/ps5/Error_Codes",
-      "checked": "2026-11-13",
-      "level": "community"
     },
     {
       "id": "NW-102633-5",
@@ -4656,35 +4581,6 @@
       "source_sha256": "00f9ceb4d12943aa581249ca65157b79ca50ca90dee6ff9897ba7c53d780e376",
       "checked": "2026-11-13",
       "level": "doc"
-    },
-    {
-      "id": "WS-116518-5",
-      "title": { "de": "Interner Fehler (HTTP 500)", "en": "Internal error (HTTP 500)" },
-      "text": {
-        "de": "Zu diesem Code gibt es keine Sony-Seite; die Angabe stammt aus dem PS5 Dev Wiki (Community). Laut PS5 Dev Wiki ist ein interner Fehler (HTTP 500) aufgetreten. Genannt wird ein Neustart der Konsole; bleibt der Fehler, hilft der PlayStation-Support.",
-        "en": "There is no Sony page for this code; the information comes from the PS5 Dev Wiki (community). According to the PS5 Dev Wiki an internal error (HTTP 500) occurred. A restart of the console is named; if the error persists, PlayStation support can help."
-      },
-      "steps": {
-        "de": [
-          "Die Konsole neu starten.",
-          "Bleibt das Problem, den PlayStation-Support kontaktieren."
-        ],
-        "en": [
-          "Restart the console.",
-          "If the problem persists, contact PlayStation Support."
-        ]
-      },
-      "notes": {
-        "de": [
-          "Interner Name laut PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_HTTP_STATUS_CODE_500_INTERNAL_SERVER_ERROR, Rückgabecode 0x82F001F4."
-        ],
-        "en": [
-          "Internal name according to the PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_HTTP_STATUS_CODE_500_INTERNAL_SERVER_ERROR, return code 0x82F001F4."
-        ]
-      },
-      "source": "https://www.psdevwiki.com/ps5/Error_Codes",
-      "checked": "2026-11-13",
-      "level": "community"
     },
     {
       "id": "WS-116520-5",

@@ -95,7 +95,7 @@
     "Se l'errore compare all'avvio di un gioco o di un'app, eliminarlo e reinstallarlo."
    ],
    "notes": [
-    "Nome interno secondo il PS5 Dev Wiki: SCE_KERNEL_ERROR_EINVA, codice di ritorno 0x80020016."
+    "Nome interno secondo il PS5 Dev Wiki: SCE_KERNEL_ERROR_EINVAL, codice di ritorno 0x80020016."
    ]
   },
   "CE-100028-1": {
@@ -474,7 +474,7 @@
   },
   "CE-108877-1": {
    "title": "Server sovraccarico o in manutenzione",
-   "text": "Il problema potrebbe essere lato server. Sony consiglia di controllare la pagina di stato, riavviare il router e riprovare più tardi.",
+   "text": "Il problema potrebbe essere lato server. Sony consiglia di controllare la pagina di stato e di riprovare dopo alcune ore.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Potrebbe essere un problema temporaneo: riprovare dopo alcune ore."
@@ -550,9 +550,6 @@
    "text": "Il dispositivo audio Bluetooth che prova a collegarsi non è compatibile con la PS5. Sony indica di usare un altro dispositivo audio.",
    "steps": [
     "Provare un altro dispositivo audio: il dispositivo Bluetooth non è compatibile con la PS5."
-   ],
-   "notes": [
-    "Nome interno secondo il PS5 Dev Wiki: SCE_SETTINGS_NETWORK_ERROR_CONN_TEST_IPV6_ONLY_NETWORK, codice di ritorno 0x80EC020E."
    ]
   },
   "CE-109573-5": {
@@ -618,8 +615,8 @@
    ]
   },
   "CE-110552-4": {
-   "title": "Impossibile leggere il disco",
-   "text": "Non è stato possibile leggere il disco. Sony indica un riavvio, la pulizia del disco e la prova di un altro disco supportato; con un disco non supportato aiuta solo un altro disco.",
+   "title": "Disco non leggibile (non supportato)",
+   "text": "La console potrebbe non supportare il disco, ad esempio per un diverso codice regionale. Sony indica di provare altri dischi e di pulire il disco.",
    "steps": [
     "Provare un altro disco supportato per vedere se la console legge altri dischi.",
     "Controllare che il disco non abbia impronte, macchie o graffi e pulirlo con un panno morbido e pulito dal centro verso il bordo.",
@@ -681,7 +678,7 @@
   },
   "CE-112840-6": {
    "title": "Problema di connessione al server",
-   "text": "Il problema potrebbe essere lato server. Sony consiglia di controllare la pagina di stato, riavviare il router e riprovare più tardi.",
+   "text": "Il problema potrebbe essere lato server. Sony consiglia di controllare la pagina di stato e di riprovare dopo alcune ore.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Potrebbe essere un problema temporaneo: riprovare dopo alcune ore."
@@ -1141,18 +1138,6 @@
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_MATCHING2_ERROR_TIMEDOUT, codice di ritorno 0x80550C36."
    ]
   },
-  "NP-103191-2": {
-   "title": "Connessione online dell'applicazione non riuscita",
-   "text": "Per questo codice non esiste una pagina Sony; l'informazione proviene dal PS5 Dev Wiki (community). Secondo il PS5 Dev Wiki la connessione di rete dell'applicazione non è riuscita. Vengono indicati la chiusura e il riavvio dell'applicazione, il riavvio della console e il riavvio del router.",
-   "steps": [
-    "Chiudere l'applicazione e riavviarla.",
-    "Riavviare la console.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli."
-   ],
-   "notes": [
-    "Nome interno secondo il PS5 Dev Wiki: SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_CONTEXT, codice di ritorno 0x80550D0E."
-   ]
-  },
   "NP-103539-1": {
    "title": "Impossibile connettersi al server",
    "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
@@ -1371,20 +1356,6 @@
    "notes": [
     "Nota di Medic: se la console usa un filtro DNS come nanoDNS che blocca gli indirizzi Sony, questo errore è prevedibile, soprattutto per le applicazioni di sistema come il browser o lo store. Non è un'affermazione di Sony e la sola cronologia degli errori non lo conferma. Il passaggio di Sony di inserire temporaneamente un server DNS pubblico qui non è elencato: aggirerebbe un tale filtro DNS.",
     "Nome interno secondo il PS5 Dev Wiki: SCE_NET_CTL_ERROR_DISCONNECT_REQ, codice di ritorno 0x8041210E."
-   ]
-  },
-  "NW-102468-2": {
-   "title": "Test di rete (STUN) scaduto",
-   "text": "Per questo codice non esiste una pagina Sony; l'informazione proviene dal PS5 Dev Wiki (community). Secondo il PS5 Dev Wiki c'è un problema nel collegare la console alla rete (timeout STUN). Vengono indicati il riavvio, una migliore ricezione, il riavvio del router, un cavo LAN e la rimozione di più router NAT.",
-   "steps": [
-    "Riavviare la console.",
-    "Con il Wi-Fi, avvicinare la console al router o rimuovere ciò che disturba la connessione tra i dispositivi.",
-    "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
-    "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
-    "Se più router NAT sono collegati in sequenza, rimuovere quelli in più."
-   ],
-   "notes": [
-    "Nome interno secondo il PS5 Dev Wiki: SCE_NET_STUN_ERROR_TIMEOUT, codice di ritorno 0x80412403."
    ]
   },
   "NW-102633-5": {
@@ -1721,17 +1692,6 @@
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_HTTP_STATUS_CODE_406_NOT_ACCEPTABLE, codice di ritorno 0x82F00196."
-   ]
-  },
-  "WS-116518-5": {
-   "title": "Errore interno (HTTP 500)",
-   "text": "Per questo codice non esiste una pagina Sony; l'informazione proviene dal PS5 Dev Wiki (community). Secondo il PS5 Dev Wiki si è verificato un errore interno (HTTP 500). Viene indicato il riavvio della console; se l'errore persiste, può aiutare l'assistenza PlayStation.",
-   "steps": [
-    "Riavviare la console.",
-    "Se il problema persiste, contattare l'assistenza PlayStation."
-   ],
-   "notes": [
-    "Nome interno secondo il PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_HTTP_STATUS_CODE_500_INTERNAL_SERVER_ERROR, codice di ritorno 0x82F001F4."
    ]
   },
   "WS-116520-5": {

@@ -20,6 +20,39 @@ std::string trim(const std::string& s) {
     return s.substr(a, b - a);
 }
 
+// Wert hinter dem '=' wie ShadowMount+ (und wie libmedic/src/collectors.cpp decode_ini_value): '#' und ';' leiten einen Kommentar ein; in v2 (Sektion
+// [config]) kann der Wert in Anfuehrungszeichen stehen, dann zaehlen sie nicht, und ein Backslash maskiert das folgende Zeichen.
+std::string decode_value(const std::string& raw, bool v2) {
+    std::string v = trim(raw);
+    if (v2 && !v.empty() && v[0] == '"') {
+        std::string out;
+        for (std::size_t i = 1; i < v.size(); ++i) {
+            if (v[i] == '\\' && i + 1 < v.size()) {
+                out += v[++i];
+                continue;
+            }
+            if (v[i] == '"') break;
+            out += v[i];
+        }
+        return out;
+    }
+    if (const auto c = v.find_first_of("#;"); c != std::string::npos) v.erase(c);
+    return trim(v);
+}
+
+// Umkehrung: ein Wert mit '#', ';', Anfuehrungszeichen, Backslash oder Leerraum am Rand wird in v2 in Anfuehrungszeichen geschrieben (v1 kennt das nicht).
+std::string encode_value(const std::string& v, bool v2) {
+    if (!v2 || v.empty()) return v;
+    const bool plain = v.find_first_of("#;\"\\") == std::string::npos && !std::isspace(static_cast<unsigned char>(v.front())) && !std::isspace(static_cast<unsigned char>(v.back()));
+    if (plain) return v;
+    std::string out = "\"";
+    for (char c : v) {
+        if (c == '"' || c == '\\') out += '\\';
+        out += c;
+    }
+    return out + "\"";
+}
+
 struct Line {
     std::string text;
     std::string section;  // Sektion, in der die Zeile steht ("" vor der ersten Sektion)
@@ -135,7 +168,14 @@ bool insert_position(const Doc& d, const Target& tg, std::size_t& pos) {
     return false;
 }
 
-void insert_line(Doc& d, const Target& tg, const std::string& raw_key, const std::string& value) {
+bool is_v2(const Doc& d) {
+    for (const Line& l : d.lines)
+        if (l.is_header && l.section == "config") return true;
+    return false;
+}
+
+void insert_line(Doc& d, const Target& tg, const std::string& raw_key, const std::string& raw_value) {
+    const std::string value = encode_value(raw_value, is_v2(d));
     std::size_t pos = 0;
     Line nl;
     nl.is_pair = true;
@@ -168,9 +208,10 @@ std::string ini_set_value(const std::string& text, const IniTarget& t, const std
     for (std::size_t i = d.lines.size(); i-- > 0;) {
         Line& l = d.lines[i];
         if (l.is_pair && l.section == tg.section && l.key == tg.key) {
-            if (l.value == value) return text;  // schon gesetzt
-            l.text = l.raw_key + "=" + value;
-            l.value = value;
+            const bool v2 = is_v2(d);
+            if (decode_value(l.value, v2) == value) return text;  // schon gesetzt
+            l.value = encode_value(value, v2);
+            l.text = l.raw_key + "=" + l.value;
             return render(d);
         }
     }
@@ -182,7 +223,7 @@ std::string ini_add_value(const std::string& text, const IniTarget& t, const std
     Doc d = parse(text);
     Target tg = resolve(d, t);
     for (const Line& l : d.lines)
-        if (l.is_pair && l.section == tg.section && l.key == tg.key && l.value == value) return text;
+        if (l.is_pair && l.section == tg.section && l.key == tg.key && decode_value(l.value, is_v2(d)) == value) return text;
     insert_line(d, tg, tg.section.empty() ? (lower(t.legacy_key) == tg.key ? t.legacy_key : t.key) : t.key, value);
     return render(d);
 }

@@ -254,6 +254,10 @@ public:
             result_.measurements.push_back({"bytes_read", static_cast<double>(got_), "B"});
             result_.measurements.push_back({"seconds", secs, "s"});
             if (st == TestStatus::Passed && got_ >= (8u << 20)) result_.measurements.push_back({"mb_per_s", static_cast<double>(got_) / 1e6 / secs, "MB/s"});  // erst ab 8 MiB aussagekraeftig
+            if (st == TestStatus::Passed && reason == "time_limit" && got_ < (8u << 20)) {  // in der Zeit kaum etwas gelesen: kein glattes "bestanden"
+                st = TestStatus::Warn;
+                reason = "slow_read";
+            }
             finish(st, reason);
         }
         return done_;
@@ -398,6 +402,11 @@ public:
         if (t >= 0) {
             temps_.push_back(t);
             peak_ = std::max(peak_, t);
+            sensor_miss_ = 0;
+        } else if (burning_ && ++sensor_miss_ >= 3) {  // ohne Messwert gibt es keinen Schutz vor Ueberhitzung: unter Last nicht weiterlaufen
+            stop_burners();
+            conclude(TestStatus::Cancelled, "sensor_lost");
+            return true;
         }
         if (burning_) {
             std::uint64_t total = 0;
@@ -511,6 +520,7 @@ private:
     Burners burners_;
     BurnArg args_[Burners::kMax];
     std::vector<int> temps_;
+    int sensor_miss_ = 0;  // aufeinanderfolgende Intervalle ohne Temperaturwert
     std::vector<double> rates_;
     std::uint64_t last_total_ = 0;
     double last_sample_ = 0;
@@ -669,19 +679,25 @@ public:
         std::string text;
         if (p.fs().read_file(kSelftestBudgetPath, text)) {
             const json b = json::parse(text, nullptr, false);
-            if (b.is_object()) {
-                if (b.value("last_date", std::string()) == today_) {
-                    finish(TestStatus::Skipped, "done_today");
-                    return;
-                }
-                budget_total_ = b.value("total_bytes", std::uint64_t{0});
-                budget_runs_ = b.value("runs", 0);
-                prior_date_ = b.value("last_date", std::string());
-                if (budget_total_ + 2 * size_ > kWriteBudgetBytes) {
-                    finish(TestStatus::Skipped, "budget_used");
-                    return;
-                }
+            if (!b.is_object()) {  // ungueltig: nicht stillschweigend ohne Tages- und Gesamtgrenze weiterschreiben
+                finish(TestStatus::Skipped, "budget_unreadable");
+                return;
             }
+            const std::string last = b.contains("last_date") && b["last_date"].is_string() ? b["last_date"].get<std::string>() : std::string();
+            if (last == today_) {
+                finish(TestStatus::Skipped, "done_today");
+                return;
+            }
+            budget_total_ = b.contains("total_bytes") && b["total_bytes"].is_number_unsigned() ? b["total_bytes"].get<std::uint64_t>() : 0;
+            budget_runs_ = b.contains("runs") && b["runs"].is_number_integer() ? b["runs"].get<int>() : 0;
+            prior_date_ = last;
+            if (budget_total_ + 2 * size_ > kWriteBudgetBytes) {
+                finish(TestStatus::Skipped, "budget_used");
+                return;
+            }
+        } else if (p.fs().exists(kSelftestBudgetPath)) {  // vorhanden, aber nicht lesbar
+            finish(TestStatus::Skipped, "budget_unreadable");
+            return;
         }
         // Tagesmarke VOR dem ersten Schreiben setzen: laesst sich das Budget nicht schreiben, laeuft der Test gar nicht (sonst waere die
         // Tagesgrenze wirkungslos), und bricht die Konsole mitten im Test ab, laeuft er am selben Tag nicht noch einmal.
@@ -696,6 +712,10 @@ public:
         if (done_) return true;
         if (aborted_) {
             finalize(TestStatus::Cancelled, abort_reason_);
+            return true;
+        }
+        if (seconds_since(t0_) > kWriteTestMaxSeconds) {  // haengendes Laufwerk: nicht ohne Grenze weiterschreiben und lesen
+            finalize(TestStatus::Cancelled, "time_limit");
             return true;
         }
         IFileSystemRW* rw = p_.fs_rw();

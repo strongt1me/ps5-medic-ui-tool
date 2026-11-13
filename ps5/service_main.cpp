@@ -147,6 +147,15 @@ int listen_local() {
         trace("Port belegt: bitte die aeltere Instanz zu enden");
         if (const int old = proto::connect_local(proto::kPort, 2); old >= 0) {
             proto::send_message(old, proto::kShutdown, nullptr, 0);
+            // Offen lassen, bis die aeltere Instanz sie schliesst: sie laedt zuerst Daten, schickt ein Hallo (das bei geschlossener Gegenseite scheitert)
+            // und liest erst dann das 'X'. Hoechstens drei Sekunden.
+            pollfd pfd{old, POLLIN, 0};
+            for (int waited = 0; waited < 30; ++waited) {
+                if (poll(&pfd, 1, 100) > 0) {
+                    char drop[64];
+                    if (recv(old, drop, sizeof drop, MSG_DONTWAIT) <= 0) break;  // geschlossen oder Fehler
+                }
+            }
             close(old);
         }
         sleep(1);
@@ -318,6 +327,7 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
 int main() {
     std::error_code ec;
     std::filesystem::create_directories("/data/ps5medic", ec);
+    std::rename(kLogPath, "/data/ps5medic/service.log.1");  // das Protokoll des vorigen Laufs bleibt eine Runde erhalten
     g_log = std::fopen(kLogPath, "w");
     signal(SIGPIPE, SIG_IGN);
     trace("PS5 Medic Dienst startet");
@@ -335,7 +345,10 @@ int main() {
         const int r = poll(&pfd, 1, 1000);
         if (r > 0 && (pfd.revents & POLLIN)) {
             const int client = accept(ls, nullptr, nullptr);
-            if (client < 0) continue;
+            if (client < 0) {
+                usleep(100000);  // dauerhafter Fehler (EMFILE): nicht mit voller Rechenzeit weiterdrehen
+                continue;
+            }
             trace("App verbunden");
             const bool finished = serve(client, *platform, http);
             close(client);

@@ -117,9 +117,7 @@ std::string redact_secrets(const std::string& text) {
         const std::size_t nl = text.find('\n', pos);
         std::string line = text.substr(pos, nl == std::string::npos ? std::string::npos : nl - pos);
         const std::size_t eq = line.find('=');
-        const std::size_t first = line.find_first_not_of(" \t");
-        const bool comment = first != std::string::npos && (line[first] == '#' || line[first] == ';');
-        if (eq != std::string::npos && !comment) {
+        if (eq != std::string::npos) {  // auch Kommentarzeilen ("# password = altes"): ein auskommentiertes Passwort ist oft ein echtes
             const std::string key = lower_str(line.substr(0, eq));
             for (const char* secret : {"password", "passwd", "secret", "token", "pass", "pwd", "username", "login", "credential", "auth", "account", "serial", "email", "psnid"})
                 if (key.find(secret) != std::string::npos) {
@@ -433,7 +431,7 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
     if (const auto* l = facts.get("klog.lines"); l && l->is_array()) {  // der gefilterte Kernel-Log (nur die Zeilen der Fakten), damit der Kern am PC gegen Fixtures prueft
         std::ofstream k(dest / "klog.txt", std::ios::binary);
         for (const auto& line : *l)
-            if (line.is_string()) k << line.get<std::string>() << "\n";
+            if (line.is_string()) k << mask_addresses(line.get<std::string>()) << "\n";
     }
     {
         std::ofstream a(dest / "system.json", std::ios::binary), b(dest / "procs.json", std::ios::binary);

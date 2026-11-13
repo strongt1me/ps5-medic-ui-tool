@@ -421,7 +421,13 @@ std::string App::annotate_titles(const std::string& text) const {
         const std::string id = text.substr(i, 9);
         out += id;
         i += 9;
-        if (text.compare(i, 2, " (") == 0) continue;  // schon beschriftet
+        if (text.compare(i, 2, " (") == 0) {  // schon beschriftet, ausser es folgt nur eine Versionsangabe wie "(13.60)" (Liste need_backport)
+            std::size_t k = i + 2;
+            bool version = k < n && digit(text[k]);
+            for (; version && k < n && text[k] != ')'; ++k)
+                if (!digit(text[k]) && text[k] != '.') version = false;
+            if (!version) continue;
+        }
         const auto it = title_names_.find(id);
         if (it != title_names_.end()) out += " (" + it->second + ")";
         else if (id.compare(0, 4, "NPXS") == 0) out += " (" + S("title.system_app") + ")";
@@ -516,6 +522,7 @@ void App::open_stored(int index) {
     medic::StoredCheck sc;
     chk_unreadable_ = !svc_.load_check(chk_[static_cast<std::size_t>(index)].id, sc);
     if (chk_unreadable_) return;
+    detail_from_game_ = false;  // ein Detail aus dem Verlauf kehrt zur Befundliste zurueck, nicht zu einem Spiel des aktuellen Laufs
     if (!viewing_old_) {
         live_result_ = result_;
         live_has_ = has_result_;
@@ -538,6 +545,7 @@ void App::open_stored(int index) {
 }
 
 void App::leave_stored() {
+    detail_from_game_ = false;
     if (viewing_old_) {
         result_ = live_result_;
         has_result_ = live_has_;
@@ -631,6 +639,9 @@ void App::handle_error_input(Button b) {
     } else if (b == Button::L1 || b == Button::R1) {
         err_group_ = (err_group_ + (b == Button::R1 ? 1 : kErrGroupCount - 1)) % kErrGroupCount;
         if (static_cast<int>(err_typed_.size()) > error_input_max()) err_typed_.resize(static_cast<std::size_t>(error_input_max()));
+        for (std::size_t i = 0; i < err_typed_.size();)  // Hex-Buchstaben passen nicht in die dezimalen Gruppen
+            if (std::string(error_alphabet()).find(err_typed_[i]) == std::string::npos) err_typed_.erase(i, 1);
+            else ++i;
         err_digit_ = std::min(err_digit_, static_cast<int>(std::string(error_alphabet()).size()) - 1);
         error_input_apply();
     } else if (b == Button::Triangle) {
@@ -758,6 +769,7 @@ void App::begin_fix(int index, Screen origin) {
         previews_[i].diff_ok = medic::diff_lines(svc_.read_text(ch.path), ch.content, all);
         for (auto& d : all)
             if (d.tag != ' ') previews_[i].changed.push_back(d);
+        if (!previews_[i].diff_ok) previews_[i].changed.push_back({'!', Strings::get(lang_)("preview.too_big")});  // sonst stuende dort nichts und die Datei wuerde trotzdem geschrieben
     }
     fix_origin_ = origin;
     screen_ = Screen::FixPreview;
@@ -945,6 +957,7 @@ void App::handle(Button b) {
                 int i = 0;
                 while (i < n && kAllLangs[i] != lang_) ++i;
                 lang_ = kAllLangs[(i + (b == Button::Left ? n - 1 : 1)) % n];
+                refresh_game_names();  // "Betrifft: ..." und Namen in der neuen Sprache
                 (void)svc_.set_language(lang_code(lang_));  // scheitert das Speichern, gilt die Sprache nur fuer diese Sitzung
             }
             else if (settings_sel_ == 1 && b == Button::Cross) open_rules_update();
@@ -2321,7 +2334,7 @@ void App::draw_compare(Canvas& c) const {
         }
         y += 50;
     }
-    if (cmp_diff_.added.empty() && cmp_diff_.resolved.empty()) small().draw(c, M + 36, 870, S("compare.same"), kDim);
+    if (cmp_diff_.added.empty() && cmp_diff_.resolved.empty() && total < kCmpVisible) small().draw(c, M + 36, y + 10, S("compare.same"), kDim);
     small().draw(c, M + 8, H - 138, S("compare.note"), kDim);
     if (total > kCmpVisible) {
         const int track_h = 676, thumb_h = std::max(40, track_h * kCmpVisible / total);
@@ -2379,7 +2392,7 @@ void App::draw_rules_update(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     title_icon(c, Icon::Download, kTintTeal, S("update.title"));
     const int pad = 40, pw = W - 2 * M, tw = pw - 2 * pad;
-    c.fill_round_rect(M, 230, pw, 500, 20, kPanel);
+    c.fill_round_rect(M, 230, pw, 590, 20, kPanel);
     int y = 262;
     auto paragraph = [&](const Font& f, const std::string& text, Color col, int max_lines) {
         for (const auto& l : wrap_text(f, text, tw, max_lines)) {
@@ -2556,11 +2569,10 @@ void App::draw_error_codes(Canvas& c) const {
 // Eingabefeld unter der Liste: Gruppe, dann die Ziffern (eingegebene gefuellt, die gerade gewaehlte mit Rahmen) und der Treffer.
 void App::draw_error_input(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    const int cw = W - 2 * M, py = H - 214, ph = 112;
+    const int cw = W - 2 * M, py = H - 194, ph = 76;
     c.fill_round_rect(M, py, cw, ph, 20, kPanel);
     c.stroke_round_rect(M, py, cw, ph, 20, 2, kAccent);
-    small().draw(c, M + 28, py + 12, S("errors.search.title"), kDim);
-    const int fy = py + 46, fh = 52;
+    const int fy = py + 12, fh = 52;
     const std::string g = err_group_ == 0 ? S("errors.search.group.all") : std::string(kErrGroups[err_group_]);
     int x = M + 28;
     c.fill_round_rect(x, fy, 120, fh, 12, kPanelHi);
@@ -2597,12 +2609,10 @@ void App::draw_error_detail(Canvas& c) const {
     const std::string level = S("errors.level." + e->level);
     const int bw = small().width(level) + 24;
     draw_badge(c, W - M - bw, 138, level, level_color(*e));
-    {
-        std::string pos = err_from_finding_ ? std::string() : S.fmt("errors.position", {{"i", std::to_string(err_sel_ + 1)}, {"n", std::to_string(n)}});
-        if (reported_error_ == e->id) pos += (pos.empty() ? "" : " · ") + S("errors.in_report");
-        text_right(c, small(), W - M, 204, pos, reported_error_ == e->id ? kOk : kDim);
-    }
-    body().draw(c, M + 80, 196, elide(body(), pick_text(lang_, e->title_de, e->title_en, "error_codes", e->id, "title"), cw - 300), kDim);
+    std::string pos = err_from_finding_ ? std::string() : S.fmt("errors.position", {{"i", std::to_string(err_sel_ + 1)}, {"n", std::to_string(n)}});
+    if (reported_error_ == e->id) pos += (pos.empty() ? "" : " · ") + S("errors.in_report");
+    const int pos_w = text_right(c, small(), W - M, 204, pos, reported_error_ == e->id ? kOk : kDim);
+    body().draw(c, M + 80, 196, elide(body(), pick_text(lang_, e->title_de, e->title_en, "error_codes", e->id, "title"), std::min(cw - 300, cw - 80 - pos_w - 32)), kDim);
 
     // Text: Zeilen ab err_scroll_, soweit sie in das Panel passen
     c.fill_round_rect(M, kErrPanelY, cw, kErrPanelH, 20, kPanel);

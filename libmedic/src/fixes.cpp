@@ -259,7 +259,7 @@ void plan_autoload_delay(FixPlan& plan, const Facts& facts, const IFileSystem& f
                 if (const auto c = l.find('#'); c != std::string::npos) l.erase(c);
             while (!l.empty() && std::isspace(static_cast<unsigned char>(l.back()))) l.pop_back();
             while (!l.empty() && std::isspace(static_cast<unsigned char>(l.front()))) l.erase(l.begin());
-            if (l.empty() || l[0] == '@') {
+            if (l.empty() || (comments && l[0] == '@')) {  // '@sync' kennt nur der WebKit-Autoloader
                 out += raw;
                 continue;
             }

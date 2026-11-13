@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <cstdio>
 #include <fstream>
 #include <sstream>
 
@@ -47,12 +48,16 @@ bool slurp(const fs::path& p, std::string& out) {
     // Obergrenze gegen Speichermangel bei riesigen Dateien (Logs lesen Aufrufer mit read_range, wenn sie nur das Ende brauchen)
     const std::uintmax_t size = fs::file_size(p, ec);
     if (ec || size > (256u << 20)) return false;
-    std::ifstream in(p, std::ios::binary);
-    if (!in) return false;
-    std::ostringstream ss;
-    ss << in.rdbuf();  // eine leere Datei setzt hier das failbit des Zielstroms: kein Fehler
-    if (in.bad()) return false;  // Lesefehler mitten in der Datei: nicht als Teilstueck "erfolgreich" melden
-    out = ss.str();
+    // fread und ferror statt "ss << in.rdbuf()": bei einem Lesefehler (EIO) setzt der Dateistrom dort kein badbit, und eine unlesbare Datei galt als leer.
+    std::FILE* f = std::fopen(p.string().c_str(), "rb");
+    if (!f) return false;
+    std::string buf;
+    char chunk[1 << 16];
+    for (std::size_t n; (n = std::fread(chunk, 1, sizeof chunk, f)) > 0;) buf.append(chunk, n);
+    const bool failed = std::ferror(f) != 0;
+    std::fclose(f);
+    if (failed) return false;  // Lesefehler: nicht als Teilstueck "erfolgreich" melden
+    out = std::move(buf);
     return true;
 }
 

@@ -2,6 +2,7 @@
 #include "medic/games.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <map>
 #include <regex>
 
@@ -159,6 +160,13 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
     if (const json* names = facts.get("titles.names"); names && names->is_object())
         for (auto& [id, g] : games)
             if (g.name.empty() && names->contains(id) && (*names)[id].is_string()) g.name = (*names)[id].get<std::string>();
+
+    // ™ und ® stehen nicht in der eingebauten Schrift (es erschiene ein "?"): aus den Namen entfernen
+    for (auto& [id, g] : games)
+        for (const char* mark : {"\xE2\x84\xA2", "\xC2\xAE"})
+            for (std::size_t p; (p = g.name.find(mark)) != std::string::npos;) g.name.erase(p, std::strlen(mark));
+    for (auto& [id, g] : games)
+        while (!g.name.empty() && g.name.back() == ' ') g.name.pop_back();
 
     std::vector<GameInfo> out;
     out.reserve(games.size());

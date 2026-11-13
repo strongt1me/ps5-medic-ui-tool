@@ -7,6 +7,7 @@
 #include "ps5_platform.hpp"
 
 #include "medic/error_codes.hpp"
+#include "medic/newest.hpp"
 #include "medic/rules.hpp"
 #include "medic_ui/app.hpp"
 #include "medic_ui/pad_nav.hpp"
@@ -137,34 +138,32 @@ std::optional<Button> map_button(Uint8 sdl_button) {
 }
 
 medic::RuleSet load_rules() {
-    for (const char* path : kRulesCandidates) {
-        if (!std::filesystem::exists(path)) continue;
-        try {
-            auto rules = medic::load_rules_from_file(path);
-            trace("Regeln: " + rules.db_version + " (" + std::to_string(rules.rules.size()) + ") aus " + path);
-            return rules;
-        } catch (const std::exception& e) {
-            trace(std::string("Regeldatei ungueltig (") + path + "): " + e.what());
-        }
+    std::string chosen;
+    std::vector<std::string> errors;
+    auto rules = medic::load_newest<medic::RuleSet>({std::begin(kRulesCandidates), std::end(kRulesCandidates)},
+                                                    [](const std::string& p) { return medic::load_rules_from_file(p); }, &chosen, &errors);
+    for (const auto& e : errors) trace("Regeldatei ungueltig (" + e + ")");
+    if (chosen.empty()) {
+        trace("Keine Regeldatei gefunden -- Check-up findet keine Befunde.");
+        return {};
     }
-    trace("Keine Regeldatei gefunden -- Check-up findet keine Befunde.");
-    return {};
+    trace("Regeln: " + rules.db_version + " (" + std::to_string(rules.rules.size()) + ") aus " + chosen);
+    return rules;
 }
 
 // Fehlercode-Nachschlagewerk (nur Text zum Lesen). Fehlt die Datei, zeigt der Bildschirm einen Hinweis; der Rest laeuft normal.
 medic::ErrorCodeSet load_error_codes() {
-    for (const char* path : kErrorCodesCandidates) {
-        if (!std::filesystem::exists(path)) continue;
-        try {
-            auto codes = medic::load_error_codes_from_file(path);
-            trace("Fehlercodes: " + codes.db_version + " (" + std::to_string(codes.codes.size()) + ") aus " + path);
-            return codes;
-        } catch (const std::exception& e) {
-            trace(std::string("Fehlercode-Datei ungueltig (") + path + "): " + e.what());
-        }
+    std::string chosen;
+    std::vector<std::string> errors;
+    auto codes = medic::load_newest<medic::ErrorCodeSet>({std::begin(kErrorCodesCandidates), std::end(kErrorCodesCandidates)},
+                                                         [](const std::string& p) { return medic::load_error_codes_from_file(p); }, &chosen, &errors);
+    for (const auto& e : errors) trace("Fehlercode-Datei ungueltig (" + e + ")");
+    if (chosen.empty()) {
+        trace("Keine Fehlercode-Datei gefunden -- der Bildschirm Fehlercodes bleibt leer.");
+        return {};
     }
-    trace("Keine Fehlercode-Datei gefunden -- der Bildschirm Fehlercodes bleibt leer.");
-    return {};
+    trace("Fehlercodes: " + codes.db_version + " (" + std::to_string(codes.codes.size()) + ") aus " + chosen);
+    return codes;
 }
 
 extern "C" {

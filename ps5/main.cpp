@@ -9,6 +9,7 @@
 #include "ps5_platform.hpp"
 
 #include "medic/collectors.hpp"
+#include "medic/newest.hpp"
 #include "medic/rules.hpp"
 #include "medic/selftest.hpp"
 #include "medic/snapshot_export.hpp"
@@ -77,20 +78,15 @@ int main() {
         out(line);
     }
 
-    // Regeln laden
+    // Regeln laden (die Datei mit der hoeheren db_version, libmedic/newest.hpp)
     medic::RuleSet rules;
-    bool have_rules = false;
-    for (const char* path : kRulesCandidates) {
-        if (!std::filesystem::exists(path)) continue;
-        try {
-            rules = medic::load_rules_from_file(path);
-            have_rules = true;
-            out(std::string("Regeln: ") + rules.db_version + " (" + std::to_string(rules.rules.size()) + ") aus " + path);
-        } catch (const std::exception& e) {
-            out(std::string("Regeldatei ungueltig (") + path + "): " + e.what());
-        }
-        break;
-    }
+    std::string rules_path;
+    std::vector<std::string> rules_errors;
+    rules = medic::load_newest<medic::RuleSet>({std::begin(kRulesCandidates), std::end(kRulesCandidates)},
+                                               [](const std::string& p) { return medic::load_rules_from_file(p); }, &rules_path, &rules_errors);
+    for (const auto& e : rules_errors) out("Regeldatei ungueltig (" + e + ")");
+    const bool have_rules = !rules_path.empty();
+    if (have_rules) out(std::string("Regeln: ") + rules.db_version + " (" + std::to_string(rules.rules.size()) + ") aus " + rules_path);
     if (!have_rules) out("Keine Regeldatei gefunden (erwartet: /data/ps5medic/knowledge/rules.json) -- nur Snapshot-Export.");
 
     if (have_rules) {

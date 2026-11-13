@@ -38,7 +38,7 @@
   <tr>
     <td valign="top">
       <h3>🛠 Riparare con annullamento</h3>
-      Sette correzioni reversibili (rinominare l'immagine, impostare la chiave di ShadowMount+, trasferire le righe v1 nelle sezioni v2, togliere BackPork dall'autoload, spostare i duplicati, tempo di attesa dell'autoload, nome di file con grafia errata) e una guida per le immagini annidate. L'anteprima mostra esattamente cosa cambia; non succede nulla senza ✕. Ogni modifica è registrata nel journal e può essere annullata. <b>Mai eliminare</b>, solo spostare o rinominare.
+      Undici correzioni reversibili (rinominare l'immagine, impostare la chiave di ShadowMount+, trasferire le righe v1 nelle sezioni v2, togliere BackPork dall'autoload, spostare i duplicati, tempo di attesa dell'autoload, voci di autoload duplicate o mancanti, attivare l'autoload, mettere da parte un file ELF difettoso, nome di file con grafia errata) e una guida per le immagini annidate. L'anteprima mostra esattamente cosa cambia; non succede nulla senza ✕. Ogni modifica è registrata nel journal e può essere annullata. <b>Mai eliminare</b>, solo spostare o rinominare.
     </td>
     <td valign="top">
       <h3>🧪 Autotest</h3>
