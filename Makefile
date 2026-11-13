@@ -205,10 +205,11 @@ launch-ui: deploy-ui
 VERSION := $(shell sed -n 's/.*kMedicVersion = "\(.*\)";/\1/p' libmedic/include/medic/report.hpp)
 DIST_NAME := ps5-medic-$(VERSION)
 DIST_DIR := dist/$(DIST_NAME)
+DIST_ZIP := PS5-Medic-UI.zip  # Dateiname des Release-Zips (innen steht der Ordner $(DIST_NAME))
 
 dist: ps5 ps5-service native-ui ps5-launcher
 	@test -n "$(VERSION)" || { echo "Version nicht gefunden (kMedicVersion in libmedic/include/medic/report.hpp)"; exit 1; }
-	rm -rf $(DIST_DIR) dist/$(DIST_NAME).zip
+	rm -rf $(DIST_DIR) dist/$(DIST_ZIP) dist/ps5-medic-$(VERSION).zip
 	mkdir -p $(DIST_DIR)/PS5MEDIC/sce_sys
 	cp $(PS5_SERVICE_ELF) $(DIST_DIR)/PS5MEDIC/ps5medicservice.elf
 	cp $(PS5_ELF) $(DIST_DIR)/PS5MEDIC/ps5medic.elf
@@ -218,10 +219,10 @@ dist: ps5 ps5-service native-ui ps5-launcher
 	cp -r build-native/$(NATIVE_ID) $(DIST_DIR)/$(NATIVE_ID)
 	cp LICENSE README.md README.en.md THIRD_PARTY.md docs/TESTER.md $(DIST_DIR)/
 	cd $(DIST_DIR) && find . -type f ! -name SHA256SUMS.txt | sort | xargs sha256sum > SHA256SUMS.txt
-	cd dist && python3 -m zipfile -c $(DIST_NAME).zip $(DIST_NAME)
+	cd dist && python3 -m zipfile -c $(DIST_ZIP) $(DIST_NAME)
 	cp $(PS5_LAUNCHER_ELF) dist/ps5medic-launcher.elf
 	cd dist && sha256sum ps5medic-launcher.elf > ps5medic-launcher.elf.sha256
-	@echo "Fertig: dist/$(DIST_NAME).zip (Ordner PS5MEDIC und FAKE42007 nach /data/homebrew/ kopieren oder die separate Datei dist/ps5medic-launcher.elf an Port 9021 senden; die Kachel startet die native App, die den Dienst beim ersten Start selbst an den ELF-Lader sendet). Lizenz GPL-3.0-or-later; bei Weitergabe den Quelltext anbieten."
+	@echo "Fertig: dist/$(DIST_ZIP) (Ordner PS5MEDIC und FAKE42007 nach /data/homebrew/ kopieren oder die separate Datei dist/ps5medic-launcher.elf an Port 9021 senden; die Kachel startet die native App, die den Dienst beim ersten Start selbst an den ELF-Lader sendet). Lizenz GPL-3.0-or-later; bei Weitergabe den Quelltext anbieten."
 
 # Kachel unter "Medien": ein winziger Starter-Titel (title/), der den Launcher an den ELF-Lader sendet. Siehe docs/TITLE.md.
 title: $(TILE_DIR)/eboot.bin
