@@ -159,7 +159,8 @@
     "Controllare la pagina di stato di PlayStation (guasto o manutenzione).",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi avvicinarla al router), configurare di nuovo la rete.",
     "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli.",
-    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535."
+    "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535.",
+    "Inserisci manualmente un indirizzo IP statico; se non basta, imposta temporaneamente il DNS su un server DNS pubblico."
    ]
   },
   "CE-105841-9": {
@@ -187,7 +188,7 @@
   },
   "CE-106444-9": {
    "title": "Errore di connessione a PlayStation",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -312,7 +313,7 @@
   },
   "CE-107750-0": {
    "title": "Errore durante il gioco",
-   "text": "Si è verificato un errore durante il gioco. Sony indica una lunga catena: scollegare il cavo di alimentazione, aggiornare il gioco, reinstallare il gioco, ricostruire il database in modalità provvisoria e solo come ultimo passaggio ripristinare la console.",
+   "text": "Si è verificato un errore durante il gioco.",
    "steps": [
     "Spegnere la console, scollegare il cavo di alimentazione, attendere cinque minuti, ricollegarlo e riavviare.",
     "Verificare che il gioco sia all'ultima versione; se l'errore persiste, eliminare il gioco in «Settings > Storage» e reinstallarlo.",
@@ -320,7 +321,7 @@
     "Se nulla aiuta, ripristinare la console («Settings > System > System Software > Reset Options > Reset Your Console»). Cancella tutti i dati nella memoria della console: prima fare un backup, poi reinstallare il gioco."
    ],
    "notes": [
-    "Opzioni della modalità provvisoria secondo Sony: «Repair Console Storage» non cancella dati, «Restore Default Settings» non elimina giochi, app, screenshot, videoclip e dati salvati, «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati."
+    "Secondo Sony «Repair Console Storage» non cancella dati e «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati."
    ]
   },
   "CE-107857-8": {
@@ -434,7 +435,7 @@
   },
   "CE-108862-5": {
    "title": "Impossibile connettersi al server",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "Nessuna connessione a PlayStation. Il nome interno indica un blocco della console (non confermato da Sony).",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla a Internet con un cavo LAN e configurare di nuovo le impostazioni di rete.",
@@ -443,7 +444,6 @@
     "Potrebbe essere un problema temporaneo: riprovare dopo un po'."
    ],
    "notes": [
-    "Sulla sua pagina Sony indica solo un problema di connessione; il nome interno (vedi sotto) fa però pensare a un blocco della console.",
     "Nota di Medic: riguarda l'accesso dell'account o della console presso Sony e non può essere risolto con Medic.",
     "Nome interno secondo il PS5 Dev Wiki: SCE_PF_AUTH_CLIENT_ERROR_CONSOLE_BANNED, codice di ritorno 0x80DE0012."
    ]
@@ -481,7 +481,7 @@
   },
   "CE-109258-5": {
    "title": "Licenza non confermata: server non raggiungibile",
-   "text": "La connessione al server non è riuscita, quindi la licenza del contenuto non è stata confermata. Sony indica la pagina di stato, un riavvio, il riavvio del router e «Restore Licenses».",
+   "text": "La connessione al server non è riuscita, quindi la licenza del contenuto non è stata confermata.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console.",
@@ -507,7 +507,7 @@
   },
   "CE-109506-1": {
    "title": "Errore di connessione a PlayStation",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "La console ha problemi di connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "In Settings > Network > Connection Status > Test Internet Connection verificare che la console sia collegata correttamente a Internet e, se serve, configurare di nuovo le impostazioni di rete.",
@@ -691,7 +691,7 @@
   },
   "CE-113212-0": {
    "title": "Impossibile connettersi al server",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -726,7 +726,7 @@
   },
   "CE-113524-6": {
    "title": "Impossibile connettersi al server",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "La console ha problemi di connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "In Settings > Network > Connection Status > Test Internet Connection verificare che la console sia collegata correttamente a Internet e, se serve, configurare di nuovo le impostazioni di rete.",
@@ -1169,7 +1169,7 @@
   },
   "NW-102261-2": {
    "title": "Impossibile connettersi al server",
-   "text": "Si è verificato un errore durante la connessione a PlayStation: la console non riesce a raggiungere il server. Sony indica la stessa catena di WV-109145-0: pagina di stato, riavvio, cavo invece del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "La console non riesce a raggiungere il server PlayStation; spesso la linea è solo temporaneamente occupata.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -1206,7 +1206,7 @@
   },
   "NW-102308-4": {
    "title": "Errore di comunicazione durante la connessione",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -1248,7 +1248,7 @@
   },
   "NW-102315-2": {
    "title": "Errore di comunicazione durante la connessione",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -1275,7 +1275,7 @@
   },
   "NW-102417-5": {
    "title": "Timeout della connessione di rete",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -1315,7 +1315,7 @@
   },
   "NW-102650-4": {
    "title": "Impossibile connettersi al server",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -1354,7 +1354,7 @@
   },
   "WS-114241-3": {
    "title": "Problema di connessione al server",
-   "text": "La console ha problemi di connessione a PlayStation. Sony indica la pagina di stato, un riavvio e il riavvio del router; spesso la linea è solo temporaneamente sovraccarica.",
+   "text": "La console ha problemi di connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console.",
@@ -1534,7 +1534,7 @@
   },
   "WS-116420-4": {
    "title": "Impossibile connettersi al server",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -1609,7 +1609,7 @@
   },
   "WS-116520-5": {
    "title": "Errore di connessione a PlayStation",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -1668,7 +1668,7 @@
   },
   "WV-109144-9": {
    "title": "Impossibile connettersi al server",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -1683,7 +1683,7 @@
   },
   "WV-109145-0": {
    "title": "Impossibile connettersi a Internet",
-   "text": "Si è verificato un errore durante la connessione a PlayStation: la console non riesce a raggiungere Internet. Sony indica una catena di pagina di stato, riavvio, cavo invece del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "La console non raggiunge Internet.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -1697,7 +1697,7 @@
   },
   "WV-109146-1": {
    "title": "Impossibile connettersi al server",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -1712,7 +1712,7 @@
   },
   "WV-109153-9": {
    "title": "Timeout della connessione di rete",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",
@@ -1727,7 +1727,7 @@
   },
   "WV-109166-3": {
    "title": "Impossibile connettersi a Internet",
-   "text": "Si è verificato un errore durante la connessione a PlayStation. Sony indica una lunga serie di passaggi: pagina di stato, riavvio, cavo al posto del Wi-Fi, riavvio del router, porte e indirizzo IP statico.",
+   "text": "Si è verificato un errore durante la connessione a PlayStation.",
    "steps": [
     "Controllare nella pagina di stato di PlayStation se è segnalato un guasto o una manutenzione.",
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi, avvicinarla al router) e configurare di nuovo le impostazioni di rete.",

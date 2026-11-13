@@ -2,7 +2,7 @@
   "_license": "SPDX-License-Identifier: GPL-3.0-or-later (wie knowledge/rules.json; JSON kennt keine Kommentare)",
   "_note": "Nachschlagewerk fuer Fehlercodes: nur lesen und erklaeren, nichts wird veraendert. Jeder Eintrag nennt seine Quelle. level doc = Sony-Hilfeseite (am 9. und 13. Nov. 2026 gegen die Seiten geprueft), community = keine Sony-Seite, nur Community-Angaben. Eintraege nach id sortiert. Schema: libmedic/src/error_codes.cpp",
   "schema_version": 1,
-  "db_version": "2026.11.15",
+  "db_version": "2026.11.16",
   "codes": [
     {
       "id": "0x80268001",
@@ -415,13 +415,15 @@
           "Auf der PlayStation-Statusseite nach Störung oder Wartung sehen.",
           "Konsole neu starten, möglichst per LAN-Kabel verbinden (bei WLAN näher an den Router), Netzwerk neu einrichten.",
           "Router und Modem ausschalten, mindestens 5 Minuten warten, wieder einschalten.",
-          "Wenn möglich Ports öffnen: TCP 80, 443, 3478, 3479, 3480 und UDP 3478, 3479, 49152 bis 65535."
+          "Wenn möglich Ports öffnen: TCP 80, 443, 3478, 3479, 3480 und UDP 3478, 3479, 49152 bis 65535.",
+          "Feste IP-Adresse von Hand eintragen; hilft das nicht, den DNS vorübergehend auf einen öffentlichen DNS-Server stellen."
         ],
         "en": [
           "Check the PlayStation status page for a server failure or maintenance.",
           "Restart the console, connect by LAN cable if possible (on Wi-Fi, move closer to the router), set up the network again.",
           "Turn off the router and modem, wait at least 5 minutes, then turn them on again.",
-          "If possible, open these ports: TCP 80, 443, 3478, 3479, 3480 and UDP 3478, 3479, 49152 to 65535."
+          "If possible, open these ports: TCP 80, 443, 3478, 3479, 3480 and UDP 3478, 3479, 49152 to 65535.",
+          "Enter a static IP address manually; if that does not help, temporarily switch the DNS to a public DNS server."
         ]
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-105799-1/",
@@ -497,8 +499,8 @@
       "id": "CE-106444-9",
       "title": { "de": "Fehler beim Verbindungsaufbau zu PlayStation", "en": "Error while connecting to PlayStation" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -518,7 +520,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_SSL_ERROR_OUT_OF_SIZE, Rückgabecode 0x8095F00B."
         ],
         "en": [
@@ -837,8 +839,8 @@
       "id": "CE-107750-0",
       "title": { "de": "Fehler während des Spiels", "en": "Error while playing the game" },
       "text": {
-        "de": "Während des Spielens ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Netzkabel ziehen, das Spiel aktualisieren, das Spiel neu installieren, die Datenbank im Safe Mode neu aufbauen und erst zuletzt die Konsole zurücksetzen.",
-        "en": "An error occurred while playing the game. Sony names a long chain: unplug the power cable, update the game, reinstall the game, rebuild the database in Safe Mode and only as the last step reset the console."
+        "de": "Während des Spielens ist ein Fehler aufgetreten.",
+        "en": "An error occurred while playing."
       },
       "steps": {
         "de": [
@@ -856,10 +858,10 @@
       },
       "notes": {
         "de": [
-          "Safe-Mode-Optionen laut Sony: „Repair Console Storage“ löscht keine Daten, „Restore Default Settings“ löscht keine Spiele, Apps, Screenshots, Videos und Spielstände, „Reset PS5“ löscht alle Benutzerdaten. Zu „Rebuild Database“ äußert sich Sony nicht zum Datenverlust."
+          "Laut Sony löscht „Repair Console Storage“ keine Daten, „Reset PS5“ alle Benutzerdaten. Zu „Rebuild Database“ sagt Sony nichts zum Datenverlust."
         ],
         "en": [
-          "Safe Mode options according to Sony: “Repair Console Storage” does not erase data, “Restore Default Settings” does not delete games, apps, screenshots, video clips and saved data, “Reset PS5” deletes all user data. For “Rebuild Database” Sony says nothing about data loss."
+          "According to Sony, “Repair Console Storage” erases no data and “Reset PS5” deletes all user data. For “Rebuild Database” Sony says nothing about data loss."
         ]
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107750-0/",
@@ -1177,8 +1179,8 @@
       "id": "CE-108862-5",
       "title": { "de": "Keine Verbindung zum Server", "en": "Unable to connect to the server" },
       "text": {
-        "de": "Die Konsole hat Probleme mit der Verbindung zu PlayStation. Sony nennt Statusseite, Neustart und einen Neustart des Routers; oft ist die Leitung nur vorübergehend ausgelastet.",
-        "en": "The console has trouble connecting to PlayStation. Sony names the status page, a restart and restarting the router; often the line is only busy for a while."
+        "de": "Keine Verbindung zu PlayStation. Der interne Name deutet auf eine Sperre der Konsole hin (nicht von Sony bestätigt).",
+        "en": "No connection to PlayStation. The internal name points to a console ban (not confirmed by Sony)."
       },
       "steps": {
         "de": [
@@ -1198,12 +1200,10 @@
       },
       "notes": {
         "de": [
-          "Sony nennt auf seiner Seite nur ein Verbindungsproblem; der interne Name (siehe unten) deutet jedoch auf eine Sperre der Konsole hin.",
           "Medic-Hinweis: Das betrifft den Zugang des Kontos oder der Konsole bei Sony und lässt sich mit Medic nicht beheben.",
           "Interner Name laut PS5 Dev Wiki: SCE_PF_AUTH_CLIENT_ERROR_CONSOLE_BANNED, Rückgabecode 0x80DE0012."
         ],
         "en": [
-          "On its page Sony only names a connection problem; the internal name (see below), however, points to a console ban.",
           "Medic note: This concerns the access of the account or console at Sony and cannot be fixed with Medic.",
           "Internal name according to the PS5 Dev Wiki: SCE_PF_AUTH_CLIENT_ERROR_CONSOLE_BANNED, return code 0x80DE0012."
         ]
@@ -1308,8 +1308,8 @@
       "id": "CE-109258-5",
       "title": { "de": "Lizenz nicht bestätigt: Server nicht erreichbar", "en": "License not confirmed: server unreachable" },
       "text": {
-        "de": "Die Verbindung zum Server ist fehlgeschlagen, deshalb wurde die Lizenz des Inhalts nicht bestätigt. Sony nennt Statusseite, Neustart, Router neu starten und „Restore Licenses“.",
-        "en": "The connection to the server failed, so the license of the content was not confirmed. Sony names the status page, a restart, restarting the router and “Restore Licenses”."
+        "de": "Die Verbindung zum Server ist fehlgeschlagen, deshalb wurde die Lizenz des Inhalts nicht bestätigt.",
+        "en": "The connection to the server failed, so the license of the content was not confirmed."
       },
       "steps": {
         "de": [
@@ -1378,8 +1378,8 @@
       "id": "CE-109506-1",
       "title": { "de": "Fehler beim Verbindungsaufbau zu PlayStation", "en": "Error while connecting to PlayStation" },
       "text": {
-        "de": "Die Konsole hat Probleme mit der Verbindung zu PlayStation. Sony nennt Statusseite, Neustart und einen Neustart des Routers; oft ist die Leitung nur vorübergehend ausgelastet.",
-        "en": "The console has trouble connecting to PlayStation. Sony names the status page, a restart and restarting the router; often the line is only busy for a while."
+        "de": "Die Konsole hat Probleme mit der Verbindung zu PlayStation.",
+        "en": "The console has trouble connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -1885,8 +1885,8 @@
       "id": "CE-113212-0",
       "title": { "de": "Keine Verbindung zum Server", "en": "Unable to connect to the server" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -1906,7 +1906,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_HTTP2_ERROR_PROXY, Rückgabecode 0x817B1084."
         ],
         "en": [
@@ -1982,8 +1982,8 @@
       "id": "CE-113524-6",
       "title": { "de": "Keine Verbindung zum Server", "en": "Unable to connect to the server" },
       "text": {
-        "de": "Die Konsole hat Probleme mit der Verbindung zu PlayStation. Sony nennt Statusseite, Neustart und einen Neustart des Routers; oft ist die Leitung nur vorübergehend ausgelastet.",
-        "en": "The console has trouble connecting to PlayStation. Sony names the status page, a restart and restarting the router; often the line is only busy for a while."
+        "de": "Die Konsole hat Probleme mit der Verbindung zu PlayStation.",
+        "en": "The console has trouble connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -3203,8 +3203,8 @@
       "id": "NW-102261-2",
       "title": { "de": "Keine Verbindung zum Server", "en": "Unable to connect to the server" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten: Die Konsole erreicht den Server nicht. Sony nennt dieselbe Kette wie bei WV-109145-0: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation: the console cannot reach the server. Sony names the same chain as for WV-109145-0: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Die Konsole kann den PlayStation-Server nicht erreichen; oft ist die Leitung nur vorübergehend ausgelastet.",
+        "en": "The console cannot reach the PlayStation server; often the line is only busy for a while."
       },
       "steps": {
         "de": [
@@ -3224,7 +3224,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen."
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen."
         ],
         "en": [
           "Medic note: If the console runs a DNS filter such as nanoDNS that blocks Sony addresses, this error is to be expected, especially for system applications such as the browser or the store. This is not a statement by Sony and is not confirmed by the error history alone. Sony's step of temporarily entering a public DNS server is not listed here: it would bypass such a DNS filter."
@@ -3300,8 +3300,8 @@
       "id": "NW-102308-4",
       "title": { "de": "Kommunikationsfehler beim Verbindungsaufbau", "en": "Communication error while connecting" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -3321,7 +3321,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_NET_ERROR_RESOLVER_ETIMEDOUT, Rückgabecode 0x804101E2."
         ],
         "en": [
@@ -3411,8 +3411,8 @@
       "id": "NW-102315-2",
       "title": { "de": "Kommunikationsfehler beim Verbindungsaufbau", "en": "Communication error while connecting" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -3432,7 +3432,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_NET_ERROR_RESOLVER_ENORECORD, Rückgabecode 0x804101E9."
         ],
         "en": [
@@ -3483,8 +3483,8 @@
       "id": "NW-102417-5",
       "title": { "de": "Zeitüberschreitung der Netzwerkverbindung", "en": "Network connection timed out" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -3504,7 +3504,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_NET_CTL_ERROR_DISCONNECT_REQ, Rückgabecode 0x8041210E."
         ],
         "en": [
@@ -3590,8 +3590,8 @@
       "id": "NW-102650-4",
       "title": { "de": "Keine Verbindung zum Server", "en": "Unable to connect to the server" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -3611,7 +3611,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_HTTP_ERROR_PROXY, Rückgabecode 0x80431084."
         ],
         "en": [
@@ -3695,8 +3695,8 @@
       "id": "WS-114241-3",
       "title": { "de": "Problem bei der Verbindung zum Server", "en": "Problem connecting to the server" },
       "text": {
-        "de": "Die Konsole hat Probleme mit der Verbindung zu PlayStation. Sony nennt Statusseite, Neustart und einen Neustart des Routers; oft ist die Leitung nur vorübergehend ausgelastet.",
-        "en": "The console has trouble connecting to PlayStation. Sony names the status page, a restart and restarting the router; often the line is only busy for a while."
+        "de": "Die Konsole hat Probleme mit der Verbindung zu PlayStation.",
+        "en": "The console has trouble connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -4192,8 +4192,8 @@
       "id": "WS-116420-4",
       "title": { "de": "Keine Verbindung zum Server", "en": "Unable to connect to the server" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -4213,7 +4213,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_OAUTH_HTTP_STATUS_CODE_409_CONFLICT, Rückgabecode 0x82E10199."
         ],
         "en": [
@@ -4396,8 +4396,8 @@
       "id": "WS-116520-5",
       "title": { "de": "Fehler beim Verbindungsaufbau zu PlayStation", "en": "Error while connecting to PlayStation" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -4417,7 +4417,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_NP_WEBAPI_SERVER_ERROR_HTTP_STATUS_CODE_502_BAD_GATEWAY, Rückgabecode 0x82F001F6."
         ],
         "en": [
@@ -4559,8 +4559,8 @@
       "id": "WV-109144-9",
       "title": { "de": "Keine Verbindung zum Server", "en": "Unable to connect to the server" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -4580,7 +4580,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_WEBVIEW_NETWORK_ERROR_COULDNT_RESOLVE_HOST, Rückgabecode 0x80E80006."
         ],
         "en": [
@@ -4598,8 +4598,8 @@
       "id": "WV-109145-0",
       "title": { "de": "Keine Verbindung zum Internet", "en": "Unable to connect to the Internet" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten: Die Konsole erreicht das Internet nicht. Sony nennt eine Kette aus Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und fester IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation: the console cannot reach the internet. Sony names a chain of status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Die Konsole erreicht das Internet nicht.",
+        "en": "The console cannot reach the internet."
       },
       "steps": {
         "de": [
@@ -4619,7 +4619,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen."
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen."
         ],
         "en": [
           "Medic note: If the console runs a DNS filter such as nanoDNS that blocks Sony addresses, this error is to be expected, especially for system applications such as the browser or the store. This is not a statement by Sony and is not confirmed by the error history alone. Sony's step of temporarily entering a public DNS server is not listed here: it would bypass such a DNS filter."
@@ -4634,8 +4634,8 @@
       "id": "WV-109146-1",
       "title": { "de": "Keine Verbindung zum Server", "en": "Unable to connect to the server" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -4655,7 +4655,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_WEBVIEW_NETWORK_ERROR_REMOTE_ACCESS_DENIED, Rückgabecode 0x80E80009."
         ],
         "en": [
@@ -4673,8 +4673,8 @@
       "id": "WV-109153-9",
       "title": { "de": "Zeitüberschreitung der Netzwerkverbindung", "en": "Network connection timed out" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -4694,7 +4694,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_WEBVIEW_NETWORK_ERROR_OPERATION_TIMEDOUT, Rückgabecode 0x80E8001C."
         ],
         "en": [
@@ -4712,8 +4712,8 @@
       "id": "WV-109166-3",
       "title": { "de": "Keine Verbindung zum Internet", "en": "Unable to connect to the Internet" },
       "text": {
-        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten. Sony nennt eine lange Kette: Statusseite, Neustart, Kabel statt WLAN, Router neu starten, Ports und feste IP-Adresse.",
-        "en": "An error occurred while connecting to PlayStation. Sony names a long chain: status page, restart, cable instead of Wi-Fi, restarting the router, ports and a static IP address."
+        "de": "Beim Verbindungsaufbau zu PlayStation ist ein Fehler aufgetreten.",
+        "en": "An error occurred while connecting to PlayStation."
       },
       "steps": {
         "de": [
@@ -4733,7 +4733,7 @@
       },
       "notes": {
         "de": [
-          "Medic-Hinweis: Läuft auf der Konsole ein DNS-Filter wie nanoDNS, der Sony-Adressen sperrt, ist dieser Fehler zu erwarten, besonders bei Systemanwendungen wie dem Browser oder dem Store. Das ist keine Aussage von Sony und aus dem Fehlerverlauf allein nicht bestätigt. Sonys Schritt, vorübergehend einen öffentlichen DNS-Server einzutragen, ist hier nicht aufgeführt: Er würde einen solchen DNS-Filter umgehen.",
+          "Medic-Hinweis (nicht von Sony, unbestätigt): Sperrt ein DNS-Filter wie nanoDNS Sony-Adressen, ist der Fehler zu erwarten; ein öffentlicher DNS würde ihn umgehen.",
           "Interner Name laut PS5 Dev Wiki: SCE_WEBVIEW_NETWORK_ERROR_GOT_NOTHING, Rückgabecode 0x80E80034."
         ],
         "en": [
