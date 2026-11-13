@@ -10,6 +10,7 @@
 
 #include "medic/error_codes.hpp"
 #include "medic/http.hpp"
+#include "medic/newest.hpp"
 #include "medic/rules.hpp"
 #include "medic_ui/app.hpp"
 #include "medic_ui/pad_nav.hpp"
@@ -90,34 +91,33 @@ Lang console_language() {
     return cached;
 }
 
+// Beide Orte werden gelesen; es gilt die Datei mit der neueren db_version (libmedic/newest.hpp, mit PC-Test).
 medic::RuleSet load_rules() {
-    for (const char* path : kRulesCandidates) {
-        if (!std::filesystem::exists(path)) continue;
-        try {
-            auto rules = medic::load_rules_from_file(path);
-            trace("Regeln: " + rules.db_version + " (" + std::to_string(rules.rules.size()) + ") aus " + path);
-            return rules;
-        } catch (const std::exception& e) {
-            trace(std::string("Regeldatei ungueltig (") + path + "): " + e.what());
-        }
+    std::string chosen;
+    std::vector<std::string> errors;
+    auto rules = medic::load_newest<medic::RuleSet>({std::begin(kRulesCandidates), std::end(kRulesCandidates)},
+                                                    [](const std::string& p) { return medic::load_rules_from_file(p); }, &chosen, &errors);
+    for (const auto& e : errors) trace("Regeldatei ungueltig (" + e + ")");
+    if (chosen.empty()) {
+        trace("Keine Regeldatei gefunden -- Check-up meldet 'unvollstaendig'.");
+        return {};
     }
-    trace("Keine Regeldatei gefunden -- Check-up meldet 'unvollstaendig'.");
-    return {};
+    trace("Regeln: " + rules.db_version + " (" + std::to_string(rules.rules.size()) + ") aus " + chosen);
+    return rules;
 }
 
 medic::ErrorCodeSet load_error_codes() {
-    for (const char* path : kErrorCodesCandidates) {
-        if (!std::filesystem::exists(path)) continue;
-        try {
-            auto codes = medic::load_error_codes_from_file(path);
-            trace("Fehlercodes: " + codes.db_version + " (" + std::to_string(codes.codes.size()) + ") aus " + path);
-            return codes;
-        } catch (const std::exception& e) {
-            trace(std::string("Fehlercode-Datei ungueltig (") + path + "): " + e.what());
-        }
+    std::string chosen;
+    std::vector<std::string> errors;
+    auto codes = medic::load_newest<medic::ErrorCodeSet>({std::begin(kErrorCodesCandidates), std::end(kErrorCodesCandidates)},
+                                                         [](const std::string& p) { return medic::load_error_codes_from_file(p); }, &chosen, &errors);
+    for (const auto& e : errors) trace("Fehlercode-Datei ungueltig (" + e + ")");
+    if (chosen.empty()) {
+        trace("Keine Fehlercode-Datei gefunden.");
+        return {};
     }
-    trace("Keine Fehlercode-Datei gefunden.");
-    return {};
+    trace("Fehlercodes: " + codes.db_version + " (" + std::to_string(codes.codes.size()) + ") aus " + chosen);
+    return codes;
 }
 
 // Eine Taste des Pads (Bits wie ScePad, siehe SDL-Treiber der PS5)

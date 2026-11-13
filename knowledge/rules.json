@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.38",
+  "db_version": "2026.11.39",
   "metrics": [
     {
       "id": "cpu_temp",

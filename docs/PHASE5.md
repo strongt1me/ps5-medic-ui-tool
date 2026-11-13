@@ -48,7 +48,7 @@ Stand 8. Nov. 2026. Regel-Update (Datei und signierter Download), unbekannte Feh
 
 **Schreibgrenze:** Alles liegt unter `/data/ps5medic/knowledge/`; ein Test prüft, dass sich sonst nichts ändert. Ohne Schreibzugriff, mit falscher Prüfsumme oder ungültigem Zeitstempel bleibt der Dateibaum unverändert.
 
-Wo die App Regeln sucht: zuerst `/data/ps5medic/knowledge/rules.json`, dann die mitgelieferte `/data/homebrew/PS5MEDIC/rules.json` (`make launch-ui` überschreibt die erste Datei mit dem Stand des Repos, das ist der Entwicklungsweg).
+Wo die App Regeln und Fehlercodes sucht: in `/data/ps5medic/knowledge/` und in der mitgelieferten `/data/homebrew/PS5MEDIC/`; **es gilt die Datei mit der höheren `db_version`**, bei Gleichstand die in `knowledge/` (seit 13. Nov. 2026; vorher hatte `knowledge/` immer Vorrang, und eine alte Kopie von `make deploy-ui` verdeckte die neue Lieferung: 40 statt 153 Codes). `make launch-ui` überschreibt die Datei in `knowledge/` mit dem Stand des Repos, das ist der Entwicklungsweg. **Wer Regeln ändert, muss die `db_version` hochzählen**, sonst gewinnt eine ältere Kopie mit derselben Nummer.
 
 ## 2. Unbekannte Fehlerzeilen und Issue-Vorlage
 

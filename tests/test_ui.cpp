@@ -1745,7 +1745,7 @@ void error_search_tests() {
         press(a, {Button::Cross});  // voll: nichts mehr
         CHECK(a.error_input_text() == "107863", "Code-Eingabe: nach sechs Ziffern kommt keine weitere dazu");
         press(a, {Button::Left, Button::Left, Button::Left});
-        CHECK(a.error_input_text() == "1078" || a.error_input_text().rfind("107", 0) == 0, "Code-Eingabe: Links nimmt Ziffern zurueck");
+        CHECK(a.error_input_text() == "1070", "Code-Eingabe: Links nimmt drei Ziffern zurueck (107 und die Ziffer 0 zur Wahl)");
         press(a, {Button::Triangle});
         CHECK(a.screen() == App::Screen::ErrorCodeDetail && !a.error_input_active(), "Code-Eingabe: Dreieck zeigt den Eintrag");
         a.render(cv);
@@ -1779,6 +1779,15 @@ void error_search_tests() {
         a.render(cv);
         press(a, {Button::Triangle});
         CHECK(a.screen() == App::Screen::ErrorCodes || a.screen() == App::Screen::ErrorCodeDetail, "Code-Eingabe: Dreieck ohne Treffer bleibt harmlos");
+    }
+    {  // ohne Fehlercode-Datei: Quadrat oeffnet kein unsichtbares Eingabefeld
+        LocalService empty_svc(*platform, rules, [] { return std::string("20261113T120000Z"); });
+        App a(empty_svc, Lang::De);
+        open_error_codes_via_ui(a);
+        press(a, {Button::Square});
+        CHECK(!a.error_input_active(), "Code-Eingabe: bei leerer Liste bleibt sie zu");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Start, "Code-Eingabe: bei leerer Liste geht der erste Kreis zurueck");
     }
     CHECK(Strings::missing().empty(), "Code-Eingabe: keine fehlenden Texte in fuenf Sprachen");
     Strings::missing().clear();

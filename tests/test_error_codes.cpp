@@ -3,6 +3,7 @@
 // knowledge/error_codes.json. Die Anzeige in der UI pruefen die Tests in test_ui.cpp.
 #include "check.hpp"
 #include "medic/error_codes.hpp"
+#include "medic/newest.hpp"
 #include "medic/text_policy.hpp"
 
 #include <algorithm>
@@ -10,6 +11,8 @@
 #include <functional>
 #include <map>
 #include <nlohmann/json.hpp>
+#include <filesystem>
+#include <fstream>
 #include <set>
 #include <string>
 
@@ -290,7 +293,39 @@ void content_tests() {
 
 }  // namespace
 
+// libmedic/newest.hpp: es gilt die neuere db_version, nicht die erste Datei (Konsolenfehler 13. Nov. 2026: alte Kopie verdeckte die neue Lieferung).
+void newest_tests() {
+    namespace fsys = std::filesystem;
+    const fsys::path dir = fsys::temp_directory_path() / "medic_newest_test";
+    fsys::remove_all(dir);
+    fsys::create_directories(dir);
+    auto write = [&](const char* name, const std::string& version) {
+        json root = {{"schema_version", 1}, {"db_version", version}, {"codes", json::array({good_entry()})}};
+        std::ofstream(dir / name) << root.dump();
+        return (dir / name).string();
+    };
+    auto load = [](const std::string& p) { return medic::load_error_codes_from_file(p); };
+    const std::string old_copy = write("old.json", "2026.11.9"), fresh = write("new.json", "2026.11.38"), same = write("same.json", "2026.11.9");
+    std::string chosen;
+    std::vector<std::string> errors;
+    auto s = medic::load_newest<ErrorCodeSet>({old_copy, fresh}, load, &chosen, &errors);
+    CHECK(chosen == fresh && s.db_version == "2026.11.38" && errors.empty(), "load_newest: die neuere Version gewinnt, auch wenn die aeltere zuerst steht (9 < 38 zahlenweise)");
+    s = medic::load_newest<ErrorCodeSet>({fresh, old_copy}, load, &chosen);
+    CHECK(chosen == fresh, "load_newest: Reihenfolge der Orte aendert nichts");
+    s = medic::load_newest<ErrorCodeSet>({old_copy, same}, load, &chosen);
+    CHECK(chosen == old_copy, "load_newest: bei Gleichstand gilt der fruehere Ort");
+    s = medic::load_newest<ErrorCodeSet>({(dir / "fehlt.json").string(), fresh}, load, &chosen, &errors);
+    CHECK(chosen == fresh && errors.empty(), "load_newest: fehlende Datei wird uebersprungen");
+    std::ofstream(dir / "kaputt.json") << "{ nicht json";
+    s = medic::load_newest<ErrorCodeSet>({(dir / "kaputt.json").string(), old_copy}, load, &chosen, &errors);
+    CHECK(chosen == old_copy && errors.size() == 1, "load_newest: ungueltige erste Datei wird gemeldet, die gueltige zweite genommen");
+    s = medic::load_newest<ErrorCodeSet>({(dir / "fehlt.json").string()}, load, &chosen);
+    CHECK(chosen.empty() && s.codes.empty(), "load_newest: ohne brauchbare Datei bleibt das Ergebnis leer");
+    fsys::remove_all(dir);
+}
+
 void error_code_tests() {
     schema_tests();
     content_tests();
+    newest_tests();
 }

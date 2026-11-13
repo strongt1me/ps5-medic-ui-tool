@@ -353,14 +353,15 @@ void plan_disable_backpork(FixPlan& plan, const Finding& f, const IFileSystem& f
 // Beide Listen (WebKit-Autoloader und Payload Manager) werden zeilenweise bearbeitet; was nicht betroffen ist, bleibt Byte fuer Byte
 // erhalten (Zeilenenden, Kommentare, Wartezeiten). Das Original liegt im Backup, Rueckgaengig stellt es her.
 
-// Eintrag einer Zeile (ohne Kommentar bei der WebKit-Liste; beim Payload Manager ist "#" KEIN Kommentar). Leer bei Anweisungen und Wartezeiten.
+// Eintrag einer Zeile (ohne Kommentar bei der WebKit-Liste; beim Payload Manager ist "#" KEIN Kommentar und "@" ein Eintrag). Leer bei Anweisungen und Wartezeiten.
 std::string autoload_entry_of(const std::string& raw, bool comments) {
     std::string l = raw;
     if (comments)
         if (const auto c = l.find('#'); c != std::string::npos) l.erase(c);
     while (!l.empty() && std::isspace(static_cast<unsigned char>(l.back()))) l.pop_back();
     while (!l.empty() && std::isspace(static_cast<unsigned char>(l.front()))) l.erase(l.begin());
-    if (l.empty() || l[0] == '@' || l[0] == '!') return {};
+    // '@sync' kennt nur der WebKit-Autoloader; beim Payload Manager ist '@...' ein Eintrag
+    if (l.empty() || l[0] == '!' || (comments && l[0] == '@')) return {};
     return l;
 }
 

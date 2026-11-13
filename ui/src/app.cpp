@@ -999,7 +999,8 @@ void App::handle(Button b) {
                 handle_error_input(b);
                 break;
             }
-            if (b == Button::Square) {  // Code eingeben: die Liste springt zum Code
+            if (b == Button::Square) {  // Code eingeben: die Liste springt zum Code (ohne Codes nichts zu finden, kein Eingabefeld)
+                if (errors_.codes.empty()) break;
                 err_input_ = true;
                 err_typed_.clear();
                 err_digit_ = 1;
