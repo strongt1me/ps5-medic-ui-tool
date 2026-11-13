@@ -6,6 +6,7 @@
 // Ohne Ausnahmen und RTTI, wie der Rest der App.
 #include <cstddef>
 #include <cstdint>
+#include <climits>
 #include <new>
 #include <sys/mman.h>
 
@@ -31,6 +32,7 @@ struct Header {
 [[noreturn]] void fail() noexcept { __builtin_trap(); }
 
 void* big_alloc(std::size_t size) noexcept {
+    if (size > SIZE_MAX - kHeader - 4095) return nullptr;  // sonst liefe die Rundung ueber und der Block wuerde winzig
     const std::size_t total = (size + kHeader + 4095) & ~static_cast<std::size_t>(4095);
     void* base = mmap(nullptr, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     if (base == MAP_FAILED) return nullptr;
@@ -65,12 +67,14 @@ bool big_free(void* p) noexcept {
 
 void* alloc(std::size_t size) noexcept {
     if (size == 0) size = 1;
-    if (size >= kBigThreshold) return big_alloc(size);
+    if (size >= kBigThreshold)
+        if (void* p = big_alloc(size)) return p;  // misslingt das (mmap, Verzeichnis voll), versucht es malloc noch
     return malloc(size);
 }
 
 void* alloc_aligned(std::size_t size, std::size_t alignment) noexcept {
-    if (alignment <= kHeader && size >= kBigThreshold) return big_alloc(size);
+    if (alignment <= kHeader && size >= kBigThreshold)
+        if (void* big = big_alloc(size)) return big;
     void* address = nullptr;
     if (alignment < sizeof(void*)) alignment = sizeof(void*);
     if ((alignment & (alignment - 1)) != 0) return nullptr;

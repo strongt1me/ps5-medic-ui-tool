@@ -175,6 +175,7 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
     PadNav nav;
     std::vector<Button> pressed;
     std::uint32_t prev_buttons = 0;
+    bool have_pad = false;  // der erste Zustand ist nur die Basislinie: eine beim Verbinden schon gehaltene Taste ist kein Tastendruck
     std::vector<std::uint8_t> rx;  // noch nicht verarbeitete Bytes der App
 
     bool first_logged = false;
@@ -256,6 +257,10 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
             }
             if (type == proto::kPad && len >= 8) {
                 const std::uint32_t b = proto::get32(pl);
+                if (!have_pad) {
+                    prev_buttons = b;
+                    have_pad = true;
+                }
                 const std::uint32_t changed = prev_buttons ^ b;
                 auto edge = [&](std::uint32_t bit, Button btn) {
                     if ((changed & bit) && (b & bit)) pressed.push_back(btn);

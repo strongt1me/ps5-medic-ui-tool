@@ -23,6 +23,8 @@
 #include <string>
 #include <vector>
 
+#include "lang_detect.hpp"
+
 extern "C" int sceKernelSendNotificationRequest(int device, void* request, size_t size, int blocking);
 
 // Die Dateien (build-native/FAKE42007/, siehe title/build_native_ui.sh; PS5MEDIC-Dateien aus dem Repository), per .incbin in die ELF gebunden.
@@ -41,6 +43,29 @@ extern "C" const unsigned char app_eboot[], app_eboot_end[], app_libc[], app_lib
     svc_elf[], svc_elf_end[], svc_rules[], svc_rules_end[], svc_codes[], svc_codes_end[], svc_icon[], svc_icon_end[];
 
 namespace fs = std::filesystem;
+
+namespace {
+
+// Bildschirm-Meldungen in der Sprache der App (ASCII, damit nichts verstuemmelt wird): 0 fertig, 1 schon aktuell, 2 Fehler (Einzelheiten im Protokoll).
+constexpr const char* kMsgs[5][3] = {
+    {"PS5 Medic: Kachel ist angelegt. ShadowMount+ erkennt sie in Sekunden, dann unter Medien starten.",
+     "PS5 Medic: Kachel und Dienst sind schon auf dem Stand. Kachel unter Medien starten.",
+     "PS5 Medic: Installation fehlgeschlagen. Protokoll: /data/ps5medic/installer.log"},
+    {"PS5 Medic: Tile installed. ShadowMount+ detects it within seconds, then start it under Media.",
+     "PS5 Medic: Tile and service are already up to date. Start the tile under Media.",
+     "PS5 Medic: Installation failed. Log: /data/ps5medic/installer.log"},
+    {"PS5 Medic : tuile installee. ShadowMount+ la detecte en quelques secondes, puis la lancer sous Medias.",
+     "PS5 Medic : tuile et service sont deja a jour. Lancer la tuile sous Medias.",
+     "PS5 Medic : echec de l'installation. Journal : /data/ps5medic/installer.log"},
+    {"PS5 Medic: riquadro installato. ShadowMount+ lo rileva in pochi secondi, poi avviarlo sotto Media.",
+     "PS5 Medic: riquadro e servizio sono gia aggiornati. Avviare il riquadro sotto Media.",
+     "PS5 Medic: installazione non riuscita. Registro: /data/ps5medic/installer.log"},
+    {"PS5 Medic: mosaico instalado. ShadowMount+ lo detecta en unos segundos; luego iniciarlo en Medios.",
+     "PS5 Medic: mosaico y servicio ya estan actualizados. Iniciar el mosaico en Medios.",
+     "PS5 Medic: fallo de la instalacion. Registro: /data/ps5medic/installer.log"},
+};
+
+}  // namespace
 
 namespace {
 
@@ -160,16 +185,16 @@ int main() {
 
     if (!error.empty()) {
         trace("FEHLER: " + error);
-        notify("PS5 Medic: Installation fehlgeschlagen (" + error + "). Protokoll: /data/ps5medic/installer.log");
+        notify(kMsgs[medic::lang::detect()][2]);
         if (g_log) std::fclose(g_log);
         return 1;
     }
     if (written == 0) {
         trace("Alles schon auf dem Stand (" + std::to_string(kept) + " Dateien)");
-        notify("PS5 Medic: Kachel und Dienst sind schon auf dem Stand. Kachel unter Medien starten.");
+        notify(kMsgs[medic::lang::detect()][1]);
     } else {
         trace("Fertig: " + std::to_string(written) + " Dateien geschrieben, " + std::to_string(kept) + " unveraendert. ShadowMount+ legt die Kachel an.");
-        notify("PS5 Medic: Kachel ist angelegt. ShadowMount+ erkennt sie in Sekunden, dann unter Medien starten.");
+        notify(kMsgs[medic::lang::detect()][0]);
     }
     if (g_log) std::fclose(g_log);
     return 0;

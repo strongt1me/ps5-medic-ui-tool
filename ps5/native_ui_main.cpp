@@ -8,6 +8,7 @@
 #include "medic_ui/canvas.hpp"
 #include "medic_ui/font.hpp"
 #include "medic_ui/splash.hpp"
+#include "lang_detect.hpp"
 #include "service_protocol.hpp"
 
 #include <array>
@@ -102,32 +103,6 @@ constexpr const char* kMsgs[5][kMsgCount] = {
 int g_lang = 1;  // 0 de, 1 en, 2 fr, 3 it, 4 es; bis zur Erkennung Englisch
 const char* tr(Msg m) { return kMsgs[g_lang][m]; }
 
-int lang_index(const char* code) {
-    static const char* const codes[] = {"de", "en", "fr", "it", "es"};
-    for (int i = 0; i < 5; ++i)
-        if (std::strncmp(code, codes[i], 2) == 0 && (code[2] == 0 || code[2] <= ' ')) return i;  // danach Zeilenende, Leerzeichen oder Steuerzeichen
-    return -1;
-}
-
-// language=xx aus config.ini (gewaehlte Sprache), sonst die Zeile aus system_language, sonst Englisch
-int detect_language() {
-    if (std::FILE* f = std::fopen("/data/ps5medic/config.ini", "r")) {
-        char line[160];
-        int found = -1;
-        while (found < 0 && std::fgets(line, sizeof line, f))
-            if (std::strncmp(line, "language=", 9) == 0) found = lang_index(line + 9);
-        std::fclose(f);
-        if (found >= 0) return found;
-    }
-    if (std::FILE* f = std::fopen("/data/ps5medic/system_language", "r")) {
-        char line[16] = {0};
-        const bool ok = std::fgets(line, sizeof line, f) != nullptr;
-        std::fclose(f);
-        if (ok && lang_index(line) >= 0) return lang_index(line);
-    }
-    return 1;
-}
-
 void notify(const char* msg) {
     static struct {
         char reserved[45];
@@ -149,9 +124,8 @@ void trace(const char* line) {
     std::fflush(g_log);
 }
 
-// ---- Pad (Layout wie der SDL-Treiber fuer die PS5) ----------------------------------------------------------------------------------
-constexpr std::uint32_t kBtnOptions = 0x0008, kBtnUp = 0x0010, kBtnRight = 0x0020, kBtnDown = 0x0040, kBtnLeft = 0x0080, kBtnL1 = 0x0400,
-                        kBtnR1 = 0x0800, kBtnTriangle = 0x1000, kBtnCircle = 0x2000, kBtnCross = 0x4000, kBtnSquare = 0x8000;
+// ---- Pad (Layout wie der SDL-Treiber fuer die PS5; die Tasten wertet der Dienst aus) ----------------------------------------------------------------------------------
+
 
 static_assert(sizeof(float) == 4, "Layout wie PS5_PadData des SDL-Treibers");
 struct PadData {
@@ -400,7 +374,7 @@ int main() {
     g_t0 = now_ms();
     g_log = std::fopen("/data/ps5medic/native.log", "a");
     trace("PS5 Medic (native App) startet");
-    g_lang = detect_language();
+    g_lang = medic::lang::detect();
     trace(g_lang == 0 ? "Sprache der Meldungen: de" : g_lang == 1 ? "Sprache der Meldungen: en" : g_lang == 2 ? "Sprache der Meldungen: fr" : g_lang == 3 ? "Sprache der Meldungen: it" : "Sprache der Meldungen: es");
     install_crash_handler();
 
