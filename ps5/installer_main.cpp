@@ -134,6 +134,9 @@ std::string write_blob(const std::string& path, const Blob& b) {
         ::unlink(tmp.c_str());
         return path + " unvollstaendig geschrieben (Speicher voll?)";
     }
+    // Ausfuehrbar wie bei FTP-Dateien (0777): fopen legt nur 0666 an, und eine eboot.bin ohne Ausfuehrungsrecht startet die Konsole nicht (die App
+    // brach beim Start sofort ab, Konsolentest 13. Nov. 2026).
+    ::chmod(tmp.c_str(), 0777);
     if (::rename(tmp.c_str(), path.c_str()) != 0) {
         const int e = errno;
         ::unlink(tmp.c_str());
@@ -168,6 +171,7 @@ int main() {
     for (const Blob& b : blobs) {
         const std::string path = std::string(b.dir) + b.rel;
         if (same_content(path, b)) {
+            ::chmod(path.c_str(), 0777);  // auch eine gleiche Datei mit falschem Modus (aus einer frueheren Fassung dieses Installers) korrigieren
             ++kept;
             trace("schon aktuell: " + path);
             continue;

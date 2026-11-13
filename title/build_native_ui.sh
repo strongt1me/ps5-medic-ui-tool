@@ -59,6 +59,22 @@ done
     -e _start -o "$B/pie.elf" "$B/app_crt.o" $(printf '%s ' "${objs[@]}" | sed "s#$B/app_crt.o##") \
     --why-extract="$B/why.txt" -Map="$B/map.txt" --error-limit=0 -L"$SDK/target/lib" --start-group "$SDK/target/lib/libc++.a" "$SDK/target/lib/libc++abi.a" "$SDK/target/lib/libpthread.a" --end-group --as-needed "$SDK"/target/lib/*.so
 
+# Neue Importe vermeiden: Die App bindet beim Start nur ein, was die Laufzeit (libc.prx) und die Systembibliotheken auf der Konsole liefern. Ein Import,
+# der dort fehlt (13. Nov. 2026: fgets), laesst die App vor main() abbrechen -- ohne Meldung. Die Liste title/native_imports.txt ist der auf der Konsole
+# bestaetigte Stand; ein neuer Import bricht den Bau ab, bis er auf der Konsole geprueft und in die Liste aufgenommen ist (ALLOW_NEW_IMPORTS=1 zum Testen).
+if command -v nm >/dev/null; then
+    nm -u "$B/pie.elf" | sed 's/^ *U //' | sort > "$B/imports.txt"
+    NEW=$(comm -13 "$REPO/title/native_imports.txt" "$B/imports.txt" || true)
+    if [[ -n $NEW ]]; then
+        echo "Neue Importe in der App (nicht in title/native_imports.txt):" >&2
+        echo "$NEW" >&2
+        if [[ ${ALLOW_NEW_IMPORTS:-0} != 1 ]]; then
+            echo "Sie koennten auf der Konsole fehlen und die App vor main() abbrechen lassen. Auf der Konsole pruefen (ALLOW_NEW_IMPORTS=1 baut trotzdem), dann in die Liste eintragen; oder eigene Schleifen statt der Bibliotheksfunktion verwenden." >&2
+            exit 3
+        fi
+    fi
+fi
+
 "$TOOL" link --in "$B/pie.elf" --out "$B/eboot.elf" --stub-dir "$SDK/target/lib" \
     --module-sdk "$MODULE_SDK" --companion-sdk "$COMPANION_SDK" --file-name eboot.elf
 "$TOOL" self --sign --in "$B/eboot.elf" --out "$B/eboot.bin" --magic "$FSELF_MAGIC"
