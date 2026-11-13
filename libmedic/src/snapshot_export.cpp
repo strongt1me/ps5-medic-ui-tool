@@ -453,6 +453,14 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
     for (const char* f : {"/data/ps5medic/selftest/last.json", "/data/ps5medic/selftest/running.json"}) ex.copy_text(f, /*tail=*/false);  // Selbsttest: Ergebnis und Absturz-Marker (nur Zahlen und IDs)
     // Marke der Konfigurationsumwandlung von SM+ (nur das Vorhandensein zaehlt; die Sicherung selbst kann Zugangsdaten enthalten)
     if (const auto* v = facts.get("smp.v1_backup_ready"); v && v->is_boolean() && v->get<bool>()) ex.write("/data/shadowmount/config-v1-backup/ready.ini", "");
+    // Gleicht config.ini der Sicherung von SM+ (dann setzt SM+ die Umwandlung selbst fort), bekommt die Sicherung im Schnappschuss denselben Inhalt;
+    // sonst eine Datei, die sich unterscheidet (ihr Inhalt ist hier nicht von Belang und kann Zugangsdaten enthalten)
+    if (const auto* v = facts.get("smp.v1_backup_ready"); v && v->is_boolean() && v->get<bool>()) {
+        const auto* same = facts.get("smp.v1_matches_backup");
+        std::string cfg;
+        if (same && same->is_boolean() && same->get<bool>() && p.fs().read_file("/data/shadowmount/config.ini", cfg)) ex.write("/data/shadowmount/config-v1-backup/config.ini", redact_secrets(cfg));
+        else ex.write("/data/shadowmount/config-v1-backup/config.ini", "# andere Sicherung\n");
+    }
 
     // nanoDNS: nur die gezaehlten Fehlerzeilen, ohne Domains und Adressen (das echte Log enthaelt jede Abfrage).
     if (const auto* up = facts.get("nanodns.log.upstream_failed"); up && up->is_number_integer()) {

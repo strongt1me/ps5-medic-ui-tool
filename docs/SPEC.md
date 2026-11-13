@@ -38,6 +38,7 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 | `autoload_fix_missing` | Autoload-Eintrag ohne Datei: Schreibweise korrigieren, sonst auskommentieren (WebKit-Liste) bzw. entfernen (Payload Manager) | Backup der Autoload-Liste |
 | `pldmgr_enable_autoload` | `AUTOLOAD_ENABLED=1` in `/data/pldmgr/pldmgr_config.txt` setzen | Backup der Datei |
 | `quarantine_broken_elf` | Unbrauchbare ELF-Datei nach `.medic_broken/` daneben verschieben (nur Whitelist-Ordner, nie löschen) | Zurückverschieben |
+| `quarantine_empty_image` | Leeres oder abgebrochenes Image (unter 512 Byte) nach `.medic_broken/` daneben verschieben (nur Whitelist-Ordner, nie löschen) | Zurückverschieben |
 | `fix_image_nesting_hint` | Nur Hinweis + Anleitung (kein Auto-Fix, Images werden nicht verändert) | – |
 
 ### 4.3 Bericht

@@ -2,6 +2,7 @@
 // Tests der Fix-Engine: SHA-256, INI-Editor, Whitelist, apply -> undo = identischer Dateibaum, Rollback, Journal.
 #include "check.hpp"
 #include "medic/collectors.hpp"
+#include "medic/casename.hpp"
 #include "medic/fixes.hpp"
 #include "medic/ini.hpp"
 #include "medic/platform.hpp"
@@ -920,6 +921,128 @@ void stack_tests() {
 
 }  // namespace
 
+// ---- Dateisystem ohne Unterscheidung der Schreibweise (exFAT/FAT), nachgebildet ---------------------------------------------------------------
+// Auf der Test-Konsole (USB-Laufwerk, exFAT) genuegt rename("casetest.txt", "CaseTest.txt"): der Ordnereintrag bekommt die neue Schreibweise
+// (per FTP geprueft, 13. Nov. 2026). Der PC-Test laeuft auf einem Dateisystem, das unterscheidet; diese Huelle findet Namen ohne Beachtung der
+// Schreibweise und benennt wie exFAT: ein Ziel, das dieselbe Datei ist, ist erlaubt, jedes andere vorhandene Ziel nicht.
+class FoldFs final : public IFileSystem {
+public:
+    explicit FoldFs(const IFileSystem& in) : in_(in) {}
+    // Wahrer Pfad im inneren Dateisystem oder leer.
+    std::string resolve(const std::string& path) const {
+        std::string cur = "/";
+        std::size_t i = 1;
+        while (i <= path.size()) {
+            const std::size_t j = path.find('/', i);
+            const std::string comp = path.substr(i, j == std::string::npos ? std::string::npos : j - i);
+            if (!comp.empty()) {
+                std::string found;
+                for (const auto& e : in_.list_dir(cur))
+                    if (casename_fold(e.name) == casename_fold(comp)) found = e.name;
+                if (found.empty()) return {};
+                cur = (cur == "/" ? std::string("/") : cur + "/") + found;
+            }
+            if (j == std::string::npos) break;
+            i = j + 1;
+        }
+        return cur;
+    }
+    bool exists(const std::string& p) const override { return !resolve(p).empty(); }
+    bool is_dir(const std::string& p) const override { const auto r = resolve(p); return !r.empty() && in_.is_dir(r); }
+    std::vector<DirEntry> list_dir(const std::string& p) const override { const auto r = resolve(p); return r.empty() ? std::vector<DirEntry>{} : in_.list_dir(r); }
+    bool read_file(const std::string& p, std::string& out) const override { const auto r = resolve(p); return !r.empty() && in_.read_file(r, out); }
+    bool read_range(const std::string& p, std::uint64_t off, std::size_t len, std::string& out) const override { const auto r = resolve(p); return !r.empty() && in_.read_range(r, off, len, out); }
+
+private:
+    const IFileSystem& in_;
+};
+
+class FoldRw final : public IFileSystemRW {
+public:
+    FoldRw(IFileSystemRW& in, const FoldFs& fold) : in_(in), fold_(fold) {}
+    bool write_file(const std::string& p, const std::string& c) override { return in_.write_file(real(p), c); }
+    bool rename(const std::string& from, const std::string& to) override {
+        const std::string a = fold_.resolve(from);
+        if (a.empty()) return false;
+        const std::string b = fold_.resolve(to);
+        if (!b.empty() && b != a) return false;  // ein anderes Ziel existiert schon
+        const std::string dir = casename_dir(real(to));
+        return in_.rename(a, (dir == "/" ? std::string("/") : dir + "/") + casename_base(to));
+    }
+    bool make_dirs(const std::string& p) override { return in_.make_dirs(real(p)); }
+    bool remove_empty_dir(const std::string& p) override { return in_.remove_empty_dir(real(p)); }
+    bool append_file(const std::string& p, const std::string& c) override { return in_.append_file(real(p), c); }
+
+private:
+    // Vorhandene Teile des Pfads in ihrer wahren Schreibweise, der Rest wie angegeben.
+    std::string real(const std::string& p) const {
+        std::string head = p, tail;
+        while (!head.empty() && head != "/" && fold_.resolve(head).empty()) {
+            tail = "/" + casename_base(head) + tail;
+            head = casename_dir(head);
+        }
+        return (head.empty() || head == "/" ? std::string() : fold_.resolve(head)) + tail;
+    }
+    IFileSystemRW& in_;
+    const FoldFs& fold_;
+};
+
+struct FoldPlatform final : Platform {
+    explicit FoldPlatform(std::unique_ptr<Platform> inner) : in(std::move(inner)), fold(in->fs()), rw(*in->fs_rw(), fold) {}
+    const IFileSystem& fs() const override { return fold; }
+    const IProcessList& procs() const override { return in->procs(); }
+    const ISystemInfo& sys() const override { return in->sys(); }
+    IFileSystemRW* fs_rw() override { return &rw; }
+    std::unique_ptr<Platform> in;
+    FoldFs fold;
+    FoldRw rw;
+};
+
+void case_fold_tests() {
+    TempCopy tmp("gc1_neg_exfat");
+    FoldPlatform fp(make_snapshot_platform(tmp.dir.string(), /*writable=*/true));
+    const std::string old_path = "/mnt/usb0/homebrew/PPSA77502/Media/Modules/Il2cppUserAssemblies.prx";
+    const std::string new_path = "/mnt/usb0/homebrew/PPSA77502/Media/Modules/Il2CppUserAssemblies.prx";
+    CHECK(fp.fs().exists(old_path) && fp.fs().exists(new_path), "exFAT-Huelle: exists() findet beide Schreibweisen (wie auf der Konsole)");
+    CHECK(!dir_has_name(fp.fs(), new_path) && dir_has_name(fp.fs(), old_path), "exFAT-Huelle: der Ordnereintrag hat nur die alte Schreibweise");
+    CHECK(is_case_only_rename(old_path, new_path) && !is_case_only_rename(old_path, old_path) && !is_case_only_rename(old_path, "/mnt/usb0/homebrew/PPSA77502/Media/Modules/x.prx"),
+          "is_case_only_rename: nur gleicher Ordner und gleicher Name bis auf die Schreibweise");
+
+    Facts facts = collect_all(fp);
+    Finding finding;
+    bool found = false;
+    for (auto& f : evaluate(rules(), facts))
+        if (f.rule_id == "game.il2cpp_case_latent") {
+            finding = f;
+            found = true;
+        }
+    CHECK(found && finding.fix == "rename_case_prx", "game.il2cpp_case_latent hat jetzt den Fix rename_case_prx");
+    FixPlan plan = plan_fix(finding, facts, fp.fs(), {});
+    CHECK(plan.changes.size() == 1 && plan.changes[0].path == old_path && plan.changes[0].to == new_path, "exFAT: Plan benennt nur die Schreibweise um (Ziel gilt nicht als vorhanden)");
+
+    const PathPolicy pol = policy_from_facts(facts);
+    ApplyResult ar = apply_plan(plan, fp, pol, confirmed("20261113T150000Z"));
+    CHECK(ar.ok, "exFAT: apply ok (" + ar.error + ")");
+    CHECK(dir_has_name(fp.fs(), new_path) && !dir_has_name(fp.fs(), old_path), "exFAT: der Ordnereintrag hat danach die neue Schreibweise");
+    UndoResult ur = undo_txn(fp, pol, ar.txn, "20261113T150100Z");
+    CHECK(ur.ok, "exFAT: undo ok (" + ur.error + ")");
+    CHECK(dir_has_name(fp.fs(), old_path) && !dir_has_name(fp.fs(), new_path), "exFAT: nach undo steht die alte Schreibweise wieder im Ordner");
+
+    // Ein anderer Eintrag mit dem Zielnamen (auf einem unterscheidenden Dateisystem) bleibt tabu
+    TempCopy tmp2("gc1_pos");
+    auto p2 = make_snapshot_platform(tmp2.dir.string(), /*writable=*/true);
+    Facts f2 = collect_all(*p2);
+    for (auto& f : evaluate(rules(), f2))
+        if (f.rule_id == "game.il2cpp_case") {
+            FixPlan pl = plan_fix(f, f2, p2->fs(), {});
+            CHECK(pl.changes.size() == 1, "gc1_pos: Plan unveraendert (unterscheidendes Dateisystem)");
+            const std::string dst = pl.changes[0].to;
+            p2->fs_rw()->write_file(dst, "andere Datei");  // das Ziel liegt schon als eigene Datei dort
+            ApplyResult bad = apply_plan(pl, *p2, policy_from_facts(f2), confirmed("20261113T150200Z"));
+            CHECK(!bad.ok, "Umbenennen auf ein vorhandenes, anderes Ziel wird weiter abgelehnt");
+        }
+}
+
 void fix_tests() {
     export_tests();
     sha_tests();
@@ -938,10 +1061,12 @@ void fix_tests() {
         {"al3_pos_duplicate", "autoload.entry_duplicate", true}, {"al2_pos_loader_missing", "autoload.entry_missing", true},
         {"al2_pos_missing_slot", "autoload.entry_missing", true},
         {"al5_pos_disabled", "pldmgr.autoload_disabled", true}, {"elf_pos_pldmgr", "payload.elf_invalid", true},
+        {"gc1_neg_exfat", "game.il2cpp_case_latent", true}, {"i2_pos_empty", "smp.image_empty", true},
     };
     int i = 0;
     for (auto& fc : cases) roundtrip(fc, i++);
     safety_tests();
+    case_fold_tests();
     rollback_test();
     plan_content_tests();
     recovery_tests();

@@ -928,7 +928,14 @@ void collect_shadowmount(const Platform& p, Facts& f) {
     f.set("smp.config_v2", cfg.v2);
     // Nach der Umwandlung legt SM+ config-v1-backup/ready.ini an. Steht dann wieder eine v1-Datei in config.ini, verweigert
     // SM+ den Start (sm_config_file.c: Abbruch, damit die umgewandelten Dateien nicht von einer alten ueberschrieben werden).
-    f.set("smp.v1_backup_ready", fs.exists(join_path(kSmpDir, "config-v1-backup/ready.ini")));
+    const bool v1_ready = fs.exists(join_path(kSmpDir, "config-v1-backup/ready.ini"));
+    f.set("smp.v1_backup_ready", v1_ready);
+    // SM+ setzt die Umwandlung nach der Marke nur fort, wenn config.ini Byte fuer Byte der Sicherung config-v1-backup/config.ini gleicht (same_file in
+    // sm_config_file.c, sonst EBUSY und kein Start). Ist sie gleich, macht SM+ die unterbrochene Umwandlung selbst fertig: kein Befund.
+    {
+        std::string backup_text;
+        f.set("smp.v1_matches_backup", v1_ready && cfg_read && fs.read_file(join_path(kSmpDir, "config-v1-backup/config.ini"), backup_text) && backup_text == cfg_text);
+    }
 
     // Zeilen, die SM+ 1.7beta12 in einer v2-Datei ignoriert (flache v1-Namen) oder wegen derer es die Datei ablehnt.
     json v1keys = json::array(), problems = json::array();

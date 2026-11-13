@@ -306,6 +306,7 @@
   "fix.autoload_remove_duplicates": "Supprimer les lignes d'autoload en double",
   "fix.autoload_fix_missing": "Corriger les entrées d'autoload sans fichier",
   "fix.quarantine_broken_elf": "Mettre de côté un fichier ELF défectueux",
+  "fix.quarantine_empty_image": "Mettre de côté une image vide",
   "fix.pldmgr_enable_autoload": "Activer l'autoload dans le Payload Manager",
   "errors.live": "Ce que Medic voit en ce moment",
   "errors.live_none": "Lancez un diagnostic et Medic affiche ici l'état actuel de la console.",

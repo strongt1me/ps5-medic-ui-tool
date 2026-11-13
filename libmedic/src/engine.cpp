@@ -10,6 +10,7 @@
 //  * undo_txn stellt je Operation fest, ob sie im Zustand "nachher" (zurueckdrehen), "vorher" (schon erledigt, ueberspringen)
 //    oder in einem fremden Zustand ist (abbrechen, nichts anfassen). Dadurch laesst sich ein halb gescheitertes Undo
 //    und eine abgebrochene Transaktion beliebig oft wiederholen.
+#include "medic/casename.hpp"
 #include "medic/fixes.hpp"
 #include "medic/sha256.hpp"
 
@@ -233,7 +234,9 @@ OpState classify(const Platform& p, const PathPolicy& policy, const json& r, std
     if (!policy.allowed(path, &why)) return OpState::Other;
     if (str_of(r, "op") == "rename") {
         if (!policy.allowed(to, &why)) return OpState::Other;
-        const bool path_exists = p.fs().exists(path), to_exists = p.fs().exists(to);
+        const bool case_only = is_case_only_rename(path, to);  // exFAT/FAT: nur der Ordnereintrag sagt, welche Schreibweise gilt
+        const bool path_exists = case_only ? dir_has_name(p.fs(), path) : p.fs().exists(path);
+        const bool to_exists = case_only ? dir_has_name(p.fs(), to) : p.fs().exists(to);
         if (!path_exists && to_exists) {
             const std::string sha_after = str_of(r, "sha_after");
             if (!sha_after.empty()) {
@@ -372,7 +375,10 @@ ApplyResult apply_impl(const FixPlan& plan, Platform& p, const PathPolicy& polic
             if (!policy.allowed(c.to, &why)) return fail(why);
             if (!paths_used.insert(PathPolicy::normalize(c.to)).second) return fail("Pfad mehrfach im Plan: " + c.to);
             if (!p.fs().exists(c.path)) return fail("Quelle existiert nicht: " + c.path);
-            if (p.fs().exists(c.to)) return fail("Ziel existiert bereits: " + c.to);
+            // Nur die Schreibweise aendern (exFAT/FAT): dort "findet" exists() das Ziel auch, wenn es dieselbe Datei ist; entscheidend ist der Ordnereintrag
+            const bool case_only = is_case_only_rename(c.path, c.to);
+            if (case_only && !dir_has_name(p.fs(), c.path)) return fail("Die Quelle hat nicht die erwartete Schreibweise: " + c.path);
+            if (case_only ? dir_has_name(p.fs(), c.to) : p.fs().exists(c.to)) return fail("Ziel existiert bereits: " + c.to);
         } else if (c.check_base) {
             // Die Datei darf sich seit der Vorschau nicht geaendert haben.
             std::string cur;
@@ -435,7 +441,10 @@ ApplyResult apply_impl(const FixPlan& plan, Platform& p, const PathPolicy& polic
             // Ab hier ist die Operation passiert -> fuer Rollback vormerken, bevor weiter geprueft wird.
             rec["sha_before"] = before;
             done.push_back(rec);
-            if (!p.fs().exists(c.to) || p.fs().exists(c.path)) return abort_all("Nachpruefung fehlgeschlagen: " + c.path);
+            const bool case_only = is_case_only_rename(c.path, c.to);
+            const bool there = case_only ? dir_has_name(p.fs(), c.to) : p.fs().exists(c.to);
+            const bool gone = case_only ? !dir_has_name(p.fs(), c.path) : !p.fs().exists(c.path);
+            if (!there || !gone) return abort_all("Nachpruefung fehlgeschlagen: " + c.path);
             const std::string after = hash_file(p.fs(), c.to, ok);
             if (!ok || after != before) return abort_all("Pruefsumme nach dem Verschieben stimmt nicht: " + c.to);
             rec["sha_after"] = after;

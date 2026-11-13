@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Plan-Phase der Fix-Engine: erzeugt konkrete Aenderungen aus Befund + Fakten. Veraendert nichts.
+#include "medic/casename.hpp"
 #include "medic/fixes.hpp"
 #include "medic/ini.hpp"
 #include "medic/sha256.hpp"
@@ -86,11 +87,12 @@ void plan_rename_parentheses(FixPlan& plan, const Facts& facts, const IFileSyste
 void plan_rename_case(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
     std::set<std::string> targets;
     for (const auto& m : array_fact(facts, "games.case_mismatch")) {
-        if (m.value("case_sensitive", 0) != 1) continue;
+        // Auch auf exFAT/FAT (case_sensitive 0): dort aendert das Umbenennen nur den Namen im Ordner; der Befund ist ein Hinweis auf spaeter
         const std::string path = str_of(m, "path"), expected = str_of(m, "expected");
         if (path.empty() || expected.empty() || expected.find('/') != std::string::npos) continue;
         const std::string to = join_path(dir_of(path), expected);
-        if (fs.exists(to) || !targets.insert(to).second) {
+        const bool exists_to = is_case_only_rename(path, to) ? dir_has_name(fs, to) : fs.exists(to);  // exFAT: exists() findet auch dieselbe Datei
+        if (exists_to || !targets.insert(to).second) {
             plan.warnings.push_back("Uebersprungen (Ziel existiert bereits): " + to);
             continue;
         }
@@ -499,6 +501,41 @@ void plan_quarantine_elf(FixPlan& plan, const Facts& facts, const IFileSystem& f
     plan.hint_en = "The file is not deleted but moved to the hidden folder .medic_broken next to it; undo brings it back. Then transfer the payload again (FTP in binary mode) or download it again.";
 }
 
+// ---- quarantine_empty_image ---------------------------------------------------------------------------------------------
+// Ein Image (.exfat, .ffpfs, .ffpfsc) unter 512 Byte kann kein Dateisystem enthalten und sich nicht einhaengen lassen. Es wird nicht geloescht,
+// sondern in den versteckten Ordner .medic_broken daneben verschoben (ShadowMount+ ueberspringt Namen mit Punkt am Anfang, wie bei den Doppelten).
+// Eine Datei, die gerade noch uebertragen wird, ist auch klein: die Vorschau sagt es, die Bestaetigung bleibt beim Nutzer.
+
+void plan_quarantine_image(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    const PathPolicy policy = policy_from_facts(facts);
+    std::set<std::string> targets;
+    for (const auto& img : array_fact(facts, "smp.images")) {
+        if (img.value("tiny", 0) != 1) continue;
+        const std::string path = str_of(img, "path");
+        if (path.empty()) continue;
+        std::string why;
+        if (!policy.allowed(path, &why)) {
+            plan.warnings.push_back("Uebersprungen (ausserhalb der erlaubten Ordner): " + path);
+            continue;
+        }
+        const std::string to = join_path(join_path(dir_of(path), ".medic_broken"), base_of(path));
+        if (fs.exists(to) || !targets.insert(to).second) {
+            plan.warnings.push_back("Uebersprungen (Ziel existiert bereits): " + to);
+            continue;
+        }
+        Change c;
+        c.kind = Change::Kind::Rename;
+        c.path = path;
+        c.to = to;
+        c.note_de = "Leeres oder abgebrochenes Image in den Ordner .medic_broken verschieben: " + base_of(path);
+        c.note_en = "Move the empty or interrupted image into the folder .medic_broken: " + base_of(path);
+        plan.changes.push_back(std::move(c));
+    }
+    if (plan.changes.empty()) plan.warnings.push_back("Kein leeres Image in den erlaubten Ordnern gefunden");
+    plan.hint_de = "Die Datei wird nicht geloescht, sondern in den versteckten Ordner .medic_broken daneben verschoben; Rueckgaengig holt sie zurueck. Wird sie gerade auf die Konsole uebertragen, die Uebertragung erst beenden: sonst bricht sie ab.";
+    plan.hint_en = "The file is not deleted but moved to the hidden folder .medic_broken next to it; undo brings it back. If it is being transferred to the console right now, let the transfer finish first: otherwise it fails.";
+}
+
 // ---- pldmgr_enable_autoload ---------------------------------------------------------------------------------------------------
 void plan_pldmgr_enable(FixPlan& plan, const Finding& finding, const Facts& facts, const IFileSystem& fs) {
     Finding f = finding;
@@ -580,6 +617,8 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
         plan_autoload_missing(plan, facts, fs);
     } else if (finding.fix == "quarantine_broken_elf") {
         plan_quarantine_elf(plan, facts, fs);
+    } else if (finding.fix == "quarantine_empty_image") {
+        plan_quarantine_image(plan, facts, fs);
     } else if (finding.fix == "pldmgr_enable_autoload") {
         plan_pldmgr_enable(plan, finding, facts, fs);
     } else if (finding.fix == "smp_disable_conflicting_backpork") {

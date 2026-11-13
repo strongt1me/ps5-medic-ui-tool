@@ -83,7 +83,7 @@
    "confidence_reason": "Se lee la grafía distinta y se mide el tipo de sistema de archivos. Que por eso el juego se cierre se basa en el informe del desarrollador de ShadowMount+ (issue 159, original leído) y no se reprodujo en la consola de prueba."
   },
   "game.il2cpp_case_latent": {
-   "text": "En una carpeta de juego en una unidad exFAT o FAT el archivo se llama Il2cppUserAssemblies.prx en lugar de Il2CppUserAssemblies.prx (juego de Unity, carpeta Media/Modules). Allí la diferencia pasa inadvertida y el juego arranca. En cuanto la carpeta se copia al SSD interno o se empaqueta en una imagen UFS, el sistema de archivos distingue mayúsculas y minúsculas: el juego no encuentra el archivo y se cierra justo tras arrancar. Renombra el archivo a Il2CppUserAssemblies.prx en el PC antes de moverlo. Aquí no hay reparación automática.",
+   "text": "En una carpeta de juego en una unidad exFAT o FAT el archivo se llama Il2cppUserAssemblies.prx en lugar de Il2CppUserAssemblies.prx (juego de Unity, carpeta Media/Modules). Allí la diferencia pasa inadvertida y el juego arranca. En cuanto la carpeta se copia al SSD interno o se empaqueta en una imagen UFS, el sistema de archivos distingue mayúsculas y minúsculas: el juego no encuentra el archivo y se cierra justo tras arrancar. Renombra el archivo antes de moverlo: la reparación solo cambia las mayúsculas y minúsculas del nombre en la misma carpeta (registro, deshacer restaura el nombre anterior).",
    "confidence_reason": "Se lee la grafía. El efecto solo se da tras mover a un sistema de archivos que distingue mayúsculas y se deduce del informe, no se observó."
   },
   "smp.debug_off": {
@@ -137,7 +137,7 @@
    "text": "El config.ini (formato v2) contiene líneas en el antiguo formato plano, p. ej. scan_depth=2. ShadowMount+ 1.7beta12 lee en un archivo v2 solo las claves de sección e ignora en silencio estas líneas, así que el ajuste no surte efecto (por ejemplo, no encontrará juegos en el segundo nivel). Pasa cuando otra herramienta o una guía antigua añade líneas planas. La reparación mueve las líneas con equivalente conocido a la sección correcta (scan_depth a [scan] depth, fakelib_default_mode a [fakelib] default_mode, scanpath a [scan] path, etc.); incluye copia de seguridad y deshacer."
   },
   "smp.v1_config_restored": {
-   "text": "El config.ini está en el formato antiguo (v1) aunque ShadowMount+ ya lo convirtió a v2 (existe config-v1-backup/ready.ini). ShadowMount+ 1.7beta12 se niega entonces a arrancar para que los archivos convertidos no se sobrescriban con los antiguos; el mensaje aparece solo en la consola. Pasa cuando se copió de vuelta un config.ini antiguo (de una copia de seguridad o de una herramienta del PC). Restaura el archivo v2 (p. ej. de la copia de Medic en /data/ps5medic/backups) o convierte el archivo a v2."
+   "text": "El config.ini está en el formato antiguo (v1), aunque ShadowMount+ ya lo convirtió a v2 (existe config-v1-backup/ready.ini), y no coincide con la copia config-v1-backup/config.ini. ShadowMount+ 1.7beta12 se niega entonces a arrancar para que los archivos convertidos no sean sobrescritos por otros antiguos; el mensaje solo aparece en la consola. Ocurre cuando se copió de vuelta un config.ini antiguo (desde una copia de seguridad o una herramienta de PC). Tú decides qué archivo debe valer: restaura el archivo v2 (p. ej. desde la copia de Medic en /data/ps5medic/backups) o convierte el archivo a v2 a mano. Aquí no hay corrección automática: no se puede leer cuál de los dos archivos es el correcto, y la conversión solo la hace ShadowMount+."
   },
   "smp.retry_limit": {
    "text": "ShadowMount+ se rindió con un título o imagen tras varios intentos fallidos (2 por título, 3 por imagen) y lo omite hasta que se reinicie el payload. La causa está en las líneas del log anteriores (p. ej. 'attach failed', 'nmount ... failed', '[REG] FAIL'). Corrige la causa y luego envía de nuevo ShadowMount+ (o reinicia los intentos con la API: POST /api/v1/scan con {\"reset_attempts\":true})."
@@ -215,7 +215,7 @@
    "confidence_reason": "Se leen el tamaño del archivo y VolumeLength; la longitud del sistema de archivos está definida en la especificación de exFAT. Que por eso un juego se cierre se deduce y no se observó en la consola de prueba."
   },
   "smp.image_empty": {
-   "text": "Una imagen (.exfat, .ffpfs o .ffpfsc) es menor de 512 bytes, así que está vacía o es solo un resto tras una interrupción: no puede contener un sistema de archivos y no se puede montar. Copia o construye la imagen de nuevo; el archivo vacío se puede quitar sin riesgo si es solo un resto (Medic no lo borra).",
+   "text": "Una imagen (.exfat, .ffpfs o .ffpfsc) es menor de 512 bytes, así que está vacía o es solo un resto tras una interrupción: no puede contener un sistema de archivos y no se puede montar. Copia o construye la imagen de nuevo; la reparación mueve el archivo a la carpeta oculta .medic_broken al lado (nunca se borra, deshacer lo devuelve). Si ahora mismo hay una transferencia a la consola, déjala terminar primero: si no, falla.",
    "confidence_reason": "Se lee el tamaño; un sistema de archivos con seguridad no cabe en menos de 512 bytes. No se observó en la consola de prueba cómo trata ShadowMount+ esos archivos."
   },
   "game.eboot_invalid": {

@@ -229,7 +229,17 @@ bool PosixRw::rename(const std::string& from, const std::string& to) {
     if (!map_virtual_path(base_, from, a) || !map_virtual_path(base_, to, b)) return false;
     if (!ancestors_clean(base_, from, false) || !ancestors_clean(base_, to, false)) return false;
     if (fs::is_symlink(a, ec)) return false;  // ein Symlink kann ausserhalb der erlaubten Ordner zeigen
-    if (!fs::exists(a, ec) || fs::exists(b, ec)) return false;
+    if (!fs::exists(a, ec)) return false;
+    if (fs::exists(b, ec)) {
+        // Auf exFAT/FAT (ohne Unterscheidung der Schreibweise) ist das Ziel bei einer Umbenennung nur der Schreibweise dieselbe Datei: erlaubt.
+        // Alles andere, was schon dort liegt, bleibt tabu.
+        std::string na = a.filename().string(), nb = b.filename().string();
+        auto fold = [](std::string& s) { for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c))); };
+        fold(na);
+        fold(nb);
+        std::error_code ec2;
+        if (a == b || a.parent_path() != b.parent_path() || na != nb || !fs::equivalent(a, b, ec2) || ec2) return false;
+    }
     fs::create_directories(b.parent_path(), ec);
     fs::rename(a, b, ec);
     if (ec) return false;

@@ -38,7 +38,7 @@
   <tr>
     <td valign="top">
       <h3>🛠 Reparieren mit Undo</h3>
-      Elf reversible Fixes (Image umbenennen, ShadowMount+-Schlüssel setzen, v1-Zeilen in die v2-Sektionen übertragen, BackPork aus dem Autoload nehmen, Duplikate verschieben, Autoload-Wartezeit, doppelte oder fehlende Autoload-Einträge, Autoload einschalten, defekte ELF-Datei beiseitelegen, Dateiname mit falscher Schreibung) und eine Anleitung für verschachtelte Images. Die Vorschau zeigt genau, was sich ändert; nichts passiert ohne ✕. Jede Änderung steht im Journal und lässt sich zurücknehmen. <b>Nie löschen</b>, nur verschieben oder umbenennen.
+      Zwölf reversible Fixes (Image umbenennen, ShadowMount+-Schlüssel setzen, v1-Zeilen in die v2-Sektionen übertragen, BackPork aus dem Autoload nehmen, Duplikate verschieben, Autoload-Wartezeit, doppelte oder fehlende Autoload-Einträge, Autoload einschalten, defekte ELF-Datei oder leeres Image beiseitelegen, Dateiname mit falscher Schreibung) und eine Anleitung für verschachtelte Images. Die Vorschau zeigt genau, was sich ändert; nichts passiert ohne ✕. Jede Änderung steht im Journal und lässt sich zurücknehmen. <b>Nie löschen</b>, nur verschieben oder umbenennen.
     </td>
     <td valign="top">
       <h3>🧪 Selbsttest</h3>

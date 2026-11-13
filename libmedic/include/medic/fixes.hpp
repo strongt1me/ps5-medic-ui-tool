@@ -25,6 +25,7 @@
 //   autoload_fix_missing                keine; liest autoload.problems[] (missing_slot, missing_file, entry_case): Schreibweise korrigieren,
 //                                       sonst Zeile auskommentieren (WebKit-Liste) bzw. entfernen (Payload Manager)
 //   quarantine_broken_elf               keine; liest payload.broken_elfs[], verschiebt nach <Ordner>/.medic_broken/ (nur Whitelist-Pfade)
+//   quarantine_empty_image              keine; liest smp.images[] mit tiny=1 (unter 512 Byte), verschiebt nach <Ordner>/.medic_broken/ (nur Whitelist-Pfade)
 //   pldmgr_enable_autoload              keine; setzt AUTOLOAD_ENABLED=1 in /data/pldmgr/pldmgr_config.txt
 //   fix_image_nesting_hint              keine (nur Hinweis)
 #pragma once

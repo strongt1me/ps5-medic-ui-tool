@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.39",
+  "db_version": "2026.11.40",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -943,11 +943,11 @@
         ]
       },
       "text": {
-        "de": "In einem Spielordner auf einem exFAT- oder FAT-Laufwerk heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Ordner Media/Modules). Dort fällt der Unterschied nicht auf, das Spiel startet. Sobald der Ordner auf die interne SSD kopiert oder in ein UFS-Image gepackt wird, unterscheidet das Dateisystem Groß- und Kleinschreibung: Das Spiel findet die Datei nicht und stürzt gleich nach dem Start ab. Vor dem Umzug die Datei am PC auf Il2CppUserAssemblies.prx umbenennen. Einen automatischen Fix gibt es hier nicht.",
-        "en": "In a game folder on an exFAT or FAT drive the file is called Il2cppUserAssemblies.prx instead of Il2CppUserAssemblies.prx (Unity game, folder Media/Modules). There the difference goes unnoticed and the game starts. As soon as the folder is copied to the internal SSD or packed into a UFS image, the file system distinguishes upper and lower case: the game does not find the file and crashes right after launch. Rename the file to Il2CppUserAssemblies.prx on the PC before the move. There is no automatic fix here."
+        "de": "In einem Spielordner auf einem exFAT- oder FAT-Laufwerk heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Ordner Media/Modules). Dort fällt der Unterschied nicht auf, das Spiel startet. Sobald der Ordner auf die interne SSD kopiert oder in ein UFS-Image gepackt wird, unterscheidet das Dateisystem Groß- und Kleinschreibung: Das Spiel findet die Datei nicht und stürzt gleich nach dem Start ab. Vor dem Umzug die Datei umbenennen: Der Fix ändert nur die Schreibweise des Dateinamens im selben Ordner (Backup und Journal, Rückgängig stellt den alten Namen wieder her).",
+        "en": "In a game folder on an exFAT or FAT drive the file is called Il2cppUserAssemblies.prx instead of Il2CppUserAssemblies.prx (Unity game, folder Media/Modules). There the difference goes unnoticed and the game starts. As soon as the folder is copied to the internal SSD or packed into a UFS image, the file system distinguishes upper and lower case: the game does not find the file and crashes right after launch. Rename the file before the move: the fix only changes the letter case of the file name in the same folder (journal entry, undo restores the old name)."
       },
       "evidence": "games.case_mismatch[].path",
-      "fix": null,
+      "fix": "rename_case_prx",
       "source": "https://github.com/drakmor/ShadowMountPlus/issues/159",
       "verified": "community",
       "confidence": {
@@ -1376,12 +1376,16 @@
           {
             "fact": "smp.v1_backup_ready",
             "eq": "true"
+          },
+          {
+            "fact": "smp.v1_matches_backup",
+            "eq": "false"
           }
         ]
       },
       "text": {
-        "de": "Die config.ini ist im alten Format (v1), obwohl ShadowMount+ sie schon auf v2 umgewandelt hat (config-v1-backup/ready.ini existiert). ShadowMount+ 1.7beta12 verweigert dann den Start, damit die umgewandelten Dateien nicht von einer alten überschrieben werden; die Meldung steht nur auf der Konsole. Das passiert, wenn eine alte config.ini zurückkopiert wurde (aus einem Backup oder von einem PC-Werkzeug). Die v2-Datei wiederherstellen (z. B. aus dem Medic-Backup unter /data/ps5medic/backups) oder die Datei auf v2 umstellen.",
-        "en": "The config.ini is in the old format (v1) although ShadowMount+ already converted it to v2 (config-v1-backup/ready.ini exists). ShadowMount+ 1.7beta12 then refuses to start so that the converted files are not overwritten by old ones; the message appears only on the console. This happens when an old config.ini was copied back (from a backup or a PC tool). Restore the v2 file (e.g. from the Medic backup under /data/ps5medic/backups) or convert the file to v2."
+        "de": "Die config.ini ist im alten Format (v1), obwohl ShadowMount+ sie schon auf v2 umgewandelt hat (config-v1-backup/ready.ini existiert), und sie gleicht nicht der Sicherung config-v1-backup/config.ini. ShadowMount+ 1.7beta12 verweigert dann den Start, damit die umgewandelten Dateien nicht von einer alten überschrieben werden; die Meldung steht nur auf der Konsole. Das passiert, wenn eine alte config.ini zurückkopiert wurde (aus einem Backup oder von einem PC-Werkzeug). Welche Datei gelten soll, entscheidest du: die v2-Datei wiederherstellen (z. B. aus dem Medic-Backup unter /data/ps5medic/backups) oder die Datei von Hand auf v2 umstellen. Einen automatischen Fix gibt es hier nicht: Welche der beiden Dateien richtig ist, lässt sich nicht lesen, und die Umwandlung selbst nimmt nur ShadowMount+ vor.",
+        "en": "The config.ini is in the old format (v1) although ShadowMount+ already converted it to v2 (config-v1-backup/ready.ini exists), and it does not match the backup config-v1-backup/config.ini. ShadowMount+ 1.7beta12 then refuses to start so that the converted files are not overwritten by old ones; the message appears only on the console. This happens when an old config.ini was copied back (from a backup or a PC tool). Which file should count is your decision: restore the v2 file (e.g. from the Medic backup under /data/ps5medic/backups) or convert the file to v2 by hand. There is no automatic fix here: which of the two files is right cannot be read, and only ShadowMount+ itself does the conversion."
       },
       "evidence": "smp.config_v2",
       "fix": null,
@@ -2016,11 +2020,11 @@
         ]
       },
       "text": {
-        "de": "Ein Image (.exfat, .ffpfs oder .ffpfsc) ist kleiner als 512 Byte, also leer oder nach einem Abbruch nur ein Rest: Es kann kein Dateisystem enthalten und sich nicht einhängen lassen. Das Image neu kopieren oder neu bauen; die leere Datei kann gefahrlos entfernt werden, wenn sie nur ein Überbleibsel ist (Medic löscht sie nicht).",
-        "en": "An image (.exfat, .ffpfs or .ffpfsc) is smaller than 512 bytes, so it is empty or only a remnant after an abort: it cannot contain a file system and cannot be mounted. Copy or build the image again; the empty file can safely be removed if it is only a leftover (Medic does not delete it)."
+        "de": "Ein Image (.exfat, .ffpfs oder .ffpfsc) ist kleiner als 512 Byte, also leer oder nach einem Abbruch nur ein Rest: Es kann kein Dateisystem enthalten und sich nicht einhängen lassen. Das Image neu kopieren oder neu bauen; der Fix legt die Datei in den versteckten Ordner .medic_broken daneben (nie löschen, Rückgängig holt sie zurück). Läuft gerade eine Übertragung auf die Konsole, diese erst beenden lassen: sonst bricht sie ab.",
+        "en": "An image (.exfat, .ffpfs or .ffpfsc) is smaller than 512 bytes, so it is empty or only a remnant after an abort: it cannot contain a file system and cannot be mounted. Copy or build the image again; the fix moves the file into the hidden folder .medic_broken next to it (never deleted, undo brings it back). If a transfer to the console is running right now, let it finish first: otherwise it fails."
       },
       "evidence": "smp.images[].path",
-      "fix": null,
+      "fix": "quarantine_empty_image",
       "source": "https://github.com/strongt1me/ps5-medic",
       "verified": "todo",
       "confidence": {
