@@ -172,6 +172,11 @@ void selftest_tests() {
         CHECK(run("sw.files.sanity", s, *empty).status == TestStatus::Passed, "Selbsttest: Dateien ok");
         s.set("smp.images", json::array({{{"path", "/x.exfat"}, {"truncated", 1}}}));
         CHECK(run("sw.files.sanity", s, *empty).status == TestStatus::Warn, "Selbsttest: abgeschnittenes Image = warn");
+        // Review 13. Nov. 2026: ein exFAT-Image, dessen Kopf nicht lesbar oder ungueltig war (keine Volumengroesse), gilt nicht als geprueft
+        s.set("smp.images", json::array({{{"path", "/x.exfat"}, {"ext", ".exfat"}, {"size", 4096}, {"tiny", 0}}}));
+        CHECK(run("sw.files.sanity", s, *empty).status == TestStatus::Warn, "Selbsttest: exFAT-Image ohne lesbaren Kopf = warn, nicht passed");
+        s.set("smp.images", json::array({{{"path", "/x.exfat"}, {"ext", ".exfat"}, {"size", 4096}, {"tiny", 0}, {"volume_bytes", 4096}, {"truncated", 0}}}));
+        CHECK(run("sw.files.sanity", s, *empty).status == TestStatus::Passed, "Selbsttest: exFAT-Image mit lesbarem Kopf = passed");
     }
     {  // Lesetest an einer echten (kleinen) Datei: i1_neg_complete hat ein 64-KiB-exFAT-Image
         Copy c("i1_neg_complete");

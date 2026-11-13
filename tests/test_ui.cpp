@@ -38,13 +38,14 @@ struct FakeService : IMedicService {
     UndoResult undo_result{true, ""};
     int checks = 0, plans = 0, applies = 0, undos = 0, reports = 0;
     int selftest_begins = 0, selftest_runs = 0, selftest_ends = 0;
+    bool begin_ok = true, end_ok = true;
     std::vector<TestResult> recorded;
     void selftest_record(const TestResult& r) override { recorded.push_back(r); }
     bool last_cancelled = false;
     std::vector<TestResult> last_results;
     bool selftest_begin(const std::vector<std::string>&) override {
         ++selftest_begins;
-        return true;
+        return begin_ok;
     }
     TestResult selftest_run(const std::string& id) override {
         ++selftest_runs;
@@ -53,10 +54,11 @@ struct FakeService : IMedicService {
         r.status = TestStatus::Passed;
         return r;
     }
-    void selftest_end(const std::vector<TestResult>& r, bool cancelled) override {
+    bool selftest_end(const std::vector<TestResult>& r, bool cancelled) override {
         ++selftest_ends;
         last_results = r;
         last_cancelled = cancelled;
+        return end_ok;
     }
     std::string last_undo;
     ReportResult report_result{true, "/data/ps5medic/reports/report_T.md", "", "PS5 Medic 0.4.0 test\n3 Befund(e):\n[KRITISCH] a.crit\n [HINWEIS] c.info\n", false};
@@ -1240,21 +1242,21 @@ void pad_nav_tests() {
         n.stick(0, 20000, 1000, out);
         CHECK(out == Buttons{Button::Down}, "Stick: nach unten loest sofort einen Schritt aus");
         out.clear();
-        n.poll(1399, out);
+        n.poll(1299, out);
         CHECK(out.empty(), "Stick: vor Ablauf der Wartezeit keine Wiederholung");
-        n.poll(1400, out);
-        CHECK(out == Buttons{Button::Down}, "Stick: gehalten wiederholt Runter nach 400 ms");
+        n.poll(1300, out);
+        CHECK(out == Buttons{Button::Down}, "Stick: gehalten wiederholt Runter nach 300 ms");
         out.clear();
-        n.poll(1450, out);
+        n.poll(1340, out);
         CHECK(out.empty(), "Stick: Wiederholung im Takt, nicht in jedem Bild");
-        n.poll(1510, out);
-        CHECK(out == Buttons{Button::Down}, "Stick: danach alle 110 ms");
+        n.poll(1370, out);
+        CHECK(out == Buttons{Button::Down}, "Stick: danach alle 70 ms");
         out.clear();
-        n.stick(0, 10000, 1520, out);  // Hysterese: zwischen kOff und kOn bleibt er gedrueckt
-        n.poll(1620, out);
+        n.stick(0, 10000, 1380, out);  // Hysterese: zwischen kOff und kOn bleibt er gedrueckt
+        n.poll(1450, out);
         CHECK(out == Buttons{Button::Down}, "Stick: Hysterese haelt die Richtung bei leichtem Zurueckgehen");
         out.clear();
-        n.stick(0, 5000, 1630, out);
+        n.stick(0, 5000, 1460, out);
         n.poll(2000, out);
         CHECK(out.empty(), "Stick: losgelassen, keine Wiederholung mehr");
         n.stick(0, -30000, 2100, out);
@@ -1295,8 +1297,8 @@ void pad_nav_tests() {
         out.clear();
         n.dpad(Button::Down, true, 3000, out);
         out.clear();
-        n.poll(3400, out);
-        n.poll(3510, out);
+        n.poll(3300, out);
+        n.poll(3370, out);
         CHECK(out == (Buttons{Button::Down, Button::Down}), "Kreuz: gehalten wiederholt");
         out.clear();
         n.dpad(Button::Down, false, 3520, out);
@@ -2971,6 +2973,26 @@ void selftest_ui_tests() {
         d4.update();
     }
     CHECK(svc4.selftest_runs == run_all, "Selbsttest-UI: Gruendlich nach Bestaetigung laeuft alle Tests (ohne Nutzer-Tests)");
+
+    // Marker nicht schreibbar: Tests mit Last oder Schreiben laufen nicht (ein Absturz bliebe sonst unbemerkt), die anderen schon; Speicherfehler wird gemeldet
+    FakeService svc5;
+    svc5.begin_ok = false;
+    svc5.end_ok = false;
+    App d5(svc5);
+    press(d5, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross, Button::Triangle});
+    press(d5, {Button::Circle});
+    press(d5, {Button::Triangle, Button::Cross});
+    for (int i = 0; i < 80; ++i) {
+        d5.render(cv);
+        d5.update();
+    }
+    int risky = 0, marker_skipped = 0;
+    for (const auto& d : selftest_registry())
+        if (d.tier != TestTier::User && (d.risk == "load" || d.risk == "write")) ++risky;
+    for (const auto& r : svc5.last_results) marker_skipped += (r.status == TestStatus::Skipped && r.reason == "marker_unwritable") ? 1 : 0;
+    CHECK(risky > 0 && marker_skipped == risky && svc5.selftest_runs == run_all - risky, "Selbsttest-UI: ohne Marker laufen Last- und Schreibtests nicht, der Rest laeuft");
+    d5.render(cv);
+    CHECK(svc5.selftest_ends == 1 && d5.screen() == App::Screen::SelfTest, "Selbsttest-UI: Ende meldet das Speichern, die Seite bleibt bedienbar");
 }
 
 void checks_archive_tests() {

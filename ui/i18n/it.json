@@ -121,6 +121,8 @@
 "selftest.reason.done_today": "già eseguito oggi",
 "selftest.reason.budget_used": "limite di scrittura esaurito",
 "selftest.reason.budget_unwritable": "limite di scrittura non salvabile, test non avviato",
+"selftest.reason.marker_unwritable": "marcatore non scrivibile, test non avviato",
+"selftest.save_failed": "Impossibile salvare il risultato.",
 "preview.too_big": "Troppe righe per l'anteprima: la modifica verrà scritta ma non è elencata qui.",
 "selftest.reason.sensor_lost": "sensore di temperatura perso, test interrotto",
 "selftest.reason.budget_unreadable": "limite di scrittura illeggibile, test non avviato",

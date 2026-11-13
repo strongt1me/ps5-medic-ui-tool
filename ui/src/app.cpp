@@ -1209,6 +1209,8 @@ void App::start_selftest(int tier_limit) {
     for (std::size_t i = 0; i < st_ids_.size(); ++i) st_run_[i].id = st_defs_[st_ids_[i]].id;
     st_next_ = 0;
     st_cancel_ = st_begun_ = st_item_started_ = st_abort_sent_ = false;
+    st_marker_ok_ = true;
+    st_save_failed_ = false;
     st_progress_ = 0;
     st_rendered_ = false;
     st_state_ = StState::Running;
@@ -1220,7 +1222,7 @@ void App::step_selftest() {
     if (!st_begun_) {
         std::vector<std::string> ids;
         for (std::size_t i : st_ids_) ids.push_back(st_defs_[i].id);
-        svc_.selftest_begin(ids);
+        st_marker_ok_ = svc_.selftest_begin(ids);  // ohne Marker bleibt ein abgestuerzter Lauf unbemerkt: Tests mit Last oder Schreiben laufen dann nicht
         st_begun_ = true;
         st_rendered_ = false;
         return;
@@ -1234,9 +1236,16 @@ void App::step_selftest() {
             st_run_[i].status = medic::TestStatus::Cancelled;
             st_run_[i].reason = "cancelled";
         }
-        svc_.selftest_end(st_run_, st_cancel_);
+        st_save_failed_ = !svc_.selftest_end(st_run_, st_cancel_);
         st_last_ = st_run_;
         st_state_ = StState::Done;
+        return;
+    }
+    if (!st_item_started_ && !st_marker_ok_ && (st_defs_[st_ids_[st_next_]].risk == "load" || st_defs_[st_ids_[st_next_]].risk == "write")) {
+        st_run_[st_next_].status = medic::TestStatus::Skipped;
+        st_run_[st_next_].reason = "marker_unwritable";
+        ++st_next_;
+        st_rendered_ = false;
         return;
     }
     if (!st_item_started_) {
@@ -1340,6 +1349,7 @@ void App::draw_selftest(Canvas& c) const {
     if (!st_last_.empty())
         small().draw(c, M + 4, y + 6, S.fmt("selftest.summary", {{"p", std::to_string(passed)}, {"w", std::to_string(warn)}, {"f", std::to_string(failed)}, {"s", std::to_string(skipped)}}), kDim);
     else small().draw(c, M + 4, y + 6, S("selftest.none_yet"), kDim);
+    if (st_save_failed_) small().draw(c, M + 4, y + 6 + small().line_height() + 4, S("selftest.save_failed"), kWarn);
     draw_hints(c, {{PadGlyph::Cross, S("selftest.all")}, {PadGlyph::Square, S("selftest.quick")}, {PadGlyph::Triangle, S("selftest.thorough")}, {PadGlyph::Shoulders, S("selftest.user")}, {PadGlyph::Circle, S("common.back")}});
 }
 
@@ -2177,7 +2187,12 @@ void App::draw_gamedetail(Canvas& c) const {
     c.fill_round_rect(px, py, pw, ph, 20, kPanel);
     int y = py + 10;
     enum class St { Ok, Warn, Crit, Info, Unknown };
-    auto row = [&](St st, const std::string& label, const std::string& value, const std::vector<std::string>& extra = {}) {
+    int reserve = 0;  // Platz fuer die noch folgenden Zeilen (Fehler, Spielstaende), damit eine lange Zeile sie nicht verdraengt
+    auto row = [&](St st, const std::string& label, const std::string& value, const std::vector<std::string>& extra_all = {}) {
+        const int base_h = 14 + small().line_height() + 2 + body().line_height() + 12;
+        const int room_rows = std::max(0, (py + ph - 8 - reserve - y - base_h) / (small().line_height() + 4));
+        const std::vector<std::string> extra(extra_all.begin(), extra_all.begin() + std::min<std::size_t>(extra_all.size(), static_cast<std::size_t>(room_rows)));
+        if (y + base_h > py + ph - 8) return;  // passt nicht mehr ins Panel
         const Color col = st == St::Ok ? kOk : st == St::Warn ? kWarn : st == St::Crit ? kCrit : st == St::Info ? kInfo : kDim;
         const Icon ic = st == St::Ok ? Icon::Ok : st == St::Warn ? Icon::Warning : st == St::Crit ? Icon::Critical : st == St::Info ? Icon::Info : Icon::Skip;
         const int lh = small().line_height();
@@ -2196,6 +2211,8 @@ void App::draw_gamedetail(Canvas& c) const {
     };
     const std::string fw = result_.fw.empty() ? "?" : result_.fw;
 
+    const int row_h = 14 + small().line_height() + 2 + body().line_height() + 12;
+    reserve = row_h * (1 + (g.foreign_saves > 0 ? 1 : 0));
     // Fundort
     if (g.sources.empty()) {
         row(St::Unknown, S("games.d.where_short"), S("games.d.where_none"));
@@ -2233,6 +2250,7 @@ void App::draw_gamedetail(Canvas& c) const {
         }
     }
     // Fehler der Konsole
+    reserve = g.foreign_saves > 0 ? row_h : 0;
     if (g.errors.empty()) {
         row(St::Ok, S("games.d.errors"), S("games.d.errors_none"));
     } else {
@@ -2242,6 +2260,7 @@ void App::draw_gamedetail(Canvas& c) const {
         if (g.errors.size() > 1) rest.push_back(S.fmt("games.d.errors_more", {{"n", std::to_string(g.errors.size())}}));
         row(St::Warn, S("games.d.errors"), S.fmt("games.d.err_short", {{"code", e.code}, {"n", std::to_string(e.count)}}), rest);
     }
+    reserve = 0;
     if (g.foreign_saves > 0) row(St::Warn, S("games.d.saves"), S.fmt("games.d.saves_foreign", {{"n", std::to_string(g.foreign_saves)}}));
     // Letzte Meldungen aus dem Log: dunkler Einschub, so viele Zeilen, wie noch Platz haben
     if (!g.log_lines.empty()) {

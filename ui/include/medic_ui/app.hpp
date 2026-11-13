@@ -208,6 +208,7 @@ private:
     std::vector<std::size_t> st_ids_;                         // Indizes (in st_defs_) der Tests dieses Laufs
     std::size_t st_next_ = 0;
     bool st_cancel_ = false, st_begun_ = false, st_item_started_ = false, st_abort_sent_ = false;
+    bool st_marker_ok_ = true, st_save_failed_ = false;  // Marker nicht schreibbar / Ergebnis nicht gespeichert
     int st_tier_ = 1;           // gewaehlte Stufe: 0 Schnell, 1 Standard, 2 Gruendlich
     double st_progress_ = 0;    // Fortschritt des laufenden Tests (0 bis 1)
 

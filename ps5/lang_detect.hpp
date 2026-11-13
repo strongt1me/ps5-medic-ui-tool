@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Sprache der Meldungen fuer Programme ohne die UI-Texte (native App vor dem Dienst, Installer): zuerst die gewaehlte Sprache aus
-// /data/ps5medic/config.ini (language=xx), sonst die Systemsprache, die der Dienst nach jedem Start in /data/ps5medic/system_language
+// /data/ps5medic/config.ini (language=xx, wie in der UI: Leerraum erlaubt, die letzte Zeile gilt), sonst die Systemsprache, die der Dienst nach jedem Start in /data/ps5medic/system_language
 // ablegt, sonst Englisch. Index: 0 de, 1 en, 2 fr, 3 it, 4 es.
 //
 // Bewusst nur fopen/fread/fclose und eigene Schleifen: die native App bindet ueber die Laufzeit libc.prx nur ein, was dort vorhanden ist.
@@ -38,19 +38,31 @@ inline int read_small(const char* path, char* buf, std::size_t size) {
     return static_cast<int>(n);
 }
 
+inline bool is_space(char c) { return c == ' ' || c == '\t' || c == '\r'; }
+
 inline int detect() {
-    char buf[1024];
+    static char buf[4096];  // reicht fuer eine uebliche config.ini; groesser ist sie nicht
+    int found = -1;
     if (read_small("/data/ps5medic/config.ini", buf, sizeof buf) >= 0) {
-        // Zeilen durchgehen: "language=xx" am Zeilenanfang
+        // Wie configured_value der UI: getrimmte Zeile, Kommentarzeilen (# und ;) zaehlen nicht, Leerraum um '=' ist erlaubt, die letzte Zeile gilt
         for (const char* line = buf; *line;) {
-            if (starts_with(line, "language=")) {
-                const int found = index_of(line + 9);
-                if (found >= 0) return found;
+            const char* p = line;
+            while (is_space(*p)) ++p;
+            if (starts_with(p, "language") && *p != '#' && *p != ';') {
+                p += 8;
+                while (is_space(*p)) ++p;
+                if (*p == '=') {
+                    ++p;
+                    while (is_space(*p)) ++p;
+                    const int idx = index_of(p);
+                    found = idx;  // die letzte Zeile gilt, auch mit unbekanntem Wert (dann Systemsprache, wie die UI mit ihrem Standard)
+                }
             }
             while (*line && *line != 10) ++line;  // bis zum Zeilenumbruch
             if (*line == 10) ++line;
         }
     }
+    if (found >= 0) return found;
     char sys[16];
     if (read_small("/data/ps5medic/system_language", sys, sizeof sys) > 0 && index_of(sys) >= 0) return index_of(sys);
     return 1;

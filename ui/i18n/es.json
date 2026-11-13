@@ -121,6 +121,8 @@
   "selftest.reason.done_today": "ya se ejecutó hoy",
   "selftest.reason.budget_used": "cupo de escritura agotado",
   "selftest.reason.budget_unwritable": "cupo de escritura no guardable, prueba no iniciada",
+  "selftest.reason.marker_unwritable": "marcador no escribible, prueba no iniciada",
+  "selftest.save_failed": "No se pudo guardar el resultado.",
   "preview.too_big": "Demasiadas líneas para la vista previa: el cambio se escribirá pero no se lista aquí.",
   "selftest.reason.sensor_lost": "sensor de temperatura perdido, prueba interrumpida",
   "selftest.reason.budget_unreadable": "cupo de escritura ilegible, prueba no iniciada",

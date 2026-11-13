@@ -331,7 +331,7 @@ private:
                 type_ = static_cast<char>(head_[0]);
                 body_left_ = medic::proto::get32(head_ + 1);
                 sub_got_ = 0;
-                if (type_ == medic::proto::kBand && body_left_ < 4) body_left_ = 0;  // ungueltig: ignorieren
+                if (type_ == medic::proto::kBand && body_left_ < 4) type_ = '?';  // ungueltig: die wenigen Bytes ueberspringen
             }
             return;
         }
@@ -367,6 +367,8 @@ private:
     std::size_t head_got_ = 0, sub_got_ = 0, body_left_ = 0, band_off_ = 0;
     char type_ = 0;
 };
+
+constexpr std::uint32_t kBtnCircle = 0x2000;  // wie im Dienst (service_main.cpp)
 
 }  // namespace
 
@@ -413,6 +415,31 @@ int main() {
     (void)scePadInit();
     int pad = -1;
     std::uint32_t next_pad_try = 0;
+    bool pad_sent = false;  // zuletzt wurde ein echter Zustand gesendet (nach einem Verlust folgt einmal der Ruhezustand)
+    auto open_pad = [&]() {
+        const std::uint32_t t = now_ms();
+        if (pad >= 0 || t < next_pad_try) return;
+        next_pad_try = t + 1000;
+        int uid = 0;
+        if (sceUserServiceGetInitialUser(&uid) == 0) {
+            pad = scePadOpen(uid, 0, 0, nullptr);
+            if (pad >= 0) trace("Pad geoeffnet");
+        }
+    };
+    // Wartet ms Millisekunden, waehrend ein Fehlerbild steht; Kreis beendet die App (sonst ginge das nur ueber die PS-Taste)
+    auto wait_with_circle = [&](int ms) {
+        for (int waited = 0; waited < ms; waited += 50) {
+            open_pad();
+            if (pad >= 0) {
+                PadData d{};
+                if (scePadReadState(pad, &d) == 0 && d.connected && (d.buttons & kBtnCircle)) {
+                    trace("Beenden mit Kreis");
+                    leave();
+                }
+            }
+            sceKernelUsleep(50000);
+        }
+    };
 
     Canvas status(kW, kH);
     Canvas splash(kW, kH);
@@ -462,7 +489,7 @@ int main() {
                 if (rc != 0) {
                     const std::string line1 = rc == 1 ? std::string(tr(kMsgNoServiceFile)) + "/data/homebrew/PS5MEDIC/ps5medicservice.elf" : std::string(tr(kMsgNoLoader));
                     show_status(line1.c_str(), tr(kMsgCheckLoader));
-                    sceKernelUsleep(3000000);
+                    wait_with_circle(3000);
                     continue;
                 }
                 for (int i = 0; i < 400 && sock < 0; ++i) {  // bis etwa 20 s, der Balken laeuft dabei weiter
@@ -474,7 +501,7 @@ int main() {
                 trace("Dienst nicht erreichbar");
                 const std::string hint = std::string(tr(kMsgLogHint)) + "/data/ps5medic/service.log";
                 show_status(tr(kMsgNoAnswer), hint.c_str());
-                sceKernelUsleep(3000000);
+                wait_with_circle(3000);
                 continue;
             }
             trace("Mit dem Dienst verbunden");
@@ -484,29 +511,28 @@ int main() {
         }
 
         // --- Pad lesen und senden ---
-        const std::uint32_t t = now_ms();
-        if (pad < 0 && t >= next_pad_try) {
-            next_pad_try = t + 1000;
-            int uid = 0;
-            if (sceUserServiceGetInitialUser(&uid) == 0) {
-                pad = scePadOpen(uid, 0, 0, nullptr);
-                if (pad >= 0) trace("Pad geoeffnet");
-            }
-        }
+        open_pad();
         if (pad >= 0) {
             PadData d{};
+            std::uint8_t msg[8];
+            bool send = false;
             if (scePadReadState(pad, &d) == 0 && d.connected) {
-                std::uint8_t msg[8];
                 medic::proto::put32(msg, d.buttons);
                 msg[4] = d.lx;
                 msg[5] = d.ly;
                 msg[6] = d.rx;
                 msg[7] = d.ry;
-                if (!medic::proto::send_message(sock, medic::proto::kPad, msg, sizeof msg)) {
-                    close(sock);
-                    sock = -1;
-                    continue;
-                }
+                send = pad_sent = true;
+            } else if (pad_sent) {  // Pad weg oder Lesefehler: einmal den Ruhezustand senden, sonst liefe eine gehaltene Richtung im Dienst weiter
+                medic::proto::put32(msg, 0);
+                msg[4] = msg[5] = msg[6] = msg[7] = 128;
+                send = true;
+                pad_sent = false;
+            }
+            if (send && !medic::proto::send_message(sock, medic::proto::kPad, msg, sizeof msg)) {
+                close(sock);
+                sock = -1;
+                continue;
             }
         }
 
@@ -522,6 +548,7 @@ int main() {
             close(sock);
             sock = -1;
             show_status(tr(kMsgLost), tr(kMsgRetry));
+            wait_with_circle(2500);  // lesbar stehen lassen, bevor der neue Versuch das Bild ersetzt
             continue;
         }
         if (reader.frame_ready) {
@@ -540,7 +567,7 @@ int main() {
         } else if (!first_frame_logged) {
             bar_frame(22.0f + static_cast<float>(reader.progress) * 0.73f);  // 22 % (verbunden) bis 95 % (Dienst bereit)
         } else {
-            (void)sceKernelUsleep(8000);
+            (void)sceKernelUsleep(3000);  // Pad und neue Bilder oefter abfragen (vorher 8 ms)
         }
     }
     trace("Beenden");

@@ -129,7 +129,7 @@ public:
     virtual std::vector<medic::TestResult> selftest_last() { return {}; }
     virtual bool selftest_begin(const std::vector<std::string>& ids) {
         (void)ids;
-        return false;
+        return true;  // ohne Dienst gibt es keinen Marker zu schreiben
     }
     virtual medic::TestResult selftest_run(const std::string& id) {
         medic::TestResult r;
@@ -149,9 +149,10 @@ public:
         return s;
     }
     virtual void selftest_abort() {}
-    virtual void selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) {
+    virtual bool selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) {
         (void)results;
         (void)cancelled;
+        return true;
     }
     // Ergebnis eines Nutzer-Tests (Pad, Anzeige) in das letzte Ergebnis eintragen.
     virtual void selftest_record(const medic::TestResult& r) { (void)r; }
@@ -203,7 +204,7 @@ public:
     SelftestStep selftest_step() override;
     void selftest_abort() override;
     void selftest_record(const medic::TestResult& r) override;
-    void selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) override;
+    bool selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) override;
     medic::RuleUpdateOffer check_codes_update() override;
     medic::RuleUpdateResult install_codes_update() override;
     medic::RuleUpdateResult rollback_codes_update() override;

@@ -121,6 +121,8 @@
   "selftest.reason.done_today": "heute schon gelaufen",
   "selftest.reason.budget_used": "Schreibbudget aufgebraucht",
   "selftest.reason.budget_unwritable": "Schreibbudget nicht speicherbar, Test nicht gestartet",
+  "selftest.reason.marker_unwritable": "Marker nicht schreibbar, Test nicht gestartet",
+  "selftest.save_failed": "Das Ergebnis konnte nicht gespeichert werden.",
   "preview.too_big": "Zu viele Zeilen für die Vorschau: die Änderung wird geschrieben, ist hier aber nicht aufgelistet.",
   "selftest.reason.sensor_lost": "Temperatursensor ausgefallen, Test abgebrochen",
   "selftest.reason.budget_unreadable": "Schreibbudget nicht lesbar, Test nicht gestartet",

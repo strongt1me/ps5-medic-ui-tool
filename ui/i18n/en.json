@@ -121,6 +121,8 @@
   "selftest.reason.done_today": "already ran today",
   "selftest.reason.budget_used": "write budget used up",
   "selftest.reason.budget_unwritable": "write budget cannot be saved, test not started",
+  "selftest.reason.marker_unwritable": "marker not writable, test not started",
+  "selftest.save_failed": "The result could not be saved.",
   "preview.too_big": "Too many lines for the preview: the change will be written but is not listed here.",
   "selftest.reason.sensor_lost": "temperature sensor lost, test aborted",
   "selftest.reason.budget_unreadable": "write budget unreadable, test not started",

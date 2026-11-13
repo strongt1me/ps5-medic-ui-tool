@@ -151,15 +151,36 @@ void LocalService::ensure_facts() {
     if (!facts_.get("smp.scan_roots")) facts_ = medic::collect_all(p_);
 }
 
-bool LocalService::reload_rules() {
-    std::string text;
-    if (!p_.fs().read_file(medic::kRulesPath, text)) return false;
-    try {
-        rules_ = medic::load_rules_from_string(text);
-        return true;
-    } catch (const std::exception&) {
-        return false;
+namespace {
+
+// Die Datei mit der hoeheren db_version aus mehreren Orten (wie libmedic/newest.hpp, aber ueber die Dateisystem-Schnittstelle der Plattform).
+// false: keine brauchbare Datei.
+template <class Set, class Loader>
+bool read_newest(const medic::IFileSystem& fs, const std::vector<std::string>& paths, Loader load, Set& out) {
+    bool found = false;
+    for (const std::string& path : paths) {
+        std::string text;
+        if (!fs.read_file(path, text)) continue;
+        try {
+            Set s = load(text);
+            if (!found || medic::compare_versions(s.db_version, out.db_version) > 0) {
+                out = std::move(s);
+                found = true;
+            }
+        } catch (const std::exception&) {
+        }
     }
+    return found;
+}
+
+}  // namespace
+
+bool LocalService::reload_rules() {
+    // nach einem Update liegt die neue Datei unter knowledge/; die mitgelieferte zaehlt, wenn sie neuer ist (wie beim Start des Dienstes)
+    medic::RuleSet s;
+    if (!read_newest<medic::RuleSet>(p_.fs(), {medic::kRulesPath, "/data/homebrew/PS5MEDIC/rules.json"}, [](const std::string& x) { return medic::load_rules_from_string(x); }, s)) return false;
+    rules_ = std::move(s);
+    return true;
 }
 
 medic::RuleUpdateOffer LocalService::check_rule_update() {
@@ -185,27 +206,15 @@ medic::RuleUpdateResult LocalService::rollback_rule_update() {
         if (!reload_rules()) r.error = "reload_failed";
     }
     else if (rules_before_install_) rules_ = *rules_before_install_;  // es galten die mitgelieferten Regeln
-    else {  // neue Sitzung seit der Installation: die mitgelieferte Datei einlesen
-        std::string text;
-        if (p_.fs().read_file("/data/homebrew/PS5MEDIC/rules.json", text)) {
-            try {
-                rules_ = medic::load_rules_from_string(text);
-            } catch (const std::exception&) {
-            }
-        }
-    }
+    else (void)reload_rules();  // neue Sitzung seit der Installation: die mitgelieferte Datei einlesen
     return r;
 }
 
 bool LocalService::reload_error_codes() {
-    std::string text;
-    if (!p_.fs().read_file(medic::kErrorCodesPath, text)) return false;
-    try {
-        error_codes_ = medic::load_error_codes_from_string(text);
-        return true;
-    } catch (const std::exception&) {
-        return false;
-    }
+    medic::ErrorCodeSet s;
+    if (!read_newest<medic::ErrorCodeSet>(p_.fs(), {medic::kErrorCodesPath, "/data/homebrew/PS5MEDIC/error_codes.json"}, [](const std::string& x) { return medic::load_error_codes_from_string(x); }, s)) return false;
+    error_codes_ = std::move(s);
+    return true;
 }
 
 namespace {
@@ -398,7 +407,7 @@ void LocalService::selftest_abort() {
     if (selftest_session_) selftest_session_->abort("cancelled");
 }
 
-void LocalService::selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) { medic::selftest_finish(p_, clock_(), results, cancelled); }
+bool LocalService::selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) { return medic::selftest_finish(p_, clock_(), results, cancelled); }
 
 ReportResult LocalService::make_report(medic::ReportLang lang) {
     ReportResult r;

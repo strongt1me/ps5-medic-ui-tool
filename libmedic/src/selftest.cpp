@@ -121,7 +121,9 @@ TestResult test_files_sanity(const Facts& f, const TestDef& d) {
         for (const auto& img : *images) {
             if (!img.is_object()) continue;
             ++checked_images;
-            if (img.value("truncated", 0) == 1 || img.value("tiny", 0) == 1) ++bad_images;
+            // ein exFAT-Image, dessen Kopf nicht lesbar oder ungueltig war (keine Volumengroesse), gilt nicht als geprueft
+            const bool exfat_head_missing = img.value("ext", std::string()) == ".exfat" && !img.contains("volume_bytes");
+            if (img.value("truncated", 0) == 1 || img.value("tiny", 0) == 1 || exfat_head_missing) ++bad_images;
         }
     const double broken = count("payload.broken_elfs"), eboot = count("games.eboot_problems");
     TestResult r = make_result(d, broken + eboot + bad_images > 0 ? TestStatus::Warn : TestStatus::Passed, broken + eboot + bad_images > 0 ? "findings" : "");

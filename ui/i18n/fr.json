@@ -121,6 +121,8 @@
   "selftest.reason.done_today": "déjà exécuté aujourd'hui",
   "selftest.reason.budget_used": "quota d'écriture épuisé",
   "selftest.reason.budget_unwritable": "quota d'écriture non enregistrable, test non lancé",
+  "selftest.reason.marker_unwritable": "marqueur non inscriptible, test non démarré",
+  "selftest.save_failed": "Le résultat n'a pas pu être enregistré.",
   "preview.too_big": "Trop de lignes pour l'aperçu : la modification sera écrite mais n'est pas listée ici.",
   "selftest.reason.sensor_lost": "capteur de température perdu, test interrompu",
   "selftest.reason.budget_unreadable": "quota d'écriture illisible, test non démarré",

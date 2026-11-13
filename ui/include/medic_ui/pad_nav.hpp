@@ -23,8 +23,8 @@ class PadNav {
 public:
     static constexpr int kOn = 16000;   // von 32767: ab hier gilt der Stick als gedrueckt
     static constexpr int kOff = 9000;   // darunter gilt er wieder als losgelassen
-    static constexpr std::uint32_t kFirstDelayMs = 400;  // bis zur ersten Wiederholung
-    static constexpr std::uint32_t kRepeatMs = 110;      // danach alle 110 ms
+    static constexpr std::uint32_t kFirstDelayMs = 300;  // bis zur ersten Wiederholung
+    static constexpr std::uint32_t kRepeatMs = 70;       // danach alle 70 ms
 
     // Steuerkreuz-Taste gedrueckt (down = true) bzw. losgelassen. Andere Tasten ignoriert die Funktion.
     void dpad(Button b, bool down, std::uint32_t now_ms, std::vector<Button>& out) {

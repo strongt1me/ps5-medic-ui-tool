@@ -200,6 +200,7 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
     std::vector<std::uint8_t> rx;  // noch nicht verarbeitete Bytes der App
 
     bool first_logged = false;
+    std::uint32_t last_update = 0, last_emit = 0;
     // Bild zeichnen und die geaenderten Streifen an die App senden. Auch der Hook der App ruft es mitten im Check-up (Fortschritt).
     auto emit_frame = [&]() -> bool {
         app.render(canvas);
@@ -306,6 +307,7 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
             rx.erase(rx.begin(), rx.begin() + 5 + len);
         }
         nav.poll(t0, pressed);
+        const bool had_input = !pressed.empty();
         for (const Button b : pressed) app.handle(b);
         pressed.clear();
         if (app.quit_requested()) {
@@ -314,11 +316,25 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
             return true;
         }
 
-        app.update();
-        if (!link_ok || !emit_frame()) return false;
+        // update() zaehlt die Takte der Oberflaeche (Startbild, Punkte hinter "Pruefe", Schritte des Selbsttests): wie bisher rund 30 pro Sekunde,
+        // auch wenn der Dienst jetzt oefter zeichnet, um Eingaben schneller zu zeigen
+        if (t0 - last_update >= 33) {
+            last_update = t0;
+            app.update();
+        }
+        // Gezeichnet wird sofort nach einer Taste, sonst alle 16 ms (die App schickt den Pad-Zustand staendig, auch unveraendert: das allein loest kein Bild aus)
+        if (!link_ok) return false;
+        if (had_input || t0 - last_emit >= 16) {
+            last_emit = t0;
+            if (!emit_frame()) return false;
+        }
 
-        const std::uint32_t used = now_ms() - t0;
-        if (used < 33) usleep((33 - used) * 1000);  // ~30 Bilder/s
+        // Warten, bis die App etwas sendet (weckt sofort), hoechstens bis zum naechsten Takt; vorher schlief der Dienst fest 33 ms: bis zu 33 ms Verzoegerung pro Tastendruck
+        const std::uint32_t since = now_ms() - last_emit;
+        if (since < 16) {
+            pollfd in{client, POLLIN, 0};
+            poll(&in, 1, static_cast<int>(16 - since));
+        }
     }
 }
 
