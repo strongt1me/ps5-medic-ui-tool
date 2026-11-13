@@ -66,16 +66,28 @@ void trace(const std::string& raw) {
 // Sprache der Konsole (Wert 1 von sceSystemServiceParamGetInt = SCE_SYSTEM_SERVICE_PARAM_ID_LANG). Gibt es sie in der App nicht, oder schlaegt die
 // Abfrage fehl, ist es Englisch.
 Lang console_language() {
+    static bool known = false;  // die Systemsprache aendert sich nicht mitten in einer Dienstsitzung: einmal lesen, einmal ablegen
+    static Lang cached = Lang::En;
+    if (known) return cached;
     int id = -1;
     const int rc = sceSystemServiceParamGetInt(1, &id);
-    const Lang lang = lang_from_system_id(rc == 0 ? id : -1);
-    trace("Systemsprache: rc=" + std::to_string(rc) + " Wert=" + std::to_string(id) + " -> " + lang_code(lang));
+    cached = lang_from_system_id(rc == 0 ? id : -1);
+    known = true;
+    trace("Systemsprache: rc=" + std::to_string(rc) + " Wert=" + std::to_string(id) + " -> " + lang_code(cached));
     // Die native App kennt die Systemsprache selbst nicht (kein Import dafuer); sie liest diese Datei fuer ihre Meldungen vor dem Dienst.
-    if (std::FILE* f = std::fopen("/data/ps5medic/system_language", "w")) {
-        std::fputs(lang_code(lang), f);
+    // Geschrieben wird nur, wenn sich der Inhalt aendert.
+    char old[16] = {0};
+    if (std::FILE* f = std::fopen("/data/ps5medic/system_language", "r")) {
+        if (!std::fgets(old, sizeof old, f)) old[0] = 0;
         std::fclose(f);
     }
-    return lang;
+    if (std::strcmp(old, lang_code(cached)) != 0) {
+        if (std::FILE* f = std::fopen("/data/ps5medic/system_language", "w")) {
+            std::fputs(lang_code(cached), f);
+            std::fclose(f);
+        }
+    }
+    return cached;
 }
 
 medic::RuleSet load_rules() {
