@@ -28,7 +28,8 @@ const std::regex& component_after_verb() {
 }
 
 const std::regex& conjunction() {
-    static const std::regex r(R"(\b(?:and|und|then|danach|dann|plus|sowie|also|auch|or|oder)\b|[,;&+])", std::regex::ECMAScript | std::regex::icase);
+    // Ein "+" zaehlt nur allein ("kstuff + firmware"), nicht in einem Namen ("ShadowMount+", "kstuff-lite 1.07+")
+    static const std::regex r(R"(\b(?:and|und|then|danach|dann|plus|sowie|also|auch|or|oder)\b|[,;&]|\s\+\s)", std::regex::ECMAScript | std::regex::icase);
     return r;
 }
 
@@ -103,7 +104,7 @@ const std::vector<Extra>& extra_patterns() {
             // "Update your PS5.", "Die Konsole aktualisieren." (nur wenn die Konsole das Objekt ist und der Satz dort endet), dazu fr/it/es
             {3, std::regex(upd + R"(\s+(?:your|the|deine|deiner|die|eure?)\s+(?:ps5|playstation|console|konsole))" + console_end, flags)},
             {3, std::regex(R"((?:die|deine|the|your)\s+(?:ps5|playstation|konsole|console)\s+(?:aktualisieren|updaten|upgraden|updating|upgrading)\b)" + sentence_end, flags)},
-            {3, std::regex(R"((?:die|deine|the|your)\s+(?:ps5|playstation|konsole|console)\s+(?:auf|to)\s+[^.\n]{0,40}\b(?:version|firmware|fw)\b[^.\n]{0,20}\b)" + upd, flags)},
+            {3, std::regex(R"((?:die|deine|the|your)\s+(?:ps5|playstation|konsole|console)\s+(?:auf|to)\s+[^.,;\n]{0,40}\b(?:version|firmware|fw)\b[^.,;\n]{0,20}\b)" + upd, flags)},  // kein Komma/Semikolon: "Wenn die Konsole auf einer neueren Firmware laeuft, aktualisiere kstuff-lite."
             {3, std::regex(R"((?:mett(?:re|ez)|mets)\s+(?:\xc3\xa0|\xc3\x80|a)\s+jour\s+(?:votre|ta|ton|la)\s+(?:console|ps5))", flags)},
             {3, std::regex(R"((?:mett(?:re|ez)|mets)\s+(?:votre|ta|ton|la)\s+(?:console|ps5)\s+(?:\xc3\xa0|\xc3\x80|a)\s+jour)", flags)},
             {3, std::regex(kFrUpdate + R"(\s+(?:du\s+|le\s+)?logiciel\s+de\s+(?:la|votre)\s+console)", flags)},
@@ -202,19 +203,40 @@ bool gate_open(int gate, const std::string& low) {
 std::string verb_noun_advice(const std::string& text, bool verb_first) {
     static const std::string kNoun = R"((?:system\s*software|systemsoftware|firmware))";
     static const std::regex first(kUpdVerb + R"((?:[^.\n]|\.[0-9]){0,80})" + kNoun, std::regex::ECMAScript | std::regex::icase);   // update the system software, Updating the firmware
-    static const std::regex second(kNoun + R"((?:[^.\n]|\.[0-9]){0,80})" + kUpdVerb, std::regex::ECMAScript | std::regex::icase);  // Systemsoftware ... aktualisieren, Firmware needs updating
-    const std::regex& re = verb_first ? first : second;
-    for (auto it = std::sregex_iterator(text.begin(), text.end(), re); it != std::sregex_iterator(); ++it) {
-        const std::string s = it->str();
-        if (verb_first) {
+    if (verb_first) {
+        for (auto it = std::sregex_iterator(text.begin(), text.end(), first); it != std::sregex_iterator(); ++it) {
+            const std::string s = it->str();
             const auto sp = s.find_first_of(" \t");
             const std::string rest = sp == std::string::npos ? std::string() : s.substr(sp);
             if (std::regex_search(rest, component_after_verb()) && !std::regex_search(rest, conjunction())) continue;
-        } else {
-            const std::string after = text.substr(static_cast<std::size_t>(it->position() + it->length()));
-            if (std::regex_search(after, component_after_verb())) continue;
+            return s;
         }
-        return s;
+        return {};
+    }
+    // "Firmware ... Verb": jedes Hauptwort einzeln, im Satzfenster dahinter (wie "(?:[^.\n]|\.[0-9]){0,80}") zaehlt jedes Verb, dem kein genannter Bestandteil
+    // folgt. Eine einzige Regex mit gieriger Luecke sah nur das letzte Verb: "Die Firmware ist zu alt: update it, then update kstuff." galt als Bestandteil.
+    static const std::regex noun_re(kNoun, std::regex::ECMAScript | std::regex::icase);
+    static const std::regex verb_re(kUpdVerb, std::regex::ECMAScript | std::regex::icase);
+    for (auto nit = std::sregex_iterator(text.begin(), text.end(), noun_re); nit != std::sregex_iterator(); ++nit) {
+        const std::size_t nstart = static_cast<std::size_t>(nit->position()), wstart = nstart + static_cast<std::size_t>(nit->length());
+        std::size_t wend = wstart;
+        for (int units = 0; units < 80 && wend < text.size(); ++units) {
+            if (text[wend] == '\n') break;
+            if (text[wend] == '.') {
+                if (wend + 1 < text.size() && text[wend + 1] >= '0' && text[wend + 1] <= '9') wend += 2;
+                else break;
+            } else {
+                ++wend;
+            }
+        }
+        for (auto vit = std::sregex_iterator(text.begin() + static_cast<std::ptrdiff_t>(wstart), text.end(), verb_re, std::regex_constants::match_prev_avail);
+             vit != std::sregex_iterator(); ++vit) {
+            const std::size_t vstart = wstart + static_cast<std::size_t>(vit->position());
+            if (vstart > wend) break;  // hinter dem Satzfenster
+            const std::size_t vend = vstart + static_cast<std::size_t>(vit->length());
+            if (std::regex_search(text.begin() + static_cast<std::ptrdiff_t>(vend), text.end(), component_after_verb())) continue;
+            return text.substr(nstart, vend - nstart);
+        }
     }
     return {};
 }

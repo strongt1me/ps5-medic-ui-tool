@@ -45,8 +45,11 @@ public:
         return names;
     }
 
+    bool readable() const override { return readable_; }
+
     std::vector<ProcInfo> running_info() const override {
         std::vector<ProcInfo> procs;
+        readable_ = false;
         int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PROC, 0};
         size_t len = 0;
         if (sysctl(mib, 4, nullptr, &len, nullptr, 0) != 0) return procs;
@@ -65,8 +68,12 @@ public:
             procs.push_back({ki->ki_comm, static_cast<std::int64_t>(ki->ki_start.tv_sec)});
             off += static_cast<size_t>(ki->ki_structsize);
         }
+        readable_ = true;
         return procs;
     }
+
+private:
+    mutable bool readable_ = true;  // Ergebnis des letzten running_info()
 };
 
 class Ps5Sys final : public ISystemInfo {

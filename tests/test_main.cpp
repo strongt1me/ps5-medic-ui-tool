@@ -12,6 +12,7 @@
 #include "check.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -618,7 +619,7 @@ void image_tests() {
     namespace fs = std::filesystem;
     std::string content(0x1200 + 77, 'x');
     for (std::size_t i = 0; i < content.size(); ++i) content[i] = static_cast<char>('a' + i % 23);
-    const fs::path root = fs::temp_directory_path() / "medic-exfat-test";
+    const fs::path root = fs::temp_directory_path() / ("medic-exfat-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));  // eindeutig: parallele Testlaeufe
     std::error_code ec;
     fs::remove_all(root, ec);
     fs::create_directories(root / "fs/data");

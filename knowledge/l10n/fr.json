@@ -343,7 +343,7 @@
   },
   "hw.thermal.short_soak": {
    "name": "Test de chaleur (courte charge CPU)",
-   "proves_not": "chaleur du GPU et de la mémoire, le refroidissement normal pendant qu'un régulateur de ventilateur tourne (il garde la console au frais), cause (poussière, pâte thermique) ; dans une pièce fraîche, les problèmes restent cachés"
+   "proves_not": "chaleur du GPU et de la mémoire, le refroidissement normal quand une application pilote le ventilateur (elle garde la console au frais), cause (poussière, pâte thermique) ; dans une pièce fraîche, les problèmes restent cachés"
   },
   "hw.mem.userland_pattern": {
    "name": "Test de motifs mémoire (128 MiB de mémoire de travail)",

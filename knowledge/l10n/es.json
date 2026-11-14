@@ -343,7 +343,7 @@
   },
   "hw.thermal.short_soak": {
    "name": "Prueba de calor (carga corta de CPU)",
-   "proves_not": "calor de GPU/memoria, la refrigeración estándar mientras funciona un controlador de ventilador (mantiene la consola fría), la causa (polvo, pasta térmica); en una habitación fresca los problemas quedan ocultos"
+   "proves_not": "calor de GPU/memoria, la refrigeración estándar cuando una app controla el ventilador (mantiene la consola fría), la causa (polvo, pasta térmica); en una habitación fresca los problemas quedan ocultos"
   },
   "hw.mem.userland_pattern": {
    "name": "Prueba de patrones de memoria (128 MiB de memoria de trabajo)",

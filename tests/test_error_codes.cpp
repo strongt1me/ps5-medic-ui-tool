@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <functional>
 #include <map>
 #include <nlohmann/json.hpp>
@@ -295,7 +296,8 @@ void content_tests() {
 // libmedic/newest.hpp: es gilt die neuere db_version, nicht die erste Datei (Konsolenfehler 13. Nov. 2026: alte Kopie verdeckte die neue Lieferung).
 void newest_tests() {
     namespace fsys = std::filesystem;
-    const fsys::path dir = fsys::temp_directory_path() / "medic_newest_test";
+    // Eindeutiger Name: zwei gleichzeitige Testlaeufe (zwei Worktrees) loeschen sich sonst gegenseitig das Verzeichnis
+    const fsys::path dir = fsys::temp_directory_path() / ("medic_newest_test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     fsys::remove_all(dir);
     fsys::create_directories(dir);
     auto write = [&](const char* name, const std::string& version) {

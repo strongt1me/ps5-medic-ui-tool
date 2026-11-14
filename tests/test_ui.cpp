@@ -376,12 +376,28 @@ void i18n_tests() {
     CHECK(no_cr_trim(slurp(dir / "fr.json")) == no_cr_trim(kFrJson), "i18n: eingebettetes Franzoesisch entspricht fr.json (tools/embed_i18n.py ausfuehren)");
     CHECK(no_cr_trim(slurp(dir / "it.json")) == no_cr_trim(kItJson), "i18n: eingebettetes Italienisch entspricht it.json (tools/embed_i18n.py ausfuehren)");
     CHECK(no_cr_trim(slurp(dir / "es.json")) == no_cr_trim(kEsJson), "i18n: eingebettetes Spanisch entspricht es.json (tools/embed_i18n.py ausfuehren)");
+
+    // Die Wissenstexte (Regeln, Abdeckung, Messwerte, Selbsttests, Fehlercodes), die die Konsole fuer fr/it/es zeigt: eingebettet muss gleich knowledge/l10n sein
+    // (vergessener Lauf von tools/embed_i18n.py: sonst zeigte die Konsole den alten Text, und alle Tests blieben gruen)
+    const fs::path kdir = fs::path(MEDIC_SOURCE_DIR) / "knowledge" / "l10n";
+    const std::pair<const char*, const char*> overlays[] = {{"fr", kFrKnowledge}, {"it", kItKnowledge}, {"es", kEsKnowledge}};
+    for (const auto& [lang, embedded] : overlays) {
+        nlohmann::json base = nlohmann::json::parse(slurp(kdir / (std::string(lang) + ".json")), nullptr, false);
+        const nlohmann::json errs = nlohmann::json::parse(slurp(kdir / (std::string(lang) + ".errors.json")), nullptr, false);
+        const nlohmann::json emb = nlohmann::json::parse(embedded, nullptr, false);
+        bool same = base.is_object() && errs.is_object() && emb.is_object();
+        if (same) {
+            base.update(errs);
+            same = base == emb;
+        }
+        CHECK(same, std::string("i18n: eingebettete Wissenstexte ") + lang + " entsprechen knowledge/l10n (tools/embed_i18n.py ausfuehren)");
+    }
 }
 
 void png_tests() {
     Canvas c(64, 48);
     c.clear(rgb(30, 60, 90));
-    const fs::path p = fs::temp_directory_path() / "medic-ui-test.png";
+    const fs::path p = fs::temp_directory_path() / ("medic-ui-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".png");
     CHECK(write_png(p.string(), c), "PNG: schreiben");
     const std::string s = slurp(p);
     CHECK(s.size() > 100 && s.compare(1, 3, "PNG") == 0, "PNG: Signatur");

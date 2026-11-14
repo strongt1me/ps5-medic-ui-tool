@@ -61,7 +61,7 @@ std::string mask_credentials(const std::string& s) {
         bool strong;
     };
     static const Name kNames[] = {{"password", true}, {"passwd", true}, {"passphrase", true}, {"secret", true}, {"token", true}, {"api_key", true}, {"apikey", true},
-                                  {"credential", true}, {"authorization", true}, {"psk", true}, {"username", false}, {"user", false}, {"login", false}, {"pass", false}};
+                                  {"credential", true}, {"authorization", true}, {"psk", true}, {"secret_key", true}, {"private_key", true}, {"access_key", true}, {"username", false}, {"user", false}, {"login", false}, {"pass", false}};
     // 1) Benutzerdaten in Adressen: scheme://user:pass@host
     std::string t = s;
     for (std::size_t at = t.find("://"); at != std::string::npos; at = t.find("://", at + 3)) {
@@ -215,7 +215,8 @@ std::string mask_ipv6(const std::string& s) {
             for (std::size_t k = b; k + 1 < i; ++k)
                 if (std::isalpha(static_cast<unsigned char>(s[k])) && !is_hex(s[k])) label_before = true;
         }
-        const bool start = (is_hex(s[i]) || s[i] == ':') && (i == 0 || (!is_word(s[i - 1]) && s[i - 1] != ':') || label_before);
+        // Hinter einer Beschriftung beginnt die Folge nur mit einer Hex-Ziffer: "Class::Fade::Dead" (C++-Name) ist keine Adresse, "addr:fe80::1" schon
+        const bool start = (is_hex(s[i]) || s[i] == ':') && (i == 0 || (!is_word(s[i - 1]) && s[i - 1] != ':') || (label_before && is_hex(s[i])));
         if (start) {
             std::size_t j = i;
             while (j < s.size() && (is_hex(s[j]) || s[j] == ':')) ++j;

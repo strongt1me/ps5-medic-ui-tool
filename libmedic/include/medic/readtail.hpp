@@ -9,8 +9,9 @@
 namespace medic {
 
 // Liest hoechstens `max_bytes` vom Ende der Datei nach `out`. Das erste, meist angeschnittene Teilstueck bis zum ersten Zeilenumbruch
-// entfaellt (nur wenn tatsaechlich gekuerzt wurde). Die Groesse kommt aus dem Verzeichniseintrag; fehlt er (z. B. bei einer Schnittstelle ohne
-// Groessenangabe), faellt die Funktion auf read_file zurueck und kuerzt danach. Eine leere, vorhandene Datei liefert true und einen leeren Text.
+// entfaellt (nur wenn tatsaechlich gekuerzt wurde und der Ausschnitt nicht genau an einem Zeilenanfang beginnt). Die Groesse kommt aus dem Verzeichniseintrag; fehlt er (z. B. bei einer Schnittstelle ohne
+// Groessenangabe, oder mit Groesse 0), faellt die Funktion auf read_file zurueck und kuerzt danach. Eine leere, vorhandene Datei liefert true und einen
+// leeren Text.
 // false: Datei fehlt oder ist nicht lesbar.
 inline bool read_tail(const IFileSystem& fs, const std::string& path, std::size_t max_bytes, std::string& out) {
     const auto slash = path.rfind('/');
@@ -25,22 +26,29 @@ inline bool read_tail(const IFileSystem& fs, const std::string& path, std::size_
                 break;
             }
     }
-    if (known && size == 0) {
-        out.clear();
-        return fs.exists(path);
-    }
+    // Groesse 0 im Verzeichniseintrag heisst "leer" oder "Groesse nicht lesbar" (PosixFs setzt dann 0): read_file klaert es. Eine leere Datei liefert true und
+    // einen leeren Text; eine Datei, die nicht gelesen werden kann, liefert false (sonst gaelte ein unlesbares Log als "leer, keine Fehler").
+    if (known && size == 0) known = false;
+    // Beginnt der Ausschnitt genau hinter einem Zeilenumbruch, ist die erste Zeile vollstaendig und bleibt; sonst entfaellt das angeschnittene Stueck.
+    auto drop_partial = [](std::string& s, bool at_line_start) {
+        if (at_line_start) return;
+        const auto nl = s.find('\n');
+        if (nl != std::string::npos) s.erase(0, nl + 1);
+    };
     if (!known || size <= max_bytes) {
         if (!fs.read_file(path, out)) return false;
         if (out.size() > max_bytes) {
+            const bool at_line_start = out[out.size() - max_bytes - 1] == '\n';
             out.erase(0, out.size() - max_bytes);
-            const auto nl = out.find('\n');
-            if (nl != std::string::npos) out.erase(0, nl + 1);
+            drop_partial(out, at_line_start);
         }
         return true;
     }
-    if (!fs.read_range(path, size - max_bytes, max_bytes, out)) return false;
-    const auto nl = out.find('\n');
-    if (nl != std::string::npos) out.erase(0, nl + 1);
+    // Ein Byte mehr lesen: das davor sagt, ob der Ausschnitt an einem Zeilenanfang beginnt
+    if (!fs.read_range(path, size - max_bytes - 1, max_bytes + 1, out) || out.empty()) return false;
+    const bool at_line_start = out[0] == '\n';
+    out.erase(0, 1);
+    drop_partial(out, at_line_start);
     return true;
 }
 

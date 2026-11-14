@@ -153,7 +153,7 @@ medic-cli history|undo|export ...
 
 ## Translations
 
-The interface is in `ui/i18n/<language>.json`; the knowledge texts for French, Italian and Spanish are provided as a supplement in `knowledge/l10n/` (rules, error codes, self-tests). If an entry is missing, the app shows English. Reports and the dynamic hints of the repair preview exist only in German and English. `tools/l10n_extract.py` pulls the source texts for translators, `tools/l10n_check.py <language>` checks a translation (keys, placeholders, numbers, codes, paths).
+The interface is in `ui/i18n/<language>.json`; the knowledge texts for French, Italian and Spanish are provided as a supplement in `knowledge/l10n/` (rules, error codes, self-tests). If an entry is missing, the app shows English. Reports and the dynamic texts of the repair preview (hints, notes, warnings and error messages) exist only in German and English (fr/it/es show English). `tools/l10n_extract.py` pulls the source texts for translators, `tools/l10n_check.py <language>` checks a translation (keys, placeholders, numbers, codes, paths).
 
 ## Contributing
 

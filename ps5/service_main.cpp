@@ -294,20 +294,23 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
         }
         const bool stale = discard_pad;  // alles, was bis hierher im Socket lag, stammt aus der Wartezeit der letzten langen Operation
         discard_pad = false;
-        while (rx.size() >= 5) {
-            const std::uint32_t len = proto::get32(rx.data() + 1);
+        std::size_t used = 0;  // schon verarbeitete Bytes am Anfang von rx: erst nach der Schleife entfernen (vorher je Nachricht, quadratisch bei vielen Pad-Paketen)
+        while (rx.size() - used >= 5) {
+            const std::uint8_t* msg = rx.data() + used;
+            const std::uint32_t len = proto::get32(msg + 1);
             if (len > 4096) return false;  // kein gueltiges Protokoll
-            if (rx.size() < 5 + len) break;
-            const char type = static_cast<char>(rx[0]);
-            const std::uint8_t* pl = rx.data() + 5;
+            if (rx.size() - used < 5 + len) break;
+            const char type = static_cast<char>(msg[0]);
+            const std::uint8_t* pl = msg + 5;
             if (type == proto::kShutdown) {
                 trace("Beenden angefordert (neuere Instanz)");
                 return true;
             }
             if (type == proto::kPad && len >= 8 && stale) {
                 const std::uint32_t b = proto::get32(pl);
-                // Nur Kreis bleibt wirksam (er bricht ab oder geht zurueck): ein Selbsttest-Schritt kann laenger als 250 ms dauern, und "Kreis: Abbrechen" muss dann trotzdem gehen
-                if (have_pad && ((prev_buttons ^ b) & kBtnCircle) && (b & kBtnCircle)) pressed.push_back(Button::Circle);
+                // Nur Kreis bleibt wirksam, und nur, wo er etwas abbricht: ein Selbsttest-Schritt kann laenger als 250 ms dauern, und "Kreis: Abbrechen" muss dann trotzdem gehen.
+                // Nach einem Check-up o. ae. (nicht unterbrechbar) wuerde jeder Kreis aus der Wartezeit zum Startbildschirm zurueck- und beim zweiten aus der App fuehren.
+                if (have_pad && ((prev_buttons ^ b) & kBtnCircle) && (b & kBtnCircle) && app.cancellable()) pressed.push_back(Button::Circle);
                 prev_buttons = b;
                 have_pad = true;
             } else if (type == proto::kPad && len >= 8) {
@@ -337,8 +340,9 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
                 nav.stick((static_cast<int>(pl[4]) - 128) * 256, (static_cast<int>(pl[5]) - 128) * 256, t0, pressed);
                 prev_buttons = b;
             }
-            rx.erase(rx.begin(), rx.begin() + 5 + len);
+            used += 5 + len;
         }
+        if (used) rx.erase(rx.begin(), rx.begin() + static_cast<std::ptrdiff_t>(used));
         nav.poll(t0, pressed);
         const bool had_input = !pressed.empty();
         const std::uint32_t busy_from = now_ms();

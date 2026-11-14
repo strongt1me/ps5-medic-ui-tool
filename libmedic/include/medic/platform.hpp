@@ -74,6 +74,9 @@ public:
         for (auto& n : running()) v.push_back({n, 0});
         return v;
     }
+    // Konnte die Liste beim letzten Lesen gelesen werden? Eine leere Liste nach einem Lesefehler ist etwas anderes als "es laeuft nichts": dann gilt der
+    // Prozess-Fakt als unbekannt (collect_processes meldet den Sammler als fehlgeschlagen), statt Regeln mit einer leeren Liste zu bewerten.
+    virtual bool readable() const { return true; }
 };
 
 enum class PortState { Unknown, Closed, Open };

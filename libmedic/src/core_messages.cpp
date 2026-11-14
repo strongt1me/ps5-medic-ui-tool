@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Englische Fassung der deutschen Meldungen der Fix-Engine (Warnungen eines Plans, Fehler beim Anwenden und Rueckgaengigmachen). Die Engine erzeugt
 // deutschen Text; die Oberflaeche zeigt ihn in der Sprache der Oberflaeche (fr/it/es: Englisch, wie die Hinweise der Fixes). Erzeugt von einem
-// Werkzeugskript aus der Liste der Meldungen; tests/test_review2.cpp prueft, dass jede Meldung in fixes.cpp und engine.cpp hier vorkommt.
+// Werkzeugskript aus der Liste der Meldungen; tests/test_review4.cpp prueft, dass jede Meldung in fixes.cpp und engine.cpp hier vorkommt.
 #include "medic/core_messages.hpp"
 
 #include <string>

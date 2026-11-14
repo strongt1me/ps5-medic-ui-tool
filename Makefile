@@ -85,6 +85,7 @@ host:
 test: host
 	$(BUILD)/medic-tests
 	python3 tests/test_triage.py
+	for l in fr it es; do python3 tools/l10n_check.py $$l all || exit 1; done
 
 clean:
 	rm -rf $(BUILD) $(PS5_BUILD) dist build-title

@@ -47,6 +47,10 @@ public:
     std::size_t finding_count() const { return result_.findings.size(); }
     int selected() const { return sel_; }
     bool quit_requested() const { return quit_; }  // Kreis auf dem Startbildschirm
+    // Nur der laufende Selbsttest laesst sich mit Kreis abbrechen (der Abbruch wirkt nach dem laufenden Test). Nach einer langen Operation reicht der Dienst
+    // Kreis aus der Wartezeit nur dann an die App weiter; sonst spraengen Kreis-Tasten, die waehrend eines nicht unterbrechbaren Check-ups gedrueckt wurden,
+    // nachher durch die Bildschirme bis zum Beenden.
+    bool cancellable() const { return screen_ == Screen::SelfTest && st_state_ == StState::Running; }
     int error_selected() const { return err_sel_; }  // Fehlercodes: gewaehlter Eintrag
     int error_scroll() const { return err_scroll_; } // Fehlercodes, Detail: erste sichtbare Textzeile
     std::string selected_error_id() const { return current_error() ? current_error()->id : std::string(); }

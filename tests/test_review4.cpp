@@ -55,6 +55,21 @@ void read_tail_tests() {
     std::string line(5000, 'x');
     cap_line(line);
     CHECK(line.size() == 2000, "cap_line: Zeilen auf 2000 Zeichen begrenzt");
+    std::string short_line = "kurz";
+    cap_line(short_line);
+    CHECK(short_line == "kurz", "cap_line: kurze Zeile bleibt unveraendert");
+    std::string own_cap(50, 'y');
+    cap_line(own_cap, 10);
+    CHECK(own_cap.size() == 10, "cap_line: eigene Obergrenze");
+
+    // Datei kleiner als max_bytes (haeufigster Weg): vollstaendig, ohne Zeilenverlust
+    spit(sb.real("/data/shadowmount/small.log"), "a\nb\nc\n");
+    CHECK(read_tail(fs, "/data/shadowmount/small.log", 1u << 20, out) && out == "a\nb\nc\n", "read_tail: kleine Datei vollstaendig");
+    // Datei groesser als max_bytes: der angeschnittene Anfang bis zum ersten Zeilenumbruch entfaellt
+    CHECK(read_tail(fs, "/data/shadowmount/small.log", 3, out) && out == "c\n", "read_tail: gekuerzt, Teilzeile am Anfang verworfen");
+    CHECK(read_tail(fs, "/data/shadowmount/small.log", 4, out) && out == "b\nc\n", "read_tail: beginnt der Ausschnitt an einem Zeilenanfang, bleibt die erste Zeile");
+    spit(sb.real("/data/shadowmount/two.log"), "xxxxxxxxxx\nyyyyyyyyy\n");  // Ende genau eine Zeile (10 Byte): nicht leer werden
+    CHECK(read_tail(fs, "/data/shadowmount/two.log", 10, out) && out == "yyyyyyyyy\n", "read_tail: letzte Zeile, die genau max_bytes fuellt, bleibt");
 
     // Eine einzige riesige Zeile im SM+-Log darf die Pruefung nicht aus dem Tritt bringen (std::regex ist rekursiv)
     Sandbox sb2;
@@ -286,6 +301,21 @@ void text_policy_tests2() {
                           "Update the\xC2\xA0system\xC2\xA0software.", "Update the system\xE2\x80\xAFsoftware.", "System\xE2\x80\x91Update einspielen", "System\xE2\x80\x93Update",
                           "Mettez a\xCC\x80 jour le micrologiciel.", "System Software\xC2\xA0Update and Settings"})
         CHECK(!find_system_update_advice(s).empty(), std::string("Textregel erkennt (Review 4): ") + s);
+    // Jede Ausweichschreibweise, die normalized() beseitigt (Pruefung Runde 6): Leerzeichen-Arten ersetzen das Leerzeichen, unsichtbare Zeichen und
+    // kombinierende Akzente stehen mitten im Wort, Bindestrich-Varianten statt "-"
+    for (const char* sp : {"\xC2\xA0", "\xE2\x80\x80", "\xE2\x80\x83", "\xE2\x80\x8A", "\xE2\x80\xAF", "\xE2\x81\x9F", "\xE3\x80\x80"})
+        CHECK(!find_system_update_advice(std::string("Update the") + sp + "system" + sp + "software.").empty(), std::string("Textregel: Leerzeichen-Variante U+") + std::to_string(static_cast<unsigned char>(sp[2])));
+    for (const char* inv : {"\xC2\xAD", "\xE2\x80\x8B", "\xE2\x80\x8C", "\xE2\x80\x8D", "\xEF\xBB\xBF", "\xCD\x80", "\xCC\x80"})
+        CHECK(!find_system_update_advice(std::string("Update the sys") + inv + "tem software.").empty(), std::string("Textregel: unsichtbares Zeichen mitten im Wort, Folgebyte ") + std::to_string(static_cast<unsigned char>(inv[1])));
+    for (const char* dash : {"\xE2\x80\x90", "\xE2\x80\x91", "\xE2\x80\x92", "\xE2\x80\x93", "\xE2\x80\x94", "\xE2\x80\x95", "\xE2\x88\x92"})
+        CHECK(!find_system_update_advice(std::string("System") + dash + "Update einspielen").empty(), std::string("Textregel: Bindestrich-Variante, Folgebyte ") + std::to_string(static_cast<unsigned char>(dash[2])));
+    // Ohne Sonderzeichen (Schnellpfad ohne Kopie) bleibt das Ergebnis dasselbe wie mit einem harmlosen, normalisierten Zeichen am Ende
+    for (const char* s : {"Update the system software.", "Installiere die neueste Firmware.", "Aktualisiere die PS5 Medic Regeln.", "Wenn die Firmware 13.60 ist, aktualisiere kstuff-lite."})
+        CHECK(find_system_update_advice(s).empty() == find_system_update_advice(std::string(s) + "\xE2\x80\x8B").empty(), std::string("Textregel: Schnellpfad gleich Normalisierung: ") + s);
+    // "Firmware ... Verb": ein frueheres Verb im selben Satz darf nicht von einem spaeteren Bestandteil ueberdeckt werden (Pruefung Runde 6, Fund 1)
+    for (const char* s : {"Your firmware is too old: update it, then update kstuff.", "The firmware is outdated, you should update it or update kstuff.",
+                          "Firmware mismatch - update it, then update payloads.", "Die Firmware ist zu alt, bitte hier jetzt aktualisieren, dann aktualisiere kstuff"})
+        CHECK(!find_system_update_advice(s).empty(), std::string("Textregel erkennt Firmware-Verb vor Bestandteil: ") + s);
     // Eine Ausnahme fuer einen genannten Bestandteil darf echte Hinweise im selben Satz nicht verdecken
     for (const char* s : {"Update kstuff and the firmware.", "Update your games and the system software.", "Update payloads, plugins and the console firmware.",
                           "Update the apps and then the firmware", "Aktualisiere kstuff, ShadowMount+ und die Systemsoftware.", "Aktualisiere die Spiele und danach die Firmware.",
@@ -293,7 +323,10 @@ void text_policy_tests2() {
         CHECK(!find_system_update_advice(s).empty(), std::string("Textregel erkennt trotz Bestandteil: ") + s);
     for (const char* s : {"Update kstuff-lite to a version that supports firmware 13.60.", "Wenn die Firmware 13.60 ist, aktualisiere kstuff-lite.", "Update the console's DNS settings.",
                           "Update the PS5 Medic rules.", "Aktualisiere die PS5 Medic Regeln.", "Installiere den Treiber für das Laufwerk.", "Aggiorna il sistema di file se serve.",
-                          "Actualiza el sistema de archivos."})
+                          "Actualiza el sistema de archivos.",
+                          // "+" im Namen ist keine Konjunktion; ein Komma trennt den Teilsatz ueber die Konsole vom Befehl (Pruefung Runde 6, Fund 2 und 3)
+                          "Update ShadowMount+ to a version that supports firmware 13.60.", "Aktualisiere ShadowMount+ fuer die Firmware 13.60",
+                          "Wenn die Konsole auf einer neueren Firmware l\xC3\xA4uft, aktualisiere kstuff-lite.", "L\xC3\xA4uft die Konsole auf der Version 13, aktualisiere ShadowMount+."})
         CHECK(find_system_update_advice(s).empty(), std::string("Textregel erlaubt (Review 4): ") + s + " -> " + find_system_update_advice(s));
 }
 
@@ -352,9 +385,44 @@ void i18n_parity_tests() {
     }
 }
 
+// Prozessliste, die nicht gelesen werden konnte (sysctl ENOMEM): leer, aber readable() == false
+struct UnreadableProcs final : IProcessList {
+    bool ok;
+    explicit UnreadableProcs(bool readable_) : ok(readable_) {}
+    std::vector<std::string> running() const override { return {}; }
+    bool readable() const override { return ok; }
+};
+
+struct ProcsPlatform final : Platform {
+    std::unique_ptr<Platform> base;
+    UnreadableProcs procs_;
+    ProcsPlatform(std::unique_ptr<Platform> b, bool readable_) : base(std::move(b)), procs_(readable_) {}
+    const IFileSystem& fs() const override { return base->fs(); }
+    const IProcessList& procs() const override { return procs_; }
+    const ISystemInfo& sys() const override { return base->sys(); }
+};
+
+// Ein Lesefehler der Prozessliste ist "unbekannt", nicht "es laeuft nichts" (Pruefung Runde 6, Fund 6)
+void unreadable_procs_tests() {
+    Sandbox sb;
+    ProcsPlatform bad(make_snapshot_platform(sb.dir.string()), false);
+    Facts f = collect_all(bad);
+    CHECK(f.get("proc.running") == nullptr, "Prozessliste nicht lesbar: kein Fakt proc.running");
+    bool failed_named = false;
+    if (const json* fl = f.get("collector.failed"); fl && fl->is_array())
+        for (const auto& e : *fl)
+            if (e.value("name", "") == "collect_processes") failed_named = true;
+    CHECK(failed_named, "Prozessliste nicht lesbar: Sammler als fehlgeschlagen vermerkt");
+    ProcsPlatform empty(make_snapshot_platform(sb.dir.string()), true);
+    Facts g = collect_all(empty);
+    const json* run = g.get("proc.running");
+    CHECK(run && run->is_array() && run->empty(), "Prozessliste lesbar und leer: Fakt proc.running ist eine leere Liste");
+}
+
 }  // namespace
 
 void review4_tests() {
+    unreadable_procs_tests();
     read_tail_tests();
     dump_safe_tests();
     collector_tests();

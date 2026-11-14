@@ -289,10 +289,12 @@ public:
     bool frame_ready = false;
     bool quit = false;
     int progress = 0;  // letzter 'G'-Wert des Dienstes (0..100)
+    std::size_t received = 0;  // bisher gelesene Bytes (zeigt, dass der Dienst noch sendet)
 
     // false: Verbindung weg
     bool pump(int fd) {
-        std::uint32_t wait_from = 0;  // Beginn des Wartens auf den Rest einer Nachricht in diesem Aufruf (0: noch nicht gewartet)
+        bool waiting = false;  // in diesem Aufruf schon auf den Rest einer Nachricht gewartet? (eine eigene Marke: now_ms() kann 0 sein, und "| 1" lag bei geraden Zeiten hinter der Uhr)
+        std::uint32_t wait_from = 0;  // Beginn dieses Wartens
         for (int guard = 0; guard < 4096; ++guard) {
             std::uint8_t* dst;
             std::size_t want;
@@ -321,8 +323,12 @@ public:
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 // Mitten in einer Nachricht oder in einem Bild (Streifen da, 'P' fehlt noch): kurz auf den Rest warten, statt erst nach einem ganzen Bildtakt
                 // (16 ms) weiterzulesen. Sonst kam ein Vollbild nur etwa 100 KB je Takt an (erstes Bild 1,4 s, Konsole 14. Nov. 2026). Hoechstens 50 ms je Aufruf.
-                if (head_got_ > 0 || in_frame_) {
-                    if (wait_from == 0) wait_from = now_ms() | 1u;
+                // Ein fertiges Bild (frame_ready) wird nicht aufgehalten, auch wenn schon der Kopf des naechsten da ist.
+                if (!frame_ready && (head_got_ > 0 || in_frame_)) {
+                    if (!waiting) {
+                        waiting = true;
+                        wait_from = now_ms();
+                    }
                     if (now_ms() - wait_from < 50u) {
                         (void)sceKernelUsleep(300);
                         continue;
@@ -338,6 +344,7 @@ public:
 
 private:
     void advance(std::size_t n) {
+        received += n;
         if (head_got_ < 5) {
             head_got_ += n;
             if (head_got_ == 5) {
@@ -520,7 +527,8 @@ int main() {
 
     int sock = -1;
     bool first_frame_logged = false;
-    std::uint32_t connected_at = 0;  // Zeitpunkt der Verbindung: kommt nach 60 s kein erstes Bild, bedient der Dienst diese Verbindung nicht
+    std::uint32_t connected_at = 0;  // Zeitpunkt der Verbindung bzw. der letzten Daten des Dienstes: kommt 60 s lang nichts und kein erstes Bild, bedient der Dienst diese Verbindung nicht
+    std::size_t seen_bytes = 0;      // reader.received beim letzten Blick (Daten zuruecksetzen connected_at: eine App im Hintergrund hat nach der Rueckkehr volle Puffer, keinen haengenden Dienst)
     for (;;) {
         // --- Verbindung herstellen (notfalls den Dienst starten) ---
         if (sock < 0) {
@@ -550,6 +558,7 @@ int main() {
             trace("Mit dem Dienst verbunden");
             connected_at = now_ms();
             reader = StreamReader(screen.data());
+            seen_bytes = 0;
             first_frame_logged = false;
             bar_frame(22);
         }
@@ -594,6 +603,10 @@ int main() {
 
         // --- Bilder des Dienstes lesen ---
         const bool alive = reader.pump(sock);
+        if (reader.received != seen_bytes) {  // der Dienst sendet noch: die 60 s ohne erstes Bild zaehlen ab dem letzten Datenempfang
+            seen_bytes = reader.received;
+            connected_at = now_ms();
+        }
         // Die Ende-Meldung zuerst auswerten: der Dienst schliesst die Verbindung gleich nach 'Q', das ist kein Verbindungsverlust
         if (reader.quit) {
             trace("Dienst meldet: beendet");
@@ -635,6 +648,7 @@ int main() {
             (void)sceKernelUsleep(3000);  // Pad und neue Bilder oefter abfragen (vorher 8 ms)
         }
     }
+    if (sock >= 0) close(sock);  // der Dienst wartet nach 'Q' auf das Schliessen (service_main.cpp): nicht erst mit dem Prozessende
     trace("Beenden");
     leave();
 }

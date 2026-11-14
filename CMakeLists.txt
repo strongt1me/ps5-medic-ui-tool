@@ -49,6 +49,9 @@ add_library(medic STATIC
   third_party/tweetnacl/tweetnacl.c
   third_party/sqlite3/sqlite3.c)
 target_include_directories(medic PUBLIC libmedic/include third_party)
+# Der Selbsttest (selftest.cpp) startet Threads: auf glibc vor 2.34 braucht schon medic-cli -lpthread
+find_package(Threads REQUIRED)
+target_link_libraries(medic PUBLIC Threads::Threads)
 target_compile_options(medic PRIVATE -Wall -Wextra)
 set_source_files_properties(third_party/qrcodegen/qrcodegen.cpp third_party/tweetnacl/tweetnacl.c third_party/libdeflate/lib/adler32.c third_party/libdeflate/lib/deflate_decompress.c third_party/libdeflate/lib/zlib_decompress.c third_party/libdeflate/lib/utils.c third_party/libdeflate/lib/x86/cpu_features.c PROPERTIES COMPILE_OPTIONS "-w")  # Fremdcode unveraendert lassen
 # SQLite ohne Dateizugriff (nur Speicher-Datenbanken, siehe libmedic/src/sqlite_check.cpp)

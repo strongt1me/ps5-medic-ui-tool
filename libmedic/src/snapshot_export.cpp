@@ -442,11 +442,15 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
         std::ofstream k(dest / "klog.txt", std::ios::binary);
         for (const auto& line : *l)
             if (line.is_string()) k << mask_addresses(line.get<std::string>()) << "\n";
+        k.close();  // Schreibfehler (Datentraeger voll) zeigen sich erst hier, nicht schon im Destruktor
+        if (!k) ++ex.write_failures;
     }
     {
         std::ofstream a(dest / "system.json", std::ios::binary), b(dest / "procs.json", std::ios::binary);
         a << dump_safe(sys, 2) << "\n";
         b << dump_safe(procs, 2) << "\n";
+        a.close();
+        b.close();
         if (!a || !b) {
             r.error = "system.json/procs.json konnten nicht geschrieben werden";
             return r;

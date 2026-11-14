@@ -343,7 +343,7 @@
   },
   "hw.thermal.short_soak": {
    "name": "Test termico (breve carico della CPU)",
-   "proves_not": "calore di GPU/memoria, il raffreddamento standard mentre un regolatore di ventola è attivo (tiene fresca la console), causa (polvere, pasta termica); in una stanza fresca i problemi restano nascosti"
+   "proves_not": "calore di GPU/memoria, il raffreddamento standard quando un'app controlla la ventola (tiene fresca la console), causa (polvere, pasta termica); in una stanza fresca i problemi restano nascosti"
   },
   "hw.mem.userland_pattern": {
    "name": "Test a schemi della memoria (128 MiB di memoria di lavoro)",

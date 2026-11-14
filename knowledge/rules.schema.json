@@ -69,7 +69,7 @@
             }
           },
           "confirm_runs": { "type": "integer", "minimum": 1, "maximum": 10, "description": "Pruefungen in Folge, bis der Befund als bestaetigt gilt (Standard 1); davor wird er als vorlaeufig gezeigt" },
-          "applies_fw": { "type": "string", "description": "Versionsbereich, z. B. \">=7.00 <=13.60\"" }
+          "applies_fw": { "type": "string", "pattern": "^\\s*((<=|>=|<|>|=)?\\s*[0-9]+(\\.[0-9]+)*[A-Za-z]*[0-9]*\\s*)+$", "description": "Versionsbereich, z. B. \">=7.00 <=13.60\": Teile mit Leerraum getrennt, je Operator (< <= > >= =, optional) und Version; der Lader lehnt Tippfehler ab" }
         }
       }
     }

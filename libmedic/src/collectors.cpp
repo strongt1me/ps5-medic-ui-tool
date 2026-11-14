@@ -18,6 +18,7 @@
 #include <regex>
 #include <set>
 #include <sstream>
+#include <stdexcept>
 #include <tuple>
 
 namespace medic {
@@ -491,6 +492,9 @@ void collect_firmware(const Platform& p, Facts& f) {
 void collect_processes(const Platform& p, Facts& f) {
     json arr = json::array();
     for (auto& n : p.procs().running()) arr.push_back(normalize_proc_name(n));
+    // Eine leere Liste nach einem Lesefehler (z. B. sysctl ENOMEM) ist keine Aussage "es laeuft nichts": ohne Fakt feuern die Regeln darauf nicht, und der
+    // Sammler steht als fehlgeschlagen im Bericht
+    if (arr.empty() && !p.procs().readable()) throw std::runtime_error("Prozessliste nicht lesbar");
     f.set("proc.running", std::move(arr));
 }
 
