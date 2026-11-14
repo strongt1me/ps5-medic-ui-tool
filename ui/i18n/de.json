@@ -158,7 +158,7 @@
   "usertest.nothing": "Nichts aufgefallen",
   "usertest.noticed": "Auffälligkeit",
   "usertest.dontknow": "Weiß nicht",
-  "selftest.reason.fan_controller": "Lüfterregler vorhanden: hält die Konsole kühl (Aussage schwach)",
+  "selftest.reason.fan_controller": "Lüfter durch eine App gesteuert: hält die Konsole kühl (Aussage schwach)",
   "detail.explanation": "Erklärung",
   "detail.evidence": "Evidenz",
   "detail.evidence_more": "… und {n} weitere",

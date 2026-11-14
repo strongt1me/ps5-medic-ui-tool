@@ -158,7 +158,7 @@
   "usertest.nothing": "Nothing noticed",
   "usertest.noticed": "Noticed something",
   "usertest.dontknow": "Don't know",
-  "selftest.reason.fan_controller": "fan controller present: keeps the console cool (weak evidence)",
+  "selftest.reason.fan_controller": "fan controlled by an app: keeps the console cool (weak evidence)",
   "detail.explanation": "Explanation",
   "detail.evidence": "Evidence",
   "detail.evidence_more": "… and {n} more",

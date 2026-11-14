@@ -158,7 +158,7 @@
   "usertest.nothing": "Rien remarqué",
   "usertest.noticed": "Remarqué quelque chose",
   "usertest.dontknow": "Ne sait pas",
-  "selftest.reason.fan_controller": "régulateur de ventilateur présent : garde la console au frais (indice faible)",
+  "selftest.reason.fan_controller": "ventilateur piloté par une application : garde la console au frais (indice faible)",
   "detail.explanation": "Explication",
   "detail.evidence": "Preuves",
   "detail.evidence_more": "... et {n} autres",

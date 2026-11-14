@@ -158,7 +158,7 @@
   "usertest.nothing": "No noté nada",
   "usertest.noticed": "Noté algo",
   "usertest.dontknow": "No sé",
-  "selftest.reason.fan_controller": "hay controlador de ventilador: mantiene la consola fría (indicio débil)",
+  "selftest.reason.fan_controller": "ventilador controlado por una app: mantiene la consola fría (indicio débil)",
   "detail.explanation": "Explicación",
   "detail.evidence": "Evidencias",
   "detail.evidence_more": "... y {n} más",

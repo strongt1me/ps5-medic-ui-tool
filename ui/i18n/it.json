@@ -158,7 +158,7 @@
 "usertest.nothing": "Nulla di anomalo",
 "usertest.noticed": "Ho notato qualcosa",
 "usertest.dontknow": "Non so",
-"selftest.reason.fan_controller": "regolatore ventola presente: tiene fresca la console (indizio debole)",
+"selftest.reason.fan_controller": "ventola controllata da un'app: tiene fresca la console (indizio debole)",
 "detail.explanation": "Spiegazione",
 "detail.evidence": "Prove",
 "detail.evidence_more": "... e altri {n}",
