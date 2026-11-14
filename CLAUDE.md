@@ -11,7 +11,7 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 - **Sprachen der App (Marc, 12. Nov. 2026):** Deutsch, Englisch, Französisch, Italienisch, Spanisch (`ui/i18n/`, `knowledge/l10n/`). Die App läuft auf den Firmwares **4.00 bis 14.10** (README und App-Info); getestet ist nur FW 12.00.
 - Entwickler: Marc (GitHub: strongt1me). Kommuniziere auf Deutsch, kurz und knapp.
 - Host: Windows mit **WSL** (Toolchain läuft in WSL), Editor VS Code.
-- Test-Konsole (Marc, 14. Nov. 2026): PS5 Pro (CFI-7021) auf **FW 12.00**, **kstuff**, **Payload Manager 0.6.3**, **ShadowMount+ 1.7beta12**. FTP auf Port **2121**, ELF-Lader auf Port **9021** offen.
+- Test-Konsolen (Marc, 14. Nov. 2026), beide auf **FW 12.00**, FTP auf Port **2121**, ELF-Lader auf Port **9021** offen: **192.168.1.94** = PS5 Pro (CFI-7021) mit **kstuff**, **Payload Manager 0.6.3**, **ShadowMount+ 1.7beta12**; **192.168.1.52** = PS5 (CFI-2116). Beim Senden immer sagen, an welche Adresse (`make send-launcher PS5_HOST=<Adresse>`).
 - Vorprojekt mit ähnlicher Technik: `strongt1me/ps5-usb-formatierer` (Payload + Web-UI). Code dort darf als Referenz dienen.
 
 ## Tech-Stack (festgelegt)
@@ -23,7 +23,7 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 - **Regeln:** JSON-Wissensdatenbank (`knowledge/rules.json`), kein hartcodiertes Fehlerwissen im C++-Code.
 
 ## Architektur-Leitlinien (wichtig)
-1. **Kern ist plattformunabhängig.** Regel-Engine + Fix-Engine laufen auch am PC gegen einen **Snapshot-Ordner** (Fixtures). Dadurch sind fast alle Regeln ohne Konsole testbar – nötig, weil die Test-Konsole nur FW 12.00 hat.
+1. **Kern ist plattformunabhängig.** Regel-Engine + Fix-Engine laufen auch am PC gegen einen **Snapshot-Ordner** (Fixtures). Dadurch sind fast alle Regeln ohne Konsole testbar – nötig, weil die Test-Konsolen nur FW 12.00 haben.
 2. **Collector → Facts → Rules → Findings → Fixes.** Collectors sammeln Fakten (read-only), Regeln werten nur Fakten aus, Fixes sind separate, reversible Aktionen.
 3. **Jeder Fix ist reversibel:** vorher Backup nach `/data/ps5medic/backups/<timestamp>/`, Journal-Eintrag, Undo-Funktion. Kein Fix ohne Bestätigung durch den Nutzer.
 4. **Nie löschen**, nur verschieben (`_to_delete/`) oder umbenennen.
