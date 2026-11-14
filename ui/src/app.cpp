@@ -4,6 +4,7 @@
 #include "medic_ui/font.hpp"
 #include "medic_ui/icons.hpp"
 
+#include "medic/core_messages.hpp"
 #include "medic/history.hpp"
 
 #include <algorithm>
@@ -446,6 +447,8 @@ std::string App::affected_text(std::size_t finding_index) const {
     return S.fmt("detail.affects", {{"list", list}});
 }
 
+std::string App::core_message(const std::string& de) const { return lang_ == Lang::De ? de : medic::core_message_en(de); }
+
 std::string App::fix_name(const std::string& id) const {
     const auto& S = Strings::get(lang_);
     const std::string key = "fix." + id;
@@ -851,7 +854,7 @@ void App::handle(Button b) {
                 detail_from_game_ = false;
                 done_kind_ = DoneKind::Fix;
                 done_ok_ = r.ok;
-                done_text_ = r.ok ? r.txn : r.error;
+                done_text_ = r.ok ? r.txn : core_message(r.error);
                 verify_ = r.ok ? Verify::Pending : Verify::None;  // nach einer Reparatur erneut pruefen
                 verify_rule_ = plan_.rule_id;
                 verify_rendered_ = false;
@@ -949,7 +952,7 @@ void App::handle(Button b) {
                 const medic::UndoResult r = svc_.undo(undo_target_.txn);
                 done_kind_ = DoneKind::Undo;
                 done_ok_ = r.ok;
-                done_text_ = r.ok ? undo_target_.txn : r.error;
+                done_text_ = r.ok ? undo_target_.txn : core_message(r.error);
                 verify_ = Verify::None;
                 screen_ = Screen::FixDone;
             } else if (b == Button::Circle) screen_ = Screen::History;
@@ -1354,7 +1357,7 @@ void App::draw_selftest(Canvas& c) const {
     if (!st_last_.empty())
         small().draw(c, M + 4, y + 6, S.fmt("selftest.summary", {{"p", std::to_string(passed)}, {"w", std::to_string(warn)}, {"f", std::to_string(failed)}, {"s", std::to_string(skipped)}}), kDim);
     else small().draw(c, M + 4, y + 6, S("selftest.none_yet"), kDim);
-    if (st_save_failed_) small().draw(c, M + 4, y + 6 + small().line_height() + 4, S("selftest.save_failed"), kWarn);
+    if (st_save_failed_) text_right(c, small(), W - M, y + 6, S("selftest.save_failed"), kWarn);
     draw_hints(c, {{PadGlyph::Cross, S("selftest.all")}, {PadGlyph::Square, S("selftest.quick")}, {PadGlyph::Triangle, S("selftest.thorough")}, {PadGlyph::Shoulders, S("selftest.user")}, {PadGlyph::Circle, S("common.back")}});
 }
 
@@ -1897,7 +1900,11 @@ void App::draw_fix_preview(Canvas& c) const {
     small().draw(c, M + 4, 192, plan_.fix_id.empty() ? std::string() : fix_name(plan_.fix_id), kDim);
 
     int y = 232;
-    const int y_limit = H - 210;
+    // Unter den Aenderungen folgen bis zu zwei Warnungen und der Hinweis (je bis zu zwei Zeilen), darunter fest die Sicherungszeile bei H-150: Platz dafuer freihalten
+    const std::string& hint_text = lang_ == Lang::De ? plan_.hint_de : plan_.hint_en;
+    const int note_lh = small().line_height() + 6;
+    const int note_rows = static_cast<int>(std::min<std::size_t>(plan_.warnings.size(), 2)) + (hint_text.empty() ? 0 : static_cast<int>(wrap_text(small(), hint_text, cw - 16, 2).size()));
+    const int y_limit = std::min(H - 210, H - 162 - note_rows * note_lh - (small().line_height() + 4));
     int shown = 0;
     if (plan_.empty()) {
         c.fill_round_rect(M, y, cw, 110, 18, kPanel);
@@ -1955,10 +1962,10 @@ void App::draw_fix_preview(Canvas& c) const {
                    S.fmt("fixprev.range", {{"from", std::to_string(prev_top_ + 1)}, {"to", std::to_string(last_shown)}, {"n", std::to_string(plan_.changes.size())}}), kText);
 
     for (std::size_t i = 0; i < std::min<std::size_t>(plan_.warnings.size(), 2); ++i) {
-        small().draw(c, M + 8, y, elide(small(), S("fixprev.warnings") + ": " + plan_.warnings[i], cw - 16), kWarn);
+        small().draw(c, M + 8, y, elide(small(), S("fixprev.warnings") + ": " + core_message(plan_.warnings[i]), cw - 16), kWarn);
         y += small().line_height() + 6;
     }
-    const std::string& hint = lang_ == Lang::De ? plan_.hint_de : plan_.hint_en;  // fr/it/es: Englisch
+    const std::string& hint = hint_text;  // fr/it/es: Englisch
     if (!hint.empty())
         for (auto& l : wrap_text(small(), hint, cw - 16, 2)) {
             small().draw(c, M + 8, y, l, kText);
@@ -2710,7 +2717,7 @@ void App::draw_error_detail(Canvas& c) const {
         c.fill_round_rect(M + cw - 24, kErrPanelY + kErrPadY, 8, track_h, 4, kPanelHi);
         c.fill_round_rect(M + cw - 24, thumb_y, 8, thumb_h, 4, kDim);
     }
-    small().draw(c, M + 8, kErrPanelY + kErrPanelH + 10, elide(small(), S("errors.readonly"), cw - 16), kDim);
+    small().draw(c, M + 8, kErrPanelY + kErrPanelH + 4, elide(small(), S("errors.readonly"), cw - 16), kDim);
 
     std::vector<std::pair<PadGlyph, std::string>> hints;
     if (max_first > 0) hints.emplace_back(PadGlyph::UpDown, S("errors.scroll"));

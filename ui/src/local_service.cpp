@@ -148,7 +148,9 @@ medic::UndoResult LocalService::undo(const std::string& txn) {
 // (App neu gestartet, direkt in den Verlauf) sind die Fakten leer, und jedes Rueckgaengigmachen ausserhalb der Standardpfade
 // scheiterte mit "Pfad nicht in der Whitelist". Deshalb vorher sammeln, wenn noch nichts da ist.
 void LocalService::ensure_facts() {
-    if (!facts_.get("smp.scan_roots")) facts_ = medic::collect_all(p_);
+    if (facts_.get("smp.scan_roots")) return;
+    facts_ = medic::collect_all(p_);
+    medic::persist_klog(p_, facts_);  // collect_all liest das Kernel-Log verbrauchend: die gelesenen Zeilen nicht verwerfen, sondern sichern
 }
 
 namespace {
@@ -342,6 +344,7 @@ std::vector<medic::TestResult> LocalService::selftest_last() { return medic::loa
 
 bool LocalService::selftest_begin(const std::vector<std::string>& ids) {
     selftest_facts_ = medic::collect_all(p_);  // erst sammeln, dann den Marker setzen (sonst saehe der Lauf seinen eigenen Marker als Absturz)
+    medic::persist_klog(p_, selftest_facts_);  // das Kernel-Log ist gelesen (verbrauchend): sichern, sonst fehlen die Zeilen im naechsten Check-up
     return medic::selftest_begin(p_, clock_(), ids);
 }
 

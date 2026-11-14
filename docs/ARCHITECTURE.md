@@ -2,7 +2,7 @@
 
 ```
 ┌──────────────────────── PS5-App (Vollbild) ────────────────────────┐
-│  UI (VulkanTemplate-Design)  ←→  App-Controller (Screens, Input)    │
+│  UI (eigener Software-Canvas)  ←→  App-Controller (Screens, Input)  │
 └───────────────────────────────┬────────────────────────────────────┘
                                 │
 ┌────────────────────── libmedic (plattformunabhängig) ──────────────┐
@@ -46,7 +46,7 @@ Siehe `knowledge/rules.schema.json`. Kurzform:
 ```json
 {
   "id": "smp.parentheses_in_pfs_name",
-  "severity": "critical",
+  "severity": "info",
   "when": { "all": [
     { "fact": "smp.images[].name", "matches": "[()]" },
     { "fact": "smp.images[].ext", "in": [".ffpfs", ".ffpfsc"] }

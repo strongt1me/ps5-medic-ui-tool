@@ -53,7 +53,7 @@ def render(font, cp):
 
 
 def main():
-    out = ["// GENERIERT von tools/gen_font.py aus DejaVu Sans -- nicht von Hand aendern.",
+    out = ["// SPDX-License-Identifier: GPL-3.0-or-later", "// GENERIERT von tools/gen_font.py aus DejaVu Sans -- nicht von Hand aendern.",
            '#include "font_data.hpp"', "", "namespace medic::ui::fontdata {", ""]
     for name, file, px, kind in FONTS:
         font = ImageFont.truetype(str(DIR / file), px)

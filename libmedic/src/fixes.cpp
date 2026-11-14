@@ -75,17 +75,17 @@ void plan_rename_parentheses(FixPlan& plan, const Facts& facts, const IFileSyste
         const std::string ext = str_of(img, "ext"), name = str_of(img, "name"), path = str_of(img, "path");
         if ((ext != ".ffpfs" && ext != ".ffpfsc") || name.find_first_of("()") == std::string::npos) continue;
         if (std::string why; !policy.allowed(path, &why)) {  // wie bei den Quarantaene-Fixes: ein Eintrag ausserhalb der Whitelist laesst nicht den ganzen Plan scheitern
-            plan.warnings.push_back("Uebersprungen (ausserhalb der erlaubten Ordner): " + path);
+            plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + path);
             continue;
         }
         std::string new_name = strip_parentheses(name);
         if (new_name.empty() || new_name == ext) {
-            plan.warnings.push_back("Uebersprungen (Name waere leer): " + path);
+            plan.warnings.push_back("Übersprungen (Name wäre leer): " + path);
             continue;
         }
         const std::string to = join_path(dir_of(path), new_name);
         if (fs.exists(to) || !targets.insert(to).second) {
-            plan.warnings.push_back("Uebersprungen (Ziel existiert bereits): " + to);
+            plan.warnings.push_back("Übersprungen (Ziel existiert bereits): " + to);
             continue;
         }
         Change c;
@@ -109,24 +109,24 @@ void plan_rename_case(FixPlan& plan, const Facts& facts, const IFileSystem& fs) 
         const std::string path = str_of(m, "path"), expected = str_of(m, "expected");
         if (path.empty() || expected.empty() || expected.find('/') != std::string::npos) continue;
         if (std::string why; !policy.allowed(path, &why)) {
-            plan.warnings.push_back("Uebersprungen (ausserhalb der erlaubten Ordner): " + path);
+            plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + path);
             continue;
         }
         const std::string to = join_path(dir_of(path), expected);
         const bool exists_to = is_case_only_rename(path, to) ? dir_has_name(fs, to) : fs.exists(to);  // exFAT: exists() findet auch dieselbe Datei
         if (exists_to || !targets.insert(to).second) {
-            plan.warnings.push_back("Uebersprungen (Ziel existiert bereits): " + to);
+            plan.warnings.push_back("Übersprungen (Ziel existiert bereits): " + to);
             continue;
         }
         Change c;
         c.kind = Change::Kind::Rename;
         c.path = path;
         c.to = to;
-        c.note_de = "Dateinamen auf die erwartete Gross-/Kleinschreibung bringen (" + base_of(path) + " -> " + expected + ")";
+        c.note_de = "Dateinamen auf die erwartete Groß-/Kleinschreibung bringen (" + base_of(path) + " -> " + expected + ")";
         c.note_en = "Rename the file to the expected letter case (" + base_of(path) + " -> " + expected + ")";
         plan.changes.push_back(std::move(c));
     }
-    plan.hint_de = "Nur der Name wird geaendert (gleicher Ordner); Rueckgaengig stellt den alten Namen wieder her.";
+    plan.hint_de = "Nur der Name wird geändert (gleicher Ordner); Rückgängig stellt den alten Namen wieder her.";
     plan.hint_en = "Only the name changes (same folder); undo restores the old name.";
 }
 
@@ -168,7 +168,7 @@ void plan_set_key(FixPlan& plan, const Finding& f, const Facts& facts, const IFi
         }
     }
     if (clamped_from >= 0) {
-        plan.hint_de = "ShadowMount+ nimmt hoechstens den Wert " + std::to_string(clamp_max) + "; Spiele auf Ebene " + std::to_string(clamped_from) +
+        plan.hint_de = "ShadowMount+ nimmt höchstens den Wert " + std::to_string(clamp_max) + "; Spiele auf Ebene " + std::to_string(clamped_from) +
                        " bleiben auch danach unauffindbar. Lege sie flacher an.";
         plan.hint_en = "ShadowMount+ accepts at most the value " + std::to_string(clamp_max) + "; games on level " + std::to_string(clamped_from) +
                        " are still not found afterwards. Move them closer to the scan path.";
@@ -187,7 +187,7 @@ void plan_set_key(FixPlan& plan, const Finding& f, const Facts& facts, const IFi
     std::string text = old_text;
     for (const auto& v : values) text = add_mode ? ini_add_value(text, t, v) : ini_set_value(text, t, v);
     if (existed && text == old_text) {
-        plan.warnings.push_back("Nichts zu tun: " + file + " enthaelt den Wert bereits");
+        plan.warnings.push_back("Nichts zu tun: " + file + " enthält den Wert bereits");
         return;
     }
     Change c;
@@ -198,7 +198,7 @@ void plan_set_key(FixPlan& plan, const Finding& f, const Facts& facts, const IFi
     c.base_existed = existed;
     c.base_sha = existed ? sha256_hex(old_text) : std::string();
     const std::string shown = (t.section.empty() ? "" : "[" + t.section + "] ") + t.key + "=" + values.front() + (values.size() > 1 ? " ..." : "");
-    c.note_de = base_of(file) + " aendern: " + shown + " (vorher Backup)";
+    c.note_de = base_of(file) + " ändern: " + shown + " (vorher Backup)";
     c.note_en = "Change " + base_of(file) + ": " + shown + " (backup first)";
     plan.changes.push_back(std::move(c));
 }
@@ -261,12 +261,12 @@ void plan_translate_v1(FixPlan& plan, const Facts& facts, const IFileSystem& fs)
         // Ein ungueltiger Wert in der v2-Sektion laesst SM+ die ganze Datei verwerfen; die flache Zeile wird in v2 dagegen nur ignoriert
         if (!smp_v2_value_valid(str_of(k, "tsection"), str_of(k, "tkey"), str_of(k, "value"))) {
             ++invalid;
-            plan.warnings.push_back("Uebersprungen (ungueltiger Wert fuer v2): " + str_of(k, "key") + "=" + str_of(k, "value"));
+            plan.warnings.push_back("Übersprungen (ungültiger Wert für v2): " + str_of(k, "key") + "=" + str_of(k, "value"));
             continue;
         }
         items.push_back({line_no, str_of(k, "tsection"), str_of(k, "tkey"), str_of(k, "value"), k.value("add", false)});
     }
-    if (stale > 0) plan.warnings.push_back(std::to_string(stale) + " Zeile(n) haben sich seit dem Check-up geaendert: bitte neu pruefen");
+    if (stale > 0) plan.warnings.push_back(std::to_string(stale) + " Zeile(n) haben sich seit dem Check-up geändert: bitte neu prüfen");
     if (items.empty()) {
         plan.warnings.push_back("Keine flache v1-Zeile mit bekannter v2-Entsprechung gefunden");
         return;
@@ -283,7 +283,7 @@ void plan_translate_v1(FixPlan& plan, const Facts& facts, const IFileSystem& fs)
         out = it.add ? ini_add_value(out, t, it.value) : ini_set_value(out, t, it.value);
     }
     if (out == text) {
-        plan.warnings.push_back("Nichts zu tun: config.ini enthaelt die Werte bereits");
+        plan.warnings.push_back("Nichts zu tun: config.ini enthält die Werte bereits");
         return;
     }
     Change c;
@@ -293,11 +293,11 @@ void plan_translate_v1(FixPlan& plan, const Facts& facts, const IFileSystem& fs)
     c.check_base = true;
     c.base_existed = true;
     c.base_sha = sha256_hex(text);
-    c.note_de = "config.ini: " + std::to_string(items.size()) + " flache v1-Zeile(n) in die v2-Sektionen uebertragen (vorher Backup)";
+    c.note_de = "config.ini: " + std::to_string(items.size()) + " flache v1-Zeile(n) in die v2-Sektionen übertragen (vorher Backup)";
     c.note_en = "config.ini: move " + std::to_string(items.size()) + " flat v1 line(s) into their v2 sections (backup first)";
     plan.changes.push_back(std::move(c));
     if (unmapped + invalid > 0) {
-        plan.hint_de = std::to_string(unmapped + invalid) + " weitere v1-Zeile(n) haben keine v2-Entsprechung oder einen ungueltigen Wert und bleiben; setzbar im Web-Interface von ShadowMount+.";
+        plan.hint_de = std::to_string(unmapped + invalid) + " weitere v1-Zeile(n) haben keine v2-Entsprechung oder einen ungültigen Wert und bleiben; setzbar im Web-Interface von ShadowMount+.";
         plan.hint_en = std::to_string(unmapped + invalid) + " more v1 line(s) have no v2 equivalent or an invalid value and stay; set them in the ShadowMount+ web interface.";
     }
 }
@@ -343,7 +343,7 @@ void plan_autoload_delay(FixPlan& plan, const Facts& facts, const IFileSystem& f
         }
         if (inserted == 0) continue;
         if (!comments && out.size() > 4095) {  // Grenze des Payload Managers (collectors_stack.cpp): eine groessere Liste startet er gar nicht; der WebKit-Autoloader kennt sie nicht
-            plan.warnings.push_back("Uebersprungen (die Liste wuerde mit den Wartezeiten ueber 4095 Byte gross): " + file);
+            plan.warnings.push_back("Übersprungen (die Liste würde mit den Wartezeiten über 4095 Byte groß): " + file);
             continue;
         }
         Change c;
@@ -353,7 +353,7 @@ void plan_autoload_delay(FixPlan& plan, const Facts& facts, const IFileSystem& f
         c.check_base = true;
         c.base_existed = true;
         c.base_sha = sha256_hex(text);
-        c.note_de = "Autoload-Liste: Wartezeit !4000 hinter elfldr einfuegen (Original im Backup)";
+        c.note_de = "Autoload-Liste: Wartezeit !4000 hinter elfldr einfügen (Original im Backup)";
         c.note_en = "Autoload list: insert the delay !4000 after elfldr (original kept in the backup)";
         plan.changes.push_back(std::move(c));
     }
@@ -370,10 +370,10 @@ void plan_disable_backpork(FixPlan& plan, const Finding& f, const IFileSystem& f
     try {
         re = std::regex(pattern, std::regex::icase);
     } catch (const std::regex_error&) {
-        plan.warnings.push_back("smp_disable_conflicting_backpork: ungueltiges Muster");
+        plan.warnings.push_back("smp_disable_conflicting_backpork: ungültiges Muster");
         return;
     }
-    plan.hint_de = "BackPork laeuft bis zum naechsten Neustart weiter. Danach ist es nicht mehr geladen.";
+    plan.hint_de = "BackPork läuft bis zum nächsten Neustart weiter. Danach ist es nicht mehr geladen.";
     plan.hint_en = "BackPork keeps running until the next restart. Afterwards it is no longer loaded.";
     bool any_file = false;
     if (p.contains("files") && p["files"].is_array()) {
@@ -482,7 +482,7 @@ void plan_autoload_duplicates(FixPlan& plan, const Facts& facts, const IFileSyst
                         "Autoload list: remove " + std::to_string(removed) + " duplicate line(s) (original kept in the backup)");
     }
     if (plan.changes.empty()) plan.warnings.push_back("Keine doppelte Zeile gefunden");
-    plan.hint_de = "Je Eintrag bleibt die erste Zeile; Wartezeiten und alle anderen Zeilen bleiben unveraendert.";
+    plan.hint_de = "Je Eintrag bleibt die erste Zeile; Wartezeiten und alle anderen Zeilen bleiben unverändert.";
     plan.hint_en = "The first line of each entry stays; delays and all other lines stay unchanged.";
 }
 
@@ -537,7 +537,7 @@ void plan_autoload_missing(FixPlan& plan, const Facts& facts, const IFileSystem&
         }
         push_list_write(plan, file, text, out, de + " (Original im Backup)", en + " (original kept in the backup)");
     }
-    if (plan.changes.empty()) plan.warnings.push_back("Kein Eintrag gefunden, der sich sicher korrigieren laesst");
+    if (plan.changes.empty()) plan.warnings.push_back("Kein Eintrag gefunden, der sich sicher korrigieren lässt");
     plan.hint_de = "Payload-Dateien werden nicht angefasst. Fehlt ein Payload wirklich, muss es von Hand wieder installiert werden.";
     plan.hint_en = "Payload files are not touched. If a payload is really missing, it has to be installed again by hand.";
 }
@@ -555,12 +555,12 @@ void plan_quarantine_elf(FixPlan& plan, const Facts& facts, const IFileSystem& f
         if (path.empty() || reason == "unreadable") continue;
         std::string why;
         if (!policy.allowed(path, &why)) {
-            plan.warnings.push_back("Uebersprungen (ausserhalb der erlaubten Ordner): " + path);
+            plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + path);
             continue;
         }
         const std::string to = free_target(fs, targets, join_path(join_path(dir_of(path), ".medic_broken"), base_of(path)));
         if (to.empty()) {
-            plan.warnings.push_back("Uebersprungen (kein freier Zielname): " + path);
+            plan.warnings.push_back("Übersprungen (kein freier Zielname): " + path);
             continue;
         }
         targets.insert(to);
@@ -573,7 +573,7 @@ void plan_quarantine_elf(FixPlan& plan, const Facts& facts, const IFileSystem& f
         plan.changes.push_back(std::move(c));
     }
     if (plan.changes.empty()) plan.warnings.push_back("Keine defekte ELF-Datei in den erlaubten Ordnern gefunden");
-    plan.hint_de = "Die Datei wird nicht geloescht, sondern nach .medic_broken daneben verschoben (Rueckgaengig holt sie zurueck). Danach das Payload neu uebertragen (FTP im Binaermodus).";
+    plan.hint_de = "Die Datei wird nicht gelöscht, sondern nach .medic_broken daneben verschoben (Rückgängig holt sie zurück). Danach das Payload neu übertragen (FTP im Binärmodus).";
     plan.hint_en = "The file is not deleted but moved to .medic_broken next to it (undo brings it back). Then transfer the payload again (FTP in binary mode).";
 }
 
@@ -591,12 +591,12 @@ void plan_quarantine_image(FixPlan& plan, const Facts& facts, const IFileSystem&
         if (path.empty()) continue;
         std::string why;
         if (!policy.allowed(path, &why)) {
-            plan.warnings.push_back("Uebersprungen (ausserhalb der erlaubten Ordner): " + path);
+            plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + path);
             continue;
         }
         const std::string to = free_target(fs, targets, join_path(join_path(dir_of(path), ".medic_broken"), base_of(path)));
         if (to.empty()) {
-            plan.warnings.push_back("Uebersprungen (kein freier Zielname): " + path);
+            plan.warnings.push_back("Übersprungen (kein freier Zielname): " + path);
             continue;
         }
         targets.insert(to);
@@ -609,7 +609,7 @@ void plan_quarantine_image(FixPlan& plan, const Facts& facts, const IFileSystem&
         plan.changes.push_back(std::move(c));
     }
     if (plan.changes.empty()) plan.warnings.push_back("Kein leeres Image in den erlaubten Ordnern gefunden");
-    plan.hint_de = "Die Datei wird nicht geloescht, sondern nach .medic_broken daneben verschoben (Rueckgaengig holt sie zurueck). Laeuft gerade eine Uebertragung, erst beenden lassen.";
+    plan.hint_de = "Die Datei wird nicht gelöscht, sondern nach .medic_broken daneben verschoben (Rückgängig holt sie zurück). Läuft gerade eine Übertragung, erst beenden lassen.";
     plan.hint_en = "The file is not deleted but moved to .medic_broken next to it (undo brings it back). If a transfer is running, let it finish first.";
 }
 
@@ -618,7 +618,7 @@ void plan_pldmgr_enable(FixPlan& plan, const Finding& finding, const Facts& fact
     Finding f = finding;
     f.fix_params = {{"file", "/data/pldmgr/pldmgr_config.txt"}, {"section", ""}, {"key", "AUTOLOAD_ENABLED"}, {"value", "1"}};
     plan_set_key(plan, f, facts, fs);
-    plan.hint_de = "Nur die Zeile AUTOLOAD_ENABLED in der Einstellungsdatei des Payload Managers wird auf 1 gesetzt; Rueckgaengig stellt die Datei wieder her.";
+    plan.hint_de = "Nur die Zeile AUTOLOAD_ENABLED in der Einstellungsdatei des Payload Managers wird auf 1 gesetzt; Rückgängig stellt die Datei wieder her.";
     plan.hint_en = "Only the line AUTOLOAD_ENABLED in the settings file of the Payload Manager is set to 1; undo restores the file.";
 }
 
@@ -652,12 +652,12 @@ void plan_move_duplicates(FixPlan& plan, const Facts& facts, const IFileSystem& 
             if (i == keep) continue;
             const Src& s = srcs[i];
             if (std::string why; !policy.allowed(s.path, &why)) {
-                plan.warnings.push_back("Uebersprungen (ausserhalb der erlaubten Ordner): " + s.path);
+                plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + s.path);
                 continue;
             }
             const std::string to = free_target(fs, targets, join_path(join_path(s.root.empty() ? dir_of(s.path) : s.root, ".duplicates"), base_of(s.path)));
             if (to.empty()) {
-                plan.warnings.push_back("Uebersprungen (kein freier Zielname): " + s.path);
+                plan.warnings.push_back("Übersprungen (kein freier Zielname): " + s.path);
                 continue;
             }
             targets.insert(to);
@@ -672,11 +672,24 @@ void plan_move_duplicates(FixPlan& plan, const Facts& facts, const IFileSystem& 
     }
     // ShadowMount+ ueberspringt Ordner mit '.' am Anfang (sm_scan_tree.c), ".duplicates" bleibt also auch bei scan_depth 2 ungescannt;
     // ein "_duplicates" wuerde dort mitgescannt und die Doppelten kaemen zurueck.
-    plan.hint_de = "Die Doppelten kommen nach .duplicates im Scanpfad (ShadowMount+ scannt Ordner mit Punkt nicht); Rueckgaengig holt sie zurueck.";
+    plan.hint_de = "Die Doppelten kommen nach .duplicates im Scanpfad (ShadowMount+ scannt Ordner mit Punkt nicht); Rückgängig holt sie zurück.";
     plan.hint_en = "The duplicates go to .duplicates in the scan path (ShadowMount+ skips folders starting with a dot); undo moves them back.";
 }
 
 }  // namespace
+
+bool file_entry_size(const IFileSystem& fs, const std::string& path, std::uint64_t& size) {
+    const auto slash = path.rfind('/');
+    if (slash == std::string::npos || slash + 1 >= path.size()) return false;
+    const std::string dir = slash == 0 ? "/" : path.substr(0, slash), name = path.substr(slash + 1);
+    for (const auto& e : fs.list_dir(dir))
+        if (e.name == name) {
+            if (e.is_dir) return false;
+            size = e.size;
+            return true;
+        }
+    return false;
+}
 
 FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& fs, const FixOptions& opt) {
     FixPlan plan;
@@ -709,11 +722,13 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
     } else if (finding.fix == "move_duplicate_titleid") {
         plan_move_duplicates(plan, facts, fs, opt);
     } else if (finding.fix == "fix_image_nesting_hint") {
-        plan.hint_de = "Images werden nicht veraendert. Die Spieldateien muessen direkt im Image-Root liegen (sce_sys/param.json im Root, kein Zusatzordner): Image neu bauen.";
+        plan.hint_de = "Images werden nicht verändert. Die Spieldateien müssen direkt im Image-Root liegen (sce_sys/param.json im Root, kein Zusatzordner): Image neu bauen.";
         plan.hint_en = "Images are not modified. Game files must sit directly in the image root (sce_sys/param.json at the root, no extra folder): rebuild the image.";
     } else {
         plan.warnings.push_back("Unbekannter Fix: " + finding.fix);
     }
+    for (Change& c : plan.changes)  // Dateien, die beiseitegelegt werden: Groesse merken (siehe Change::check_size)
+        if (c.kind == Change::Kind::Rename && file_entry_size(fs, c.path, c.base_size)) c.check_size = true;
     return plan;
 }
 

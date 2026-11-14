@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/rules.hpp"
+#include "medic/jsondump.hpp"
 #include "medic/text_policy.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <fstream>
 #include <optional>
@@ -115,6 +117,44 @@ void parse_confidence(const json& j, Rule& r, const std::string& where) {
     if (r.confidence.level == "high" && basis != "doc" && basis != "observed") fail(w, "level=high braucht basis doc oder observed");
 }
 
+// Version in applies_fw: Zahlen mit Punkten ("13.60"), optional eine Vorabversion direkt dahinter ("1.7beta12").
+bool valid_fw_version(const std::string& v) {
+    std::size_t i = 0;
+    for (;;) {
+        std::size_t j = i;
+        while (j < v.size() && std::isdigit(static_cast<unsigned char>(v[j]))) ++j;
+        if (j == i) return false;
+        i = j;
+        if (i < v.size() && v[i] == '.') {
+            ++i;
+            continue;
+        }
+        break;
+    }
+    while (i < v.size() && std::isalpha(static_cast<unsigned char>(v[i]))) ++i;
+    while (i < v.size() && std::isdigit(static_cast<unsigned char>(v[i]))) ++i;
+    return i == v.size();
+}
+
+// applies_fw: Teile mit Leerraum getrennt, je "<Operator><Version>" mit Operator < <= > >= = (oder ohne); der Operator darf auch durch Leerraum von der Version
+// getrennt stehen. Ein Tippfehler (">=13,60", "13.60-14.10", "=>13.60") schaltete die Regel sonst still ab oder auf "immer": lieber die Datei ablehnen.
+void validate_fw_range(const std::string& range, const std::string& where) {
+    std::stringstream ss(range);
+    std::string tok;
+    int parts = 0;
+    while (ss >> tok) {
+        std::size_t i = 0;
+        while (i < tok.size() && (tok[i] == '<' || tok[i] == '>' || tok[i] == '=')) ++i;
+        const std::string op = tok.substr(0, i);
+        if (!(op.empty() || op == "<" || op == ">" || op == "=" || op == "<=" || op == ">=")) fail(where, "'applies_fw': ungueltiger Operator '" + op + "'");
+        std::string ver = tok.substr(i);
+        if (ver.empty() && !(ss >> ver)) fail(where, "'applies_fw': hinter '" + op + "' fehlt die Version");
+        if (!valid_fw_version(ver)) fail(where, "'applies_fw': ungueltige Version '" + ver + "'");
+        ++parts;
+    }
+    if (parts == 0) fail(where, "'applies_fw' darf nicht leer sein");
+}
+
 Rule parse_rule(const json& j, std::size_t index) {
     std::string where = "rules[" + std::to_string(index) + "]";
     if (!j.is_object()) fail(where, "Regel muss ein Objekt sein");
@@ -158,7 +198,10 @@ Rule parse_rule(const json& j, std::size_t index) {
         if (!j["fix_params"].is_object()) fail(where, "'fix_params' muss ein Objekt sein");
         r.fix_params = j["fix_params"];
     }
-    if (j.contains("applies_fw")) r.applies_fw = need_string(j, "applies_fw", where);
+    if (j.contains("applies_fw")) {
+        r.applies_fw = need_string(j, "applies_fw", where);
+        validate_fw_range(r.applies_fw, where);
+    }
     if (j.contains("confirm_runs")) {
         if (!j["confirm_runs"].is_number_integer() || j["confirm_runs"].get<long>() < 1 || j["confirm_runs"].get<long>() > 10) fail(where, "'confirm_runs' muss eine Ganzzahl von 1 bis 10 sein");
         r.confirm_runs = static_cast<int>(j["confirm_runs"].get<long>());
@@ -176,7 +219,7 @@ std::string to_s(const json& v) {
         os << v.get<double>();
         return os.str();
     }
-    return v.dump();
+    return dump_safe(v);
 }
 
 bool loose_equal(const json& a, const json& b) {
@@ -440,6 +483,18 @@ RuleSet load_rules_from_file(const std::string& path) {
     std::ostringstream ss;
     ss << in.rdbuf();
     return load_rules_from_string(ss.str());
+}
+
+std::string peek_db_version(const std::string& path) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) throw std::runtime_error("kann '" + path + "' nicht oeffnen");
+    std::ostringstream ss;
+    ss << in.rdbuf();
+    const json j = json::parse(ss.str(), nullptr, /*allow_exceptions=*/false);
+    if (j.is_discarded() || !j.is_object()) throw std::runtime_error("kein gueltiges JSON");
+    const auto it = j.find("db_version");
+    if (it == j.end() || !it->is_string()) throw std::runtime_error("Feld 'db_version' fehlt");
+    return it->get<std::string>();
 }
 
 std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts) {

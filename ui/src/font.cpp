@@ -41,6 +41,9 @@ const Font& Font::get(Id id) {
 const Font::Glyph& Font::find(std::uint32_t cp) const {
     auto it = std::lower_bound(glyphs_.begin(), glyphs_.end(), cp, [](const Glyph& g, std::uint32_t v) { return g.cp < v; });
     if (it != glyphs_.end() && it->cp == cp) return *it;
+    // Markenzeichen in Spielnamen ("Spider-Man™", "®", "©") fehlen in der Schrift: ohne Platzhalter weglassen statt "?" zu zeigen
+    static const Glyph kBlank{0, 0, 0, 0, 0, 0, 0};
+    if (cp == 0x2122 || cp == 0xAE || cp == 0xA9) return kBlank;
     if (cp != '?') return find('?');
     return glyphs_.front();
 }

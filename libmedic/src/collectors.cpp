@@ -4,6 +4,7 @@
 #include "medic/history.hpp"
 #include "medic/selftest.hpp"
 
+#include "medic/readtail.hpp"
 #include "medic/rules.hpp"
 #include "medic/sqlite_check.hpp"
 
@@ -346,6 +347,8 @@ void scan_dir(const IFileSystem& fs, const std::string& root, const std::string&
         // "sce_sys" ist nie eine Quelle: in Ordnern ohne param.json (z. B. PS4-Dumps) enthaelt es .dat-Dateien (npbind.dat),
         // die sonst als Images in grosser Tiefe gezaehlt wuerden (erster Konsolenlauf: falscher B10-Befund).
         if (e.is_dir && (e.name == "backports" || e.name == "sce_sys")) continue;
+        // Ordner, die Windows auf USB-Laufwerken anlegt: nie eine Spielquelle (WPSettings.dat darin zaehlte als Image)
+        if (e.is_dir && (e.name == "System Volume Information" || e.name == "$RECYCLE.BIN")) continue;
         const std::string path = join_path(dir, e.name);
         Entry en;
         en.root = root;
@@ -383,12 +386,13 @@ std::map<std::string, Entry> scan_roots(const IFileSystem& fs, const std::vector
 void collect_log_lines(const IFileSystem& fs, const std::string& path, Facts& f, const std::string& fact) {
     std::string text;
     json arr = json::array();
-    if (fs.read_file(path, text)) {
-        if (text.size() > kMaxLogBytes) text.erase(0, text.size() - kMaxLogBytes);
+    if (read_tail(fs, path, kMaxLogBytes, text)) {
         auto lines = split_lines(text);
         std::size_t from = lines.size() > kMaxLogLines ? lines.size() - kMaxLogLines : 0;
-        for (std::size_t i = from; i < lines.size(); ++i)
+        for (std::size_t i = from; i < lines.size(); ++i) {
+            cap_line(lines[i]);  // eine einzige riesige Zeile soll weder den Speicher fuellen noch die Regex-Pruefungen lahmlegen
             if (!trim(lines[i]).empty()) arr.push_back(lines[i]);
+        }
     } else if (fs.exists(path)) {
         return;  // vorhanden, aber nicht lesbar: der Fakt fehlt ("nicht geprueft"), statt als leeres Log "keine Fehler" zu behaupten
     }
@@ -577,10 +581,31 @@ std::string app_title_name(const json& param, const std::string& fallback) {
     std::vector<std::string> langs;
     if (lp.contains("defaultLanguage") && lp["defaultLanguage"].is_string()) langs.push_back(lp["defaultLanguage"].get<std::string>());
     langs.push_back("en-US");
+    // Die Oberflaeche kennt Latin-1 und ein paar Satzzeichen (Schrift: ui/src/font_data.cpp). Ein Titel in anderer Schrift (japanisch, "Okami" mit Macron)
+    // erschiene als "?": dann zaehlt der naechste darstellbare Titel (en-US), sonst bleibt der erste.
+    auto drawable = [](const std::string& s) {
+        for (std::size_t i = 0; i < s.size();) {
+            const unsigned char c = static_cast<unsigned char>(s[i]);
+            std::uint32_t cp = c;
+            std::size_t n = 1;
+            if (c >= 0xF0) { cp = c & 0x07; n = 4; }
+            else if (c >= 0xE0) { cp = c & 0x0F; n = 3; }
+            else if (c >= 0xC0) { cp = c & 0x1F; n = 2; }
+            for (std::size_t k = 1; k < n && i + k < s.size(); ++k) cp = (cp << 6) | (static_cast<unsigned char>(s[i + k]) & 0x3F);
+            i += n;
+            const bool ok = cp < 0x100 || cp == 0x2122 || cp == 0x2013 || cp == 0x2018 || cp == 0x2019 || cp == 0x201C || cp == 0x201D || cp == 0x201E || cp == 0x2026 || cp == 0x2192;  // Latin-1, Markenzeichen (werden weggelassen), Satzzeichen, Pfeil
+            if (!ok) return false;
+        }
+        return true;
+    };
+    std::string first;
     for (const auto& l : langs)
-        if (lp.contains(l) && lp[l].is_object() && lp[l].contains("titleName") && lp[l]["titleName"].is_string())
-            return lp[l]["titleName"].get<std::string>();
-    return fallback;
+        if (lp.contains(l) && lp[l].is_object() && lp[l].contains("titleName") && lp[l]["titleName"].is_string()) {
+            std::string name = lp[l]["titleName"].get<std::string>();
+            if (drawable(name)) return name;
+            if (first.empty()) first = std::move(name);
+        }
+    return first.empty() ? fallback : first;
 }
 
 }  // namespace
@@ -590,8 +615,7 @@ void collect_plugins(const Platform& p, Facts& f) {
     const IFileSystem& fs = p.fs();
     std::string version, source, text;
     for (const char* log : {"/data/ps5-theme/logs/log.txt", "/data/ps5-theme/logs/log.1.txt"}) {
-        if (!fs.read_file(log, text)) continue;
-        if (text.size() > kMaxLogBytes) text.erase(0, text.size() - kMaxLogBytes);
+        if (!read_tail(fs, log, kMaxLogBytes, text)) continue;
         version = find_ps5theme_version(text, /*want_last=*/true);
         if (!version.empty()) {
             source = "log";
@@ -1068,6 +1092,9 @@ void collect_shadowmount(const Platform& p, Facts& f) {
             images.push_back(std::move(img));
         }
         if (e.level > depth) {  // von SM+ bei dieser Tiefe nicht gescannt
+            // Ohne erkennbare Titel-ID zaehlt nur ein Image mit echter Endung (die ID steht dann erst im Inneren); ein Spielordner oder eine
+            // ".dat"-Datei (z. B. WPSettings.dat aus "System Volume Information") ist kein Spiel.
+            if (e.titleid.empty() && (!e.is_image || e.ext == ".dat")) continue;
             deep.push_back({{"path", e.path}, {"level", e.level}, {"titleid", e.titleid}});
             continue;
         }
@@ -1393,7 +1420,10 @@ void collect_databases(const Platform& p, Facts& f) {
             json d = {{"path", path}, {"name", name}, {"size", size}, {"readable", 0}, {"header_bad", 0}, {"truncated", 0}, {"unaligned", 0},
                       {"page_size", 0}, {"header_pages", 0}, {"journal_hot", 0}, {"journal_size", -1}, {"wal_size", -1}, {"integrity", -1}, {"integrity_note", ""}, {"integrity_skip", ""}};
             std::string head;
-            if (fs.read_range(path, 0, 100, head) && head.size() == 100) {
+            if (size > 0 && size < 100 && fs.read_range(path, 0, 100, head) && head.size() == size) {
+                d["readable"] = 1;  // kuerzer als der 100-Byte-Kopf einer SQLite-Datei: kann keine gueltige Datenbank sein
+                d["header_bad"] = 1;
+            } else if (fs.read_range(path, 0, 100, head) && head.size() == 100) {
                 d["readable"] = 1;
                 unsigned page = be16(head, 16);
                 if (page == 1) page = 65536;

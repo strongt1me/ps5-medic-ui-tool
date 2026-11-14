@@ -28,7 +28,7 @@
    "text": "El contenedor .ffpfsc contiene archivos del juego directamente. Un .ffpfsc es solo un contenedor para una imagen interna (.exfat o pfs_image.dat) y no debe tener archivos del juego en su raíz."
   },
   "smp.duplicate_titleid": {
-   "text": "El mismo TITLE_ID existe en más de un origen (p. ej. una carpeta y una imagen). ShadowMount+ usa solo uno y muestra «Duplicate - ignored» en cada inicio. La corrección aparta las copias sobrantes (no se borra nada, se puede deshacer); el origen en uso se queda."
+   "text": "El mismo TITLE_ID existe en más de un origen (p. ej. una carpeta y una imagen). ShadowMount+ usa solo uno y muestra «Duplicate ... ignored» en cada inicio. La corrección aparta las copias sobrantes (no se borra nada, se puede deshacer); el origen en uso se queda."
   },
   "smp.custom_scanpath_hides_defaults": {
    "text": "Hay rutas de escaneo personalizadas: ya no se escanean las rutas predeterminadas y ShadowMount+ no encontrará estos juegos. La corrección añade la ruta (con copia de seguridad y deshacer); o mueve los juegos a una ruta escaneada."
@@ -43,15 +43,15 @@
    "text": "Esta imagen .exfat usa clústeres menores de 64 KB, lo que la ralentiza. Reconstruye la imagen con clústeres de 64 KB (p. ej. mkfs.exfat -c 64K)."
   },
   "savedata.foreign_account": {
-   "text": "Estos datos guardados pertenecen a un ID de cuenta distinto del que está activo ahora (p. ej. tras repetir la activación sin conexión). La consola indica entonces «Datos dañados», aunque no está demostrado que los archivos estén dañados. Salida: volver a usar la cuenta original. No borres los datos antiguos; antes de cambiar el ID de cuenta, copia por FTP /system_data/savedata_prospero, savedata_prospero y savedata_prospero_meta. Medic no cambia nada.",
+   "text": "Estos datos guardados pertenecen a un ID de cuenta distinto del que está activo ahora (p. ej. tras repetir la activación sin conexión). La consola indica entonces «Datos dañados», aunque no está demostrado que los archivos estén dañados. Solución: volver a usar la cuenta original. No borres los datos antiguos; antes de cambiar el ID de cuenta, copia por FTP /system_data/savedata_prospero, savedata_prospero y savedata_prospero_meta. Medic no cambia nada.",
    "confidence_reason": "El ACCOUNT_ID distinto se lee de los archivos. Que provoque «datos dañados» se observó en la consola de prueba con tres juegos, pero no está confirmado restaurando el ID antiguo."
   },
   "errors.recurring_title": {
-   "text": "El historial de errores (/system_data/priv/error/history) contiene varias veces el mismo código de error CE para el mismo título: el título no arranca o no funciona de forma fiable. Qué significa el código está en «Errores». En títulos de carpetas o imágenes pueden ser causa las carpetas backport, los ajustes de FakeLib o archivos que faltan; el historial no dice cuál.",
+   "text": "El historial de errores (/system_data/priv/error/history) contiene varias veces el mismo código de error CE para el mismo título: el título no arranca o no funciona de forma fiable. Lo que significa el código se explica en «Errores». En títulos de carpetas o imágenes pueden ser causa las carpetas backport, los ajustes de FakeLib o archivos que faltan; el historial no dice cuál.",
    "confidence_reason": "Se lee el historial de errores. Que los códigos repetidos apunten a un título que no funciona bien es una deducción; el umbral (más de dos entradas) es provisional."
   },
   "errors.recurring_system_app": {
-   "text": "Una aplicación del sistema (título NPXS...) notificó varias veces el mismo código de error CE en el historial. Suelen ser errores de conexión o de servidor, por ejemplo causados por un filtro DNS (p. ej. nanoDNS) o un problema de red. Solo con el historial no se puede decidir; no apunta a hardware defectuoso. Consulta el código en «Códigos de error».",
+   "text": "Una aplicación del sistema (título NPXS...) notificó varias veces el mismo código de error CE en el historial. Suelen ser errores de conexión o de servidor, por ejemplo causados por un filtro DNS (p. ej. nanoDNS) o un problema de red. Solo con el historial no se puede decidir; no apunta a hardware defectuoso. Consulta el código en «Errores».",
    "confidence_reason": "Se lee el historial de errores. No se puede decidir con el historial si detrás hay red, filtro DNS u otra cosa; el umbral (más de dos entradas) es provisional."
   },
   "sys.unclean_boot": {
@@ -90,7 +90,7 @@
    "text": "debug=0: sin el log de depuración no es posible ningún diagnóstico. Pon debug=1 mientras buscas fallos."
   },
   "smp.register_failed": {
-   "text": "Falló el registro de un juego. Primero quita el icono del lanzador y registra de nuevo; solo como último recurso borra los datos del juego (aviso: se pierden los datos guardados). El código de error está en la línea de registro «[REG] FAIL: 0x...»."
+   "text": "Falló el registro de un juego. Primero quita el icono del lanzador y registra de nuevo; solo como último recurso borra los datos del juego (aviso: se pierden los datos guardados). El código de error está en la línea del log «[REG] FAIL: 0x...»."
   },
   "smp.image_sector_autotune": {
    "text": "ShadowMount+ ajustó automáticamente el tamaño de sector de una imagen (desde 1.7beta12 el valor está en profiles.ini bajo [image:FILE], antes en autotune.ini). Simplemente inicia el juego de nuevo."
@@ -149,7 +149,7 @@
    "text": "ShadowMount+ no pudo vigilar una ruta de escaneo (permiso denegado) y detuvo su escáner: ya no se detectan juegos nuevos. Hasta 1.7beta11 bastaba una ruta de escaneo predeterminada ilegible para eso (p. ej. /data/etaHEN/games); corregido en 1.7beta12, actualiza ShadowMount+. Si no, revisa los permisos de la carpeta indicada o define solo tus propias rutas de escaneo ([scan] path)."
   },
   "smp.launch_busy": {
-   "text": "Los juegos ya no arrancan: ShadowMount+ notifica repetidamente 'launch mount unavailable - status=16 (Device busy)'. Tras un cambio de juego fallido, un título quedó reservado (hasta 1.7beta11, corregido en 1.7beta12). Inicia una vez el título fallido sin un juego en ejecución o envía de nuevo ShadowMount+; actualiza ShadowMount+."
+   "text": "Los juegos ya no arrancan: ShadowMount+ notifica repetidamente 'launch mount unavailable ... status=16 (Device busy)'. Tras un cambio de juego fallido, un título quedó reservado (hasta 1.7beta11, corregido en 1.7beta12). Inicia una vez el título fallido sin un juego en ejecución o envía de nuevo ShadowMount+; actualiza ShadowMount+."
   },
   "smp.fakelib_handoff_stuck": {
    "text": "Un proceso terminado bloquea la cola de limpieza de fakelib: después los juegos con backport arrancan sin su fakelib y se cierran. Solo lo soluciona reiniciar la consola. Corregido en ShadowMount+ 1.7beta12."
@@ -176,7 +176,7 @@
    "text": "La lista de autocarga del Payload Manager tiene un formato no válido. Basta un solo error (archivo de más de 4095 bytes, línea de más de 511 caracteres, pausa no válida '!...', coma en una línea) para invalidar toda la secuencia: no se inicia nada. Corrige la línea indicada."
   },
   "pldmgr.autoload_disabled": {
-   "text": "El Payload Manager tiene entradas en su lista de autocarga, pero la autocarga está desactivada (AUTOLOAD_ENABLED=0): los payloads no se cargan al arrancar. La corrección activa el autoload (con copia de seguridad y deshacer); si es lo que quieres, no hagas nada."
+   "text": "El Payload Manager tiene entradas en su lista de autocarga, pero la autocarga está desactivada (AUTOLOAD_ENABLED=0): los payloads no se cargan al arrancar. La corrección activa la autocarga (con copia de seguridad y deshacer); si es lo que quieres, no hagas nada."
   },
   "payload.elf_invalid": {
    "text": "Al menos un archivo ELF es inservible: demasiado pequeño, sin firma ELF (a menudo una página de error HTML guardada) o cortado (transferencia interrumpida). El cargador lo rechaza y el payload no arranca. Transfiere el archivo de nuevo (FTP en modo binario) o descárgalo otra vez. La corrección no borra nada: mueve el archivo defectuoso a la carpeta oculta .medic_broken junto a él (deshacer lo devuelve)."
@@ -191,11 +191,11 @@
    "text": "En etaHEN está activado 'Game_rest_kill' (o 'Util_rest_kill'): etaHEN cierra el juego o la aplicación abiertos cuando la consola entra en modo reposo. Es un ajuste, no un fallo, pero explica los juegos que desaparecen y el progreso sin guardar perdido."
   },
   "storage.usb_mounted_ro": {
-   "text": "Una unidad conectada está montada en solo lectura: copiar, mover y reparar no funciona allí. Causas posibles: interruptor de protección contra escritura, error del sistema de archivos, unidad que falla. Revísala en un PC con chkdsk o fsck y vuelve a conectarla.",
+   "text": "Una unidad conectada está montada en solo lectura: copiar, mover y reparar no funcionan allí. Causas posibles: interruptor de protección contra escritura, error del sistema de archivos, unidad que falla. Revísala en un PC con chkdsk o fsck y vuelve a conectarla.",
    "confidence_reason": "Que la unidad está montada en solo lectura se mide en la entrada de montaje. Medic no puede saber por qué; las causas indicadas son posibilidades habituales, no demostradas."
   },
   "smp.image_mount_0x60": {
-   "text": "ShadowMount+ no puede montar una imagen (error 0x00000060): la imagen está adjunta, pero no se puede abrir su sistema de archivos. Causa posible: una imagen mal construida (un error de MkPFS 0.0.6 producía imágenes dañadas). Reconstrúyela con la versión actual de MkPFS, primero como .exfat. A otro usuario no le sirvió; la causa no está del todo aclarada.",
+   "text": "ShadowMount+ no puede montar una imagen (error 0x00000060): la imagen está asociada («attached»), pero no se puede abrir su sistema de archivos. Causa posible: una imagen mal construida (un error de MkPFS 0.0.6 producía imágenes dañadas). Reconstrúyela con la versión actual de MkPFS, primero como .exfat. A otro usuario no le sirvió; la causa no está del todo aclarada.",
    "confidence_reason": "El código está en la línea del log. La causa viene de un informe del autor de MkPFS sobre la versión 0.0.6; a un segundo usuario .exfat no le sirvió; no se reprodujo en la consola de prueba."
   },
   "smp.register_console_db": {
@@ -223,7 +223,7 @@
    "confidence_reason": "Se leen el tamaño y los primeros bytes. Que por eso el juego no arranque se deduce del formato de archivo, pero no se observó en la consola de prueba; los formatos desconocidos que no son texto no se notifican a propósito."
   },
   "selftest.failed": {
-   "text": "Un autotest falló (pruebas: test, motivo). Error de lectura («read_error», «short_read»): revisa la unidad, el cable, el puerto y el archivo; repite la prueba, prueba otro puerto y copia el archivo de nuevo. Error de cálculo o de memoria («compute_mismatch», «mem_mismatch»): señal seria de un problema de hardware; haz antes copia de los datos guardados y repite la prueba otro día.",
+   "text": "Un autotest falló (evidencia: test, motivo). Error de lectura («read_error», «short_read»): revisa la unidad, el cable, el puerto y el archivo; repite la prueba, prueba otro puerto y copia el archivo de nuevo. Error de cálculo o de memoria («compute_mismatch», «mem_mismatch»): señal seria de un problema de hardware; haz antes copia de los datos guardados y repite la prueba otro día.",
    "confidence_reason": "El resultado viene de una ejecución de esta app en esta consola y se lee. De ello no se puede determinar la causa de un error de lectura; las posibilidades indicadas son habituales, no demostradas."
   },
   "selftest.interrupted": {
@@ -231,7 +231,7 @@
    "confidence_reason": "Se lee el marcador. Interpretarlo como un cuelgue es una deducción: un apagado deliberado o un programa que terminó sin cierre correcto también lo dejan."
   },
   "selftest.write_failed": {
-   "text": "La prueba de escritura del autotest falló (pruebas: motivo): el archivo de prueba en /data/ps5medic/selftest no se pudo escribir («write_error»), releer («read_error») o difería de lo escrito («verify_mismatch»). Señal seria de un problema de almacenamiento o del sistema de archivos: haz antes copia por FTP de los datos guardados y de los datos importantes y repite la prueba otro día. Un solo fallo puede ser una coincidencia. Medic no cambia nada.",
+   "text": "La prueba de escritura del autotest falló (evidencia: motivo): el archivo de prueba en /data/ps5medic/selftest no se pudo escribir («write_error»), releer («read_error») o difería de lo escrito («verify_mismatch»). Señal seria de un problema de almacenamiento o del sistema de archivos: haz antes copia por FTP de los datos guardados y de los datos importantes y repite la prueba otro día. Un solo fallo puede ser una coincidencia. Medic no cambia nada.",
    "confidence_reason": "Medido en esta consola (datos escritos y releídos comparados). La relectura puede venir en parte de una caché; no se puede descartar un fallo de la propia prueba, y la causa sigue abierta."
   },
   "selftest.thermal": {
@@ -250,7 +250,7 @@
    "text": "Una ruta de escaneo personalizada de config.ini está en una unidad no conectada (/mnt/usbN o /mnt/extN): los juegos de allí no se encuentran. Si [library] remove_missing está activado, ShadowMount+ quita los registros tras el retraso configurado (por defecto: desactivado). Vuelve a conectar la unidad (sin hub USB, otro puerto) o quita la ruta de escaneo."
   },
   "appdb.orphan_entry": {
-   "text": "La base de datos del software del sistema (app.db) lista un título cuya carpeta en /user/app o /system_ex/app falta (pruebas: ID de título): un icono sin juego. Lo habitual es que falte la unidad desde la que ShadowMount+ había montado el título (también tras desactivar PS4Mount o una desinstalación interrumpida). Comprueba la unidad; si no, borra el icono con el menú de opciones. Medic no modifica la base de datos.",
+   "text": "La base de datos del software del sistema (app.db) lista un título cuya carpeta en /user/app o /system_ex/app falta (evidencia: ID de título): un icono sin juego. Lo habitual es que falte la unidad desde la que ShadowMount+ había montado el título (también tras desactivar PS4Mount o una desinstalación interrumpida). Comprueba la unidad; si no, borra el icono con el menú de opciones. Medic no modifica la base de datos.",
    "confidence_reason": "Se leen la entrada y la carpeta que falta. Las causas indicadas son posibilidades habituales, no demostradas; en la consola de prueba todas las entradas coincidían con las carpetas."
   },
   "appdb.unregistered_folder": {

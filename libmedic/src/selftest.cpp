@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/selftest.hpp"
+#include "medic/jsondump.hpp"
 
 #include <nlohmann/json.hpp>
 
 #include <pthread.h>
+#include <sched.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -289,6 +291,11 @@ struct Burners {
     bool use_fma = false, inject = false;
     std::atomic<std::uint64_t> iters[kMax];
     std::int64_t deadline = 0;  // harte Frist nach der Uhr: unabhaengig vom Hauptthread, die Threads beenden sich selbst
+    // Herzschlag des Hauptthreads (steady_seconds beim letzten step()): haengt er laenger als kBeatTimeoutS (z. B. blockiert in einem send() an die App), laeuft
+    // niemand mehr, der die Temperatur prueft, und die Rechenthreads hoeren auf, statt bis zur harten Frist unueberwacht zu heizen.
+    static constexpr std::int64_t kBeatTimeoutS = 3;
+    std::atomic<std::int64_t> beat{0};
+    std::atomic<bool> stalled{false};  // die Rechenthreads haben wegen des ausbleibenden Herzschlags aufgehoert: der Test ist ungueltig (keine Aussage zur Hardware)
     pthread_t th[kMax];
     int started = 0;
 
@@ -366,7 +373,16 @@ void* burn_main(void* p) {
         if (bits != a->b->reference) a->b->errors.fetch_add(1, std::memory_order_relaxed);
         ++round;
         a->b->iters[a->index].fetch_add(1, std::memory_order_relaxed);  // eine Runde = ein Zaehler (Einheit egal: nur das Verhaeltnis zaehlt)
-        if (a->b->stop.load(std::memory_order_relaxed) || steady_seconds() >= a->b->deadline) break;
+        // Nach jeder Runde (ca. 0,1 ms) die CPU hergeben: Die Konsole teilt Threads gleicher Prioritaet offenbar nicht per Zeitscheibe auf (14. Nov. 2026, Messwerte:
+        // sysconf meldet 16 Kerne, 8 Rechenthreads liefen, der Dienst kam in 3,8 s nur 2-mal zum Zug, ein Thread schaffte 1 Runde, ein anderer 35603). Ohne Abgabe
+        // belegen die Rechenthreads die nutzbaren Kerne, und der Hauptthread (Dienst) wartet, bis sie fertig sind.
+        sched_yield();
+        const std::int64_t now = steady_seconds();
+        if (a->b->stop.load(std::memory_order_relaxed) || now >= a->b->deadline) break;
+        if (now - a->b->beat.load(std::memory_order_relaxed) > Burners::kBeatTimeoutS) {
+            a->b->stalled.store(true, std::memory_order_relaxed);
+            break;
+        }
     }
     return nullptr;
 }
@@ -393,6 +409,7 @@ public:
         peak_ = t;
         temps_.push_back(t);
         long cores = sysconf(_SC_NPROCESSORS_ONLN);
+        cpus_online_ = cores;  // Messwert fuers Ergebnis: der Wert von sysconf kann groesser sein als die Kerne, die ein Prozess nutzen darf (Konsole, 14. Nov. 2026: "stalled")
         // Zwei Kerne bleiben frei (Dienst, App, ShadowMount+): bei voller Last auf allen Kernen kam der Dienst zeitweise nicht mehr zum Lesen seiner Eingaben,
         // die App brach die Verbindung ab und die Oberflaeche startete mitten im Test neu (Konsole, 13. Nov. 2026)
         cores_ = static_cast<int>(std::max(1L, std::min<long>(cores > 2 ? cores - 2 : cores, Burners::kMax)));
@@ -401,9 +418,22 @@ public:
 
     bool step() override {
         if (done_) return true;
+        {  // Messwert fuers Ergebnis: laengste Pause zwischen zwei Schritten (der Herzschlag der Rechenthreads verlangt mindestens alle 3 s einen Schritt)
+            const auto now_step = Clock::now();
+            if (have_last_step_) max_gap_ms_ = std::max(max_gap_ms_, std::chrono::duration<double, std::milli>(now_step - last_step_).count());
+            last_step_ = now_step;
+            have_last_step_ = true;
+            ++steps_;
+        }
+        burners_.beat.store(steady_seconds(), std::memory_order_relaxed);
         if (aborted_) {
             stop_burners();
             conclude(TestStatus::Cancelled, abort_reason_);
+            return true;
+        }
+        if (burning_ && burners_.stalled.load(std::memory_order_relaxed)) {  // der Dienst stand still, die Last ist vorzeitig weggefallen: kein Messergebnis, kein Befund
+            stop_burners();
+            conclude(TestStatus::Cancelled, "stalled");
             return true;
         }
         if (!burning_ && !cooling_) start_burners();
@@ -474,6 +504,7 @@ private:
         next_sample_ = phase_start_ + std::chrono::milliseconds(ctx_.step_ms);
         last_sample_ = 0;
         burners_.deadline = steady_seconds() + ctx_.thermal_burn_s + 3;  // harte Frist: Last plus 3 Sekunden Spielraum
+        burners_.beat.store(steady_seconds(), std::memory_order_relaxed);
         burners_.use_fma = have_fma();
         burners_.reference = round_bits(burners_.use_fma);  // Referenz im Hauptthread, vor den Rechenthreads
         burners_.inject = ctx_.inject_compute_fault;
@@ -482,6 +513,7 @@ private:
             if (pthread_create(&burners_.th[i], nullptr, burn_main, &args_[i]) != 0) break;
             ++burners_.started;
         }
+        threads_ = burners_.started;
         if (burners_.started == 0) {
             burning_ = false;
             conclude(TestStatus::Error, "no_threads");
@@ -499,6 +531,21 @@ private:
         result_.measurements.push_back({"rise_c", static_cast<double>(peak_ - rest_), "C"});
         result_.measurements.push_back({"end_c", static_cast<double>(last), "C"});
         result_.measurements.push_back({"cores", static_cast<double>(cores_), ""});
+        // Diagnose (nur Messwerte, ohne Einfluss auf das Urteil): Kernzahl laut System, gestartete Threads, Schritte, laengste Pause zwischen Schritten, Runden je Thread
+        result_.measurements.push_back({"cpus_online", static_cast<double>(cpus_online_), ""});
+        result_.measurements.push_back({"threads_started", static_cast<double>(threads_), ""});
+        result_.measurements.push_back({"steps", static_cast<double>(steps_), ""});
+        result_.measurements.push_back({"max_step_gap_ms", max_gap_ms_, "ms"});
+        if (threads_ > 0) {
+            std::uint64_t lo = ~0ull, hi = 0;
+            for (int i = 0; i < threads_; ++i) {
+                const std::uint64_t v = burners_.iters[i].load(std::memory_order_relaxed);
+                lo = std::min(lo, v);
+                hi = std::max(hi, v);
+            }
+            result_.measurements.push_back({"rounds_min_thread", static_cast<double>(lo), ""});
+            result_.measurements.push_back({"rounds_max_thread", static_cast<double>(hi), ""});
+        }
         std::string why = reason;
         const std::uint64_t compute_errors = burners_.errors.load();
         result_.measurements.push_back({"compute_errors", static_cast<double>(compute_errors), ""});
@@ -548,6 +595,12 @@ private:
     Clock::time_point phase_start_ = Clock::now();
     Clock::time_point next_sample_ = Clock::now();
     int rest_ = 0, peak_ = 0, cores_ = 1;
+    long cpus_online_ = 0;
+    int threads_ = 0;
+    std::uint64_t steps_ = 0;
+    double max_gap_ms_ = 0;
+    Clock::time_point last_step_{};
+    bool have_last_step_ = false;
     bool burning_ = false, cooling_ = false;
     bool fan_controller_ = false;
     double fan_target_ = -1;
@@ -794,7 +847,7 @@ private:
     }
 
     bool write_budget(const std::string& date, int runs, std::uint64_t total) {
-        return p_.fs_rw()->write_file(kSelftestBudgetPath, json({{"last_date", date}, {"runs", runs}, {"total_bytes", total}}).dump() + "\n");
+        return p_.fs_rw()->write_file(kSelftestBudgetPath, dump_safe(json({{"last_date", date}, {"runs", runs}, {"total_bytes", total}})) + "\n");
     }
 
     Platform& p_;
@@ -1008,13 +1061,13 @@ bool selftest_record(Platform& p, const std::string& ts, const TestResult& r) {
     if (!replaced) all.push_back(r);
     json arr = json::array();
     for (const auto& x : all) arr.push_back(result_json(x));
-    return rw->write_file(kSelftestLastPath, json({{"finished", finished}, {"cancelled", false}, {"results", arr}}).dump(2) + "\n");
+    return rw->write_file(kSelftestLastPath, dump_safe(json({{"finished", finished}, {"cancelled", false}, {"results", arr}}), 2) + "\n");
 }
 
 bool selftest_begin(Platform& p, const std::string& ts, const std::vector<std::string>& ids) {
     IFileSystemRW* rw = p.fs_rw();
     if (!rw || !valid_ts(ts)) return false;
-    return rw->write_file(kSelftestMarkerPath, json({{"state", "running"}, {"started", ts}, {"tests", ids}}).dump() + "\n");
+    return rw->write_file(kSelftestMarkerPath, dump_safe(json({{"state", "running"}, {"started", ts}, {"tests", ids}})) + "\n");
 }
 
 bool selftest_finish(Platform& p, const std::string& ts, const std::vector<TestResult>& results, bool cancelled) {
@@ -1022,11 +1075,19 @@ bool selftest_finish(Platform& p, const std::string& ts, const std::vector<TestR
     if (!rw || !valid_ts(ts)) return false;
     json arr = json::array();
     for (const auto& r : results) arr.push_back(result_json(r));
-    const bool ok1 = rw->write_file(kSelftestLastPath, json({{"finished", ts}, {"cancelled", cancelled}, {"results", arr}}).dump(2) + "\n");
+    const bool ok1 = rw->write_file(kSelftestLastPath, dump_safe(json({{"finished", ts}, {"cancelled", cancelled}, {"results", arr}}), 2) + "\n");
     // Marker nicht loeschen, sondern auf "done" setzen: ein erhaltenes "running" heisst, der Lauf wurde nicht ordentlich beendet.
-    const bool ok2 = rw->write_file(kSelftestMarkerPath, json({{"state", "done"}, {"finished", ts}}).dump() + "\n");
+    const bool ok2 = rw->write_file(kSelftestMarkerPath, dump_safe(json({{"state", "done"}, {"finished", ts}})) + "\n");
     return ok1 && ok2;
 }
+
+namespace {
+
+// Typsichere Getter: eine von Hand bearbeitete oder beschaedigte Datei (Zahl statt Text, Text statt Zahl) darf nicht werfen (json::value wirft type_error).
+std::string text_field(const json& j, const char* k) { return j.is_object() && j.contains(k) && j[k].is_string() ? j[k].get<std::string>() : std::string(); }
+double number_field(const json& j, const char* k, double d) { return j.is_object() && j.contains(k) && j[k].is_number() ? j[k].get<double>() : d; }
+
+}  // namespace
 
 std::vector<TestResult> load_last_selftest(const IFileSystem& fs, std::string* finished_ts) {
     std::vector<TestResult> out;
@@ -1039,14 +1100,14 @@ std::vector<TestResult> load_last_selftest(const IFileSystem& fs, std::string* f
         if (!x.is_object() || !x.contains("id") || !x["id"].is_string()) continue;
         TestResult r;
         r.id = x["id"].get<std::string>();
-        r.status = test_status_from_string(x.value("status", std::string()));
-        r.reason = x.value("reason", std::string());
-        r.started = x.value("started", std::string());
-        r.duration_s = x.value("duration_s", 0.0);
+        r.status = test_status_from_string(text_field(x, "status"));
+        r.reason = text_field(x, "reason");
+        r.started = text_field(x, "started");
+        r.duration_s = number_field(x, "duration_s", 0.0);
         if (x.contains("measurements") && x["measurements"].is_array())
             for (const auto& m : x["measurements"])
                 if (m.is_object() && m.contains("name") && m["name"].is_string() && m.contains("value") && m["value"].is_number())
-                    r.measurements.push_back({m["name"].get<std::string>(), m["value"].get<double>(), m.value("unit", std::string())});
+                    r.measurements.push_back({m["name"].get<std::string>(), m["value"].get<double>(), text_field(m, "unit")});
         out.push_back(std::move(r));
     }
     return out;
@@ -1073,8 +1134,8 @@ void collect_selftest(const Platform& p, Facts& f) {
     std::string marker;
     if (p.fs().read_file(kSelftestMarkerPath, marker)) {
         const json m = json::parse(marker, nullptr, false);
-        if (m.is_object() && m.value("state", std::string()) == "running") {
-            f.set("selftest.interrupted.started", m.value("started", std::string()));
+        if (m.is_object() && text_field(m, "state") == "running") {
+            f.set("selftest.interrupted.started", text_field(m, "started"));
             json tests = json::array();
             if (m.contains("tests") && m["tests"].is_array())
                 for (const auto& t : m["tests"])

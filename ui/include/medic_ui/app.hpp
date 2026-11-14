@@ -132,6 +132,8 @@ private:
     std::string annotate_titles(const std::string& text) const;
     std::string affected_text(std::size_t finding_index) const;
     std::string fix_name(const std::string& id) const;
+    // Meldung der Fix-Engine (deutsch) in der Sprache der Oberflaeche; fr/it/es: Englisch (wie die Hinweise der Fixes)
+    std::string core_message(const std::string& de) const;
     const medic::Finding* current_finding() const;
 
     IMedicService& svc_;

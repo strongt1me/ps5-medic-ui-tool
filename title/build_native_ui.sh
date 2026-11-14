@@ -65,8 +65,8 @@ done
 # der dort fehlt (13. Nov. 2026: fgets), laesst die App vor main() abbrechen -- ohne Meldung. Die Liste title/native_imports.txt ist der auf der Konsole
 # bestaetigte Stand; ein neuer Import bricht den Bau ab, bis er auf der Konsole geprueft und in die Liste aufgenommen ist (ALLOW_NEW_IMPORTS=1 zum Testen).
 if command -v nm >/dev/null; then
-    nm -u "$B/pie.elf" | sed 's/^ *U //' | sort > "$B/imports.txt"
-    NEW=$(comm -13 "$REPO/title/native_imports.txt" "$B/imports.txt" || true)
+    nm -u "$B/pie.elf" | sed 's/^ *U //' | LC_ALL=C sort > "$B/imports.txt"
+    NEW=$(LC_ALL=C comm -13 "$REPO/title/native_imports.txt" "$B/imports.txt" || true)
     if [[ -n $NEW ]]; then
         echo "Neue Importe in der App (nicht in title/native_imports.txt):" >&2
         echo "$NEW" >&2

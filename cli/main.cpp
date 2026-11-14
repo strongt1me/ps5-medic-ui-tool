@@ -8,6 +8,7 @@
 //   report  <snapshot-dir> [--out datei] [--qr] [--rules f] [--lang de|en]   (Bericht als Markdown; --qr: Kurzfassung als QR-Code im Terminal)
 // "fix" ohne --apply zeigt nur den Plan (Dry-Run). Mit --apply wird DIREKT im Snapshot-Ordner geschrieben -- Kopie benutzen!
 #include "medic/collectors.hpp"
+#include "medic/jsondump.hpp"
 #include "medic/diff.hpp"
 #include "medic/fixes.hpp"
 #include "medic/history.hpp"
@@ -122,7 +123,7 @@ int cmd_check(const Args& a) {
                                        {"urgency", medic::urgency_of(f)},
                                        {"confidence", {{"level", conf.level}, {"basis", conf.basis}, {"reason", a.lang == "de" ? conf.reason_de : conf.reason_en}}}});
         }
-        std::cout << out.dump(2) << "\n";
+        std::cout << medic::dump_safe(out, 2) << "\n";
         return 0;
     }
 

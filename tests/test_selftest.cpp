@@ -9,6 +9,7 @@
 #include "medic/text_policy.hpp"
 
 #include <chrono>
+#include <thread>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -327,6 +328,25 @@ void selftest_tests() {
         CHECK(sess && longest < 100, "Waermetest: kein einzelner step() dauert ein ganzes Messintervall (laengster Abstand " + std::to_string(longest) + " ms)");
         CHECK(sess && sess->result().status == TestStatus::Passed, "Waermetest: laeuft in kleinen Schritten durch und besteht");
     }
+    {  // Steht der Hauptthread laenger als 3 s still (z. B. blockierendes send()), hoeren die Rechenthreads auf; der Test gilt dann als abgebrochen, nicht als "Leistungsabfall"
+        Sandbox b4;
+        ScriptedPlatform sp4(make_snapshot_platform(b4.dir.string(), false), false);
+        sp4.sys_.temps = {40};
+        TestContext c4;
+        c4.thermal_burn_s = 20;
+        c4.thermal_cool_s = 1;
+        const Facts none4;
+        const TestDef* d4 = find_test("hw.thermal.short_soak");
+        auto sess4 = d4 ? begin_selftest_session(sp4, none4, *d4, c4) : nullptr;
+        CHECK(sess4 != nullptr, "Waermetest (Stillstand): Sitzung beginnt");
+        if (sess4) {
+            sess4->step();  // startet die Rechenthreads
+            std::this_thread::sleep_for(std::chrono::milliseconds(4500));
+            bool done = false;
+            for (int i = 0; i < 50 && !done; ++i) done = sess4->step();
+            CHECK(done && sess4->result().status == TestStatus::Cancelled && sess4->result().reason == "stalled", "Waermetest: Stillstand des Hauptthreads = abgebrochen (stalled), kein Befund");
+        }
+    }
     {  // Schreibtest (Gruendlich): Schutzregeln, Pruefmuster, nie loeschen
         TestContext ctx;
         ctx.write_bytes = 8u << 20;  // zwei Bloecke
@@ -469,6 +489,9 @@ void selftest_tests() {
         sp2.sys_.temps = {40};
         auto r2 = run("hw.thermal.short_soak", Facts(), sp2, ctx);
         CHECK(r2.status == TestStatus::Passed && r2.reason == "no_heating", "Waermetest: ohne Anstieg und ohne Luefterregler = Grund no_heating");
+        CHECK(measure(r2, "cpus_online") >= 1 && measure(r2, "threads_started") >= 1 && measure(r2, "threads_started") <= measure(r2, "cpus_online") && measure(r2, "steps") >= 2 && measure(r2, "max_step_gap_ms") >= 0 &&
+                  measure(r2, "rounds_min_thread") >= 0 && measure(r2, "rounds_max_thread") >= measure(r2, "rounds_min_thread"),
+              "Waermetest: Diagnose-Messwerte (Kernzahl, Threads, Schritte, laengste Pause, Runden je Thread) stehen im Ergebnis");
     }
     {  // Kernel-Log sammeln (D10b): anhaengen, Doppelte, Neustart rotiert, nie loeschen
         Sandbox w;

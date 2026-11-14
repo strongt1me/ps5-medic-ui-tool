@@ -32,7 +32,7 @@ Prüfe, ob der ELF-Lader (Port 9021) läuft und beide Ordner vollständig in `/d
 
 ## Datenschutz
 
-- PS5 Medic **sendet nichts**. Die einzige Netzfunktion ist der optionale Regel-Download (nur mit Adresse in `config.ini`, nur auf Bestätigung, nur zwei GET-Abrufe); Berichte und Snapshots verlassen die Konsole nur, wenn du sie selbst weitergibst.
+- PS5 Medic **sendet nichts**. Netzfunktionen: der optionale Regel-Download (nur mit Adresse in `config.ini`, nur auf Bestätigung, nur zwei GET-Abrufe) und im Selbsttest ein TCP-Verbindungsversuch zum Router im eigenen Netz (keine Daten, nie das Internet); Berichte und Snapshots verlassen die Konsole nur, wenn du sie selbst weitergibst.
 - Der **Bericht** ersetzt IP- und MAC-Adressen, Benutzer- und Konto-IDs und Seriennummern. **Dateinamen und Pfade bleiben**, weil sie meist die Evidenz sind.
 - Der **Snapshot** enthält die Namen von Dateien und Ordnern unter den ShadowMount+-Scanpfaden, also auch Spielnamen, und das `debug.log` von ShadowMount+. Weitergeben nur, wenn du damit einverstanden bist.
 - Teile nichts, was Schlüssel, Firmware oder Spiele-Inhalte enthält. PS5 Medic exportiert so etwas nicht.
@@ -58,7 +58,7 @@ Die Prüfsumme schützt vor beschädigten oder abgeschnittenen Kopien. Sie schü
 
 ## Entwurf für einen Aufruf in Foren oder auf Discord (nicht veröffentlicht, bleibt Vorlage: das Repository ist privat)
 
-> **PS5 Medic sucht Tester (FW 7.x bis 13.60)**
+> **PS5 Medic sucht Tester (FW 4.00 bis 14.10)**
 >
 > PS5 Medic ist eine Vollbild-App für gejailbreakte PS5, die das Homebrew-Setup prüft (ShadowMount+, kstuff, Payloads, Dateinamen, Konfiguration), Fehler in Klartext erklärt und sichere Fälle mit Backup und Rückgängig repariert. Bisher getestet nur auf einer PS5 Pro mit FW 12.00.
 >

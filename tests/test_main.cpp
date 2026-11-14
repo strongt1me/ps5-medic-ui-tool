@@ -215,7 +215,7 @@ static void new_fact_tests() {
         if (v && v->is_array() && v->size() == 1) {
             const json& a = (*v)[0];
             // eboot.bin (2048) + icon0.png (512) + param.json (ein paar hundert Byte)
-            CHECK(a["titleid"] == "PPSA98427" && a["name"] == "CD Player" && a["reserved_mib"] == 16384 && a["content_bytes"] > 2560 &&
+            CHECK(a["titleid"] == "PPSA00099" && a["name"] == "Test App" && a["reserved_mib"] == 16384 && a["content_bytes"] > 2560 &&
                       a["content_bytes"] < 3584,
                   "C2: Titel, Name, Reservierung und Inhaltsgroesse");
         }
@@ -665,6 +665,7 @@ int main() {
     codes_update_tests();
     text_policy_tests();
     review2_tests();
+    review4_tests();
     history_tests();
     selftest_tests();
     ui_tests();

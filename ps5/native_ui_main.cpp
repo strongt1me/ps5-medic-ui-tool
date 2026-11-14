@@ -292,6 +292,7 @@ public:
 
     // false: Verbindung weg
     bool pump(int fd) {
+        std::uint32_t wait_from = 0;  // Beginn des Wartens auf den Rest einer Nachricht in diesem Aufruf (0: noch nicht gewartet)
         for (int guard = 0; guard < 4096; ++guard) {
             std::uint8_t* dst;
             std::size_t want;
@@ -317,7 +318,18 @@ public:
                 continue;
             }
             if (n == 0) return false;
-            if (errno == EAGAIN || errno == EWOULDBLOCK) return true;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                // Mitten in einer Nachricht oder in einem Bild (Streifen da, 'P' fehlt noch): kurz auf den Rest warten, statt erst nach einem ganzen Bildtakt
+                // (16 ms) weiterzulesen. Sonst kam ein Vollbild nur etwa 100 KB je Takt an (erstes Bild 1,4 s, Konsole 14. Nov. 2026). Hoechstens 50 ms je Aufruf.
+                if (head_got_ > 0 || in_frame_) {
+                    if (wait_from == 0) wait_from = now_ms() | 1u;
+                    if (now_ms() - wait_from < 50u) {
+                        (void)sceKernelUsleep(300);
+                        continue;
+                    }
+                }
+                return true;
+            }
             if (errno == EINTR) continue;
             return false;
         }
@@ -332,6 +344,7 @@ private:
                 type_ = static_cast<char>(head_[0]);
                 body_left_ = medic::proto::get32(head_ + 1);
                 sub_got_ = 0;
+                if (type_ == medic::proto::kBand) in_frame_ = true;
                 if (type_ == medic::proto::kBand && body_left_ < 4) type_ = '?';  // ungueltig: die wenigen Bytes ueberspringen
             }
             return;
@@ -354,7 +367,10 @@ private:
         if (type_ == medic::proto::kBand) band_off_ += n;
     }
     void finish_message() {
-        if (type_ == medic::proto::kPresent) frame_ready = true;
+        if (type_ == medic::proto::kPresent) {
+            frame_ready = true;
+            in_frame_ = false;
+        }
         if (type_ == medic::proto::kQuit) quit = true;
         if (type_ == medic::proto::kProgress && skip_[0] <= 100) progress = skip_[0];
         head_got_ = 0;
@@ -367,6 +383,7 @@ private:
     std::uint8_t skip_[512] = {};
     std::size_t head_got_ = 0, sub_got_ = 0, body_left_ = 0, band_off_ = 0;
     char type_ = 0;
+    bool in_frame_ = false;  // Streifen eines Bildes empfangen, das abschliessende 'P' fehlt noch
 };
 
 constexpr std::uint32_t kBtnCircle = 0x2000;  // wie im Dienst (service_main.cpp)
@@ -503,11 +520,12 @@ int main() {
 
     int sock = -1;
     bool first_frame_logged = false;
+    std::uint32_t connected_at = 0;  // Zeitpunkt der Verbindung: kommt nach 60 s kein erstes Bild, bedient der Dienst diese Verbindung nicht
     for (;;) {
         // --- Verbindung herstellen (notfalls den Dienst starten) ---
         if (sock < 0) {
             bar_frame(8);
-            sock = medic::proto::connect_local(medic::proto::kPort, 2);
+            sock = medic::proto::connect_local(medic::proto::kPort, 2, /*big_buffers=*/true);
             if (sock < 0) {
                 const int rc = send_service_elf();
                 trace(rc == 0 ? "Dienst-ELF an den Lader gesendet" : "Dienst-ELF konnte nicht gesendet werden");
@@ -519,7 +537,7 @@ int main() {
                 }
                 for (int i = 0; i < 400 && sock < 0; ++i) {  // bis etwa 20 s, der Balken laeuft dabei weiter
                     for (int k = 0; k < 3; ++k) bar_frame(14);
-                    if (i % 5 == 0) sock = medic::proto::connect_local(medic::proto::kPort, 2);
+                    if (i % 5 == 0) sock = medic::proto::connect_local(medic::proto::kPort, 2, /*big_buffers=*/true);
                 }
             }
             if (sock < 0) {
@@ -530,6 +548,7 @@ int main() {
                 continue;
             }
             trace("Mit dem Dienst verbunden");
+            connected_at = now_ms();
             reader = StreamReader(screen.data());
             first_frame_logged = false;
             bar_frame(22);
@@ -602,6 +621,15 @@ int main() {
             }
             show(screen.data());
         } else if (!first_frame_logged) {
+            if (now_ms() - connected_at > 60000u) {  // verbunden, aber nie ein Bild: der Dienst haengt oder bedient noch eine andere App
+                trace("Kein erstes Bild vom Dienst nach 60 s");
+                close(sock);
+                sock = -1;
+                const std::string hint = std::string(tr(kMsgLogHint)) + "/data/ps5medic/service.log";
+                show_status(tr(kMsgNoAnswer), hint.c_str());
+                wait_with_circle(3000);  // Kreis beendet die App, sonst folgt ein neuer Versuch
+                continue;
+            }
             bar_frame(22.0f + static_cast<float>(reader.progress) * 0.73f);  // 22 % (verbunden) bis 95 % (Dienst bereit)
         } else {
             (void)sceKernelUsleep(3000);  // Pad und neue Bilder oefter abfragen (vorher 8 ms)

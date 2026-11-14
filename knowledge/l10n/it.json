@@ -10,10 +10,10 @@
    "text": "ShadowMount+ richiede kstuff-lite 1.07 o successivo."
   },
   "smp.parentheses_in_pfs_name": {
-   "text": "Il nome di un'immagine .ffpfs/.ffpfsc contiene parentesi. Le vecchie versioni di ShadowMount+ (per esempio 1.6test15) causavano un kernel panic durante la scansione, quelle recenti probabilmente no. La correzione rinomina l'immagine senza parentesi (con backup e annullamento)."
+   "text": "Il nome di un'immagine .ffpfs/.ffpfsc contiene parentesi. Le vecchie versioni di ShadowMount+ (per esempio 1.6test15) causavano un kernel panic durante la scansione, quelle recenti probabilmente no. La riparazione rinomina l'immagine senza parentesi (con backup e annullamento)."
   },
   "smp.autotoggle_crash_1360": {
-   "text": "Questa combinazione (FW 13.60, ShadowMount+ 1.7beta3, kstuff-lite 1.11, kstuff_game_auto_toggle=1) è stata segnalata con crash ripetuti dei giochi. Soluzione provvisoria: kstuff_game_auto_toggle=0 (kstuff resta caricato); la correzione lo imposta con backup e annullamento."
+   "text": "Questa combinazione (FW 13.60, ShadowMount+ 1.7beta3, kstuff-lite 1.11, kstuff_game_auto_toggle=1) è stata segnalata con crash ripetuti dei giochi. Soluzione provvisoria: kstuff_game_auto_toggle=0 (kstuff resta caricato); la riparazione lo imposta con backup e annullamento."
   },
   "smp.fw900_kstuff_fork": {
    "text": "Su FW 9.00, a quanto risulta, i dump non si avviano con la build di kstuff-lite di EchoStretch («can't launch the game or app»). Gli utenti riferiscono che il fork di kstuff di Drakmor risolve il problema."
@@ -28,10 +28,10 @@
    "text": "Il contenitore .ffpfsc contiene direttamente i file del gioco. Un .ffpfsc è solo un contenitore per un'immagine interna (.exfat o pfs_image.dat) e nella sua radice non deve avere file del gioco."
   },
   "smp.duplicate_titleid": {
-   "text": "Lo stesso TITLE_ID esiste in più fonti (per esempio una cartella e un'immagine). ShadowMount+ ne usa solo una e a ogni avvio mostra «Duplicate - ignored». La correzione sposta le copie in più (non viene eliminato nulla, annullamento possibile); la fonte in uso resta."
+   "text": "Lo stesso TITLE_ID esiste in più fonti (per esempio una cartella e un'immagine). ShadowMount+ ne usa solo una e a ogni avvio mostra «Duplicate - ignored». La riparazione sposta le copie in più (non viene eliminato nulla, annullamento possibile); la fonte in uso resta."
   },
   "smp.custom_scanpath_hides_defaults": {
-   "text": "Sono impostati percorsi di scansione personalizzati: i percorsi predefiniti non vengono più scansionati e ShadowMount+ non troverà questi giochi. La correzione aggiunge il percorso (con backup e annullamento); oppure sposta i giochi in un percorso scansionato."
+   "text": "Sono impostati percorsi di scansione personalizzati: i percorsi predefiniti non vengono più scansionati e ShadowMount+ non troverà questi giochi. La riparazione aggiunge il percorso (con backup e annullamento); oppure sposta i giochi in un percorso scansionato."
   },
   "smp.scan_depth": {
    "text": "Questi giochi si trovano più in profondità della profondità di scansione impostata e non vengono trovati. Aumenta scan_depth (per esempio 2) o metti le cartelle a un livello meno profondo."
@@ -43,7 +43,7 @@
    "text": "Questa immagine .exfat usa cluster più piccoli di 64 KB, il che la rallenta. Ricostruisci l'immagine con cluster da 64 KB (per esempio mkfs.exfat -c 64K)."
   },
   "savedata.foreign_account": {
-   "text": "Questi dati salvati appartengono a un ID account diverso da quello attivo ora (per esempio dopo una nuova attivazione offline). La console segnala allora «Dati danneggiati», anche se non è dimostrato che i file siano danneggiati. Soluzione: usa di nuovo l'account originale. Non eliminare i vecchi dati salvati; prima di cambiare l'ID account, copia via FTP /system_data/savedata_prospero, savedata_prospero e savedata_prospero_meta. Medic non modifica nulla.",
+   "text": "Questi dati salvati appartengono a un ID account diverso da quello attivo ora (per esempio dopo una nuova attivazione offline). La console segnala allora «Dati danneggiati», anche se non è dimostrato che i file siano danneggiati. Soluzione: usa di nuovo l'account originale. Non eliminare i vecchi dati salvati; prima di cambiare l'ID account, fai un backup via FTP di /system_data/savedata_prospero, savedata_prospero e savedata_prospero_meta. Medic non modifica nulla.",
    "confidence_reason": "L'ACCOUNT_ID diverso è letto dai file. Che provochi «dati danneggiati» è stato osservato sulla console di prova con tre giochi, ma non confermato ripristinando il vecchio ID."
   },
   "errors.recurring_title": {
@@ -51,7 +51,7 @@
    "confidence_reason": "La cronologia degli errori viene letta. Che codici ripetuti indichino un titolo che non funziona in modo pulito è un'inferenza; la soglia (più di due voci) è provvisoria."
   },
   "errors.recurring_system_app": {
-   "text": "Un'applicazione di sistema (titolo NPXS...) ha segnalato più volte lo stesso codice di errore CE nella cronologia. Spesso sono errori di connessione o del server, per esempio causati da un filtro DNS (es. nanoDNS) o da un problema di rete. Dalla sola cronologia non si può stabilire; non indica un guasto hardware. Cerca il codice in «Cerca codici di errore».",
+   "text": "Un'applicazione di sistema (titolo NPXS...) ha segnalato più volte lo stesso codice di errore CE nella cronologia. Spesso sono errori di connessione o del server, per esempio causati da un filtro DNS (es. nanoDNS) o da un problema di rete. Dalla sola cronologia non si può stabilire; non indica un guasto hardware. Guarda il codice in «Codici di errore».",
    "confidence_reason": "La cronologia degli errori viene letta. Se dietro ci siano rete, filtro DNS o altro non si può stabilire dalla cronologia; la soglia (più di due voci) è provvisoria."
   },
   "sys.unclean_boot": {
@@ -67,7 +67,7 @@
    "confidence_reason": "L'intestazione viene letta e confrontata con il formato di file SQLite. Le conseguenze per la console (icone mancanti, messaggi di errore) sono esperienza, non una relazione documentata."
   },
   "db.truncated": {
-   "text": "Un database del software di sistema è più piccolo di quanto indica la sua intestazione (troncato), per esempio dopo un crash, un'interruzione di corrente o archiviazione piena. Riavvia la console normalmente e controlla di nuovo; se il rilevamento resta, il file è danneggiato. Sony offre «Ricostruisci database» in modalità provvisoria (effetto sui titoli montati da ShadowMount+ non verificato). Medic non modifica i database.",
+   "text": "Un database del software di sistema è più piccolo di quanto indica la sua intestazione (troncato), per esempio dopo un crash, un'interruzione di corrente o con l'archiviazione piena. Riavvia la console normalmente e controlla di nuovo; se il rilevamento resta, il file è danneggiato. Sony offre «Ricostruisci database» in modalità provvisoria (effetto sui titoli montati da ShadowMount+ non verificato). Medic non modifica i database.",
    "confidence_reason": "Dimensione del file e intestazione vengono lette e confrontate con il formato di file SQLite. Non si può escludere un rilevamento mentre la console sta scrivendo in quel momento, quindi controlla di nuovo."
   },
   "db.journal_pending": {
@@ -111,7 +111,7 @@
    "confidence_reason": "La riserva e le dimensioni dei file vengono lette. Il caso noto (CD Player prima della 1.1.2) viene dalla pagina dell'autore; che ogni riserva di questo tipo sprechi spazio non è dimostrato."
   },
   "game.needs_backport": {
-   "text": "Per questi giochi il param.json richiede una versione di firmware più alta di quella della console e i percorsi di scansione non contengono la cartella backports/<TITLE_ID>/. Secondo il toolkit backport la console li avvia solo con un backport o con AMPR Emu / AMPR Emu NG; su questa console non è confermato. Per le immagini (diverse da .exfat) Medic non può verificare se il backport è già integrato nel gioco; il riscontro può quindi essere irrilevante.",
+   "text": "Per questi giochi il param.json richiede una versione di firmware più alta di quella della console e i percorsi di scansione non contengono la cartella backports/<TITLE_ID>/. Secondo il toolkit backport la console li avvia solo con un backport o con AMPR Emu / AMPR Emu NG; su questa console non è confermato. Per le immagini (diverse da .exfat) Medic non può verificare se il backport è già integrato nel gioco; il rilevamento può quindi non essere pertinente.",
    "confidence_reason": "La versione richiesta è letta dal param.json e confrontata con quella della console. Che i giochi quindi non si avviino lo afferma solo il toolkit backport; non è confermato su questa console."
   },
   "smp.shellcore_hook_lost": {
@@ -137,7 +137,7 @@
    "text": "Il config.ini (formato v2) contiene righe nel vecchio formato piatto, per esempio scan_depth=2. ShadowMount+ 1.7beta12 le ignora in silenzio in un file v2, quindi l'impostazione non ha effetto. La riparazione sposta le righe con un equivalente noto nella sezione giusta (per esempio scan_depth in [scan] depth); backup e annullamento inclusi."
   },
   "smp.v1_config_restored": {
-   "text": "Il config.ini è nel vecchio formato (v1), anche se ShadowMount+ lo ha già convertito in v2 (config-v1-backup/ready.ini esiste), e differisce da config-v1-backup/config.ini. Per questo ShadowMount+ 1.7beta12 rifiuta di avviarsi (messaggio solo sulla console). Ripristina il file v2 (ad es. dal backup di Medic in /data/ps5medic/backups) oppure convertilo in v2 a mano; quale valga lo decidi tu. Nessuna correzione automatica."
+   "text": "Il config.ini è nel vecchio formato (v1), anche se ShadowMount+ lo ha già convertito in v2 (config-v1-backup/ready.ini esiste), e differisce da config-v1-backup/config.ini. Per questo ShadowMount+ 1.7beta12 rifiuta di avviarsi (messaggio solo sulla console). Ripristina il file v2 (ad es. dal backup di Medic in /data/ps5medic/backups) oppure convertilo in v2 a mano; quale valga lo decidi tu. Nessuna riparazione automatica."
   },
   "smp.retry_limit": {
    "text": "ShadowMount+ ha rinunciato a un titolo o a un'immagine dopo diversi tentativi falliti (2 per titolo, 3 per immagine) e lo salta fino al riavvio del payload. La causa è nelle righe di log precedenti (per esempio 'attach failed', 'nmount ... failed'). Risolvi la causa, poi invia di nuovo ShadowMount+ (oppure azzera i tentativi: POST /api/v1/scan con {\"reset_attempts\":true})."
@@ -146,13 +146,13 @@
    "text": "ShadowMount+ sta aspettando kstuff e fino ad allora non avvia alcun servizio (niente scansione, niente montaggi). kstuff-lite non è caricato o non è ancora pronto: caricalo prima di ShadowMount+ nell'elenco autoload (o dopo con un ritardo) e verifica che la versione corrisponda al firmware."
   },
   "smp.scanner_root_denied": {
-   "text": "ShadowMount+ non ha potuto sorvegliare un percorso di scansione (permesso negato) e ha fermato il suo scanner: non vengono più rilevati nuovi giochi. Fino alla 1.7beta11 bastava un percorso di scansione predefinito illeggibile (per esempio /data/etaHEN/games); corretto nella 1.7beta12, aggiorna ShadowMount+. Altrimenti controlla i permessi della cartella indicata o imposta solo i tuoi percorsi di scansione ([scan] path)."
+   "text": "ShadowMount+ non ha potuto monitorare un percorso di scansione (permesso negato) e ha fermato il suo scanner: non vengono più rilevati nuovi giochi. Fino alla 1.7beta11 bastava un percorso di scansione predefinito illeggibile (per esempio /data/etaHEN/games); corretto nella 1.7beta12, aggiorna ShadowMount+. Altrimenti controlla i permessi della cartella indicata o imposta solo i tuoi percorsi di scansione ([scan] path)."
   },
   "smp.launch_busy": {
    "text": "I giochi non si avviano più: ShadowMount+ segnala ripetutamente 'launch mount unavailable ... status=16 (Device busy)'. Dopo un cambio di gioco fallito un titolo è rimasto riservato (fino alla 1.7beta11, corretto nella 1.7beta12). Avvia una volta il titolo fallito senza un gioco in esecuzione o invia di nuovo ShadowMount+; aggiorna ShadowMount+."
   },
   "smp.fakelib_handoff_stuck": {
-   "text": "Un processo terminato blocca la coda di pulizia di fakelib: poi i giochi con backport si avviano senza il loro fakelib e vanno in crash. Solo un riavvio della console lo risolve. Corretto in ShadowMount+ 1.7beta12."
+   "text": "Un processo terminato blocca la coda di pulizia di fakelib: poi i giochi con backport si avviano senza la loro fakelib e vanno in crash. Solo un riavvio della console lo risolve. Corretto in ShadowMount+ 1.7beta12."
   },
   "smp.backport_overlay_denied": {
    "text": "Non è stato possibile montare l'overlay backport (fakelib) ('Operation not permitted'): su unità USB (exFAT) non è consentito. Secondo lo sviluppatore aiuta: copiare i file del backport nella cartella del gioco, usare un'immagine .exfat o l'archiviazione interna."
@@ -161,25 +161,25 @@
    "text": "ShadowMount+ 1.7beta9 o 1.7beta10 perde memoria a ogni scansione (circa 5-8 MB al minuto); dopo ore possono comparire scatti, crash o CE-108262-9. Corretto nella 1.7beta11: aggiorna ShadowMount+. Come soluzione provvisoria, in config.ini imposta interval_seconds = 3600 sotto [scan]."
   },
   "smp.usb_game_closed_on_rest": {
-   "text": "Entrando in modalità riposo ShadowMount+ ha chiuso un gioco in esecuzione da un'unità USB (voluto, non un guasto). I progressi non salvati possono andare persi: esci dal gioco prima della modalità riposo. Fino alla 1.7beta11 colpiva per errore anche l'M.2 (/mnt/ext1), corretto nella 1.7beta12."
+   "text": "Quando la console è entrata in modalità riposo, ShadowMount+ ha chiuso un gioco in esecuzione da un'unità USB (voluto, non un guasto). I progressi non salvati possono andare persi: esci dal gioco prima della modalità riposo. Fino alla 1.7beta11 colpiva per errore anche l'M.2 (/mnt/ext1), corretto nella 1.7beta12."
   },
   "autoload.elfldr_without_delay": {
    "text": "Nell'elenco autoload il loader (elfldr) è seguito direttamente dalla voce successiva. Un loader appena avviato accetta connessioni solo dopo qualche secondo: la voce successiva quindi fallisce a ogni avvio. Tra le due serve un ritardo (!4000 = quattro secondi). La riparazione lo inserisce; backup e annullamento inclusi."
   },
   "autoload.entry_missing": {
-   "text": "Una voce dell'elenco autoload non ha un file di payload corrispondente (oppure differiscono solo maiuscole/minuscole; i nomi le distinguono). Il loader segnala 'Payload not found' / 'Not found' e la salta: il payload manca a ogni riavvio. La correzione sistema l'ortografia o disattiva la voce (con backup e annullamento); i file non vengono toccati. Oppure installa di nuovo il payload."
+   "text": "Una voce dell'elenco autoload non ha un file di payload corrispondente (oppure differiscono solo maiuscole/minuscole; i nomi le distinguono). Il loader segnala 'Payload not found' / 'Not found' e la salta: il payload manca a ogni riavvio. La riparazione corregge la grafia o disattiva la voce (con backup e annullamento); i file non vengono toccati. Oppure installa di nuovo il payload."
   },
   "autoload.entry_duplicate": {
-   "text": "Una voce compare più volte nell'elenco autoload e viene inviata ogni volta (i loader non rimuovono i duplicati). La correzione rimuove i duplicati successivi (con backup e annullamento)."
+   "text": "Una voce compare più volte nell'elenco autoload e viene inviata ogni volta (i loader non rimuovono i duplicati). La riparazione rimuove i duplicati successivi (con backup e annullamento)."
   },
   "pldmgr.autoload_syntax": {
    "text": "L'elenco autoload del Payload Manager ha un formato non valido. Basta un solo errore (file oltre 4095 byte, riga oltre 511 caratteri, ritardo '!...' non valido, virgola in una riga) per invalidare l'intera sequenza: non parte nulla. Correggi la riga indicata."
   },
   "pldmgr.autoload_disabled": {
-   "text": "Il Payload Manager ha voci nell'elenco autoload, ma l'autoload è disattivato (AUTOLOAD_ENABLED=0): i payload non vengono caricati all'avvio. La correzione attiva l'autoload (con backup e annullamento); se è voluto, non fare nulla."
+   "text": "Il Payload Manager ha voci nell'elenco autoload, ma l'autoload è disattivato (AUTOLOAD_ENABLED=0): i payload non vengono caricati all'avvio. La riparazione attiva l'autoload (con backup e annullamento); se è voluto, non fare nulla."
   },
   "payload.elf_invalid": {
-   "text": "Almeno un file ELF è inutilizzabile: troppo piccolo, senza firma ELF (spesso una pagina di errore HTML salvata) o troncato (trasferimento interrotto). Il loader lo rifiuta e il payload non si avvia. Trasferisci di nuovo il file (FTP in modalità binaria) o scaricalo di nuovo. La correzione non elimina nulla: sposta il file difettoso nella cartella nascosta .medic_broken accanto (l'annullamento lo ripristina)."
+   "text": "Almeno un file ELF è inutilizzabile: troppo piccolo, senza firma ELF (spesso una pagina di errore HTML salvata) o troncato (trasferimento interrotto). Il loader lo rifiuta e il payload non si avvia. Trasferisci di nuovo il file (FTP in modalità binaria) o scaricalo di nuovo. La riparazione non elimina nulla: sposta il file difettoso nella cartella nascosta .medic_broken accanto al file (l'annullamento lo ripristina)."
   },
   "nanodns.log_problem": {
    "text": "Il log di nanoDNS contiene errori: nanoDNS non raggiunge i suoi server DNS upstream (allora ogni risoluzione di nomi fallisce e app e Payload Manager sembrano «offline»), non riesce ad aprire la porta 53 o segnala righe non valide in nanodns.ini. Controlla i server upstream in nanodns.ini (per esempio l'indirizzo del router come prima voce) e invia di nuovo nanoDNS."
@@ -215,7 +215,7 @@
    "confidence_reason": "Dimensione del file e VolumeLength vengono letti; la lunghezza del file system è definita nella specifica exFAT. Che un gioco vada in crash per questo è dedotto e non osservato sulla console di prova."
   },
   "smp.image_empty": {
-   "text": "Un'immagine (.exfat, .ffpfs o .ffpfsc) è più piccola di 512 byte, quindi è vuota o è solo un resto dopo un'interruzione, e non può essere montata. Copiala o costruiscila di nuovo. La riparazione sposta il file nella cartella nascosta .medic_broken accanto (mai eliminato, l'annullamento lo riporta). Se è in corso un trasferimento verso la console, lascialo prima finire.",
+   "text": "Un'immagine (.exfat, .ffpfs o .ffpfsc) è più piccola di 512 byte, quindi è vuota o è solo un resto dopo un'interruzione, e non può essere montata. Copiala o costruiscila di nuovo. La riparazione sposta il file nella cartella nascosta .medic_broken accanto al file (mai eliminato, l'annullamento lo riporta). Se è in corso un trasferimento verso la console, lascialo prima finire.",
    "confidence_reason": "La dimensione viene letta; un file system di certo non sta in meno di 512 byte. Come ShadowMount+ tratti tali file non è stato osservato sulla console di prova."
   },
   "game.eboot_invalid": {
@@ -235,11 +235,11 @@
    "confidence_reason": "Misurato su questa console (dati scritti e riletti confrontati). La rilettura può in parte venire da una cache; un errore nel test stesso non si può escludere, e la causa resta aperta."
   },
   "selftest.thermal": {
-   "text": "Nel test termico dell'autotest la console si è fatta notare sotto un breve carico della CPU: ha raggiunto 85 °C, è salita troppo in fretta, si è raffreddata lentamente o ha perso oltre il 10 % di velocità di calcolo (possibile throttling). Cause possibili: polvere, ventilazione limitata, stanza calda. Tieni libere le prese d'aria e ripeti il test in una stanza fresca; se resta così, fai pulire la console. Le soglie sono nostre ipotesi.",
+   "text": "Nel test termico dell'autotest la console ha mostrato valori anomali sotto un breve carico della CPU: ha raggiunto 85 °C, è salita troppo in fretta, si è raffreddata lentamente o ha perso oltre il 10 % di velocità di calcolo (possibile throttling). Cause possibili: polvere, ventilazione limitata, stanza calda. Tieni libere le prese d'aria e ripeti il test in una stanza fresca; se resta così, fai pulire la console. Le soglie sono nostre ipotesi.",
    "confidence_reason": "Temperature e velocità di calcolo sono misurate. Le soglie (85 °C, 15 °C in cinque intervalli di misura, calo di velocità del 10 %) sono nostre ipotesi senza riferimento; l'ambiente influenza molto il risultato."
   },
   "selftest.net_local": {
-   "text": "Nel test di rete il collegamento con il router si è fatto notare: almeno il 20 % dei tentativi di connessione è rimasto senza risposta oppure il router ha risposto in media solo dopo più di 100 ms (segno di ricezione Wi-Fi debole, cavo difettoso o router sovraccarico). Avvicinati al router o usa un cavo LAN, riavvia il router e ripeti il test. Si misura solo il percorso verso il router, non Internet.",
+   "text": "Nel test di rete il collegamento con il router è risultato anomalo: almeno il 20 % dei tentativi di connessione è rimasto senza risposta oppure il router ha risposto in media solo dopo più di 100 ms (segno di ricezione Wi-Fi debole, cavo difettoso o router sovraccarico). Avvicinati al router o usa un cavo LAN, riavvia il router e ripeti il test. Si misura solo il percorso verso il router, non Internet.",
    "confidence_reason": "Tempo di risposta e perdita sono misurati, ma solo con 20 tentativi su una porta del router. Le soglie sono nostre ipotesi; un router può rispondere volutamente in ritardo o per niente."
   },
   "sys.temp_high": {

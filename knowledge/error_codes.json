@@ -1,8 +1,8 @@
 {
   "_license": "SPDX-License-Identifier: GPL-3.0-or-later (wie knowledge/rules.json; JSON kennt keine Kommentare)",
-  "_note": "Nachschlagewerk fuer Fehlercodes: nur lesen und erklaeren, nichts wird veraendert. Jeder Eintrag nennt seine Quelle. level doc = Sony-Hilfeseite (am 9. und 13. Nov. 2026 gegen die Seiten geprueft), community = keine Sony-Seite, nur Community-Angaben. Eintraege nach id sortiert. Schema: libmedic/src/error_codes.cpp",
+  "_note": "Nachschlagewerk fuer Fehlercodes: nur lesen und erklaeren, nichts wird veraendert. Jeder Eintrag nennt seine Quelle. level doc = Sony-Hilfeseite (am 9., 11. und 13. Nov. 2026 gegen die Seiten geprueft), community = keine Sony-Seite, nur Community-Angaben. Eintraege nach id sortiert. Schema: libmedic/src/error_codes.cpp",
   "schema_version": 1,
-  "db_version": "2026.11.16",
+  "db_version": "2026.11.17",
   "codes": [
     {
       "id": "0x80268001",
@@ -15,6 +15,14 @@
         "de": [
         ],
         "en": [
+        ]
+      },
+      "notes": {
+        "de": [
+          "Das README nennt die Regel „set3-nonfatal“ (ändert Spieldateien, ungetestet); Medic wendet sie nicht an. Anderes Vorkommen ist nicht belegt."
+        ],
+        "en": [
+          "The README names the rule “set3-nonfatal” (changes game files, untested); Medic does not apply it. Other occurrences are not documented."
         ]
       },
       "source": "https://github.com/cherryduck/ps5-backport-toolkit/blob/master/README.md",
@@ -34,6 +42,14 @@
         "en": [
         ]
       },
+      "notes": {
+        "de": [
+          "Vermutung des Melders (unbestätigt): Die Trophäen-Dateien (z. B. npbind.dat) werden wie bei PS5-Spielen gesucht, nicht wie bei PS4. Medic bestätigt das nicht."
+        ],
+        "en": [
+          "Reporter's guess (unconfirmed): trophy files (e.g. npbind.dat) are looked up as for PS5 games, not as for PS4. Medic does not confirm this."
+        ]
+      },
       "source": "https://github.com/drakmor/ShadowMountPlus/issues/97",
       "checked": "2026-11-09",
       "level": "community"
@@ -49,6 +65,16 @@
         "de": [
         ],
         "en": [
+        ]
+      },
+      "notes": {
+        "de": [
+          "Der Zusammenhang von Code und Größe steht nur in der README-Tabelle, nicht ausdrücklich erklärt.",
+          "Medic ändert keine Spieldateien und stellt weder Spiele noch Backports bereit."
+        ],
+        "en": [
+          "The link between code and size appears only in the README's table, not explained explicitly.",
+          "Medic does not change game files and provides neither games nor backports."
         ]
       },
       "source": "https://github.com/cherryduck/ps5-backport-toolkit/blob/master/README.md",
@@ -679,6 +705,16 @@
         "de": [
         ],
         "en": [
+        ]
+      },
+      "notes": {
+        "de": [
+          "Das README nennt die Toolkit-Regeln „savedata-mount“, „savedata-prepare“ und „savedata-dirsearch“; sie ändern Spieldateien, Medic wendet sie nicht an.",
+          "Das README nennt den Fall nur für die Firmware 4.xx; weitere Ursachen sind nicht belegt."
+        ],
+        "en": [
+          "The README names the toolkit rules “savedata-mount”, “savedata-prepare” and “savedata-dirsearch”; they change game files, Medic does not apply them.",
+          "The README names the case only for firmware 4.xx; other causes are not documented."
         ]
       },
       "source": "https://github.com/cherryduck/ps5-backport-toolkit/blob/master/README.md",

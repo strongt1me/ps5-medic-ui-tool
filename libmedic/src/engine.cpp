@@ -162,7 +162,7 @@ bool read_journal(const IFileSystem& fs, std::vector<json>& out, std::string& er
         }
         out.push_back(std::move(j));
     }
-    if (skipped > 0) err = std::to_string(skipped) + " unlesbare Journalzeile(n) uebersprungen";
+    if (skipped > 0) err = std::to_string(skipped) + " unlesbare Journalzeile(n) übersprungen";
     return true;
 }
 
@@ -190,7 +190,7 @@ bool revert_op(Platform& p, const PathPolicy& policy, const std::string& txn, co
     const std::string path = str_of(rec, "path"), to = str_of(rec, "to");
     if (str_of(rec, "op") == "rename") {
         if (!rw.rename(to, path)) {
-            err = "Rueckbenennen fehlgeschlagen: " + to + " -> " + path;
+            err = "Zurückbenennen fehlgeschlagen: " + to + " -> " + path;
             return false;
         }
         remove_created_dirs(p, policy, rec);
@@ -200,12 +200,12 @@ bool revert_op(Platform& p, const PathPolicy& policy, const std::string& txn, co
     if (!backup.empty()) {
         const std::string nb = PathPolicy::normalize(backup);
         if (nb.empty() || !starts_with_dir(nb, kBackupRoot)) {
-            err = "Backup-Pfad liegt ausserhalb des Backup-Ordners: " + backup;
+            err = "Backup-Pfad liegt außerhalb des Backup-Ordners: " + backup;
             return false;
         }
         std::string old;
         if (!p.fs().read_file(nb, old) || sha256_hex(old) != str_of(rec, "sha_before")) {
-            err = "Backup fehlt oder wurde veraendert: " + backup;
+            err = "Backup fehlt oder wurde verändert: " + backup;
             return false;
         }
         if (!rw.write_file(path, old)) {
@@ -243,14 +243,14 @@ OpState classify(const Platform& p, const PathPolicy& policy, const json& r, std
                 bool ok = true;
                 const std::string now = hash_file(p.fs(), to, ok);
                 if (!ok || now != sha_after) {
-                    why = "Datei wurde nach dem Fix veraendert: " + to;
+                    why = "Datei wurde nach dem Fix verändert: " + to;
                     return OpState::Other;
                 }
             }
             return OpState::After;
         }
         if (path_exists && !to_exists) return OpState::Before;
-        why = path_exists ? "Am urspruenglichen Ort liegt inzwischen etwas: " + path : "Datei fehlt am Zielort: " + to;
+        why = path_exists ? "Am ursprünglichen Ort liegt inzwischen etwas: " + path : "Datei fehlt am Zielort: " + to;
         return OpState::Other;
     }
     std::string cur;
@@ -262,14 +262,14 @@ OpState classify(const Platform& p, const PathPolicy& policy, const json& r, std
         if (existed) {  // Das Backup muss noch da sein, sonst gaebe es nichts zurueckzuspielen
             std::string old;
             if (backup.empty() || !p.fs().read_file(PathPolicy::normalize(backup), old) || sha256_hex(old) != sha_before) {
-                why = "Backup fehlt oder wurde veraendert: " + backup;
+                why = "Backup fehlt oder wurde verändert: " + backup;
                 return OpState::Other;
             }
         }
         return OpState::After;
     }
     if (existed ? (has && cur_sha == sha_before) : !has) return OpState::Before;
-    why = has ? "Datei wurde nach dem Fix veraendert: " + path : "Datei fehlt: " + path;
+    why = has ? "Datei wurde nach dem Fix verändert: " + path : "Datei fehlt: " + path;
     return OpState::Other;
 }
 
@@ -333,7 +333,7 @@ bool PathPolicy::allowed(const std::string& path, std::string* why) const {
         return false;
     };
     const std::string n = normalize(path);
-    if (n.empty()) return no("Ungueltiger Pfad");
+    if (n.empty()) return no("Ungültiger Pfad");
     for (const char* d : kDenied)
         if (starts_with_dir(n, d)) return no("Gesperrter Systempfad");
     for (const auto& r : roots_)
@@ -360,10 +360,10 @@ ApplyResult apply_impl(const FixPlan& plan, Platform& p, const PathPolicy& polic
         r.error = msg;
         return r;
     };
-    if (!opt.confirmed) return fail("Nicht bestaetigt: es wurde nichts geaendert");
+    if (!opt.confirmed) return fail("Nicht bestätigt: es wurde nichts geändert");
     if (!p.fs_rw()) return fail("Kein Schreibzugriff auf dieses Dateisystem");
-    if (plan.changes.empty()) return fail("Der Plan enthaelt keine Aenderungen");
-    if (!valid_txn_name(opt.timestamp)) return fail("Ungueltiger Zeitstempel");
+    if (plan.changes.empty()) return fail("Der Plan enthält keine Änderungen");
+    if (!valid_txn_name(opt.timestamp)) return fail("Ungültiger Zeitstempel");
 
     // 1. Alles pruefen, bevor etwas veraendert wird.
     std::set<std::string> paths_used;
@@ -379,12 +379,17 @@ ApplyResult apply_impl(const FixPlan& plan, Platform& p, const PathPolicy& polic
             const bool case_only = is_case_only_rename(c.path, c.to);
             if (case_only && !dir_has_name(p.fs(), c.path)) return fail("Die Quelle hat nicht die erwartete Schreibweise: " + c.path);
             if (case_only ? dir_has_name(p.fs(), c.to) : p.fs().exists(c.to)) return fail("Ziel existiert bereits: " + c.to);
+            if (c.check_size) {
+                std::uint64_t now_size = 0;
+                if (!file_entry_size(p.fs(), c.path, now_size) || now_size != c.base_size)
+                    return fail("Die Datei hat sich seit der Vorschau geändert (bitte neu prüfen): " + c.path);
+            }
         } else if (c.check_base) {
             // Die Datei darf sich seit der Vorschau nicht geaendert haben.
             std::string cur;
             const bool has = p.fs().read_file(c.path, cur);
             if (has != c.base_existed || (has && sha256_hex(cur) != c.base_sha))
-                return fail("Die Datei hat sich seit der Vorschau geaendert (bitte neu pruefen): " + c.path);
+                return fail("Die Datei hat sich seit der Vorschau geändert (bitte neu prüfen): " + c.path);
         }
     }
     std::vector<json> journal;
@@ -410,7 +415,7 @@ ApplyResult apply_impl(const FixPlan& plan, Platform& p, const PathPolicy& polic
                    {"error", msg + (e2.empty() ? "" : " | Rollback: " + e2)}};
         std::string e3;
         append_journal(p, ab, e3);
-        return fail(msg + (e2.empty() ? " (Aenderungen zurueckgenommen)" : " | Rollback unvollstaendig: " + e2 + " -- im Verlauf zurueckholen"));
+        return fail(msg + (e2.empty() ? " (Änderungen zurückgenommen)" : " | Rollback unvollständig: " + e2 + " -- im Verlauf zurückholen"));
     };
 
     const json roots = json(policy.extra_roots());
@@ -444,16 +449,16 @@ ApplyResult apply_impl(const FixPlan& plan, Platform& p, const PathPolicy& polic
             const bool case_only = is_case_only_rename(c.path, c.to);
             const bool there = case_only ? dir_has_name(p.fs(), c.to) : p.fs().exists(c.to);
             const bool gone = case_only ? !dir_has_name(p.fs(), c.path) : !p.fs().exists(c.path);
-            if (!there || !gone) return abort_all("Nachpruefung fehlgeschlagen: " + c.path);
+            if (!there || !gone) return abort_all("Nachprüfung fehlgeschlagen: " + c.path);
             const std::string after = hash_file(p.fs(), c.to, ok);
-            if (!ok || after != before) return abort_all("Pruefsumme nach dem Verschieben stimmt nicht: " + c.to);
+            if (!ok || after != before) return abort_all("Prüfsumme nach dem Verschieben stimmt nicht: " + c.to);
             rec["sha_after"] = after;
             done.back() = rec;
         } else {
             std::string old;
             const bool existed = p.fs().read_file(c.path, old);
             // Vorhanden, aber nicht lesbar: kein Backup moeglich, also nicht ueberschreiben (sonst waere die Datei ohne Undo verloren)
-            if (!existed && p.fs().exists(c.path)) return abort_all("Datei nicht lesbar, kein Backup moeglich: " + c.path);
+            if (!existed && p.fs().exists(c.path)) return abort_all("Datei nicht lesbar, kein Backup möglich: " + c.path);
             const std::string backup = existed ? join_path(join_path(kBackupRoot, txn), c.path.substr(1)) : std::string();
             rec["backup"] = backup;
             rec["existed"] = existed;
@@ -478,7 +483,7 @@ ApplyResult apply_impl(const FixPlan& plan, Platform& p, const PathPolicy& polic
             done.push_back(rec);
             std::string rb;
             if (!p.fs().read_file(c.path, rb) || sha256_hex(rb) != rec["sha_after"].get<std::string>())
-                return abort_all("Nachpruefung fehlgeschlagen: " + c.path);
+                return abort_all("Nachprüfung fehlgeschlagen: " + c.path);
         }
         if (!append_journal(p, rec, err)) return abort_all(err);
         ++seq;
@@ -498,8 +503,8 @@ UndoResult undo_impl(Platform& p, const PathPolicy& policy_now, const std::strin
         return r;
     };
     if (!p.fs_rw()) return fail("Kein Schreibzugriff auf dieses Dateisystem");
-    if (!valid_txn_name(timestamp)) return fail("Ungueltiger Zeitstempel");
-    if (!valid_txn_name(txn)) return fail("Ungueltige Transaktions-ID");
+    if (!valid_txn_name(timestamp)) return fail("Ungültiger Zeitstempel");
+    if (!valid_txn_name(txn)) return fail("Ungültige Transaktions-ID");
     std::vector<json> journal;
     std::string err;
     if (!read_journal(p.fs(), journal, err)) return fail(err);
@@ -520,8 +525,8 @@ UndoResult undo_impl(Platform& p, const PathPolicy& policy_now, const std::strin
         else if (type == "undo") undone = true;
         else if (type == "abort") aborted_clean = bool_of(j, "clean", true);
     }
-    if (undone) return fail("Transaktion wurde bereits rueckgaengig gemacht: " + txn);
-    if (!committed && aborted_clean) return fail("Transaktion war fehlgeschlagen und wurde schon zurueckgenommen: " + txn);
+    if (undone) return fail("Transaktion wurde bereits rückgängig gemacht: " + txn);
+    if (!committed && aborted_clean) return fail("Transaktion war fehlgeschlagen und wurde schon zurückgenommen: " + txn);
     if (intents.empty() && ops.empty()) return fail("Transaktion unbekannt: " + txn);
 
     // Whitelist: heutige Wurzeln plus die, die beim Fix galten (der Scanpfad kann inzwischen aus der Config verschwunden sein).
@@ -537,8 +542,8 @@ UndoResult undo_impl(Platform& p, const PathPolicy& policy_now, const std::strin
     if (committed && recs.empty()) return fail("Transaktion unbekannt: " + txn);
     // Fehlen Eintraege (unlesbare Journalzeilen), wuerde ein Teil der Aenderungen unbemerkt bleiben: lieber nichts tun.
     if (committed && commit_ops >= 0 && static_cast<long long>(recs.size()) < commit_ops)
-        return fail("Journal unvollstaendig (" + std::to_string(recs.size()) + " von " + std::to_string(commit_ops) +
-                    " Operationen lesbar) -- es wird nichts veraendert: " + txn);
+        return fail("Journal unvollständig (" + std::to_string(recs.size()) + "/" + std::to_string(commit_ops) +
+                    " Operationen lesbar) -- es wird nichts verändert: " + txn);
 
     // Vorpruefung: nichts anfassen, wenn eine Operation in einem fremden Zustand ist (fremde Aenderung nicht ueberschreiben).
     std::vector<std::pair<long long, OpState>> states;
@@ -560,7 +565,7 @@ UndoResult undo_impl(Platform& p, const PathPolicy& policy_now, const std::strin
             json uf = {{"type", "undo_failed"}, {"txn", txn}, {"ts", timestamp}, {"error", e}};
             std::string e2;
             append_journal(p, uf, e2);
-            return fail("Rueckgaengig machen unvollstaendig (erneut versuchen moeglich): " + e);
+            return fail("Rückgängig machen unvollständig (erneut versuchen möglich): " + e);
         }
     }
     json rec = {{"type", "undo"}, {"txn", txn}, {"ts", timestamp}, {"ops", recs.size()}, {"recovered", !committed}};
@@ -586,7 +591,7 @@ UndoResult undo_txn(Platform& p, const PathPolicy& policy, const std::string& tx
         return undo_impl(p, policy, txn, timestamp);
     } catch (const std::exception& e) {
         UndoResult r;
-        r.error = std::string("Interner Fehler beim Rueckgaengigmachen: ") + e.what();
+        r.error = std::string("Interner Fehler beim Rückgängigmachen: ") + e.what();
         return r;
     }
 }

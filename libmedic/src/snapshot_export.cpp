@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/snapshot_export.hpp"
+#include "medic/jsondump.hpp"
 
 #include "medic/exfat.hpp"
 #include "medic/report.hpp"
@@ -100,7 +101,8 @@ std::string mask_addresses(const std::string& line) {
                     else ok = false;
                 }
             }
-            if (ok && parts == 4 && (j == n || (!std::isalnum(static_cast<unsigned char>(line[j])) && line[j] != '.')) && first != 127 && first != 0) {
+            const bool dot_digit = j + 1 < n && line[j] == '.' && is_digit(line[j + 1]);  // "1.2.3.4.5": mehr Teile, keine Adresse
+            if (ok && parts == 4 && (j == n || (!std::isalnum(static_cast<unsigned char>(line[j])) && !dot_digit)) && first != 127 && first != 0) {
                 out += "x.x.x.x";
                 i = j;
                 continue;
@@ -108,7 +110,7 @@ std::string mask_addresses(const std::string& line) {
         }
         out += line[i++];
     }
-    return out;
+    return redact_ipv6(out);
 }
 
 std::string redact_secrets(const std::string& text) {
@@ -162,7 +164,7 @@ bool mask_param_json(const std::string& text, std::string& out) {
         }
     };
     walk(j);
-    out = j.dump();
+    out = dump_safe(j);
     return true;
 }
 
@@ -285,10 +287,16 @@ public:
         std::error_code ec;
         fs::create_directories(target.parent_path(), ec);
         std::ofstream out(target, std::ios::binary | std::ios::trunc);
-        if (!out) return false;
-        out.write(content.data(), static_cast<std::streamsize>(content.size()));
+        if (out) {
+            out.write(content.data(), static_cast<std::streamsize>(content.size()));
+            out.close();  // Fehler beim Zurueckschreiben (Datentraeger voll, Stick gezogen) zeigen sich erst hier
+        }
+        if (!out) {
+            ++write_failures;
+            return false;
+        }
         ++entries;
-        return static_cast<bool>(out);
+        return true;
     }
     void mkdir(const std::string& vpath) {
         std::error_code ec;
@@ -370,6 +378,7 @@ public:
     const IFileSystem& fs_;
     fs::path dest_;
     std::size_t entries = 0;
+    std::size_t write_failures = 0;  // Dateien, die nicht (vollstaendig) geschrieben werden konnten
     std::vector<std::string> warnings;
 
 private:
@@ -436,8 +445,8 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
     }
     {
         std::ofstream a(dest / "system.json", std::ios::binary), b(dest / "procs.json", std::ios::binary);
-        a << sys.dump(2) << "\n";
-        b << procs.dump(2) << "\n";
+        a << dump_safe(sys, 2) << "\n";
+        b << dump_safe(procs, 2) << "\n";
         if (!a || !b) {
             r.error = "system.json/procs.json konnten nicht geschrieben werden";
             return r;
@@ -503,7 +512,7 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
             json param = {{"titleId", e["titleid"]}, {"requiredSystemSoftwareVersion", required}};
             if (e.contains("sdk_fw") && e["sdk_fw"].is_string())
                 if (const std::string sdk = encode(e["sdk_fw"].get<std::string>()); !sdk.empty()) param["sdkVersion"] = sdk;
-            ex.write("/user/app/" + e["titleid"].get<std::string>() + "/sce_sys/param.json", param.dump());
+            ex.write("/user/app/" + e["titleid"].get<std::string>() + "/sce_sys/param.json", dump_safe(param));
         }
         // Eingebauter Backport (games.fw[].eboot_sdk): Ersatz-eboot.bin mit derselben SDK-Version im Ordner der Quelle (smp.titles)
         const auto* t = facts.get("smp.titles");
@@ -571,8 +580,14 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
             const std::string path = str("path"), titleid = str("titleid"), name = str("name"), uid = str("uid");
             if (path.empty() || titleid.empty() || name.empty() || uid.empty() || !safe_name(uid) || !safe_name(titleid)) continue;
             auto it = placeholder.emplace(str("account"), std::string()).first;
-            if (it->second.empty()) it->second = "0" + std::to_string(placeholder.size() + 1) + "00000000000000";  // 0200..., 0300...
-            ex.write(path, psf_bytes(it->second, titleid, name, str("title")));
+            if (it->second.empty()) {
+                const std::size_t n = placeholder.size() + 1;  // 2, 3, ...: die 1 gehoert dem aktuellen Konto
+                if (n > 255) continue;
+                char buf[24];
+                std::snprintf(buf, sizeof buf, "%02X00000000000000", static_cast<unsigned>(n));  // 0200..., 0300...: immer genau 16 Zeichen
+                it->second = buf;
+            }
+            ex.write(path, psf_bytes(it->second, titleid, name, "Gespeicherte Daten"));  // der echte Spielstand-Titel bleibt aussen vor
             const std::string dir = "/user/home/" + uid + "/savedata_prospero_meta/user/" + titleid;
             if (memory_written.insert(uid).second) ex.write(dir + "/sce_bu_sce_sdmemory.sfo", psf_bytes("0100000000000000", titleid, "sce_sdmemory", "Gespeicherte Daten"));
         }
@@ -608,7 +623,7 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
                 char name[32];
                 std::snprintf(name, sizeof name, "%08X.json", n);
                 json j = {{"shortError", e["code"]}, {"titleId", title}, {"tick", (when + 62135596800LL) * 1000000LL}};
-                ex.write(std::string("/system_data/priv/error/history/") + name, j.dump());
+                ex.write(std::string("/system_data/priv/error/history/") + name, dump_safe(j));
             }
         }
     }
@@ -693,12 +708,17 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
 
     json meta = {{"tool", "ps5-medic snapshot export"}, {"created", timestamp}, {"entries", ex.entries}, {"warnings", ex.warnings},
                  {"note", "Enthaelt Datei- und Ordnernamen. Vor dem Teilen pruefen."}};
-    std::ofstream m(dest / "export.json", std::ios::binary);
-    m << meta.dump(2) << "\n";
+    {
+        std::ofstream m(dest / "export.json", std::ios::binary);
+        m << dump_safe(meta, 2) << "\n";
+        m.close();
+        if (!m) ++ex.write_failures;
+    }
 
-    r.ok = true;
     r.entries = ex.entries;
     r.warnings = ex.warnings;
+    r.ok = ex.write_failures == 0;
+    if (!r.ok) r.error = std::to_string(ex.write_failures) + " Dateien konnten nicht geschrieben werden (Datentraeger voll oder Stick entfernt?); der Export ist unvollstaendig";
     return r;
 }
 

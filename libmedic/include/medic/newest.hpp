@@ -5,6 +5,7 @@
 #pragma once
 #include "medic/rules.hpp"  // compare_versions
 
+#include <algorithm>
 #include <exception>
 #include <filesystem>
 #include <string>
@@ -33,6 +34,39 @@ Set load_newest(const std::vector<std::string>& paths, Loader load, std::string*
     }
     if (chosen) *chosen = best_path;
     return best;
+}
+
+// Wie load_newest, aber ohne jede Datei vollstaendig zu pruefen: peek(pfad) liefert nur die db_version (JSON lesen, sonst nichts), danach wird nur die Datei mit der
+// hoechsten Version geladen. Schlaegt deren Pruefung fehl, kommt die naechstniedrigere dran. Grund: auf der Konsole kostete das Pruefen der veralteten Kopie
+// (Regeln 286 ms, Fehlercodes 217 ms, Messung 14. Nov. 2026) mehr als die Haelfte der Ladezeit, und das Ergebnis wurde verworfen.
+// Eine Datei, die sich nicht einmal als JSON mit db_version lesen laesst, wird in `errors` gemeldet und uebersprungen.
+template <class Set, class Loader, class Peek>
+Set load_newest_peek(const std::vector<std::string>& paths, Loader load, Peek peek, std::string* chosen, std::vector<std::string>* errors = nullptr) {
+    struct Candidate {
+        std::string path, version;
+    };
+    std::vector<Candidate> found;
+    for (const std::string& path : paths) {
+        std::error_code ec;
+        if (!std::filesystem::exists(path, ec)) continue;
+        try {
+            found.push_back({path, peek(path)});
+        } catch (const std::exception& e) {
+            if (errors) errors->push_back(path + ": " + e.what());
+        }
+    }
+    std::stable_sort(found.begin(), found.end(), [](const Candidate& a, const Candidate& b) { return compare_versions(a.version, b.version) > 0; });  // Gleichstand: frueherer Ort bleibt vorn
+    if (chosen) chosen->clear();
+    for (const Candidate& c : found) {
+        try {
+            Set s = load(c.path);
+            if (chosen) *chosen = c.path;
+            return s;
+        } catch (const std::exception& e) {
+            if (errors) errors->push_back(c.path + ": " + e.what());
+        }
+    }
+    return Set{};
 }
 
 }  // namespace medic

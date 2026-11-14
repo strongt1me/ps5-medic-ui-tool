@@ -478,7 +478,14 @@ std::string findings_summary(const std::vector<Finding>& fs_) {
     for (auto& f : fs_) {
         if (f.rule_id == kLiveOnlyRule) continue;
         s += f.rule_id + "|" + f.fix + "|";
-        for (auto& e : f.evidence) s += e + ";";
+        for (auto e : f.evidence) {
+            // Der Export ersetzt den Titel eines Spielstands ("<ID> <Name> (<Titel>)") durch einen Platzhalter: er gehoert nicht in einen Export (Datenschutz)
+            if (f.rule_id == "savedata.foreign_account") {
+                const auto paren = e.find(" (");
+                if (paren != std::string::npos) e.erase(paren);
+            }
+            s += e + ";";
+        }
         s += "\n";
     }
     return s;
@@ -650,7 +657,7 @@ void recovery_tests() {
         const auto before = tree(tmp.dir);
         FailSetPlatform fp(make_snapshot_platform(tmp.dir.string(), true), {3, 4});  // 3. Aenderung scheitert, dann auch der Rollback von Nr. 2
         ApplyResult ar = apply_plan(three_renames(), fp, PathPolicy({"/data/homebrew"}), confirmed("20261108T150400Z"));
-        CHECK(!ar.ok && ar.error.find("Rollback unvollstaendig") != std::string::npos, "Rollback-Fehler: apply meldet unvollstaendigen Rollback");
+        CHECK(!ar.ok && ar.error.find("Rollback unvollständig") != std::string::npos, "Rollback-Fehler: apply meldet unvollstaendigen Rollback");
         auto h = history(fp);
         CHECK(h.size() == 1 && h[0].state == "incomplete", "Rollback-Fehler: history = incomplete (nicht aborted)");
         CHECK(tree(tmp.dir) != before, "Rollback-Fehler: eine Datei liegt noch am neuen Ort");
@@ -695,7 +702,7 @@ void recovery_tests() {
         p->fs_rw()->write_file(kJournalPath, out);
         const auto mid = tree(tmp.dir);
         UndoResult ur = undo_txn(*p, pol, ar.txn, "20261108T150601Z");
-        CHECK(!ur.ok && ur.error.find("Journal unvollstaendig") != std::string::npos, "Luecke im Journal: undo abgelehnt (" + ur.error + ")");
+        CHECK(!ur.ok && ur.error.find("Journal unvollständig") != std::string::npos, "Luecke im Journal: undo abgelehnt (" + ur.error + ")");
         CHECK(tree(tmp.dir) == mid, "Luecke im Journal: nichts veraendert");
     }
     // H) Die Datei hat sich seit der Vorschau geaendert: apply lehnt ab, nichts wird ueberschrieben, kein Journal.

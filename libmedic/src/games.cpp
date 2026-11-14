@@ -25,9 +25,12 @@ int rank_of(Severity s) { return s == Severity::Critical ? 0 : (s == Severity::W
 
 // Kommt needle in hay vor, und endet der Treffer an einer Namensgrenze? "/data/homebrew/Game" steht nicht in "/data/homebrew/Game2/x" (sonst bekaeme das Spiel
 // "Game" die Befunde von "Game2").
-bool contains_word(const std::string& hay, const std::string& needle) {
+// `longer`: bekannte andere Quellpfade, die mit `needle` beginnen ("/x/God of War" gegen "/x/God of War Ragnarok"): an einer Stelle, an der einer von
+// ihnen passt, gehoert der Treffer dem laengeren Pfad.
+bool contains_word(const std::string& hay, const std::string& needle, const std::vector<std::string>* longer = nullptr) {
     if (needle.empty()) return false;
     for (std::size_t pos = hay.find(needle); pos != std::string::npos; pos = hay.find(needle, pos + 1)) {
+        if (longer && std::any_of(longer->begin(), longer->end(), [&](const std::string& l) { return hay.compare(pos, l.size(), l) == 0; })) continue;
         const std::size_t end = pos + needle.size();
         if (end >= hay.size()) return true;
         const unsigned char c = static_cast<unsigned char>(hay[end]);
@@ -161,6 +164,14 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
     for (const auto& f : findings)
         for (const auto& ev : f.evidence)
             for (auto it = std::sregex_iterator(ev.begin(), ev.end(), id_re); it != std::sregex_iterator(); ++it) at(it->str());
+    std::set<std::string> all_paths;
+    for (auto& [id, g] : games)
+        for (const auto& s : g.sources) all_paths.insert(s.path);
+    std::map<std::string, std::vector<std::string>> longer_of;  // Quellpfad -> bekannte laengere Pfade mit demselben Anfang
+    for (const auto& pth : all_paths) {
+        auto& v = longer_of[pth];
+        for (auto it = all_paths.upper_bound(pth); it != all_paths.end() && it->compare(0, pth.size(), pth) == 0; ++it) v.push_back(*it);
+    }
     for (std::size_t i = 0; i < findings.size(); ++i) {
         const Finding& f = findings[i];
         for (auto& [id, g] : games) {
@@ -168,7 +179,7 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
             for (const auto& ev : f.evidence) {
                 if (contains_word(ev, id)) hit = true;
                 for (const auto& s : g.sources)
-                    if (contains_word(ev, s.path)) hit = true;
+                    if (contains_word(ev, s.path, &longer_of[s.path])) hit = true;
                 if (hit) break;
             }
             if (!hit) continue;

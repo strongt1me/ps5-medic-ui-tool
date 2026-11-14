@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/checks.hpp"
+#include "medic/jsondump.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -118,7 +119,7 @@ bool save_check(Platform& p, const StoredCheck& c, std::string* id) {
         if (n > 20) return false;
         name = c.ts + "_" + std::to_string(n);
     }
-    if (!rw->write_file(std::string(kChecksDir) + "/" + name + ".json", to_json(c).dump(1) + "\n")) return false;
+    if (!rw->write_file(std::string(kChecksDir) + "/" + name + ".json", dump_safe(to_json(c), 1) + "\n")) return false;
     if (id) *id = name;
     return true;
 }

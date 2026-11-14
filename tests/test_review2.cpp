@@ -77,7 +77,7 @@ void planner_tests() {
             CHECK(c.find("fan_target_temperature=70") == std::string::npos && c.find("target_temperature") != std::string::npos, "v1-Fix: gueltige Zeile wandert in die v2-Sektion");
             CHECK(c.find("[scan]") == std::string::npos, "v1-Fix: kein [scan] depth mit ungueltigem Wert angelegt");
         }
-        CHECK(any_warning(plan, "ungueltiger Wert"), "v1-Fix: Warnung zum uebersprungenen Wert");
+        CHECK(any_warning(plan, "ungültiger Wert"), "v1-Fix: Warnung zum uebersprungenen Wert");
     }
     // ... und eine seit dem Check-up veraenderte Datei: die falsche Zeile wird nicht entfernt
     {
@@ -86,7 +86,7 @@ void planner_tests() {
         Facts facts;
         facts.set("smp.v1_keys", json::array({json{{"key", "scan_depth"}, {"value", "2"}, {"line", 2}, {"tsection", "scan"}, {"tkey", "depth"}, {"add", false}}}));
         const FixPlan plan = plan_fix(finding_for("smp_translate_v1_keys"), facts, e.p->fs(), {});
-        CHECK(plan.changes.empty() && any_warning(plan, "geaendert"), "v1-Fix: veraltete Zeilennummer, nichts wird entfernt");
+        CHECK(plan.changes.empty() && any_warning(plan, "geändert"), "v1-Fix: veraltete Zeilennummer, nichts wird entfernt");
     }
 
     // autoload_insert_delay: nicht ueber die Grenze von 4095 Byte des Payload Managers

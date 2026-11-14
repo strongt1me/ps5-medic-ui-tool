@@ -2,6 +2,7 @@
 // Collectors fuer den Jailbreak-Stack ausserhalb von ShadowMount+: Autoload-Listen (Payload Manager, WebKit-Autoloader),
 // ELF-Dateien (abgebrochene Uebertragung), nanoDNS-Log, etaHEN. Nur lesen.
 #include "medic/collectors.hpp"
+#include "medic/readtail.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -41,6 +42,7 @@ std::vector<std::string> split_lines(const std::string& text) {
 }
 
 constexpr std::size_t kMaxLogLines = 20000;
+constexpr std::size_t kMaxLogBytes = 4u << 20;
 
 // ---- Autoload-Listen -----------------------------------------------------------------------------------------------
 
@@ -244,13 +246,14 @@ void collect_elfs(const IFileSystem& fs, Facts& f) {
 // noch Domains gelangen in Fakten, Befunde oder den Export (Formate aus nanoDNS main.c, v0.4).
 void collect_nanodns(const IFileSystem& fs, Facts& f) {
     std::string text;
-    if (!fs.read_file("/data/nanodns/nanodns.log", text)) return;
+    if (!read_tail(fs, "/data/nanodns/nanodns.log", kMaxLogBytes, text)) return;
     static const std::regex up(R"(\[nanodns\] all upstreams failed for )");
     static const std::regex bind(R"(\[nanodns\] bind\(.*\) failed)");
     static const std::regex warn(R"(\[nanodns\] warning: )");
     int upstream = 0, bind_failed = 0, warnings = 0;
-    const auto lines = split_lines(text);
+    auto lines = split_lines(text);
     for (std::size_t i = lines.size() > kMaxLogLines ? lines.size() - kMaxLogLines : 0; i < lines.size(); ++i) {
+        cap_line(lines[i]);
         if (std::regex_search(lines[i], up)) ++upstream;
         else if (std::regex_search(lines[i], bind)) ++bind_failed;
         else if (std::regex_search(lines[i], warn)) ++warnings;

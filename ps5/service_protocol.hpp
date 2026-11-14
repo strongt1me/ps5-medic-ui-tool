@@ -50,14 +50,21 @@ inline void set_nodelay(int s) {
     setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
 }
 
+// Grosse Puffer fuer die Bildstreifen: ein ganzes Bild sind 8 MB, und mit dem Standardpuffer (einige 10 KB) lief es in vielen kleinen Schritten durch
+// (Konsole, 14. Nov. 2026: Senden des ersten Bilds 1393 ms). Lehnt das System die Groesse ab, bleibt der Standard.
+inline void set_stream_buffers(int s, int bytes = 1 << 20) {
+    setsockopt(s, SOL_SOCKET, SO_SNDBUF, &bytes, sizeof bytes);
+    setsockopt(s, SOL_SOCKET, SO_RCVBUF, &bytes, sizeof bytes);
+}
+
 // Sendezeitlimit je blockierendem send(): eine Gegenstelle, die nicht mehr liest, haelt den Sender sonst fuer immer fest.
 inline void set_send_timeout(int s, int seconds) {
     timeval tv{seconds, 0};
     setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof tv);
 }
 
-// Verbindung zu 127.0.0.1:port; -1 bei Fehler. Das Sendezeitlimit verhindert endloses Warten.
-inline int connect_local(int port, int send_timeout_s = 5) {
+// Verbindung zu 127.0.0.1:port; -1 bei Fehler. Das Sendezeitlimit verhindert endloses Warten. big_buffers: grosse Puffer fuer den Bildstrom (set_stream_buffers).
+inline int connect_local(int port, int send_timeout_s = 5, bool big_buffers = false) {
     sockaddr_in sa;
     std::memset(&sa, 0, sizeof sa);
     sa.sin_len = sizeof sa;
@@ -68,6 +75,7 @@ inline int connect_local(int port, int send_timeout_s = 5) {
     if (s < 0) return -1;
     set_send_timeout(s, send_timeout_s);
     set_nodelay(s);
+    if (big_buffers) set_stream_buffers(s);  // vor connect(): erst dann richtet sich das Empfangsfenster danach
     if (connect(s, reinterpret_cast<const sockaddr*>(&sa), sizeof sa) < 0) {
         close(s);
         return -1;

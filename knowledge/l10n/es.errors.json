@@ -51,7 +51,7 @@
    "title": "No se puede cargar el juego o la aplicación",
    "text": "No se puede cargar el juego o la aplicación. Sony aconseja sobre todo borrarlo y reinstalarlo.",
    "steps": [
-    "Resalta el juego, pulsa el botón Options y elige «Borrar».",
+    "Resalta el juego, pulsa el botón Options y elige «Delete» (Eliminar).",
     "Versión digital: reinstala el juego desde tu biblioteca.",
     "Juego en disco: limpia el disco del centro al borde con un paño suave sin pelusa, vuelve a insertarlo y reinstala el juego.",
     "Consola en vertical sobre el soporte: inserta el disco con la cara de la etiqueta hacia la izquierda."
@@ -100,14 +100,14 @@
    "text": "No hay espacio libre suficiente en el SSD de la consola. Para este código Sony no indica una cantidad concreta de espacio.",
    "steps": [
     "Abre «Ajustes > Almacenamiento > Almacenamiento del sistema» y comprueba que hay espacio libre suficiente para la descarga.",
-    "Resalta un contenido y elige «Borrar»: con el botón de selección en el almacenamiento de la consola, con el botón Options en la pantalla de inicio."
+    "Resalta un contenido y elige «Delete» (Eliminar): con el botón de selección en el almacenamiento de la consola, con el botón Options en la pantalla de inicio."
    ]
   },
   "CE-100095-5": {
    "title": "Problema al iniciar la aplicación",
    "text": "Hubo un problema al iniciar la aplicación.",
    "steps": [
-    "Resalta la aplicación, pulsa el botón Options y elige «Borrar».",
+    "Resalta la aplicación, pulsa el botón Options y elige «Delete» (Eliminar).",
     "Reinstala la aplicación y mantén la consola encendida durante la instalación."
    ]
   },
@@ -298,7 +298,7 @@
    "text": "No se pudo iniciar la aplicación; puede que el archivo de actualización no se aplicara bien al arrancar.",
    "steps": [
     "Reinicia la consola y vuelve a iniciar la aplicación.",
-    "Si no, los datos del juego pueden estar dañados: resalta la aplicación, pulsa Options, «Delete» (Borrar) y vuelve a instalar."
+    "Si no, los datos del juego pueden estar dañados: resalta la aplicación, pulsa Options, «Delete» (Eliminar) y vuelve a instalar."
    ]
   },
   "CE-107649-7": {
@@ -316,9 +316,9 @@
    "text": "Se produjo un error durante el juego.",
    "steps": [
     "Apaga la consola, desenchufa el cable de alimentación, espera cinco minutos, vuelve a enchufarlo y reinicia.",
-    "Asegúrate de que el juego esté en la última versión; si el error persiste, borra el juego en «Settings > Storage» y vuelve a instalarlo.",
-    "En el modo seguro elige «Clear Cache and Rebuild Database > Rebuild Database» (haz antes una copia de tus datos).",
-    "Si nada ayuda, restablece la consola («Settings > System > System Software > Reset Options > Reset Your Console»). Borra todos los datos del almacenamiento de la consola: haz antes una copia y luego vuelve a instalar el juego."
+    "Asegúrate de que el juego esté en la última versión; si el error persiste, borra el juego en «Ajustes > Almacenamiento» y vuelve a instalarlo.",
+    "En el modo seguro elige «Borrar caché y reconstruir base de datos > Reconstruir base de datos» (haz antes una copia de tus datos).",
+    "Si nada ayuda, restablece la consola («Ajustes > Sistema > Software del sistema > Opciones de restablecimiento > Restablecer la consola»). Borra todos los datos del almacenamiento de la consola: haz antes una copia y luego vuelve a instalar el juego."
    ],
    "notes": [
     "Según Sony, «Reparar almacenamiento de la consola» no borra datos y «Restablecer PS5» borra todos los datos de usuario. Sobre «Reconstruir base de datos» Sony no dice nada de pérdida de datos."
@@ -531,7 +531,7 @@
    "text": "Ocurrió un error al iniciar el juego.",
    "steps": [
     "Reinicia la consola.",
-    "En la biblioteca de juegos, resalta el juego, pulsa el botón Options, elige «Borrar» y reinstálalo.",
+    "En la biblioteca de juegos, resalta el juego, pulsa el botón Options, elige «Delete» (Eliminar) y reinstálalo.",
     "Si no, en modo seguro elige «Borrar caché y reconstruir base de datos > Reconstruir base de datos»; haz antes copia de tus datos."
    ],
    "notes": [

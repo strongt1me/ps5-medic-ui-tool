@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // GENERIERT von tools/gen_font.py aus DejaVu Sans -- nicht von Hand aendern.
 #include "font_data.hpp"
 

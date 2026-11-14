@@ -33,6 +33,7 @@
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -51,6 +52,10 @@ struct Change {
     bool check_base = false;
     bool base_existed = false;
     std::string base_sha;  // SHA-256 des Inhalts beim Planen (leer, wenn die Datei fehlte)
+    // Nur Rename einer DATEI (Image, ELF): Groesse beim Planen. Aendert sie sich bis zur Bestaetigung (eine Uebertragung lief noch), lehnt apply_plan
+    // ab, statt eine inzwischen vollstaendige Datei beiseitezulegen.
+    bool check_size = false;
+    std::uint64_t base_size = 0;
 };
 
 struct FixPlan {
@@ -90,6 +95,9 @@ private:
 };
 
 PathPolicy policy_from_facts(const Facts& facts);
+
+// Groesse einer Datei laut Eintrag im Elternordner; false bei Ordnern und fehlenden Eintraegen.
+bool file_entry_size(const IFileSystem& fs, const std::string& path, std::uint64_t& size);
 
 // ---- Anwenden / Rueckgaengig --------------------------------------------
 

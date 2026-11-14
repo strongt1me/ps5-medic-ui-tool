@@ -4,7 +4,7 @@
   "rules": [
     {
       "id": "smp.parentheses_in_pfs_name",
-      "severity": "critical",
+      "severity": "info",
       "when": {
         "all": [
           { "fact": "smp.images[].name", "matches": "[()]" },
@@ -44,7 +44,7 @@
       "when": {
         "all": [
           { "fact": "proc.running", "contains": "backpork" },
-          { "fact": "smp.config.backport_fakelib", "eq": "1", "default": "1" }
+          { "fact": "smp.fakelib_enabled", "eq": "1" }
         ]
       },
       "text": {

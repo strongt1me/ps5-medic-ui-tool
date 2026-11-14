@@ -9,6 +9,7 @@
 #include "ps5_platform.hpp"
 
 #include "medic/collectors.hpp"
+#include "medic/jsondump.hpp"
 #include "medic/newest.hpp"
 #include "medic/rules.hpp"
 #include "medic/selftest.hpp"
@@ -59,9 +60,9 @@ int main() {
     out("Firmware: " + platform->sys().firmware() + "  Modell: " + platform->sys().model());
     out("Konsolenstart (Epoch): " + std::to_string(platform->sys().boot_epoch()));
     for (const char* k : {"smp.version", "net.port_9021", "jb.seconds_after_boot", "jb.first_process", "ps5theme.version", "apps.oversized", "smp.api.bind", "smp.api.port", "smp.api.state", "sys.temp.cpu_c", "sys.temp.soc_c", "boot.unclean_total", "boot.unclean_14d", "boot.log_last", "errors.total", "db.count", "savedata.current_account", "games.case_mismatch", "fan.controller.name", "fan.controller.mode", "fan.controller.target_c", "klog.readable", "klog.total_lines", "appdb.registered", "appdb.orphans", "appdb.unregistered"})
-        if (const auto* v = facts.get(k)) out(std::string("Fakt ") + k + ": " + v->dump());
+        if (const auto* v = facts.get(k)) out(std::string("Fakt ") + k + ": " + medic::dump_safe(*v));
     if (const auto* dbs = facts.get("db.files"); dbs && dbs->is_array())  // Datenbank-Pruefung je Datei: Pruefung 1 = ok, 0 = Fehler, -1 = nicht geprueft
-        for (const auto& e : *dbs) out("  db " + e.value("path", std::string()) + "  Groesse " + e["size"].dump() + "  Pruefung " + e["integrity"].dump() + (e["integrity_skip"].get<std::string>().empty() ? std::string() : "  (nicht geprueft: " + e["integrity_skip"].get<std::string>() + ")"));
+        for (const auto& e : *dbs) out("  db " + e.value("path", std::string()) + "  Groesse " + medic::dump_safe(e["size"]) + "  Pruefung " + medic::dump_safe(e["integrity"]) + (e["integrity_skip"].get<std::string>().empty() ? std::string() : "  (nicht geprueft: " + e["integrity_skip"].get<std::string>() + ")"));
     out("Prozesse:");
     for (const auto& n : platform->procs().running()) out("  " + n);
 
@@ -82,8 +83,9 @@ int main() {
     medic::RuleSet rules;
     std::string rules_path;
     std::vector<std::string> rules_errors;
-    rules = medic::load_newest<medic::RuleSet>({std::begin(kRulesCandidates), std::end(kRulesCandidates)},
-                                               [](const std::string& p) { return medic::load_rules_from_file(p); }, &rules_path, &rules_errors);
+    rules = medic::load_newest_peek<medic::RuleSet>({std::begin(kRulesCandidates), std::end(kRulesCandidates)},
+                                               [](const std::string& p) { return medic::load_rules_from_file(p); },
+                                                    [](const std::string& p) { return medic::peek_db_version(p); }, &rules_path, &rules_errors);
     for (const auto& e : rules_errors) out("Regeldatei ungueltig (" + e + ")");
     const bool have_rules = !rules_path.empty();
     if (have_rules) out(std::string("Regeln: ") + rules.db_version + " (" + std::to_string(rules.rules.size()) + ") aus " + rules_path);

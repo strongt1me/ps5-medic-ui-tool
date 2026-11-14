@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.44",
+  "db_version": "2026.11.45",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -700,8 +700,8 @@
         ]
       },
       "text": {
-        "de": "Eine Systemanwendung (Titel NPXS…) hat im Fehlerverlauf mehrfach denselben CE-Fehlercode gemeldet. Oft sind das Verbindungs- oder Serverfehler, etwa durch einen DNS-Filter (z. B. nanoDNS) oder ein Netzwerkproblem. Aus dem Verlauf allein lässt sich das nicht klären; auf defekte Hardware deutet es nicht hin. Code unter „Fehlercodes nachschlagen“ ansehen.",
-        "en": "A system application (title NPXS…) reported the same CE error code several times in the error history. These are often connection or server errors, for example caused by a DNS filter (e.g. nanoDNS) or a network problem. This cannot be told from the history alone; it does not point to defective hardware. Look up the code under “Look up error codes”."
+        "de": "Eine Systemanwendung (Titel NPXS…) hat im Fehlerverlauf mehrfach denselben CE-Fehlercode gemeldet. Oft sind das Verbindungs- oder Serverfehler, etwa durch einen DNS-Filter (z. B. nanoDNS) oder ein Netzwerkproblem. Aus dem Verlauf allein lässt sich das nicht klären; auf defekte Hardware deutet es nicht hin. Code unter „Fehlercodes“ ansehen.",
+        "en": "A system application (title NPXS…) reported the same CE error code several times in the error history. These are often connection or server errors, for example caused by a DNS filter (e.g. nanoDNS) or a network problem. This cannot be told from the history alone; it does not point to defective hardware. Look up the code under “Error codes”."
       },
       "evidence": "errors.pairs[].label",
       "fix": null,

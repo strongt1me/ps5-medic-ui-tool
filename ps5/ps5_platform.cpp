@@ -51,12 +51,14 @@ public:
         size_t len = 0;
         if (sysctl(mib, 4, nullptr, &len, nullptr, 0) != 0) return procs;
         std::vector<char> buf;
-        for (int attempt = 0; attempt < 4; ++attempt) {  // Prozessliste kann zwischen den Aufrufen wachsen
+        bool got = false;
+        for (int attempt = 0; attempt < 4 && !got; ++attempt) {  // Prozessliste kann zwischen den Aufrufen wachsen
             len += len / 4 + 4096;
             buf.assign(len, 0);
-            if (sysctl(mib, 4, buf.data(), &len, nullptr, 0) == 0) break;
-            if (errno != ENOMEM) return procs;
+            if (sysctl(mib, 4, buf.data(), &len, nullptr, 0) == 0) got = true;
+            else if (errno != ENOMEM) return procs;
         }
+        if (!got || len > buf.size()) return procs;  // alle Versuche mit ENOMEM: len waere der benoetigte Wert, groesser als der Puffer
         for (size_t off = 0; off + sizeof(int) <= len;) {
             const auto* ki = reinterpret_cast<const struct kinfo_proc*>(buf.data() + off);
             if (ki->ki_structsize <= 0 || off + static_cast<size_t>(ki->ki_structsize) > len) break;

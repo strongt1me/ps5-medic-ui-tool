@@ -18,7 +18,7 @@
   },
   "0x80960005": {
    "title": "Richiesta dei preset di gioco rifiutata (firmware 4.xx)",
-   "text": "Per questo codice non esiste una pagina Sony. Secondo il README del PS5 Backport Toolkit, il firmware 4.xx rifiuta la richiesta di «Game Presets» di un gioco perché è più grande di 8 byte.",
+   "text": "Per questo codice non esiste una pagina Sony. Secondo il README del PS5 Backport Toolkit, il firmware 4.xx rifiuta la richiesta di «Game Presets» di un gioco perché è di 8 byte troppo grande.",
    "steps": [],
    "notes": [
     "Il legame tra codice e dimensione compare solo nella tabella del README, senza spiegazione esplicita.",
@@ -72,7 +72,7 @@
    "text": "Si è verificato un errore generico. Sony indica solo un riavvio e una reinstallazione.",
    "steps": [
     "Riavvia la console.",
-    "Se l'errore compare all'avvio di un'app (anche un gioco): eliminala e reinstallala; prima fai un backup dei salvataggi."
+    "Se l'errore compare all'avvio di un'app (anche un gioco): eliminala e reinstallala; prima fai un backup dei dati salvati."
    ]
   },
   "CE-100009-0": {
@@ -160,7 +160,7 @@
     "Riavviare la console, se possibile collegarla con un cavo LAN (con il Wi-Fi avvicinarla al router), configurare di nuovo la rete.",
     "Spegnere router e modem, attendere almeno 5 minuti e riaccenderli.",
     "Se possibile, aprire queste porte: TCP 80, 443, 3478, 3479, 3480 e UDP 3478, 3479, da 49152 a 65535.",
-    "Inserisci manualmente un indirizzo IP statico; se non basta, imposta temporaneamente il DNS su un server DNS pubblico."
+    "Inserire manualmente un indirizzo IP statico; se non basta, impostare temporaneamente il DNS su un server DNS pubblico."
    ]
   },
   "CE-105841-9": {
@@ -391,10 +391,10 @@
    ]
   },
   "CE-107958-0": {
-   "title": "Archivio esterno rimosso forzatamente",
+   "title": "Unità di archiviazione esterna rimossa forzatamente",
    "text": "Per questo codice non esiste una pagina Sony. Secondo il PS5 Dev Wiki l'errore si è verificato durante un download o una copia dopo la disconnessione di un'unità esterna.",
    "steps": [
-    "Ricollegare l'archivio esterno (se possibile direttamente alla console, senza hub) e ripetere l'operazione."
+    "Ricollegare l'unità di archiviazione esterna (se possibile direttamente alla console, senza hub) e ripetere l'operazione."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_PLAYGO_ERROR_CORE_EXT_FORCIBLY_EJECTED, codice di ritorno 0x80B21701."
@@ -530,7 +530,7 @@
    "title": "Errore all'avvio del gioco",
    "text": "Si è verificato un errore all'avvio del gioco.",
    "steps": [
-    "Riavviare la console.",
+    "Riavvia la console.",
     "Nella libreria dei giochi evidenzia il gioco, premi il tasto OPTIONS, scegli «Delete» e reinstallalo.",
     "Altrimenti, in modalità provvisoria scegli «Clear Cache and Rebuild Database > Rebuild Database»; prima fai un backup dei dati."
    ],
@@ -563,7 +563,7 @@
    "steps": [
     "Controllare che il disco non abbia impronte, macchie o graffi e pulirlo con un panno morbido dal centro verso il bordo.",
     "Verificare che il disco sia inserito correttamente e provare un altro disco supportato.",
-    "Se il problema persiste, contattare l'assistenza PlayStation o usare lo strumento di riparazione PlayStation."
+    "Se il problema persiste, contattare l'assistenza PlayStation o usare lo strumento PlayStation Repairs."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_DISC_PLAYER_ERROR_AACS_VERIFY, codice di ritorno 0x8114000E."
@@ -587,7 +587,7 @@
    "steps": [
     "Provare un altro disco supportato per vedere se la console legge altri dischi.",
     "Controllare impronte, macchie e graffi; pulire il disco con un panno morbido dal centro verso il bordo.",
-    "Se il problema persiste, contattare l'assistenza PlayStation o usare lo strumento di riparazione PlayStation."
+    "Se il problema persiste, contattare l'assistenza PlayStation o usare lo strumento PlayStation Repairs."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_DISC_PLAYER_ERROR_INVALID_FORMAT, codice di ritorno 0x8114001C."
@@ -623,7 +623,7 @@
     "Se PS4 e PS5 sono in Wi-Fi, collegarle ciascuna con cavo LAN oppure direttamente tra loro con un cavo Ethernet.",
     "Spegnere router e modem, attendere almeno cinque minuti e riaccenderli.",
     "Riavviare il trasferimento dati in Settings > System > Data Transfer.",
-    "Solo salvataggi: usare invece l'archiviazione online o un dispositivo USB."
+    "Solo dati salvati: usare invece l'archiviazione online o un dispositivo USB."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_AESOCKET_ERROR_SOCKET_RECV_INCOMPLETED, codice di ritorno 0x81640011."
@@ -830,8 +830,8 @@
    ]
   },
   "CE-118851-4": {
-   "title": "La console non riesce a sincronizzare i salvataggi con l'archivio cloud",
-   "text": "La console non riesce a sincronizzare i salvataggi con l'archivio cloud.",
+   "title": "La console non riesce a sincronizzare i dati salvati con l'archiviazione cloud",
+   "text": "La console non riesce a sincronizzare i dati salvati con l'archiviazione cloud.",
    "steps": [
     "Scegliere «Try Again» nella schermata «Sync Status».",
     "Se sono coinvolti più giochi, disattivare e riattivare «Enable Auto-Sync».",
@@ -867,8 +867,8 @@
    ]
   },
   "CE-122154-5": {
-   "title": "La console non riesce a sincronizzare i salvataggi con l'archivio cloud",
-   "text": "La console non riesce a sincronizzare i salvataggi con l'archivio cloud.",
+   "title": "La console non riesce a sincronizzare i dati salvati con l'archiviazione cloud",
+   "text": "La console non riesce a sincronizzare i dati salvati con l'archiviazione cloud.",
    "steps": [
     "Attendere almeno 15 minuti, poi scegliere «Try Again» nella schermata «Sync Status», oppure disattivare e riattivare la sincronizzazione automatica.",
     "Se il problema persiste, contattare l'assistenza PlayStation."
@@ -881,7 +881,7 @@
     "Verificare che l'accesso funzioni in Settings > Users and Accounts > Account > Sign In.",
     "Se l'accesso è già effettuato: uscire da Settings > Users and Accounts > Other > Sign Out e poi accedere di nuovo.",
     "Spegnere router e modem, attendere almeno cinque minuti, riaccenderli.",
-    "Se il problema persiste, contattare l'assistenza PlayStation o usare lo strumento di riparazione PlayStation."
+    "Se il problema persiste, contattare l'assistenza PlayStation o usare lo strumento PlayStation Repairs."
    ],
    "notes": [
     "Nome interno secondo il PS5 Dev Wiki: SCE_NP_ERROR_ALREADY_INITIALIZED, codice di ritorno 0x80550001."
@@ -926,7 +926,7 @@
    "title": "Il gioco richiede una versione di firmware più alta",
    "text": "Sony non spiega ulteriormente questo codice. Per i giochi su una console con jailbreak una possibile causa: il gioco è creato per un firmware più alto di quello della console.",
    "steps": [
-    "Ha quindi bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
+    "Il gioco ha quindi bisogno di un backport per il firmware in uso per avviarsi su questa PS5.",
     "In alternativa AMPR Emu o AMPR Emu NG: mettere libSceAmpr.sprx nella cartella fakelib/ del gioco, montare il gioco con ShadowMount+ e disattivare lì gli aggiornamenti di fakelib."
    ],
    "notes": [

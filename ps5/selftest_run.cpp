@@ -33,6 +33,7 @@ int main() {
     const std::string ts = timestamp();
     std::printf("Zeit: %s\n", ts.c_str());
     const medic::Facts facts = medic::collect_all(*platform);  // vor dem Marker, sonst sieht der Lauf seinen eigenen Marker
+    medic::persist_klog(*platform, facts);                      // das gelesene Kernel-Log nicht verwerfen
     const medic::Thermal t0 = platform->sys().thermal();
     std::printf("Ruhewert: CPU %d C, SoC %d C\n", t0.cpu_c, t0.soc_c);
 

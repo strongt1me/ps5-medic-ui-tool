@@ -25,6 +25,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -44,6 +45,7 @@ const char* const kErrorCodesCandidates[] = {"/data/ps5medic/knowledge/error_cod
 const char* const kLogPath = "/data/ps5medic/service.log";
 
 std::FILE* g_log = nullptr;
+std::vector<std::string> g_pending;  // Zeilen, die vor dem Binden des Ports anfielen (siehe main)
 
 std::uint32_t now_ms() {
     timespec ts{};
@@ -61,6 +63,8 @@ void trace(const std::string& raw) {
     if (g_log) {
         std::fputs((line + "\n").c_str(), g_log);
         std::fflush(g_log);
+    } else if (g_pending.size() < 200) {
+        g_pending.push_back(line);
     }
 }
 
@@ -95,8 +99,14 @@ Lang console_language() {
 medic::RuleSet load_rules() {
     std::string chosen;
     std::vector<std::string> errors;
-    auto rules = medic::load_newest<medic::RuleSet>({std::begin(kRulesCandidates), std::end(kRulesCandidates)},
-                                                    [](const std::string& p) { return medic::load_rules_from_file(p); }, &chosen, &errors);
+    auto rules = medic::load_newest_peek<medic::RuleSet>({std::begin(kRulesCandidates), std::end(kRulesCandidates)},
+                                                    [](const std::string& p) {
+                                                        const std::uint32_t t0 = now_ms();  // Messung: das Laden samt Textpruefung dauert auf der Konsole spuerbar (Marc, 14. Nov. 2026)
+                                                        auto r = medic::load_rules_from_file(p);
+                                                        trace("  Regeldatei " + p + " geladen in " + std::to_string(now_ms() - t0) + " ms");
+                                                        return r;
+                                                    },
+                                                    [](const std::string& p) { return medic::peek_db_version(p); }, &chosen, &errors);
     for (const auto& e : errors) trace("Regeldatei ungueltig (" + e + ")");
     if (chosen.empty()) {
         trace("Keine Regeldatei gefunden -- Check-up meldet 'unvollstaendig'.");
@@ -109,8 +119,14 @@ medic::RuleSet load_rules() {
 medic::ErrorCodeSet load_error_codes() {
     std::string chosen;
     std::vector<std::string> errors;
-    auto codes = medic::load_newest<medic::ErrorCodeSet>({std::begin(kErrorCodesCandidates), std::end(kErrorCodesCandidates)},
-                                                         [](const std::string& p) { return medic::load_error_codes_from_file(p); }, &chosen, &errors);
+    auto codes = medic::load_newest_peek<medic::ErrorCodeSet>({std::begin(kErrorCodesCandidates), std::end(kErrorCodesCandidates)},
+                                                         [](const std::string& p) {
+                                                             const std::uint32_t t0 = now_ms();
+                                                             auto r = medic::load_error_codes_from_file(p);
+                                                             trace("  Fehlercode-Datei " + p + " geladen in " + std::to_string(now_ms() - t0) + " ms");
+                                                             return r;
+                                                         },
+                                                         [](const std::string& p) { return medic::peek_db_version(p); }, &chosen, &errors);
     for (const auto& e : errors) trace("Fehlercode-Datei ungueltig (" + e + ")");
     if (chosen.empty()) {
         trace("Keine Fehlercode-Datei gefunden.");
@@ -200,10 +216,14 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
     std::vector<std::uint8_t> rx;  // noch nicht verarbeitete Bytes der App
 
     bool first_logged = false;
+    bool discard_pad = false;  // nach einer langen Operation: die in der Zwischenzeit aufgelaufenen Pad-Zustaende verwerfen (nur als neue Basislinie lesen)
     std::uint32_t last_update = 0, last_emit = 0;
     // Bild zeichnen und die geaenderten Streifen an die App senden. Auch der Hook der App ruft es mitten im Check-up (Fortschritt).
+    std::uint32_t first_update_ms = 0;  // Messung fuers Protokoll: erste update()-Zeit, erste render()-Zeit (Marc, 14. Nov. 2026: Start dauert vom "bereit" bis zum ersten Bild 1,8 s)
     auto emit_frame = [&]() -> bool {
+        const std::uint32_t render_from = now_ms();
         app.render(canvas);
+        const std::uint32_t render_ms = now_ms() - render_from;
 
         // Geaenderte Streifen senden (Raster von kBandRows Zeilen; zusammenhaengende Streifen in einer Nachricht)
         const std::uint32_t* px = canvas.data();
@@ -241,7 +261,8 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
         }
         if (!first_logged) {
             first_logged = true;
-            trace("Erstes Bild gesendet");
+            trace("Erstes Bild gesendet (update " + std::to_string(first_update_ms) + " ms, Zeichnen " + std::to_string(render_ms) + " ms, Senden " +
+                  std::to_string(now_ms() - render_from - render_ms) + " ms)");
         }
         first = false;
         return true;
@@ -271,6 +292,8 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
             trace("Sitzung endet: Lesefehler (errno " + std::to_string(errno) + ")");
             return false;
         }
+        const bool stale = discard_pad;  // alles, was bis hierher im Socket lag, stammt aus der Wartezeit der letzten langen Operation
+        discard_pad = false;
         while (rx.size() >= 5) {
             const std::uint32_t len = proto::get32(rx.data() + 1);
             if (len > 4096) return false;  // kein gueltiges Protokoll
@@ -281,7 +304,13 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
                 trace("Beenden angefordert (neuere Instanz)");
                 return true;
             }
-            if (type == proto::kPad && len >= 8) {
+            if (type == proto::kPad && len >= 8 && stale) {
+                const std::uint32_t b = proto::get32(pl);
+                // Nur Kreis bleibt wirksam (er bricht ab oder geht zurueck): ein Selbsttest-Schritt kann laenger als 250 ms dauern, und "Kreis: Abbrechen" muss dann trotzdem gehen
+                if (have_pad && ((prev_buttons ^ b) & kBtnCircle) && (b & kBtnCircle)) pressed.push_back(Button::Circle);
+                prev_buttons = b;
+                have_pad = true;
+            } else if (type == proto::kPad && len >= 8) {
                 const std::uint32_t b = proto::get32(pl);
                 if (!have_pad) {
                     prev_buttons = b;
@@ -312,6 +341,7 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
         }
         nav.poll(t0, pressed);
         const bool had_input = !pressed.empty();
+        const std::uint32_t busy_from = now_ms();
         for (const Button b : pressed) app.handle(b);
         pressed.clear();
         if (app.quit_requested()) {
@@ -335,6 +365,11 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
         if (t0 - last_update >= 33) {
             last_update = t0;
             app.update();
+            if (!first_logged) first_update_ms = now_ms() - t0;
+        }
+        if (now_ms() - busy_from > 250) {  // Check-up, Download oder Test: die App hat inzwischen weiter Pad-Zustaende geschickt, die nicht mehr zum Bildschirm gehoeren
+            discard_pad = true;
+            nav.reset();
         }
         // Gezeichnet wird sofort nach einer Taste, sonst alle 16 ms (die App schickt den Pad-Zustand staendig, auch unveraendert: das allein loest kein Bild aus)
         if (!link_ok) {
@@ -363,13 +398,26 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
 int main() {
     std::error_code ec;
     std::filesystem::create_directories("/data/ps5medic", ec);
-    std::rename(kLogPath, "/data/ps5medic/service.log.1");  // das Protokoll des vorigen Laufs bleibt eine Runde erhalten
-    g_log = std::fopen(kLogPath, "w");
     signal(SIGPIPE, SIG_IGN);
     trace("PS5 Medic Dienst startet");
 
     const int ls = listen_local();
-    if (ls < 0) return 1;
+    if (ls < 0) {
+        // Eine zweite Instanz, die den Port nicht bekommt, darf das Protokoll der laufenden nicht wegnehmen: nur anhaengen
+        if (std::FILE* f = std::fopen(kLogPath, "a")) {
+            std::fputs("--- weitere Instanz konnte den Port nicht binden ---\n", f);
+            for (const auto& l : g_pending) std::fputs((l + "\n").c_str(), f);
+            std::fclose(f);
+        }
+        return 1;
+    }
+    std::rename(kLogPath, "/data/ps5medic/service.log.1");  // das Protokoll des vorigen Laufs bleibt eine Runde erhalten
+    g_log = std::fopen(kLogPath, "a");  // "a": eine zweite Instanz, die danach noch anhaengt, vermischt sich nicht mit den Zeilen dieser
+    if (g_log) {
+        for (const auto& l : g_pending) std::fputs((l + "\n").c_str(), g_log);
+        std::fflush(g_log);
+    }
+    g_pending.clear();
     trace("Dienst wartet auf 127.0.0.1:" + std::to_string(proto::kPort));
 
     auto platform = medic::make_ps5_platform(/*writable=*/true);
@@ -387,8 +435,16 @@ int main() {
             }
             trace("App verbunden");
             proto::set_nodelay(client);
+            proto::set_stream_buffers(client);
             proto::set_send_timeout(client, 120);  // liest die App nicht mehr, bleibt der Dienst nicht fuer immer in send() haengen (120 s, Marc 13. Nov. 2026: eine App im Hintergrund nach der PS-Taste soll bei einem laengeren Test nicht ihre Sitzung verlieren)
-            const bool finished = serve(client, *platform, http);
+            bool finished = false;
+            try {
+                finished = serve(client, *platform, http);
+            } catch (const std::exception& e) {  // z. B. eine unerwartete Ausnahme in einer Pruefung: die App verbindet sich neu, der Dienst lebt weiter
+                trace(std::string("Sitzung endet: Ausnahme: ") + e.what());
+            } catch (...) {
+                trace("Sitzung endet: unbekannte Ausnahme");
+            }
             close(client);
             last_client = now_ms();
             if (finished) break;

@@ -62,6 +62,9 @@ std::string anonymize(const std::string& text);
 // Nur Zugangsdaten schwaerzen (password=, user:, token, smb://benutzer:passwort@host): fuer Logs und Konfigurationen im Schnappschuss-Export.
 std::string redact_credentials(const std::string& text);
 
+// Ersetzt IPv6-Adressen (auch "::ffff:a.b.c.d") durch [IPV6]. Fuer den Snapshot-Export, dessen mask_addresses nur MAC und IPv4 kennt.
+std::string redact_ipv6(const std::string& text);
+
 // Voller Bericht als Markdown.
 std::string build_report(const ReportInput& in, ReportLang lang);
 

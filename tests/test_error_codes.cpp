@@ -320,6 +320,46 @@ void newest_tests() {
     CHECK(chosen == old_copy && errors.size() == 1, "load_newest: ungueltige erste Datei wird gemeldet, die gueltige zweite genommen");
     s = medic::load_newest<ErrorCodeSet>({(dir / "fehlt.json").string()}, load, &chosen);
     CHECK(chosen.empty() && s.codes.empty(), "load_newest: ohne brauchbare Datei bleibt das Ergebnis leer");
+
+    // load_newest_peek: dieselbe Wahl, aber nur die gewaehlte Datei wird vollstaendig geladen (Konsole: die veraltete Kopie kostete >50 % der Ladezeit)
+    int loads = 0;
+    auto counting = [&](const std::string& p) {
+        ++loads;
+        return medic::load_error_codes_from_file(p);
+    };
+    auto peek = [](const std::string& p) { return medic::peek_db_version(p); };
+    errors.clear();
+    s = medic::load_newest_peek<ErrorCodeSet>({old_copy, fresh}, counting, peek, &chosen, &errors);
+    CHECK(chosen == fresh && s.db_version == "2026.11.38" && errors.empty() && loads == 1, "load_newest_peek: neuere Version gewinnt, nur eine Datei wird geladen");
+    loads = 0;
+    s = medic::load_newest_peek<ErrorCodeSet>({fresh, old_copy}, counting, peek, &chosen);
+    CHECK(chosen == fresh && loads == 1, "load_newest_peek: Reihenfolge der Orte aendert nichts");
+    s = medic::load_newest_peek<ErrorCodeSet>({old_copy, same}, counting, peek, &chosen);
+    CHECK(chosen == old_copy, "load_newest_peek: bei Gleichstand gilt der fruehere Ort");
+    s = medic::load_newest_peek<ErrorCodeSet>({(dir / "fehlt.json").string(), fresh}, counting, peek, &chosen, &errors);
+    CHECK(chosen == fresh && errors.empty(), "load_newest_peek: fehlende Datei wird uebersprungen");
+    errors.clear();
+    s = medic::load_newest_peek<ErrorCodeSet>({(dir / "kaputt.json").string(), old_copy}, counting, peek, &chosen, &errors);
+    CHECK(chosen == old_copy && errors.size() == 1, "load_newest_peek: Datei ohne lesbares JSON wird gemeldet, die gueltige genommen");
+    // Neueste Datei ist lesbar, aber ungueltig (leere Codeliste): die naechstniedrigere kommt dran, der Fehler wird gemeldet
+    {
+        json bad = {{"schema_version", 1}, {"db_version", "2026.11.99"}, {"codes", json::array()}, {"unbekannt", 1}};
+        std::ofstream(dir / "bad_newest.json") << bad.dump();
+    }
+    errors.clear();
+    s = medic::load_newest_peek<ErrorCodeSet>({(dir / "bad_newest.json").string(), old_copy}, counting, peek, &chosen, &errors);
+    CHECK(chosen == old_copy && errors.size() == 1 && s.db_version == "2026.11.9", "load_newest_peek: ungueltige neueste Datei: Rueckfall auf die naechste, Fehler gemeldet");
+    s = medic::load_newest_peek<ErrorCodeSet>({(dir / "fehlt.json").string()}, counting, peek, &chosen);
+    CHECK(chosen.empty() && s.codes.empty(), "load_newest_peek: ohne brauchbare Datei bleibt das Ergebnis leer");
+    CHECK(medic::peek_db_version(fresh) == "2026.11.38", "peek_db_version liest die Version");
+    bool threw = false;
+    try {
+        std::ofstream(dir / "keine_version.json") << R"({"schema_version":1})";
+        (void)medic::peek_db_version((dir / "keine_version.json").string());
+    } catch (const std::runtime_error&) {
+        threw = true;
+    }
+    CHECK(threw, "peek_db_version wirft ohne db_version");
     fsys::remove_all(dir);
 }
 

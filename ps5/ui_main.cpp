@@ -140,8 +140,9 @@ std::optional<Button> map_button(Uint8 sdl_button) {
 medic::RuleSet load_rules() {
     std::string chosen;
     std::vector<std::string> errors;
-    auto rules = medic::load_newest<medic::RuleSet>({std::begin(kRulesCandidates), std::end(kRulesCandidates)},
-                                                    [](const std::string& p) { return medic::load_rules_from_file(p); }, &chosen, &errors);
+    auto rules = medic::load_newest_peek<medic::RuleSet>({std::begin(kRulesCandidates), std::end(kRulesCandidates)},
+                                                    [](const std::string& p) { return medic::load_rules_from_file(p); },
+                                                    [](const std::string& p) { return medic::peek_db_version(p); }, &chosen, &errors);
     for (const auto& e : errors) trace("Regeldatei ungueltig (" + e + ")");
     if (chosen.empty()) {
         trace("Keine Regeldatei gefunden -- Check-up findet keine Befunde.");
@@ -155,8 +156,9 @@ medic::RuleSet load_rules() {
 medic::ErrorCodeSet load_error_codes() {
     std::string chosen;
     std::vector<std::string> errors;
-    auto codes = medic::load_newest<medic::ErrorCodeSet>({std::begin(kErrorCodesCandidates), std::end(kErrorCodesCandidates)},
-                                                         [](const std::string& p) { return medic::load_error_codes_from_file(p); }, &chosen, &errors);
+    auto codes = medic::load_newest_peek<medic::ErrorCodeSet>({std::begin(kErrorCodesCandidates), std::end(kErrorCodesCandidates)},
+                                                         [](const std::string& p) { return medic::load_error_codes_from_file(p); },
+                                                         [](const std::string& p) { return medic::peek_db_version(p); }, &chosen, &errors);
     for (const auto& e : errors) trace("Fehlercode-Datei ungueltig (" + e + ")");
     if (chosen.empty()) {
         trace("Keine Fehlercode-Datei gefunden -- der Bildschirm Fehlercodes bleibt leer.");

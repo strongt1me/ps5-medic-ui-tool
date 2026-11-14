@@ -99,6 +99,8 @@ struct CoverageResult {
 // Wirft std::runtime_error mit verstaendlicher Meldung, wenn JSON oder Schema ungueltig sind.
 RuleSet load_rules_from_string(const std::string& json_text);
 RuleSet load_rules_from_file(const std::string& path);
+// Nur die db_version einer Regel- oder Fehlercode-Datei (JSON lesen, nichts pruefen); wirft std::runtime_error, wenn die Datei fehlt, kein JSON ist oder kein Textfeld db_version hat.
+std::string peek_db_version(const std::string& path);
 
 // Ergebnis nach Schweregrad (kritisch zuerst), dann nach Regel-ID sortiert.
 std::vector<Finding> evaluate(const RuleSet& rs, const Facts& facts);

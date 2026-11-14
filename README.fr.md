@@ -38,7 +38,7 @@
   <tr>
     <td valign="top">
       <h3>🛠 Réparer avec annulation</h3>
-      Onze corrections réversibles (renommer une image, définir la clé ShadowMount+, reporter les lignes v1 dans les sections v2, retirer BackPork de l'Autoload, déplacer les doublons, délai d'attente de l'Autoload, entrées d'Autoload en double ou manquantes, activer l'Autoload, mettre de côté un fichier ELF défectueux, nom de fichier à l'orthographe incorrecte) et un guide pour les images imbriquées. L'aperçu montre exactement ce qui change ; rien ne se passe sans ✕. Chaque modification est inscrite au journal et peut être annulée. <b>Jamais de suppression</b>, uniquement déplacer ou renommer.
+      Douze corrections réversibles (renommer une image, définir la clé ShadowMount+, reporter les lignes v1 dans les sections v2, retirer BackPork de l'Autoload, déplacer les doublons, délai d'attente de l'Autoload, entrées d'Autoload en double ou manquantes, activer l'Autoload, mettre de côté un fichier ELF défectueux ou une image vide, nom de fichier à l'orthographe incorrecte) et un guide pour les images imbriquées. L'aperçu montre exactement ce qui change ; rien ne se passe sans ✕. Chaque modification est inscrite au journal et peut être annulée. <b>Jamais de suppression</b>, uniquement déplacer ou renommer.
     </td>
     <td valign="top">
       <h3>🧪 Autotest</h3>

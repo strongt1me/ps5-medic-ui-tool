@@ -160,7 +160,7 @@
     "Redémarrer la console, la connecter si possible par câble LAN (en Wi-Fi, la rapprocher du routeur), reconfigurer le réseau.",
     "Éteindre le routeur et le modem, attendre au moins 5 minutes, puis les rallumer.",
     "Si possible, ouvrir ces ports : TCP 80, 443, 3478, 3479, 3480 et UDP 3478, 3479, 49152 à 65535.",
-    "Saisissez une adresse IP statique à la main ; sinon, réglez temporairement le DNS sur un serveur DNS public."
+    "Saisir une adresse IP statique à la main ; sinon, régler temporairement le DNS sur un serveur DNS public."
    ]
   },
   "CE-105841-9": {
@@ -530,7 +530,7 @@
    "title": "Erreur au lancement du jeu",
    "text": "Une erreur est survenue au lancement du jeu.",
    "steps": [
-    "Redémarrer la console.",
+    "Redémarrez la console.",
     "Dans la bibliothèque de jeux, sélectionnez le jeu, appuyez sur la touche OPTIONS, choisissez « Delete » et réinstallez-le.",
     "Sinon, en mode sans échec, choisissez « Clear Cache and Rebuild Database > Rebuild Database » ; sauvegardez d'abord vos données."
    ],
@@ -574,7 +574,7 @@
    "text": "Le disque n'a pas pu être lu ; avec un disque non pris en charge, seul un autre disque aide.",
    "steps": [
     "Redémarrer la console.",
-    "Vérifier traces de doigts, saletés et rayures sur le disque ; l'essuyer avec un chiffon doux du centre vers le bord.",
+    "Vérifier l'absence de traces de doigts, de saletés et de rayures sur le disque ; l'essuyer avec un chiffon doux du centre vers le bord.",
     "Vérifier que le disque peut être lu sur la console et essayer un autre disque pris en charge."
    ],
    "notes": [
@@ -1453,7 +1453,7 @@
    "text": "D'après Sony, le compte est peut-être suspendu (temporairement).",
    "steps": [
     "Vérifier si la connexion fonctionne sur un autre appareil, par exemple un PC.",
-    "Si elle échoue aussi là, Sony indique que le compte est suspendu pour violation des conditions d'utilisation ; les lire, ainsi que le contrat d'utilisateur."
+    "Si elle échoue aussi sur cet appareil, Sony indique que le compte est suspendu pour violation des conditions d'utilisation ; les lire, ainsi que le contrat d'utilisateur."
    ],
    "notes": [
     "Note de Medic : cela concerne l'accès du compte ou de la console chez Sony et ne peut pas être corrigé avec Medic.",
@@ -1465,7 +1465,7 @@
    "text": "D'après Sony, le compte est peut-être suspendu (temporairement).",
    "steps": [
     "Essayer de se connecter sur un autre appareil, par exemple un PC.",
-    "Si cela échoue aussi là, Sony indique que le compte est suspendu pour violation des conditions d'utilisation : les lire.",
+    "Si cela échoue aussi sur cet appareil, Sony indique que le compte est suspendu pour violation des conditions d'utilisation : les lire.",
     "Plus d'informations figurent dans l'e-mail envoyé à l'identifiant de connexion (adresse e-mail)."
    ],
    "notes": [
@@ -1500,7 +1500,7 @@
    "text": "D'après Sony, le compte est peut-être suspendu (temporairement).",
    "steps": [
     "Essayer de se connecter sur un autre appareil, par exemple un PC.",
-    "Si cela échoue aussi là, Sony indique que le compte est suspendu pour violation des conditions d'utilisation : les lire."
+    "Si cela échoue aussi sur cet appareil, Sony indique que le compte est suspendu pour violation des conditions d'utilisation : les lire."
    ],
    "notes": [
     "Note de Medic : cela concerne l'accès du compte ou de la console chez Sony ; Medic ne peut pas le corriger.",

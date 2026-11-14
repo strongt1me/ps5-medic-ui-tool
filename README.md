@@ -153,7 +153,7 @@ medic-cli history|undo|export ...
 
 ## Übersetzungen
 
-Die Oberfläche steht in `ui/i18n/<sprache>.json`, die Wissenstexte für Französisch, Italienisch und Spanisch liegen als Ergänzung in `knowledge/l10n/` (Regeln, Fehlercodes, Selbsttests). Fehlt ein Eintrag, zeigt die App Englisch. Berichte und die dynamischen Hinweise der Reparatur-Vorschau gibt es nur auf Deutsch und Englisch. `tools/l10n_extract.py` zieht die Quelltexte für Übersetzer, `tools/l10n_check.py <sprache>` prüft eine Übersetzung (Schlüssel, Platzhalter, Zahlen, Codes, Pfade).
+Die Oberfläche steht in `ui/i18n/<sprache>.json`, die Wissenstexte für Französisch, Italienisch und Spanisch liegen als Ergänzung in `knowledge/l10n/` (Regeln, Fehlercodes, Selbsttests). Fehlt ein Eintrag, zeigt die App Englisch. Berichte und die dynamischen Texte der Reparatur-Vorschau (Hinweise, Notizen, Warnungen und Fehlermeldungen) gibt es nur auf Deutsch und Englisch (fr/it/es zeigen Englisch). `tools/l10n_extract.py` zieht die Quelltexte für Übersetzer, `tools/l10n_check.py <sprache>` prüft eine Übersetzung (Schlüssel, Platzhalter, Zahlen, Codes, Pfade).
 
 ## Mitmachen
 

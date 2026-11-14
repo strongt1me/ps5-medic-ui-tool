@@ -10,7 +10,7 @@
    "text": "ShadowMount+ exige kstuff-lite 1.07 ou plus récent."
   },
   "smp.parentheses_in_pfs_name": {
-   "text": "Le nom d'une image .ffpfs/.ffpfsc contient des parenthèses. Les anciennes versions de ShadowMount+ (p. ex. 1.6test15) provoquaient un kernel panic pendant l'analyse, les récentes probablement plus. Le correctif renomme l'image sans parenthèses (avec sauvegarde et annulation)."
+   "text": "Le nom d'une image .ffpfs/.ffpfsc contient des parenthèses. Les anciennes versions de ShadowMount+ (p. ex. 1.6test15) provoquaient un kernel panic pendant l'analyse, les récentes probablement pas. Le correctif renomme l'image sans parenthèses (avec sauvegarde et annulation)."
   },
   "smp.autotoggle_crash_1360": {
    "text": "Cette combinaison (FW 13.60, ShadowMount+ 1.7beta3, kstuff-lite 1.11, kstuff_game_auto_toggle=1) a été signalée avec des plantages de jeu répétés. Contournement : kstuff_game_auto_toggle=0 (kstuff reste chargé) ; le correctif le règle avec sauvegarde et annulation."
@@ -40,7 +40,7 @@
    "text": "debug.log signale à plusieurs reprises « source not stable yet » pour la même source : la copie est encore en cours, ou stability_wait_seconds ne convient pas à la source. Attendez la fin de la copie, sinon revoyez la valeur."
   },
   "smp.exfat_cluster": {
-   "text": "Cette image .exfat utilise des clusters de moins de 64 KB, ce qui la ralentit. Recréez l'image avec des clusters de 64 KB (p. ex. mkfs.exfat -c 64K)."
+   "text": "Cette image .exfat utilise des clusters de moins de 64 Ko, ce qui la ralentit. Recréez l'image avec des clusters de 64 Ko (p. ex. mkfs.exfat -c 64K)."
   },
   "savedata.foreign_account": {
    "text": "Ces sauvegardes appartiennent à un autre ID de compte que celui qui est actif maintenant (p. ex. après une nouvelle activation hors ligne). La console indique alors « Données corrompues », bien que les fichiers ne soient pas prouvés endommagés. Solution : utiliser à nouveau le compte d'origine. Ne supprimez pas les anciennes sauvegardes ; avant tout changement d'ID de compte, copiez par FTP /system_data/savedata_prospero ainsi que savedata_prospero et savedata_prospero_meta. Medic ne modifie rien.",
@@ -111,7 +111,7 @@
    "confidence_reason": "La réservation et la taille des fichiers sont lues. Le cas connu (CD Player avant 1.1.2) vient de la page de l'auteur ; que toute réservation de ce genre gaspille de l'espace n'est pas prouvé."
   },
   "game.needs_backport": {
-   "text": "Pour ces jeux, le param.json exige une version de firmware plus élevée que celle de la console, et les chemins d'analyse ne contiennent pas de dossier backports/<TITLE_ID>/. Selon le kit de backport, la console ne les lance qu'avec un backport ou AMPR Emu / AMPR Emu NG ; cela n'est pas confirmé sur cette console. Pour les images (autres que .exfat), Medic ne peut pas vérifier si le backport est déjà intégré au jeu ; ce constat peut alors être sans objet.",
+   "text": "Pour ces jeux, le param.json exige une version de firmware plus élevée que celle de la console, et les chemins d'analyse ne contiennent pas de dossier backports/<TITLE_ID>/. Selon le kit de backport, la console ne les lance qu'avec un backport ou AMPR Emu / AMPR Emu NG ; cela n'est pas confirmé sur cette console. Pour les images (autres que .exfat), Medic ne peut pas vérifier si le backport est déjà intégré au jeu ; ce résultat peut alors être sans objet.",
    "confidence_reason": "La version requise est lue dans le param.json et comparée à celle de la console. Que les jeux ne démarrent donc pas n'est affirmé que par le kit de backport ; non confirmé sur cette console."
   },
   "smp.shellcore_hook_lost": {
@@ -158,7 +158,7 @@
    "text": "L'overlay de backport (fakelib) n'a pas pu être monté ('Operation not permitted') : ce n'est pas autorisé sur les disques USB (exFAT). Selon le développeur, ceci aide : copier les fichiers de backport dans le dossier du jeu, utiliser une image .exfat ou le stockage interne."
   },
   "smp.leak_pre_beta11": {
-   "text": "ShadowMount+ 1.7beta9 ou 1.7beta10 perd de la mémoire à chaque analyse (environ 5 à 8 MB par minute) ; après des heures, saccades, plantages ou CE-108262-9 sont à craindre. Corrigé dans 1.7beta11 : mettez ShadowMount+ à jour. En attendant : dans config.ini, réglez interval_seconds = 3600 sous [scan]."
+   "text": "ShadowMount+ 1.7beta9 ou 1.7beta10 perd de la mémoire à chaque analyse (environ 5 à 8 Mo par minute) ; après des heures, saccades, plantages ou CE-108262-9 sont à craindre. Corrigé dans 1.7beta11 : mettez ShadowMount+ à jour. En attendant : dans config.ini, réglez interval_seconds = 3600 sous [scan]."
   },
   "smp.usb_game_closed_on_rest": {
    "text": "En passant en mode repos, ShadowMount+ a fermé un jeu lancé depuis un disque USB (voulu, pas un défaut). La progression non sauvegardée peut être perdue : quittez le jeu avant le mode repos. Jusqu'à 1.7beta11, cela touchait aussi à tort le M.2 (/mnt/ext1), corrigé dans 1.7beta12."
@@ -170,7 +170,7 @@
    "text": "Une entrée de la liste d'autoload n'a pas de fichier payload correspondant (ou seule la casse diffère ; les noms sont sensibles à la casse). Le chargeur signale 'Payload not found' / 'Not found' et l'ignore : le payload manque après chaque redémarrage. Le correctif corrige l'orthographe ou désactive l'entrée (avec sauvegarde et annulation) ; les fichiers ne sont pas modifiés. Ou réinstallez le payload."
   },
   "autoload.entry_duplicate": {
-   "text": "Une entrée apparaît plusieurs fois dans la liste d'autoload et est envoyée à chaque fois (les chargeurs ne retirent pas les doublons). Le correctif supprime les doublons suivants (avec sauvegarde et annulation)."
+   "text": "Une entrée apparaît plusieurs fois dans la liste d'autoload et est envoyée à chaque fois (les chargeurs ne retirent pas les doublons). Le correctif retire les doublons suivants (avec sauvegarde et annulation)."
   },
   "pldmgr.autoload_syntax": {
    "text": "La liste d'autoload du Payload Manager a un format invalide. Une seule erreur (fichier de plus de 4095 octets, ligne de plus de 511 caractères, délai invalide '!...', virgule dans une ligne) invalide toute la séquence et rien ne démarre. Corrigez la ligne indiquée."
@@ -219,7 +219,7 @@
    "confidence_reason": "La taille est lue ; un système de fichiers ne tient certainement pas dans moins de 512 octets. La façon dont ShadowMount+ traite ces fichiers n'a pas été observée sur la console de test."
   },
   "game.eboot_invalid": {
-   "text": "Le eboot.bin d'un dossier de jeu est inutilisable : moins de 64 octets ou simple texte (p. ex. une page d'erreur enregistrée). Un eboot.bin valide commence comme ELF ou SELF. Probablement un téléchargement ou une copie échoués ; le jeu ne peut pas démarrer ainsi. Recopiez le fichier depuis la source. Medic ne vérifie que le début du fichier.",
+   "text": "Le fichier eboot.bin d'un dossier de jeu est inutilisable : moins de 64 octets ou simple texte (p. ex. une page d'erreur enregistrée). Un eboot.bin valide commence comme ELF ou SELF. Probablement un téléchargement ou une copie échoués ; le jeu ne peut pas démarrer ainsi. Recopiez le fichier depuis la source. Medic ne vérifie que le début du fichier.",
    "confidence_reason": "La taille et les premiers octets sont lus. Que le jeu ne démarre donc pas découle du format de fichier mais n'a pas été observé sur la console de test ; les formats inconnus non textuels ne sont volontairement pas signalés."
   },
   "selftest.failed": {

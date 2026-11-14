@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/history.hpp"
+#include "medic/jsondump.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -117,7 +118,7 @@ bool append_history(Platform& p, const HistoryRun& run) {
         for (std::size_t i = from; i < lines.size(); ++i) text += lines[i] + "\n";
     }
     if (!text.empty() && text.back() != '\n') text += '\n';
-    text += rec.dump() + "\n";
+    text += dump_safe(rec) + "\n";
     return rw->write_file(kHistoryPath, text);
 }
 

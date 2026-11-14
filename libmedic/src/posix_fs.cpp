@@ -156,6 +156,8 @@ bool PosixRw::write_file(const std::string& path, const std::string& content) {
     fs::path p, tmp;
     std::error_code ec;
     if (!map_virtual_path(base_, path, p) || !ancestors_clean(base_, path, false)) return false;
+    // Ein Symlink als Ziel wuerde durch eine normale Datei ersetzt, und "rueckgaengig" stellte den Link nicht wieder her: ablehnen
+    if (fs::is_symlink(p, ec)) return false;
     fs::create_directories(p.parent_path(), ec);
     tmp = p;
     tmp += ".medic-tmp";
@@ -230,7 +232,7 @@ bool PosixRw::rename(const std::string& from, const std::string& to) {
     if (!ancestors_clean(base_, from, false) || !ancestors_clean(base_, to, false)) return false;
     if (fs::is_symlink(a, ec)) return false;  // ein Symlink kann ausserhalb der erlaubten Ordner zeigen
     if (!fs::exists(a, ec)) return false;
-    if (fs::exists(b, ec)) {
+    if (fs::exists(fs::symlink_status(b, ec))) {  // auch ein haengender Symlink als Ziel zaehlt (exists() loest ihn auf und meldete "frei")
         // Auf exFAT/FAT (ohne Unterscheidung der Schreibweise) ist das Ziel bei einer Umbenennung nur der Schreibweise dieselbe Datei: erlaubt.
         // Alles andere, was schon dort liegt, bleibt tabu.
         std::string na = a.filename().string(), nb = b.filename().string();
@@ -259,7 +261,9 @@ bool PosixRw::make_dirs(const std::string& path) {
 bool PosixRw::remove_empty_dir(const std::string& path) {
     fs::path p;
     std::error_code ec;
-    if (!map_virtual_path(base_, path, p) || !fs::is_directory(p, ec) || !fs::is_empty(p, ec)) return false;
+    // Wie make_dirs: ein Symlink auf dem Weg oder als Ordner selbst fuehrte aus den erlaubten Ordnern hinaus
+    if (!map_virtual_path(base_, path, p) || !ancestors_clean(base_, path, true) || fs::is_symlink(p, ec)) return false;
+    if (!fs::is_directory(p, ec) || !fs::is_empty(p, ec)) return false;
     return fs::remove(p, ec);
 }
 

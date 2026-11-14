@@ -23,8 +23,10 @@ bool is_hex(char c) { return is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' 
 bool is_word(char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; }
 char low(char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); }
 
-bool before_ok(const std::string& s, std::size_t i) { return i == 0 || !is_word(s[i - 1]); }
 bool after_ok(const std::string& s, std::size_t i) { return i >= s.size() || !is_word(s[i]); }
+// Kennungen (MAC, Konto-ID, IP): ein Unterstrich daneben ("savedata_<ID>", "_<MAC>_") ist eine Grenze, kein Teil des Worts.
+bool id_before_ok(const std::string& s, std::size_t i) { return i == 0 || !std::isalnum(static_cast<unsigned char>(s[i - 1])); }
+bool id_after_ok(const std::string& s, std::size_t i) { return i >= s.size() || !std::isalnum(static_cast<unsigned char>(s[i])); }
 
 // "/user/home/<8 Hex>" -> "/user/home/[ID]"
 std::string mask_user_home(const std::string& s) {
@@ -59,7 +61,7 @@ std::string mask_credentials(const std::string& s) {
         bool strong;
     };
     static const Name kNames[] = {{"password", true}, {"passwd", true}, {"passphrase", true}, {"secret", true}, {"token", true}, {"api_key", true}, {"apikey", true},
-                                  {"credential", true}, {"username", false}, {"user", false}, {"login", false}, {"pass", false}};
+                                  {"credential", true}, {"authorization", true}, {"psk", true}, {"username", false}, {"user", false}, {"login", false}, {"pass", false}};
     // 1) Benutzerdaten in Adressen: scheme://user:pass@host
     std::string t = s;
     for (std::size_t at = t.find("://"); at != std::string::npos; at = t.find("://", at + 3)) {
@@ -87,8 +89,11 @@ std::string mask_credentials(const std::string& s) {
                 std::size_t j = i + len;
                 const bool quoted = j < t.size() && (t[j] == '"' || t[j] == '\'');  // JSON-/Python-Feld
                 if (quoted) ++j;
+                const std::size_t gap_start = j;
                 while (j < t.size() && (t[j] == ' ' || t[j] == '\t')) ++j;
+                const bool spaced = j > gap_start;
                 if (j >= t.size() || (t[j] != ':' && t[j] != '=')) continue;
+                const bool ini_style = spaced && t[j] == '=' && nm.strong;
                 if (t[j] == ':' && !nm.strong && !quoted) continue;
                 ++j;
                 while (j < t.size() && (t[j] == ' ' || t[j] == '\t')) ++j;
@@ -104,6 +109,9 @@ std::string mask_credentials(const std::string& s) {
                 } else if (t.compare(j, 3, "***") == 0) {  // schon geschwaerzt (Export): unveraendert lassen
                     out += "***";
                     j += 3;
+                } else if (ini_style) {  // "password = mein langer satz": der Wert kann Leerzeichen enthalten, also bis zum Zeilenende
+                    out += "[SECRET]";
+                    while (j < t.size() && t[j] != '\r' && t[j] != '\n') ++j;
                 } else {
                     out += "[SECRET]";
                     const std::size_t vstart = j;
@@ -134,7 +142,8 @@ std::string mask_key_values(const std::string& s) {
                                 {"seriennummer", "[SERIAL]"},  {"serial no", "[SERIAL]"},     {"serial", "[SERIAL]"},
                                 {"account id", "[ID]"},        {"account_id", "[ID]"},        {"accountid", "[ID]"},
                                 {"psn id", "[ID]"},            {"user id", "[ID]"},           {"user_id", "[ID]"},
-                                {"userid", "[ID]"}};
+                                {"userid", "[ID]"},            {"online_id", "[ID]"},         {"onlineid", "[ID]"},
+                                {"npid", "[ID]"},              {"psnid", "[ID]"}};
     std::string lower;
     lower.reserve(s.size());
     for (char c : s) lower += low(c);
@@ -174,14 +183,14 @@ std::string mask_mac(const std::string& s) {
     std::string out;
     std::size_t i = 0;
     while (i < s.size()) {
-        if (before_ok(s, i) && i + 17 <= s.size() && is_hex(s[i])) {
+        if (id_before_ok(s, i) && i + 17 <= s.size() && is_hex(s[i])) {
             const char sep = s[i + 2];
             bool ok = sep == ':' || sep == '-';
             for (int g = 0; ok && g < 6; ++g) {
                 const std::size_t p = i + static_cast<std::size_t>(g) * 3;
                 ok = is_hex(s[p]) && is_hex(s[p + 1]) && (g == 5 || s[p + 2] == sep);
             }
-            if (ok && after_ok(s, i + 17)) {
+            if (ok && id_after_ok(s, i + 17)) {
                 out += "[MAC]";
                 i += 17;
                 continue;
@@ -197,10 +206,31 @@ std::string mask_ipv6(const std::string& s) {
     std::string out;
     std::size_t i = 0;
     while (i < s.size()) {
-        const bool start = (is_hex(s[i]) || s[i] == ':') && (i == 0 || (!is_word(s[i - 1]) && s[i - 1] != ':'));
+        // Beginn einer Folge: nach einem Nicht-Wortzeichen oder Unterstrich, oder direkt hinter "<Beschriftung>:" (Beschriftung mit einem Nicht-Hex-Buchstaben:
+        // "inet6:", "addr:", "ip:"). Mitten in einer gescheiterten Folge ("12:34:56") faengt keine neue an.
+        bool label_before = false;
+        if (i >= 2 && s[i - 1] == ':' && is_word(s[i - 2])) {
+            std::size_t b = i - 1;
+            while (b > 0 && is_word(s[b - 1])) --b;
+            for (std::size_t k = b; k + 1 < i; ++k)
+                if (std::isalpha(static_cast<unsigned char>(s[k])) && !is_hex(s[k])) label_before = true;
+        }
+        const bool start = (is_hex(s[i]) || s[i] == ':') && (i == 0 || (!is_word(s[i - 1]) && s[i - 1] != ':') || label_before);
         if (start) {
             std::size_t j = i;
             while (j < s.size() && (is_hex(s[j]) || s[j] == ':')) ++j;
+            // "::ffff:192.168.1.5": die vier Dezimal-Oktette am Ende gehoeren zur Adresse
+            std::size_t run_end = j;
+            if (j < s.size() && s[j] == '.' && j > i && is_digit(s[j - 1])) {
+                std::size_t k = j;
+                int dots = 0;
+                while (k < s.size() && (is_digit(s[k]) || s[k] == '.')) dots += s[k++] == '.';
+                while (k > j && s[k - 1] == '.') {  // ein Satzpunkt hinter der Adresse gehoert nicht dazu
+                    --k;
+                    --dots;
+                }
+                if (dots == 3 && k > j && is_digit(s[k - 1])) run_end = k;
+            }
             const std::string run = s.substr(i, j - i);
             const std::size_t colons = static_cast<std::size_t>(std::count(run.begin(), run.end(), ':'));
             const bool double_colon = run.find("::") != std::string::npos;
@@ -211,9 +241,9 @@ std::string mask_ipv6(const std::string& s) {
                 else if (++g > 4) groups_ok = false;
             }
             const bool has_hex = std::any_of(run.begin(), run.end(), is_hex);
-            if (after_ok(s, j) && groups_ok && has_hex && ((double_colon && colons >= 2) || colons == 7)) {
+            if (after_ok(s, run_end) && groups_ok && has_hex && ((double_colon && colons >= 2) || colons == 7)) {  // "std::bad_alloc und a::b_c" bleibt: '_' gehoert zum Namen
                 out += "[IPV6]";
-                i = j;
+                i = run_end;
                 continue;
             }
         }
@@ -227,7 +257,7 @@ std::string mask_ipv4(const std::string& s) {
     std::string out;
     std::size_t i = 0;
     while (i < s.size()) {
-        if (is_digit(s[i]) && before_ok(s, i) && (i == 0 || s[i - 1] != '.')) {
+        if (is_digit(s[i]) && id_before_ok(s, i) && (i == 0 || s[i - 1] != '.')) {
             std::size_t p = i;
             int octets = 0;
             bool ok = true;
@@ -247,7 +277,7 @@ std::string mask_ipv4(const std::string& s) {
             }
             const bool trailing_digit = p < s.size() && is_digit(s[p]);
             const bool more_parts = p + 1 < s.size() && s[p] == '.' && is_digit(s[p + 1]);
-            if (ok && octets == 4 && !trailing_digit && !more_parts && after_ok(s, p)) {
+            if (ok && octets == 4 && !trailing_digit && !more_parts && id_after_ok(s, p)) {
                 out += "[IP]";
                 i = p;
                 continue;
@@ -266,12 +296,12 @@ std::string mask_account_hex(const std::string& s) {
     while (i < s.size()) {
         const bool prefixed = s[i] == '0' && i + 1 < s.size() && (s[i + 1] == 'x' || s[i + 1] == 'X');
         const std::size_t start = prefixed ? i + 2 : i;
-        if (before_ok(s, i) && start < s.size() && is_hex(s[start])) {
+        if (id_before_ok(s, i) && start < s.size() && is_hex(s[start])) {
             std::size_t n = 0;
             while (start + n < s.size() && is_hex(s[start + n])) ++n;
             bool has_letter = false;
             for (std::size_t k = 0; k < n; ++k) has_letter = has_letter || !is_digit(s[start + k]);
-            if (n == 16 && (prefixed || has_letter) && after_ok(s, start + n)) {
+            if (n == 16 && (prefixed || has_letter) && id_after_ok(s, start + n)) {
                 out += "[ACCOUNT-ID]";
                 i = start + n;
                 continue;
@@ -439,6 +469,8 @@ std::string md_code(std::string s) {
 }  // namespace
 
 std::string redact_credentials(const std::string& text) { return mask_credentials(text); }
+
+std::string redact_ipv6(const std::string& text) { return mask_ipv6(text); }
 
 std::string anonymize(const std::string& text) {
     // Reihenfolge: erst Schluessel/Wert und Pfade, dann Adressen, zuletzt lose 16-Hex-Kennungen.

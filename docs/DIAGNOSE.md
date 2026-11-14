@@ -21,7 +21,7 @@ Ziel: PS5 Medic wird zum vollständigen System- und Spiele-Doktor, der Hardware-
 | Datenbanken, Stufe 1 | `collect_databases` (Kopf, Größe, Journal) | `db.header_invalid`, `db.truncated`, `db.journal_pending` | sqlite.org/fileformat2.html |
 | Datenbanken, Stufe 2 | `sqlite_check.cpp` (`integrity_check` auf einer Kopie im Speicher, WAL eingerechnet) | `db.integrity_failed` | Idee nach PS5 Cleanup (GPL-3.0-or-later), eigener Code |
 | Fehlercodes | Katalog `error_codes.json` (150 Codes) | – | Sony-Seiten, update-freier Wortlaut |
-| Abdeckung | `evaluate_coverage` (Liste `coverage` in `rules.json`, 11 Bereiche) | – (Bericht, UI, CLI) | Leitregel „nicht geprüft ≠ gesund“ |
+| Abdeckung | `evaluate_coverage` (Liste `coverage` in `rules.json`, 13 Bereiche) | – (Bericht, UI, CLI) | Leitregel „nicht geprüft ≠ gesund“ |
 | Verlässlichkeit | `confidence` je Regel (Stufe, Grundlage, Grund; Standard aus `verified`) | – (UI, Bericht, CLI) | Leitregel „Evidenz trennen“ |
 | Spielordner | `collect_game_files` (Dateiname nur in der Groß-/Kleinschreibung falsch) | `game.il2cpp_case` (mit Fix `rename_case_prx`), `game.il2cpp_case_latent` | ShadowMount+ #159, #173 (Originale gelesen) |
 
