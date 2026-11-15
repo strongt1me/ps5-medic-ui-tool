@@ -125,8 +125,6 @@ const CompatEntry kCompatTable[] = {
     {"PPSA30839", "ok", "ZSTD"},
     {"PPSA30856", "ok", "ZSTD"},
     {"PPSA32557", "ok", "ZSTD"},
-    {"PPSA32785", "fail", ""},
-    {"PPSA32786", "fail", ""},
     {"PPSA32803", "ok", "ZSTD"},
     {"PPSA33286", "ok", "ZSTD"},
     {"PPSA33626", "ok", "ZSTD"},
@@ -142,6 +140,6 @@ const CompatEntry kCompatTable[] = {
     {"PPSA36082", "ok", "ZSTD"},
     {"PPSA36992", "ok", "ZSTD"},
 };
-const unsigned kCompatCount = 135;
+const unsigned kCompatCount = 133;
 
 }  // namespace medic

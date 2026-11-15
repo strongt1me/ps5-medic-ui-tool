@@ -21,6 +21,8 @@ def main():
     for g in src["games"]:
         if g.get("status") not in ("ok", "fail", "mixed"):
             continue
+        if g["status"] != "ok" and "demo" in g.get("notes", "").lower():
+            continue  # Fehler laut Notiz bei der Demo: nicht dem Vollspiel zuordnen
         fmt = g.get("format", "") if g.get("format", "") in FORMATS else ""
         for ppsa in re.findall(r"PPSA[0-9]{5}", g.get("ppsa", "")):
             table[ppsa] = (g["status"], fmt)

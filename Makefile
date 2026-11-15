@@ -85,6 +85,7 @@ host:
 test: host
 	$(BUILD)/medic-tests
 	python3 tests/test_triage.py
+	python3 tools/gen_rule_table.py --check || { echo "docs/RULE_TABLE.md veraltet: python3 tools/gen_rule_table.py"; exit 1; }
 	for l in fr it es; do python3 tools/l10n_check.py $$l all || exit 1; done
 
 clean:

@@ -20,6 +20,7 @@
 
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -711,6 +712,17 @@ void misc_tests() {
         CHECK(find_compat("PPSA17942") && std::string(find_compat("PPSA17942")->status) == "fail", "Kompatibilitaet: bekannter Titel mit fail");
         CHECK(find_compat("PPSA11386") && std::string(find_compat("PPSA11386")->status) == "ok", "Kompatibilitaet: bekannter Titel mit ok");
         CHECK(find_compat("PPSA00001") == nullptr && find_compat("") == nullptr, "Kompatibilitaet: unbekannter Titel nicht in der Liste");
+        {  // knowledge/compat.json und die eingebettete Tabelle (compat_data.cpp) sind dieselben Daten
+            std::ifstream in(std::string(MEDIC_SOURCE_DIR) + "/knowledge/compat.json");
+            const json cj = json::parse(in, nullptr, false);
+            const json* games = cj.is_object() && cj.contains("games") ? &cj["games"] : nullptr;
+            CHECK(games && games->is_object() && games->size() == kCompatCount && std::string(cj.value("date", "")) == kCompatDate, "Kompatibilitaet: compat.json und Tabelle gleich gross und gleiches Datum");
+            if (games)
+                for (const auto& [id, v] : games->items()) {
+                    const CompatEntry* e = find_compat(id);
+                    CHECK(e && v.value("status", "") == e->status && v.value("format", "") == e->format, "Kompatibilitaet: Eintrag " + id + " in compat.json und Tabelle gleich");
+                }
+        }
         Facts f;
         f.set("smp.titles", json::array({{{"titleid", "PPSA17942"}, {"path", "/data/homebrew/a"}}, {{"titleid", "PPSA11386"}, {"path", "/data/homebrew/b"}}, {{"titleid", "PPSA00001"}, {"path", "/data/homebrew/c"}}}));
         Sandbox sb;

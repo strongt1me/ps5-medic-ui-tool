@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/collectors.hpp"
+#include "medic/pfs.hpp"
 #include "medic/image_reader.hpp"
 #include "medic/history.hpp"
 #include "medic/selftest.hpp"
@@ -1099,21 +1100,12 @@ void collect_shadowmount(const Platform& p, Facts& f) {
                 }
             }
             if (e.ext == ".ffpfs" || e.ext == ".ffpfsc") {
-                // PFS-Behaelter: Magic 0x1332A0B @8, Blockgroesse u32 @32, Blockzahl u64 @56; ein gebautes Abbild ist genau Blockzahl mal Blockgroesse gross
-                // (an zwei echten .ffpfsc der Test-Konsole am 15. Nov. 2026 nachgerechnet: 923321 x 65536 und 57295 x 65536 Byte; ebenso im Converter, 9 von 9 gebaut)
                 std::string head;
-                if (fs.read_range(e.path, 0, 64, head) && head.size() == 64) {
-                    auto le = [&](std::size_t off, int n) {
-                        std::uint64_t v = 0;
-                        for (int i = n - 1; i >= 0; --i) v = (v << 8) | static_cast<unsigned char>(head[off + static_cast<std::size_t>(i)]);
-                        return v;
-                    };
-                    const std::uint64_t bs = le(32, 4), nd = le(56, 8);
-                    if (le(8, 4) == 0x01332A0Bu && bs >= 4096 && bs <= (1u << 24) && (bs & (bs - 1)) == 0 && nd > 0 && nd < (1ull << 40)) {
-                        img["volume_bytes"] = nd * bs;
-                        img["truncated"] = e.size < nd * bs ? 1 : 0;
+                if (fs.read_range(e.path, 0, kPfsHeadBytes, head))
+                    if (const std::uint64_t vol = pfs_volume_bytes(head)) {  // ein gebautes Abbild ist Blockzahl x Blockgroesse gross; kleiner = unvollstaendige Kopie
+                        img["volume_bytes"] = vol;
+                        img["truncated"] = e.size < vol ? 1 : 0;
                     }
-                }
             }
             if (e.ext != ".dat") {
                 img["tiny"] = e.size < 512 ? 1 : 0;  // kleiner als ein Kopf: leer oder abgebrochen

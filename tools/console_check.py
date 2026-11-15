@@ -30,10 +30,34 @@ def fetch(ftp, path, limit=4 << 20):
 
 
 def listing(ftp, path):
+    """Eintraege eines Ordners als (Name, Ist-Ordner). Der FTP-Server der Konsole kennt kein MLSD, deshalb NLST und CWD-Probe."""
+    names = []
     try:
-        return [(n, f) for n, f in ftp.mlsd(path, facts=["type", "size", "modify"])]
+        ftp.retrlines("NLST " + path, names.append)
     except ftplib.all_errors:
         return []
+    out = []
+    for n in names:
+        base = n.rsplit("/", 1)[-1]
+        if base in (".", ".."):
+            continue
+        is_dir = False
+        try:
+            here = ftp.pwd()
+            ftp.cwd(path.rstrip("/") + "/" + base)
+            ftp.cwd(here)
+            is_dir = True
+        except ftplib.all_errors:
+            pass
+        out.append((base, is_dir))
+    return out
+
+
+def modified(ftp, path):
+    try:
+        return ftp.sendcmd("MDTM " + path)[4:].strip()
+    except ftplib.all_errors:
+        return ""
 
 
 def main():
@@ -68,7 +92,7 @@ def main():
     else:
         try:
             facts = json.loads(raw.decode("utf-8"))
-            mod = dict(listing(ftp, ROOT)).get("last_facts.json", {}).get("modify", "")
+            mod = modified(ftp, ROOT + "/last_facts.json")
             say(True, f"last_facts.json: {len(facts)} Fakten, geaendert {mod}")
         except ValueError:
             say(False, "last_facts.json ist kein gueltiges JSON")
@@ -97,7 +121,7 @@ def main():
         lines = [l for l in raw.decode("utf-8", "replace").splitlines() if "error" in l.lower() or "fail" in l.lower()]
         say(not lines, f"native.log: {len(lines)} Fehlerzeilen" + (" (letzte: " + lines[-1][:120] + ")" if lines else ""))
 
-    backups = [n for n, f in listing(ftp, ROOT + "/backups") if f.get("type") == "dir"]
+    backups = [n for n, is_dir in listing(ftp, ROOT + "/backups") if is_dir]
     print(f"INFO  Sicherungen: {len(backups)}" + (f", neueste {sorted(backups)[-1]}" if backups else ""))
     ftp.quit()
     print("Fertig:", "alles in Ordnung" if not bad else f"{bad} Punkt(e) pruefen", time.strftime("(%d.%m.%Y %H:%M)"))
