@@ -335,6 +335,9 @@
   "klog": {
    "text": "Log del kernel (arretrato dall'ultima lettura)"
   },
+  "game_runtime": {
+   "text": "Libreria di runtime e pack dei giochi (cartelle e immagini)"
+  },
   "app_registry": {
    "text": "Registro dei titoli (app.db, solo ID titolo e percorso)"
   }

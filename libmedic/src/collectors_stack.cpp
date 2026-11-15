@@ -242,8 +242,9 @@ void collect_elfs(const IFileSystem& fs, Facts& f) {
 
 // ---- nanoDNS und etaHEN ----------------------------------------------------------------------------------------------
 
-// Das nanoDNS-Log enthaelt jede DNS-Abfrage samt Domain und Client-IP. Hier werden nur Fehlerzeilen GEZAEHLT; weder die Zeilen
-// noch Domains gelangen in Fakten, Befunde oder den Export (Formate aus nanoDNS main.c, v0.4).
+// Das nanoDNS-Log enthaelt jede DNS-Abfrage samt Domain und Client-IP. Hier werden Fehlerzeilen GEZAEHLT; als Beleg im Befund steht je Art nur die LETZTE
+// Fehlerzeile, bei "all upstreams failed for <Domain>" ohne die Domain (Formate aus nanoDNS main.c, v0.4). Abfragezeilen gelangen nie in Fakten.
+// nanodns.log.problems[]: kind (upstream|bind|warning), count, line
 void collect_nanodns(const IFileSystem& fs, Facts& f) {
     std::string text;
     if (!read_tail(fs, "/data/nanodns/nanodns.log", kMaxLogBytes, text)) return;
@@ -251,13 +252,26 @@ void collect_nanodns(const IFileSystem& fs, Facts& f) {
     static const std::regex bind(R"(\[nanodns\] bind\(.*\) failed)");
     static const std::regex warn(R"(\[nanodns\] warning: )");
     int upstream = 0, bind_failed = 0, warnings = 0;
+    std::string up_line, bind_line, warn_line;
     auto lines = split_lines(text);
     for (std::size_t i = lines.size() > kMaxLogLines ? lines.size() - kMaxLogLines : 0; i < lines.size(); ++i) {
         cap_line(lines[i]);
-        if (std::regex_search(lines[i], up)) ++upstream;
-        else if (std::regex_search(lines[i], bind)) ++bind_failed;
-        else if (std::regex_search(lines[i], warn)) ++warnings;
+        if (std::regex_search(lines[i], up)) {
+            ++upstream;
+            up_line = "[nanodns] all upstreams failed";  // die Domain der Abfrage bleibt aussen vor
+        } else if (std::regex_search(lines[i], bind)) {
+            ++bind_failed;
+            bind_line = lines[i].substr(0, 200);
+        } else if (std::regex_search(lines[i], warn)) {
+            ++warnings;
+            warn_line = lines[i].substr(0, 200);
+        }
     }
+    json problems = json::array();
+    if (upstream) problems.push_back({{"kind", "upstream"}, {"count", upstream}, {"line", up_line}});
+    if (bind_failed) problems.push_back({{"kind", "bind"}, {"count", bind_failed}, {"line", bind_line}});
+    if (warnings) problems.push_back({{"kind", "warning"}, {"count", warnings}, {"line", warn_line}});
+    f.set("nanodns.log.problems", std::move(problems));
     f.set("nanodns.log.upstream_failed", upstream);
     f.set("nanodns.log.bind_failed", bind_failed);
     f.set("nanodns.log.config_warnings", warnings);

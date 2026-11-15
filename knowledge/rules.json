@@ -230,6 +230,21 @@
       }
     },
     {
+      "id": "game_runtime",
+      "text": {
+        "de": "Laufzeit-Bibliothek und Packs der Spiele (Ordner und Images)",
+        "en": "Runtime library and packs of the games (folders and images)"
+      },
+      "tested_when": {
+        "all": [
+          {
+            "fact": "games.runtime_skipped",
+            "eq": 0
+          }
+        ]
+      }
+    },
+    {
       "id": "app_registry",
       "text": {
         "de": "Titelregister (app.db, nur Titel-ID und Pfad)",
@@ -1759,6 +1774,7 @@
         "de": "Das nanoDNS-Log enthält Fehler: nanoDNS erreicht seine Upstream-DNS-Server nicht (dann scheitert jede Namensauflösung, Apps und Payload Manager wirken „offline“), kann Port 53 nicht öffnen oder meldet ungültige Zeilen in nanodns.ini. Prüfe die Upstream-Server in nanodns.ini (z. B. die Router-Adresse als ersten Eintrag) und sende nanoDNS neu.",
         "en": "The nanoDNS log contains errors: nanoDNS cannot reach its upstream DNS servers (then every name lookup fails and apps and the Payload Manager look “offline”), cannot open port 53 or reports invalid lines in nanodns.ini. Check the upstream servers in nanodns.ini (e.g. the router address as the first entry) and send nanoDNS again."
       },
+      "evidence": "nanodns.log.problems[].line",
       "fix": null,
       "source": "https://github.com/drakmor/nanoDNS",
       "verified": "doc"
@@ -2057,11 +2073,11 @@
       "source": "https://github.com/quer3q/ampr-emu-ng/issues/41",
       "verified": "community",
       "confidence": {
-        "level": "high",
+        "level": "medium",
         "basis": "observed",
         "reason": {
-          "de": "Die Rechte werden gelesen. Dass die Konsole eine Datei ohne Ausführungsrecht nicht startet, wurde am 13. November 2026 an der Test-Konsole mit der eigenen eboot.bin beobachtet und von einem Nutzer (ampr-emu-ng, Issue 41) mit einer FTP-Kopie bestätigt.",
-          "en": "The permissions are read. That the console does not start a file without execute permission was observed on the test console on 13 November 2026 with our own eboot.bin and confirmed by a user (ampr-emu-ng, issue 41) with an FTP copy."
+          "de": "Die Rechte werden gelesen. Dass die Konsole eine eboot.bin ohne Ausführungsrecht nicht startet, wurde am 13. November 2026 an der Test-Konsole mit der eigenen eboot.bin beobachtet (für Module ist es nicht gemessen) und von einem Nutzer (ampr-emu-ng, Issue 41) mit einer FTP-Kopie bestätigt.",
+          "en": "The permissions are read. That the console does not start an eboot.bin without execute permission was observed on the test console on 13 November 2026 with our own eboot.bin (not measured for modules) and confirmed by a user (ampr-emu-ng, issue 41) with an FTP copy."
         }
       }
     },
@@ -2095,7 +2111,7 @@
     },
     {
       "id": "smp.image_name_too_long",
-      "severity": "warning",
+      "severity": "info",
       "when": {
         "all": [
           {

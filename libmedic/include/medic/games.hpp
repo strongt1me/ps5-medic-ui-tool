@@ -36,6 +36,7 @@ struct GameInfo {
     int backport = -1;    // Backport-Ordner vorhanden: 1 ja, 0 nein, -1 unbekannt (keine Firmware-Angabe)
     bool needs_backport = false;  // verlangt neuere Firmware als die Konsole, ohne Backport
     bool eboot_bad = false, case_mismatch = false, oversized = false;
+    bool noexec = false, pack_bad = false, runtime_bad = false;  // Programmdatei ohne Ausfuehrungsrecht, unvollstaendiges Pack, Laufzeit passt nicht zu den Packs
     std::vector<GameError> errors;
     int foreign_saves = 0;                 // Spielstaende mit anderer Konto-ID
     std::vector<std::string> log_lines;    // letzte Zeilen des ShadowMount+-Logs, die die TITLE_ID nennen (hoechstens kGameLogLines)

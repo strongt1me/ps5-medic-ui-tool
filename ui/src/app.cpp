@@ -2300,6 +2300,9 @@ void App::draw_gamedetail(Canvas& c) const {
         std::vector<std::pair<St, std::string>> probs;
         if (g.eboot_bad) probs.emplace_back(St::Crit, S("games.d.eboot"));
         if (g.case_mismatch) probs.emplace_back(St::Warn, S("games.d.case"));
+        if (g.noexec) probs.emplace_back(St::Warn, S("games.d.noexec"));
+        if (g.pack_bad) probs.emplace_back(St::Warn, S("games.d.pack"));
+        if (g.runtime_bad) probs.emplace_back(St::Warn, S("games.d.runtime"));
         if (g.oversized) probs.emplace_back(St::Info, S("games.d.oversized"));
         if (probs.empty()) {
             row(St::Ok, S("games.d.files"), S("games.d.files_none"));

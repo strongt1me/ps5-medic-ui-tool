@@ -335,6 +335,9 @@
   "klog": {
    "text": "Journal du noyau (depuis la dernière lecture)"
   },
+  "game_runtime": {
+   "text": "Bibliothèque d'exécution et packs des jeux (dossiers et images)"
+  },
   "app_registry": {
    "text": "Registre des titres (app.db, ID du titre et chemin seulement)"
   }

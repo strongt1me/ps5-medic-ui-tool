@@ -125,7 +125,7 @@ void chmod_tests() {
     CHECK(mode_of(sb.real(game + "/eboot.bin")) == 0777 && mode_of(sb.real(game + "/sce_module/libfoo.prx")) == 0777 && mode_of(sb.real(game + "/Media/Modules/Unity.prx")) == 0777,
           "Rechte: Programmdateien stehen auf 0777");
     CHECK(mode_of(sb.real(game + "/sce_module/ok.sprx")) == 0755 && mode_of(sb.real(game + "/Media/data.bin")) == 0666, "Rechte: andere Dateien bleiben unberuehrt");
-    CHECK(sb.real(game + "/eboot.bin").string().size() > 0 && testutil::slurp(sb.real(game + "/eboot.bin")) == "ELF-Platzhalter", "Rechte: der Inhalt bleibt unberuehrt");
+    CHECK(testutil::slurp(sb.real(game + "/eboot.bin")) == "ELF-Platzhalter", "Rechte: der Inhalt bleibt unberuehrt");
 
     // Rechte jetzt in Ordnung: ein zweiter Check-up meldet nichts mehr
     {
@@ -534,7 +534,8 @@ void folder_and_kraken_tests() {
     const json* ks = k.get("kraken.sparse_extent");
     CHECK(k.get("kraken.log_present") && ks && ks->size() == 2 && (*ks)[0]["path"] == "/data/homebrew/A.pkg" && (*ks)[1]["path"] == "/mnt/usb0/homebrew/B.pkg", "Kraken: zwei Pakete, je einmal, harmlose Zeilen ignoriert");
     Facts none;
-    auto empty = make_snapshot_platform(Sandbox().dir.string());
+    Sandbox sb3;  // lebt bis zum Ende der Pruefung (ein Temporaeres waere vor dem Aufruf schon weg)
+    auto empty = make_snapshot_platform(sb3.dir.string());
     collect_kraken(*empty, none);
     CHECK(none.get("kraken.log_present") == nullptr && none.get("kraken.sparse_extent") == nullptr, "Kraken: ohne Log keine Fakten");
 }
@@ -553,6 +554,10 @@ void rename_device_tests() {
         PosixRw root("/");
         const std::string to = "/dev/shm/medic-device-test-" + std::to_string(::getpid()) + ".txt";
         CHECK(!root.rename(from.string(), to) && stdfs::exists(from) && !stdfs::exists(to), "Verschieben: ueber Dateisysteme hinweg wird abgelehnt, die Quelle bleibt");
+        std::error_code ec;
+        stdfs::remove(to, ec);
+    } else {
+        std::fprintf(stderr, "Hinweis: Verschieben ueber Dateisysteme nicht getestet (/dev/shm fehlt oder liegt auf demselben Geraet)\n");
     }
 }
 
@@ -703,10 +708,28 @@ void review_followup_tests() {
     }
 }
 
+// nanoDNS: die letzte Fehlerzeile je Art steht im Befund, Domains nie
+void nanodns_tests() {
+    Sandbox sb;
+    spit(sb.real("/data/nanodns/nanodns.log"),
+         "[nanodns] query from=127.0.0.1:1 id=0x1 qname=geheim.example.com qtype=A(1) qclass=1\n"
+         "[nanodns] all upstreams failed for geheim.example.com\n"
+         "[nanodns] all upstreams failed for noch.geheimer.example.org\n"
+         "[nanodns] warning: ignoring invalid line 7 in nanodns.ini\n");
+    auto p = make_snapshot_platform(sb.dir.string());
+    Facts f;
+    collect_helpers(*p, f);
+    const json* pr = f.get("nanodns.log.problems");
+    CHECK(pr && pr->size() == 2 && (*pr)[0]["kind"] == "upstream" && (*pr)[0]["count"] == 2 && (*pr)[0]["line"] == "[nanodns] all upstreams failed", "nanoDNS: Upstream-Fehler gezaehlt, Zeile ohne Domain");
+    CHECK(pr && (*pr)[1]["kind"] == "warning" && (*pr)[1]["line"] == "[nanodns] warning: ignoring invalid line 7 in nanodns.ini", "nanoDNS: Warnung mit ihrer Zeile");
+    CHECK(pr && pr->dump().find("geheim") == std::string::npos, "nanoDNS: keine Domain in den Fakten");
+}
+
 }  // namespace
 
 void game_issue_tests() {
     chmod_tests();
+    nanodns_tests();
     leftover_tests();
     long_name_tests();
     rename_device_tests();

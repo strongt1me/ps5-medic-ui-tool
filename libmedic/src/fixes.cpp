@@ -768,7 +768,7 @@ void plan_chmod_program_files(FixPlan& plan, const Facts& facts, const IFileSyst
             plan.changes.push_back(std::move(c));
         }
     }
-    if (cut) plan.warnings.push_back("Mehr als " + std::to_string(kMaxChmodFiles) + " Dateien: der Rest folgt nach dem nächsten Check-up");
+    if (cut) plan.warnings.insert(plan.warnings.begin(), "Mehr als " + std::to_string(kMaxChmodFiles) + " Dateien: der Rest folgt nach dem nächsten Check-up");  // zuerst: die Vorschau zeigt nur die ersten Hinweise
     if (plan.changes.empty()) plan.warnings.push_back("Keine Programmdatei ohne Ausführungsrecht in den erlaubten Ordnern gefunden");
     plan.hint_de = "Nur die Rechte der genannten Programmdateien ändern sich (auf 0777); der Inhalt bleibt unberührt. Rückgängig stellt die alten Rechte wieder her.";
     plan.hint_en = "Only the permissions of the listed program files change (to 0777); the content stays untouched. Undo restores the old permissions.";

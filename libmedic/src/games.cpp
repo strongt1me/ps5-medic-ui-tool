@@ -143,6 +143,16 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
     if (const json* a = arr_of(facts, "games.case_mismatch"))
         for (const auto& e : *a)
             if (GameInfo* g = at(str_of(e, "titleid"))) g->case_mismatch = true;
+    if (const json* a = arr_of(facts, "games.noexec"))
+        for (const auto& e : *a)
+            if (GameInfo* g = at(str_of(e, "titleid"))) g->noexec = true;
+    if (const json* a = arr_of(facts, "games.pack_problems"))
+        for (const auto& e : *a)
+            if (GameInfo* g = at(str_of(e, "titleid"))) g->pack_bad = true;
+    if (const json* a = arr_of(facts, "games.runtime"))
+        for (const auto& e : *a)
+            if (str_of(e, "problem") != "")
+                if (GameInfo* g = at(str_of(e, "titleid"))) g->runtime_bad = true;
     if (const json* a = arr_of(facts, "errors.pairs"))
         for (const auto& e : *a) {
             GameInfo* g = at(str_of(e, "titleid"));

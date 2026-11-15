@@ -24,7 +24,7 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 - **Pro Spiel:** Titelliste mit Quellen, Systemdatenbank, verlangter Firmware, Backport (auch im Spiel eingebaut), Dateiprüfung, Fehlern der Konsole, Spielständen und möglichen Gründen.
 - Läuft auf den Firmwares 4.00 bis 14.10 (soweit der Jailbreak dort läuft); getestet ist bisher nur FW 12.00.
 
-### 4.2 Reparieren (12 sichere Fixes)
+### 4.2 Reparieren (15 Fixes und 1 Hinweis)
 | Fix-ID | Aktion | Reversibel durch |
 |---|---|---|
 | `rename_image_parentheses` | Klammern aus `.ffpfs`/`.ffpfsc`-Dateinamen entfernen | Rückbenennung aus Journal |

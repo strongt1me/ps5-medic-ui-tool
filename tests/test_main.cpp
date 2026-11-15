@@ -382,7 +382,7 @@ static void new_fact_tests() {
     }
     {  // Abdeckung: "nicht geprueft" statt "in Ordnung" (Bereiche stehen in knowledge/rules.json)
         const auto rules = medic::load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
-        CHECK(rules.coverage.size() == 13 && rules.coverage[0].id == "processes" && rules.coverage[11].id == "klog" && rules.coverage.back().id == "app_registry", "Abdeckung: 13 Bereiche aus der Regeldatei (zuletzt Kernel-Log und Titelregister)");
+        CHECK(rules.coverage.size() == 14 && rules.coverage[0].id == "processes" && rules.coverage[11].id == "klog" && rules.coverage[12].id == "game_runtime" && rules.coverage.back().id == "app_registry", "Abdeckung: 14 Bereiche aus der Regeldatei (zuletzt Kernel-Log und Titelregister)");
         auto cov = [&](const char* fixture) {
             std::map<std::string, bool> m;
             for (const auto& c : medic::evaluate_coverage(rules, facts_of(fixture))) m[c.id] = c.tested;
