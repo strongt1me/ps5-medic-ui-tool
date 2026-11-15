@@ -14,6 +14,8 @@ add_library(medic STATIC
   libmedic/src/collectors.cpp
   libmedic/src/collectors_stack.cpp
   libmedic/src/collectors_games.cpp
+  libmedic/src/compat.cpp
+  libmedic/src/compat_data.cpp
   libmedic/src/rules.cpp
   libmedic/src/finding.cpp
   libmedic/src/checks.cpp

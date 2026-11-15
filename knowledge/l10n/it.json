@@ -258,6 +258,10 @@
    "text": "Kraken Mount rifiuta un .pkg: il layout del file del pacchetto ha un buco (sparse extent), e il pacchetto quindi non ottiene un riquadro; il messaggio compare solo in /data/krakenmount/kraken.log. Secondo il messaggio aiuta ricostruire il pacchetto con Dump Forge (--kraken stored). Una correzione nello stesso Kraken Mount è prevista nel progetto ma non era ancora in nessuna release. Medic qui non modifica nulla.",
    "confidence_reason": "Il messaggio viene letto dal log. Che derivi da un layout con un buco è scritto nel progetto Kraken Mount (issue 4, 5, 8, 9, 13, 20); se ricostruire con --kraken stored aiuti non è stato verificato lì su un pacchetto reale."
   },
+  "game.compat_known_bad": {
+   "text": "Secondo l'elenco di compatibilità dei backup ZSTD e LZ4, questo gioco non funziona per i tester o dà risultati contrastanti (prova: ID del titolo, risultato, formato). Non è confermato che sia lo stesso su questa console. Se il gioco non si avvia: controlla il formato del backup, la versione del gioco e il file runtime (libSceAmpr.sprx) e leggi la voce dell'elenco.",
+   "confidence_reason": "Il titolo compare con questo risultato nell'elenco di compatibilità integrato (segnalazioni di tester). Medic non ha avviato il gioco su questa console; le segnalazioni possono riguardare un'altra versione o un altro runtime."
+  },
   "game.eboot_invalid": {
    "text": "L'eboot.bin di una cartella di gioco è inutilizzabile: meno di 64 byte o semplice testo (per esempio una pagina di errore salvata). Un eboot.bin valido inizia come ELF o SELF. Probabilmente un download o una copia falliti; così il gioco non può avviarsi. Copia di nuovo il file dalla fonte. Medic controlla solo l'inizio del file.",
    "confidence_reason": "Dimensione e primi byte vengono letti. Che il gioco quindi non si avvii deriva dal formato del file ma non è stato osservato sulla console di prova; i formati sconosciuti non di testo volutamente non vengono segnalati."

@@ -1,0 +1,547 @@
+{
+ "schema_version": 1,
+ "date": "2026-11-14",
+ "source": "https://github.com/strongt1me/ps5-zstd-kompatibilitaetsliste",
+ "games": {
+  "PPSA01287": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA01317": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA01318": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA01340": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA01417": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA01469": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA01474": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA01528": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA01551": {
+   "status": "fail",
+   "format": ""
+  },
+  "PPSA02015": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA02053": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA02225": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA02261": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA02424": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA02433": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA02530": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA02632": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA02690": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA03071": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA03210": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA03589": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA03671": {
+   "status": "mixed",
+   "format": "ZSTD/LZ4"
+  },
+  "PPSA03831": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA03864": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA03954": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA04290": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA04451": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA04489": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA04539": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA04540": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA04608": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA04962": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA05975": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA06081": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA06435": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA07411": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA07498": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA07579": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA07580": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA07634": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA07642": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA07644": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA07862": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA08045": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA08065": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA08162": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA08164": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA08330": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA08338": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA08448": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA08560": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA08576": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA08587": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA08804": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA09518": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA09790": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA09826": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA09894": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA10621": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA11386": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA13197": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA13427": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA14299": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA14453": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA15368": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA15508": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA16280": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA16626": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA16709": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA16746": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA16833": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA16960": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA17203": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA17599": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA17942": {
+   "status": "fail",
+   "format": "ZSTD"
+  },
+  "PPSA18102": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA18605": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA19563": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA20397": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA20447": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA21203": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA21564": {
+   "status": "ok",
+   "format": "LZ4/ZSTD"
+  },
+  "PPSA21567": {
+   "status": "ok",
+   "format": "LZ4/ZSTD"
+  },
+  "PPSA21704": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA22327": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA22520": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA23015": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA23226": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA23372": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA23559": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA23732": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA23767": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA24266": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA24913": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA25286": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA25411": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA25991": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA26136": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA26344": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA26786": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA27366": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA27500": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA27836": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA28000": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA28180": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA28183": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA28416": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA28495": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA29617": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA30117": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA30223": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA30454": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA30490": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA30601": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA30797": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA30803": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA30839": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA30856": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA32557": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA32785": {
+   "status": "fail",
+   "format": ""
+  },
+  "PPSA32786": {
+   "status": "fail",
+   "format": ""
+  },
+  "PPSA32803": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA33286": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA33626": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA34015": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA34140": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA34299": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA34547": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA34971": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA35304": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA35399": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA35889": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA35901": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA36082": {
+   "status": "ok",
+   "format": "ZSTD"
+  },
+  "PPSA36992": {
+   "status": "ok",
+   "format": "ZSTD"
+  }
+ }
+}

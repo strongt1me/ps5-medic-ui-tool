@@ -2307,6 +2307,12 @@ void App::draw_gamedetail(Canvas& c) const {
     else if (g.needs_backport) row(St::Warn, S("games.d.fw"), S.fmt("games.d.fw_short_need", {{"req", g.required_fw}, {"fw", fw}}));
     else if (g.backport == 1) row(St::Ok, S("games.d.fw"), S.fmt("games.d.fw_short_backport", {{"req", g.required_fw}}));
     else row(St::Ok, S("games.d.fw"), S.fmt("games.d.fw_ok", {{"req", g.required_fw}}));
+    // Kompatibilitaetsliste (ZSTD/LZ4): nur Titel, die in der Liste stehen
+    if (!g.compat.empty()) {
+        const std::string fmt = g.compat_format.empty() ? std::string() : " (" + g.compat_format + ")";
+        if (g.compat == "ok") row(St::Ok, S("games.d.compat"), S("games.d.compat_ok") + fmt);
+        else row(St::Warn, S("games.d.compat"), S(g.compat == "fail" ? "games.d.compat_fail" : "games.d.compat_mixed") + fmt);
+    }
     // Dateien: schlimmster Punkt als Wert, weitere darunter
     {
         std::vector<std::pair<St, std::string>> probs;

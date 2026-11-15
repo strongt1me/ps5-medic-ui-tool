@@ -3,6 +3,7 @@
 // Programmdateien ohne Ausfuehrungsrecht (CE-107750-0), Reste abgebrochener Packvorgaenge, zu lange Image-Namen und weitere.
 #include "check.hpp"
 #include "medic/collectors.hpp"
+#include "medic/compat.hpp"
 #include "medic/exfat.hpp"
 #include "medic/fixes.hpp"
 #include "medic/history.hpp"
@@ -755,6 +756,23 @@ void misc_tests() {
         for (const auto& g : infos)
             if (g.titleid == "PPSA00249" && g.eboot_bad) found = true;
         CHECK(found, "Spiele-Ansicht: ein Titel mit Befund kommt auch jenseits der 200er-Grenze hinein");
+    }
+    {  // Kompatibilitaetsliste: Tabelle sortiert, Suche, Fakten und Spiel-Eintrag
+        for (unsigned i = 1; i < kCompatCount; ++i) CHECK(std::string(kCompatTable[i - 1].titleid) < kCompatTable[i].titleid, "Kompatibilitaet: Tabelle sortiert");
+        CHECK(find_compat("PPSA17942") && std::string(find_compat("PPSA17942")->status) == "fail", "Kompatibilitaet: bekannter Titel mit fail");
+        CHECK(find_compat("PPSA11386") && std::string(find_compat("PPSA11386")->status) == "ok", "Kompatibilitaet: bekannter Titel mit ok");
+        CHECK(find_compat("PPSA00001") == nullptr && find_compat("") == nullptr, "Kompatibilitaet: unbekannter Titel nicht in der Liste");
+        Facts f;
+        f.set("smp.titles", json::array({{{"titleid", "PPSA17942"}, {"path", "/data/homebrew/a"}}, {{"titleid", "PPSA11386"}, {"path", "/data/homebrew/b"}}, {{"titleid", "PPSA00001"}, {"path", "/data/homebrew/c"}}}));
+        Sandbox sb;
+        auto p = make_snapshot_platform(sb.dir.string());
+        collect_compat(*p, f);
+        CHECK(f.get("games.compat") && f.get("games.compat")->size() == 2 && f.get("games.compat_bad") && f.get("games.compat_bad")->size() == 1, "Kompatibilitaet: zwei Treffer, einer davon schlecht");
+        CHECK((*f.get("games.compat_bad"))[0]["desc"].get<std::string>().find("PPSA17942: fail") == 0, "Kompatibilitaet: Evidenz nennt Titel und Ergebnis");
+        bool seen = false;
+        for (const auto& g : collect_game_infos(f, {}))
+            if (g.titleid == "PPSA17942" && g.compat == "fail") seen = true;
+        CHECK(seen, "Kompatibilitaet: Spiel-Eintrag traegt das Ergebnis");
     }
 }
 

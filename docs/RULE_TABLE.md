@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Regel-Uebersicht
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.47, 85 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.48, 86 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -16,6 +16,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `db.truncated` | warning | alle | - | doc | Eine Datenbank der Systemsoftware ist kleiner, als ihr Kopf angibt (abgeschnitten), z. |
 | `errors.recurring_system_app` | info | alle | - | todo | Eine Systemanwendung (Titel NPXS…) hat im Fehlerverlauf mehrfach denselben CE-Fehlercode gemeldet. |
 | `errors.recurring_title` | warning | alle | - | todo | Der Fehlerverlauf (/system_data/priv/error/history) enthält denselben CE-Fehlercode mehrfach für denselben Titel: Der Titel startet oder... |
+| `game.compat_known_bad` | info | alle | - | community | Laut der Kompatibilitätsliste für ZSTD- und LZ4-Sicherungen läuft dieses Spiel bei Testern nicht oder nur mit widersprüchlichen Berichten... |
 | `game.eboot_invalid` | warning | alle | - | todo | Die eboot.bin eines Spielordners ist unbrauchbar: kleiner als 64 Byte oder reiner Text (z. |
 | `game.il2cpp_case` | warning | alle | `rename_case_prx` | community | Im Spielordner heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Media/Modules). |
 | `game.il2cpp_case_latent` | info | alle | `rename_case_prx` | community | Im Spielordner auf einem exFAT-/FAT-Laufwerk heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Media/... |

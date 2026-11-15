@@ -141,6 +141,12 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
             for (auto& [id, g] : games)
                 if (g.installed == 1 && g.registered < 0) g.registered = 0;
     }
+    if (const json* a = arr_of(facts, "games.compat"))
+        for (const auto& e : *a)
+            if (GameInfo* g = at(str_of(e, "titleid"))) {
+                g->compat = str_of(e, "status");
+                g->compat_format = str_of(e, "format");
+            }
     if (const json* a = arr_of(facts, "games.eboot_problems"))
         for (const auto& e : *a)
             if (GameInfo* g = at(str_of(e, "titleid"))) g->eboot_bad = true;

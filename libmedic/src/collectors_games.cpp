@@ -2,6 +2,7 @@
 // Collectors fuer Spiele (Auswahl vom 14. Nov. 2026, ampr-emu-ng, kraken-mount, Dump Forge): Laufzeit-Bibliothek und Packs im Spiel (Ordner oder Image),
 // unvollstaendige Spielordner in den Scanpfaden, Meldungen von Kraken Mount. Nur lesen; aus Images wird nur der Anfang weniger Dateien gelesen.
 #include "medic/collectors.hpp"
+#include "medic/compat.hpp"
 #include "medic/image_reader.hpp"
 #include "medic/readtail.hpp"
 
@@ -335,6 +336,29 @@ void collect_kstuff_file(const Platform& p, Facts& f) {
             return;
         }
     }
+}
+
+// games.compat[]: titleid, status ("ok", "fail", "mixed"), format -- alle Titel dieser Konsole (smp.titles, games.fw), die in der eingebetteten Kompatibilitaetsliste stehen.
+// games.compat_bad[]: davon die mit "fail" oder "mixed", dazu desc (Titel-ID, Ergebnis, Format) als Evidenz. Nur eingebaute Daten, kein Netz.
+void collect_compat(const Platform&, Facts& f) {
+    std::set<std::string> ids;
+    for (const char* key : {"smp.titles", "games.fw"})
+        if (const json* a = f.get(key); a && a->is_array())
+            for (const auto& e : *a)
+                if (e.is_object() && e.contains("titleid") && e["titleid"].is_string()) ids.insert(e["titleid"].get<std::string>());
+    json all = json::array(), bad = json::array();
+    for (const auto& id : ids) {
+        const CompatEntry* c = find_compat(id);
+        if (!c) continue;
+        json row = {{"titleid", id}, {"status", c->status}, {"format", c->format}};
+        all.push_back(row);
+        if (std::strcmp(c->status, "ok") != 0) {
+            row["desc"] = id + ": " + (std::strcmp(c->status, "fail") == 0 ? "fail" : "mixed") + (c->format[0] ? std::string(" (") + c->format + ")" : std::string());
+            bad.push_back(std::move(row));
+        }
+    }
+    if (!all.empty()) f.set("games.compat", std::move(all));
+    if (!bad.empty()) f.set("games.compat_bad", std::move(bad));
 }
 
 // games.incomplete[]: path, name, missing[] ("eboot.bin", "sce_sys/param.json"), param ("ok", "missing", "bom", "invalid", "no_titleid"). Ein Ordner direkt in einem

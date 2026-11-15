@@ -258,6 +258,10 @@
    "text": "Kraken Mount refuse un .pkg : la disposition du fichier de paquet a un trou (sparse extent), et le paquet n'obtient donc pas de tuile ; le message n'est que dans /data/krakenmount/kraken.log. Selon le message, il aide de reconstruire le paquet avec Dump Forge (--kraken stored). Une correction dans Kraken Mount lui-même est prévue dans le projet mais n'était dans aucune version. Medic ne modifie rien ici.",
    "confidence_reason": "Le message est lu dans le journal. Qu'il provienne d'une disposition avec un trou figure dans le projet Kraken Mount (issues 4, 5, 8, 9, 13, 20) ; qu'une reconstruction avec --kraken stored aide n'y a pas été vérifié sur un vrai paquet."
   },
+  "game.compat_known_bad": {
+   "text": "Selon la liste de compatibilité des sauvegardes ZSTD et LZ4, ce jeu ne fonctionne pas chez les testeurs ou donne des rapports contradictoires (preuve : ID du titre, résultat, format). Rien ne confirme qu'il en soit de même sur cette console. Si le jeu ne démarre pas : vérifiez le format de la sauvegarde, la version du jeu et le fichier d'exécution (libSceAmpr.sprx), et lisez l'entrée de la liste.",
+   "confidence_reason": "Le titre figure avec ce résultat dans la liste de compatibilité intégrée (rapports de testeurs). Medic n'a pas lancé le jeu sur cette console ; les rapports peuvent concerner une autre version ou un autre runtime."
+  },
   "game.eboot_invalid": {
    "text": "Le fichier eboot.bin d'un dossier de jeu est inutilisable : moins de 64 octets ou simple texte (p. ex. une page d'erreur enregistrée). Un eboot.bin valide commence comme ELF ou SELF. Probablement un téléchargement ou une copie échoués ; le jeu ne peut pas démarrer ainsi. Recopiez le fichier depuis la source. Medic ne vérifie que le début du fichier.",
    "confidence_reason": "La taille et les premiers octets sont lus. Que le jeu ne démarre donc pas découle du format de fichier mais n'a pas été observé sur la console de test ; les formats inconnus non textuels ne sont volontairement pas signalés."

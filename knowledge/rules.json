@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.47",
+  "db_version": "2026.11.48",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2074,6 +2074,34 @@
         "reason": {
           "de": "Die Rechte werden gelesen. Dass die Konsole eine eboot.bin ohne Ausführungsrecht nicht startet, wurde am 13. November 2026 an der Test-Konsole mit der eigenen eboot.bin beobachtet (für Module ist es nicht gemessen) und von einem Nutzer (ampr-emu-ng, Issue 41) mit einer FTP-Kopie bestätigt.",
           "en": "The permissions are read. That the console does not start an eboot.bin without execute permission was observed on the test console on 13 November 2026 with our own eboot.bin (not measured for modules) and confirmed by a user (ampr-emu-ng, issue 41) with an FTP copy."
+        }
+      }
+    },
+    {
+      "id": "game.compat_known_bad",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.compat_bad[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Laut der Kompatibilitätsliste für ZSTD- und LZ4-Sicherungen läuft dieses Spiel bei Testern nicht oder nur mit widersprüchlichen Berichten (Evidenz: Titel-ID, Ergebnis, Format). Ob es an dieser Konsole ebenso ist, ist nicht bestätigt. Wenn das Spiel nicht startet: Format der Sicherung, Version des Spiels und die Laufzeit-Datei (libSceAmpr.sprx) prüfen und in der Liste nachlesen.",
+        "en": "According to the compatibility list for ZSTD and LZ4 backups, testers report that this game does not run, or report conflicting results (evidence: title ID, result, format). Whether it is the same on this console is not confirmed. If the game does not start: check the backup format, the game version and the runtime file (libSceAmpr.sprx), and read the list entry."
+      },
+      "evidence": "games.compat_bad[].desc",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-zstd-kompatibilitaetsliste",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Der Titel steht mit diesem Ergebnis in der eingebetteten Kompatibilitätsliste (Berichte von Testern). Medic hat das Spiel an dieser Konsole nicht gestartet; die Berichte können eine andere Version oder Laufzeit betreffen.",
+          "en": "The title is listed with this result in the embedded compatibility list (tester reports). Medic did not start the game on this console; the reports may concern another version or runtime."
         }
       }
     },
