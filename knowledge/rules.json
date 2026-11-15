@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.46",
+  "db_version": "2026.11.47",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -1999,18 +1999,14 @@
       "when": {
         "all": [
           {
-            "fact": "smp.images[].ext",
-            "eq": ".exfat"
-          },
-          {
             "fact": "smp.images[].truncated",
             "eq": "1"
           }
         ]
       },
       "text": {
-        "de": "Ein .exfat-Image ist kleiner, als sein Kopf angibt (VolumeLength): Die Kopie ist unvollständig. Häufige Ursachen: abgebrochenes Kopieren, volles Laufwerk oder FAT32 (höchstens 4 GiB je Datei). Das Spiel startet dann nicht oder stürzt ab. Image erneut kopieren, am besten auf ein exFAT-Laufwerk, und die Größe mit der Quelle vergleichen. Medic ändert das Image nicht.",
-        "en": "An .exfat image is smaller than its header says (VolumeLength): the copy is incomplete. Common causes: an interrupted copy, a full drive or FAT32 (at most 4 GiB per file). The game then does not start or crashes. Copy the image again, preferably to an exFAT drive, and compare the size with the source. Medic does not change the image."
+        "de": "Ein Image (.exfat, .ffpfs oder .ffpfsc) ist kleiner, als sein Kopf angibt (VolumeLength bzw. Blockzahl mal Blockgröße): Die Kopie ist unvollständig. Häufige Ursachen: abgebrochenes Kopieren, volles Laufwerk oder FAT32 (höchstens 4 GiB je Datei). Das Spiel startet dann nicht oder stürzt ab. Image erneut kopieren, am besten auf ein exFAT-Laufwerk, und die Größe mit der Quelle vergleichen. Medic ändert das Image nicht.",
+        "en": "An image (.exfat, .ffpfs or .ffpfsc) is smaller than its header says (VolumeLength or block count times block size): the copy is incomplete. Common causes: an interrupted copy, a full drive or FAT32 (at most 4 GiB per file). The game then does not start or crashes. Copy the image again, preferably to an exFAT drive, and compare the size with the source. Medic does not change the image."
       },
       "evidence": "smp.images[].path",
       "fix": null,

@@ -1207,7 +1207,7 @@ void report_service_tests() {
         for (auto& p : full_tree(t.dir))
             if (!before.count(p)) added.push_back(p);
         const bool only_reports = std::all_of(added.begin(), added.end(), [](const std::string& p) {
-            return p == "fs/data/ps5medic" || p.rfind("fs/data/ps5medic/reports", 0) == 0;
+            return p == "fs/data/ps5medic" || p.rfind("fs/data/ps5medic/reports", 0) == 0 || p == "fs/data/ps5medic/last_facts.json";
         });
         CHECK(only_reports && std::find(added.begin(), added.end(), report_file) != added.end(), "Bericht: es kommt nur eine Datei unter /data/ps5medic/reports/ hinzu");
         CHECK(r.qr_text.find("Report: /data/ps5medic/reports/report_20261108T130000Z.md") != std::string::npos && !r.truncated, "Bericht: QR-Text nennt die Datei");
@@ -1966,6 +1966,30 @@ void error_link_tests() {
         press(a, {Button::Circle});
         CHECK(a.screen() == App::Screen::ErrorCodes, "Verweis: Kreis geht dort zur Liste");
     }
+    {  // Spiel-Detail: Quadrat schlaegt den Fehlercode des gewaehlten Grundes nach; ohne Code tut es nichts; Kreis fuehrt Befund -> Spiel zurueck
+        FakeService s2;
+        s2.errors = svc.errors;
+        s2.result.findings = {finding_mentioning("a.known", "CE-100007-1"), finding_mentioning("b.unknown", "CE-999999-9")};
+        medic::GameInfo g;
+        g.titleid = "PPSA01234";
+        g.name = "Testspiel";
+        g.findings = {0, 1};
+        s2.game_list = {g};
+        App a(s2);
+        run_check_via_ui(a, cv);
+        press(a, {Button::Circle});
+        for (int i = 0; i < 5; ++i) a.handle(Button::Down);
+        press(a, {Button::Cross, Button::Cross});
+        CHECK(a.screen() == App::Screen::GameDetail, "Spiel-Verweis: Einzelansicht offen");
+        a.render(cv);
+        press(a, {Button::Square});
+        CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.error_selected() == 7, "Spiel-Verweis: Quadrat zeigt den Eintrag zu CE-100007-1");
+        press(a, {Button::Circle, Button::Circle});
+        CHECK(a.screen() == App::Screen::GameDetail, "Spiel-Verweis: Kreis, Kreis kommt zum Spiel zurueck");
+        press(a, {Button::Down, Button::Square});
+        CHECK(a.screen() == App::Screen::GameDetail, "Spiel-Verweis: Grund ohne bekannten Code, Quadrat tut nichts");
+        a.render(cv);
+    }
     {  // Beide Sprachen, Anzeige: mit Nachschlagewerk gibt es Zeile und Taste, ohne nicht; unbekannter Code aendert nichts
         FakeService without;
         without.result = svc.result;  // gleiche Befunde, aber kein Nachschlagewerk geladen
@@ -2022,7 +2046,11 @@ void error_link_real_data_tests() {
             a.render(cv);
             press(a, {Button::Circle});
             CHECK(a.screen() == App::Screen::Detail, std::string("Verweis (Datei): ") + fixture + ": zurueck zum Befund");
-            CHECK(full_tree(t.dir) == before, std::string("Verweis (Datei): ") + fixture + ": nichts geschrieben");
+            {  // der Check-up legt nur die Fakten-Datei neu an (last_facts.json, nur auf der Konsole zum Nachsehen)
+                auto after = full_tree(t.dir);
+                after.erase("fs/data/ps5medic/last_facts.json");
+                CHECK(after == before, std::string("Verweis (Datei): ") + fixture + ": nichts geschrieben");
+            }
         }
     }
     CHECK(Strings::missing().empty(), "Verweis (Datei): keine fehlenden Texte");

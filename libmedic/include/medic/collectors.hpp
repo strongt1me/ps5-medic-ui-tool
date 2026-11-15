@@ -26,6 +26,7 @@ void collect_databases(const Platform& p, Facts& f);      // db.count, db.integr
 void collect_game_files(const Platform& p, Facts& f);    // games.case_mismatch[].{titleid,path,expected,actual,fstype,case_sensitive}
 void collect_game_runtime(const Platform& p, Facts& f);   // games.runtime[], games.pack_problems[]: libSceAmpr.sprx und Packs in Spielordnern und Images (collectors_games.cpp)
 void collect_game_folders(const Platform& p, Facts& f);   // games.incomplete[]: Ordner in Scanpfaden, die wie ein Spiel aussehen, aber unvollstaendig sind
+void collect_kstuff_file(const Platform& p, Facts& f);    // kstuff.file, kstuff.file_version (nur Information)
 void collect_kraken(const Platform& p, Facts& f);         // kraken.log_present, kraken.sparse_extent[]: Meldungen aus /data/krakenmount/kraken.log
 void collect_leftovers(const Platform& p, Facts& f);       // leftovers.files[].{path,name,size,is_dir,root}: Reste abgebrochener Kopier-/Packvorgaenge in den Scanpfaden
 

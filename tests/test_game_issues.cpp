@@ -6,6 +6,7 @@
 #include "medic/exfat.hpp"
 #include "medic/fixes.hpp"
 #include "medic/history.hpp"
+#include "medic/games.hpp"
 #include "medic/image_reader.hpp"
 #include "medic/posix_fs.hpp"
 #include "medic/rules.hpp"
@@ -725,10 +726,43 @@ void nanodns_tests() {
     CHECK(pr && pr->dump().find("geheim") == std::string::npos, "nanoDNS: keine Domain in den Fakten");
 }
 
+// kstuff-Datei aus dem Payload Manager (nur Information) und die 200-Titel-Grenze der Spiele-Ansicht
+void misc_tests() {
+    {
+        Sandbox sb;
+        spit(sb.real("/data/pldmgr/autoload.txt"), "local/kstuff1\n!3000\nlocal/shadowmountplus\n");
+        spit(sb.real("/data/pldmgr/payloads/local/kstuff1/kstuff1.13-fpkg-dr-test8-rest-fast.elf"), "elf");
+        spit(sb.real("/data/pldmgr/payloads/local/kstuff1/meta.json"), "{}");
+        auto p = make_snapshot_platform(sb.dir.string());
+        Facts f;
+        collect_kstuff_file(*p, f);
+        CHECK(f.get("kstuff.file") && *f.get("kstuff.file") == "kstuff1.13-fpkg-dr-test8-rest-fast.elf" && f.get("kstuff.file_version") && *f.get("kstuff.file_version") == "1.13",
+              "kstuff: Datei und Version aus dem Dateinamen");
+        CHECK(f.get("kstuff.version") == nullptr, "kstuff: die gepruefte Version bleibt unbekannt (keine Regel stuetzt sich auf den Dateinamen)");
+    }
+    {  // 250 Titel, einer mit kritischem Befund ganz hinten: er faellt nicht heraus
+        Facts f;
+        json titles = json::array();
+        for (int i = 0; i < 250; ++i) {
+            char id[16];
+            std::snprintf(id, sizeof id, "PPSA%05d", i);
+            titles.push_back({{"titleid", id}, {"path", std::string("/data/homebrew/") + id}});
+        }
+        f.set("smp.titles", titles);
+        f.set("games.eboot_problems", json::array({{{"titleid", "PPSA00249"}, {"path", "/x"}, {"reason", "text"}}}));
+        const auto infos = collect_game_infos(f, {});
+        bool found = false;
+        for (const auto& g : infos)
+            if (g.titleid == "PPSA00249" && g.eboot_bad) found = true;
+        CHECK(found, "Spiele-Ansicht: ein Titel mit Befund kommt auch jenseits der 200er-Grenze hinein");
+    }
+}
+
 }  // namespace
 
 void game_issue_tests() {
     chmod_tests();
+    misc_tests();
     nanodns_tests();
     leftover_tests();
     long_name_tests();

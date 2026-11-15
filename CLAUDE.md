@@ -50,3 +50,4 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 - Erst Phase 0 aus `docs/ROADMAP.md` (Host-Kern + Fixtures), **dann** die PS5-Oberfläche.
 - Für jede neue Regel: Fixture anlegen, Test schreiben, Regel in `rules.json`, Quelle verlinken.
 - Kleine Commits, nach jeder Phase kurzer Status an Marc.
+- **Keine Testspiele in Scanpfaden der Konsole** (Marc, 15. Nov. 2026): ShadowMount+ hängt jeden Ordner mit `eboot.bin` und `param.json` aus `/data/homebrew` usw. ein; ihn dort per FTP zu löschen stürzte die Konsole ab. Tests ohne Spielmarken oder außerhalb der Scanpfade machen, vorher ShadowMount+ anhalten, nichts im Scanpfad löschen.

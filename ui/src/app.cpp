@@ -776,6 +776,7 @@ void App::begin_fix(int index, Screen origin) {
     }
     fix_origin_ = origin;
     prev_top_ = 0;
+    prev_page_ = 2;
     screen_ = Screen::FixPreview;
 }
 
@@ -845,10 +846,10 @@ void App::handle(Button b) {
             else if (b == Button::Circle) screen_ = detail_from_game_ ? Screen::GameDetail : Screen::Findings;
             break;
         case Screen::FixPreview:
-            if (b == Button::Up || b == Button::L1) {  // viele Aenderungen: blaettern (Kreuz wendet immer ALLE an, die Vorschau muss sie zeigen koennen); L1/R1 springen um 2
-                prev_top_ = std::max(0, prev_top_ - (b == Button::L1 ? 2 : 1));
+            if (b == Button::Up || b == Button::L1) {  // viele Aenderungen: blaettern (Kreuz wendet immer ALLE an, die Vorschau muss sie zeigen koennen); L1/R1 springen eine Seite
+                prev_top_ = std::max(0, prev_top_ - (b == Button::L1 ? prev_page_ : 1));
             } else if (b == Button::Down || b == Button::R1) {
-                prev_top_ = std::min(std::max(static_cast<int>(plan_.changes.size()) - 1, 0), prev_top_ + (b == Button::R1 ? 2 : 1));
+                prev_top_ = std::min(std::max(static_cast<int>(plan_.changes.size()) - 1, 0), prev_top_ + (b == Button::R1 ? prev_page_ : 1));
             } else if (b == Button::Cross && !plan_.empty()) {
                 const medic::ApplyResult r = svc_.apply_fix(plan_);
                 detail_from_game_ = false;
@@ -919,6 +920,17 @@ void App::handle(Button b) {
                         top_ = std::clamp(sel_ - kListVisible + 1, 0, std::max(static_cast<int>(result_.findings.size()) - kListVisible, 0));
                         detail_from_game_ = true;
                         screen_ = Screen::Detail;
+                    }
+                }
+            } else if (b == Button::Square) {  // Fehlercode des gewaehlten Grundes nachschlagen (Kreis kommt zum Befund, dort wieder zum Spiel)
+                if (n > 0) {
+                    const std::size_t idx = games_[static_cast<std::size_t>(game_sel_)].findings[static_cast<std::size_t>(gd_sel_)];
+                    if (idx < result_.findings.size() && find_error_index(errors_, finding_text(result_.findings[idx])) >= 0) {
+                        sel_ = static_cast<int>(idx);
+                        top_ = std::clamp(sel_ - kListVisible + 1, 0, std::max(static_cast<int>(result_.findings.size()) - kListVisible, 0));
+                        detail_from_game_ = true;
+                        screen_ = Screen::Detail;
+                        open_error_for_finding();
                     }
                 }
             } else if (b == Button::Circle) screen_ = Screen::GameList;
@@ -1956,7 +1968,7 @@ void App::draw_fix_preview(Canvas& c) const {
         if (pv.changed.size() > 6) small().draw(c, M + 36, ty, S.fmt("fixprev.diff_more", {{"n", std::to_string(pv.changed.size() - 6)}}), kDim);
         y += ph + 14;
     }
-    (void)shown;
+    prev_page_ = std::max(shown, 1);  // so viele Aenderungen zeigte diese Seite: L1/R1 springen genau so weit
     if (plan_.changes.size() > 1 && (prev_top_ > 0 || last_shown < plan_.changes.size()))
         text_right(c, small(), W - M, 192,
                    S.fmt("fixprev.range", {{"from", std::to_string(prev_top_ + 1)}, {"to", std::to_string(last_shown)}, {"n", std::to_string(plan_.changes.size())}}), kText);
@@ -2380,6 +2392,10 @@ void App::draw_gamedetail(Canvas& c) const {
     if (n > 1) hints.emplace_back(PadGlyph::UpDown, S("common.select"));
     if (total > 1) hints.emplace_back(PadGlyph::Shoulders, S("games.browse"));
     if (n > 0) hints.emplace_back(PadGlyph::Cross, S("games.open_finding"));
+    if (n > 0 && gd_sel_ >= 0 && gd_sel_ < n) {
+        const std::size_t fi = g.findings[static_cast<std::size_t>(gd_sel_)];
+        if (fi < result_.findings.size() && find_error_index(errors_, finding_text(result_.findings[fi])) >= 0) hints.emplace_back(PadGlyph::Square, S("common.lookup"));
+    }
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }

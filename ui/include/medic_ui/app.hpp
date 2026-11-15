@@ -163,6 +163,7 @@ private:
     mutable bool running_rendered_ = false;  // der Bildschirm "Pruefe..." muss mindestens einmal gezeichnet worden sein
     int sel_ = 0, top_ = 0;
     int prev_top_ = 0;  // Reparatur-Vorschau: erste angezeigte Aenderung (blaettern)
+    mutable int prev_page_ = 2;  // Anzahl der Aenderungen auf der zuletzt gezeichneten Seite (L1/R1 springen so weit)
 
     medic::FixPlan plan_;
     std::vector<Preview> previews_;

@@ -211,7 +211,7 @@
    "confidence_reason": "Vengono lette la temperatura attuale e la mediana delle misurazioni precedenti. La soglia di 12 °C è una nostra ipotesi; le misurazioni precedenti possono essere state fatte con un carico o un ambiente diversi."
   },
   "smp.image_truncated": {
-   "text": "Un'immagine .exfat è più piccola di quanto indica la sua intestazione (VolumeLength): la copia è incompleta. Cause comuni: copia interrotta, unità piena o FAT32 (al massimo 4 GiB per file). Il gioco allora non si avvia o va in crash. Copia di nuovo l'immagine, meglio su un'unità exFAT, e confronta la dimensione con la fonte. Medic non modifica l'immagine.",
+   "text": "Un'immagine (.exfat, .ffpfs o .ffpfsc) è più piccola di quanto indica la sua intestazione (VolumeLength o numero di blocchi per dimensione del blocco): la copia è incompleta. Cause comuni: copia interrotta, unità piena o FAT32 (al massimo 4 GiB per file). Il gioco allora non si avvia o va in crash. Copia di nuovo l'immagine, meglio su un'unità exFAT, e confronta la dimensione con la fonte. Medic non modifica l'immagine.",
    "confidence_reason": "Dimensione del file e VolumeLength vengono letti; la lunghezza del file system è definita nella specifica exFAT. Che un gioco vada in crash per questo è dedotto e non osservato sulla console di prova."
   },
   "smp.image_empty": {

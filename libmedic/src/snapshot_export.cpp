@@ -366,6 +366,25 @@ public:
                 }
                 write(path, head.size() > e.size ? head.substr(0, static_cast<std::size_t>(e.size)) : head);
             } else if (lower_ext(e.name) == ".ffpfs" || lower_ext(e.name) == ".ffpfsc" || lower_ext(e.name) == ".ffpkg") {
+                // PFS mit gueltigem Kopf: Ersatzkopf mit 4096-Byte-Bloecken, 1 Block (vollstaendig) bzw. 2 Bloecke (abgeschnitten) bei 4096 Byte Dateigroesse,
+                // damit die Laengenpruefung (smp.image_truncated) nach dem Export dasselbe Ergebnis liefert
+                std::string head;
+                if (lower_ext(e.name) != ".ffpkg" && fs_.read_range(path, 0, 64, head) && head.size() == 64) {
+                    auto le = [&](std::size_t off, int n) {
+                        std::uint64_t v = 0;
+                        for (int i = n - 1; i >= 0; --i) v = (v << 8) | static_cast<unsigned char>(head[off + static_cast<std::size_t>(i)]);
+                        return v;
+                    };
+                    const std::uint64_t bs = le(32, 4), nd = le(56, 8);
+                    if (le(8, 4) == 0x01332A0Bu && bs >= 4096 && bs <= (1u << 24) && (bs & (bs - 1)) == 0 && nd > 0 && nd < (1ull << 40)) {
+                        std::string stub(4096, '\0');
+                        stub[8] = 0x0B; stub[9] = 0x2A; stub[10] = 0x33; stub[11] = 0x01;
+                        stub[33] = 0x10;                                   // Blockgroesse 4096 = 0x1000, Little-Endian ab Offset 32
+                        stub[56] = e.size < nd * bs ? 2 : 1;               // Blockzahl
+                        write(path, stub);
+                        continue;
+                    }
+                }
                 write(path, std::string(static_cast<std::size_t>(std::min<std::uint64_t>(e.size, 512)), '\0'));  // nur die Groessenklasse (leer oder nicht) bleibt erhalten
             } else {
                 write(path, std::string());

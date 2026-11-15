@@ -1098,6 +1098,23 @@ void collect_shadowmount(const Platform& p, Facts& f) {
                     img["truncated"] = e.size < xi.volume_bytes ? 1 : 0;  // Datei kleiner als das beschriebene Dateisystem: unvollstaendige Kopie
                 }
             }
+            if (e.ext == ".ffpfs" || e.ext == ".ffpfsc") {
+                // PFS-Behaelter: Magic 0x1332A0B @8, Blockgroesse u32 @32, Blockzahl u64 @56; ein gebautes Abbild ist genau Blockzahl mal Blockgroesse gross
+                // (an zwei echten .ffpfsc der Test-Konsole am 15. Nov. 2026 nachgerechnet: 923321 x 65536 und 57295 x 65536 Byte; ebenso im Converter, 9 von 9 gebaut)
+                std::string head;
+                if (fs.read_range(e.path, 0, 64, head) && head.size() == 64) {
+                    auto le = [&](std::size_t off, int n) {
+                        std::uint64_t v = 0;
+                        for (int i = n - 1; i >= 0; --i) v = (v << 8) | static_cast<unsigned char>(head[off + static_cast<std::size_t>(i)]);
+                        return v;
+                    };
+                    const std::uint64_t bs = le(32, 4), nd = le(56, 8);
+                    if (le(8, 4) == 0x01332A0Bu && bs >= 4096 && bs <= (1u << 24) && (bs & (bs - 1)) == 0 && nd > 0 && nd < (1ull << 40)) {
+                        img["volume_bytes"] = nd * bs;
+                        img["truncated"] = e.size < nd * bs ? 1 : 0;
+                    }
+                }
+            }
             if (e.ext != ".dat") {
                 img["tiny"] = e.size < 512 ? 1 : 0;  // kleiner als ein Kopf: leer oder abgebrochen
                 // Namenslaenge: ShadowMount+ haengt das Image unter /mnt/shadowmnt/<Name>_<8 Hex> ein, der Kernel erlaubt 88 Byte (MNAMELEN). Der Name ohne Endung darf
@@ -1824,7 +1841,7 @@ void collect_app_registry(const Platform& p, Facts& f) {
 Facts collect_all(const Platform& p, const std::function<void(int, int)>& progress) {
     Facts f;
     json failed = json::array();
-    constexpr int kSteps = 27;  // 26 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
+    constexpr int kSteps = 28;  // 27 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
     int done = 0;
     // Jeder Collector einzeln: ein Fehler (z. B. beschaedigtes JSON in einer von Hand bearbeiteten Datei) beendet nicht den ganzen Check-up,
     // sondern wird als collector.failed vermerkt; die uebrigen Fakten bleiben gueltig (Audit 12. Nov. 2026)
@@ -1860,6 +1877,7 @@ Facts collect_all(const Platform& p, const std::function<void(int, int)>& progre
     MEDIC_RUN(collect_game_runtime);
     MEDIC_RUN(collect_game_folders);
     MEDIC_RUN(collect_kraken);
+    MEDIC_RUN(collect_kstuff_file);
     MEDIC_RUN(collect_baseline);
     MEDIC_RUN(collect_selftest);
     MEDIC_RUN(collect_fan_controller);

@@ -52,11 +52,14 @@ bool contains_word(const std::string& hay, const std::string& needle, const std:
 
 std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<Finding>& findings) {
     std::map<std::string, GameInfo> games;
+    // Die Obergrenze gilt nur fuer die Auflistung der Titel (installiert, in Scanpfaden). Ein Titel mit Befund oder Fehlerspur kommt immer hinein (force), sonst
+    // fehlte bei einer grossen Sammlung ein Spiel mit kritischem Befund, je nach Reihenfolge der Fakten.
+    bool force = false;
     auto at = [&](const std::string& id) -> GameInfo* {
         if (id.empty()) return nullptr;
         auto it = games.find(id);
         if (it == games.end()) {
-            if (games.size() >= kMaxGames) return nullptr;
+            if (!force && games.size() >= kMaxGames) return nullptr;
             it = games.emplace(id, GameInfo{}).first;
             it->second.titleid = id;
         }
@@ -100,6 +103,7 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
             s.dup_count = e.value("dup_count", 1);
             g->sources.push_back(std::move(s));
         }
+    force = true;
     // Ein Image erkennt man am Eintrag in smp.images (Pfad gleich); das ist genauer als die Endung.
     if (const json* imgs = arr_of(facts, "smp.images"))
         for (auto& [id, g] : games)

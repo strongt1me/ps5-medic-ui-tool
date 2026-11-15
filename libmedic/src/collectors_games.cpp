@@ -6,6 +6,7 @@
 #include "medic/readtail.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
@@ -284,6 +285,9 @@ void collect_game_runtime(const Platform& p, Facts& f) {
     std::set<std::string> done;
     int attempts = 0, skipped = 0;
     constexpr int kMaxSources = 60;  // eine Quelle kostet bei einem Image das Oeffnen und einige Lesezugriffe; Fehlversuche zaehlen mit
+    // Zeitbudget (USB-Platten und PFSC-Images koennen langsam sein): danach bleibt der Rest ungeprueft und steht in games.runtime_skipped
+    const auto started = std::chrono::steady_clock::now();
+    constexpr auto kBudget = std::chrono::seconds(8);
     if (titles && titles->is_array())
         for (const auto& t : *titles) {
             if (!t.is_object() || !t.contains("path") || !t["path"].is_string() || !t.contains("titleid") || !t["titleid"].is_string()) continue;
@@ -291,7 +295,7 @@ void collect_game_runtime(const Platform& p, Facts& f) {
             if (!done.insert(path).second) continue;
             const bool is_image = image_paths.count(path) != 0;
             if (!is_image && !fs.is_dir(path)) continue;
-            if (attempts >= kMaxSources) {
+            if (attempts >= kMaxSources || std::chrono::steady_clock::now() - started > kBudget) {
                 ++skipped;
                 continue;
             }
@@ -308,6 +312,29 @@ void collect_game_runtime(const Platform& p, Facts& f) {
     f.set("games.runtime", std::move(runtime));
     f.set("games.pack_problems", std::move(problems));
     f.set("games.runtime_skipped", skipped);  // so viele Quellen blieben ungeprueft (Grenze kMaxSources): "nicht gefunden" sagt dann nichts
+}
+
+// kstuff.file, kstuff.file_version: die kstuff-Datei, die der Payload Manager laedt (Eintrag mit "kstuff" in /data/pldmgr/autoload.txt, Datei im Ordner
+// /data/pldmgr/payloads/<Eintrag>/). Die Version steht nur im Dateinamen ("kstuff1.13-fpkg-dr-test8-rest-fast.elf") und ist keine gepruefte Angabe; es sind
+// Forks mit eigener Zaehlung dabei. Deshalb nur Fakten zur Information (last_facts.json), keine Regel stuetzt sich darauf (kstuff.version bleibt unbekannt).
+void collect_kstuff_file(const Platform& p, Facts& f) {
+    std::string list;
+    if (!p.fs().read_file("/data/pldmgr/autoload.txt", list)) return;
+    std::istringstream in(list);
+    std::string line;
+    while (std::getline(in, line)) {
+        while (!line.empty() && (line.back() == '\r' || line.back() == ' ')) line.pop_back();
+        if (line.empty() || line[0] == '!' || lower(line).find("kstuff") == std::string::npos || line.find("..") != std::string::npos) continue;
+        for (const auto& e : p.fs().list_dir("/data/pldmgr/payloads/" + line)) {
+            const std::string l = lower(e.name);
+            if (e.is_dir || l.size() < 5 || l.compare(l.size() - 4, 4, ".elf") != 0) continue;
+            f.set("kstuff.file", e.name);
+            static const std::regex ver(R"(([0-9]+\.[0-9]+(?:\.[0-9]+)?))");
+            std::smatch m;
+            if (std::regex_search(e.name, m, ver)) f.set("kstuff.file_version", m[1].str());
+            return;
+        }
+    }
 }
 
 // games.incomplete[]: path, name, missing[] ("eboot.bin", "sce_sys/param.json"), param ("ok", "missing", "bom", "invalid", "no_titleid"). Ein Ordner direkt in einem

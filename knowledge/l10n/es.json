@@ -211,7 +211,7 @@
    "confidence_reason": "Se leen la temperatura actual y la mediana de las mediciones anteriores. El umbral de 12 °C es una suposición nuestra; las mediciones anteriores pueden haberse hecho con otra carga o en otro entorno."
   },
   "smp.image_truncated": {
-   "text": "Una imagen .exfat es más pequeña de lo que indica su cabecera (VolumeLength): la copia está incompleta. Causas habituales: copia interrumpida, unidad llena o FAT32 (máx. 4 GiB por archivo). El juego entonces no arranca o se cierra. Copia la imagen de nuevo, mejor a una unidad exFAT, y compara el tamaño con el origen. Medic no modifica la imagen.",
+   "text": "Una imagen (.exfat, .ffpfs o .ffpfsc) es más pequeña de lo que indica su cabecera (VolumeLength o número de bloques por tamaño de bloque): la copia está incompleta. Causas habituales: copia interrumpida, unidad llena o FAT32 (máx. 4 GiB por archivo). El juego entonces no arranca o se cierra. Copia la imagen de nuevo, mejor a una unidad exFAT, y compara el tamaño con el origen. Medic no modifica la imagen.",
    "confidence_reason": "Se leen el tamaño del archivo y VolumeLength; la longitud del sistema de archivos está definida en la especificación de exFAT. Que por eso un juego se cierre se deduce y no se observó en la consola de prueba."
   },
   "smp.image_empty": {

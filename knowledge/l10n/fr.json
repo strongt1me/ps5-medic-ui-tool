@@ -211,7 +211,7 @@
    "confidence_reason": "La température actuelle et la médiane des mesures précédentes sont lues. Le seuil de 12 °C est notre propre hypothèse ; les mesures précédentes ont pu être prises sous une autre charge ou dans un autre environnement."
   },
   "smp.image_truncated": {
-   "text": "Une image .exfat est plus petite que ne l'indique son en-tête (VolumeLength) : la copie est incomplète. Causes courantes : copie interrompue, disque plein ou FAT32 (4 GiB au plus par fichier). Le jeu ne démarre alors pas ou plante. Recopiez l'image, de préférence sur un disque exFAT, et comparez la taille avec la source. Medic ne modifie pas l'image.",
+   "text": "Une image (.exfat, .ffpfs ou .ffpfsc) est plus petite que ne l'indique son en-tête (VolumeLength ou nombre de blocs fois taille de bloc) : la copie est incomplète. Causes courantes : copie interrompue, disque plein ou FAT32 (4 GiB au plus par fichier). Le jeu ne démarre alors pas ou plante. Recopiez l'image, de préférence sur un disque exFAT, et comparez la taille avec la source. Medic ne modifie pas l'image.",
    "confidence_reason": "La taille du fichier et VolumeLength sont lus ; la longueur du système de fichiers est définie dans la spécification exFAT. Qu'un jeu plante à cause de cela est déduit et non observé sur la console de test."
   },
   "smp.image_empty": {

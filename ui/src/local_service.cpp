@@ -3,6 +3,7 @@
 
 #include "medic/collectors.hpp"
 #include "medic/history.hpp"
+#include "medic/jsondump.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -105,6 +106,16 @@ CheckResult LocalService::run_check() {
         sc.resolved = r.resolved;
         sc.metrics = r.metrics;
         saved = medic::save_check(p_, sc) && saved;
+    }
+    // Die Fakten zu Spielen, Resten, nanoDNS, Kraken und kstuff dieses Check-ups (nur auf der Konsole, nicht im Bericht): zeigen, was Medic gelesen hat, auch wenn
+    // kein Befund entstand (Laufzeit-Version in Images, Pack-Zustand, Beleg-Zeilen)
+    if (saved && p_.fs_rw() && p_.fs().is_dir("/data/ps5medic")) {  // nur auf der Konsole (Medic-Ordner vorhanden) und zusammen mit dem gespeicherten Check-up
+        nlohmann::json out = nlohmann::json::object();
+        for (const char* k : {"games.runtime", "games.pack_problems", "games.noexec", "games.incomplete", "games.runtime_skipped", "leftovers.files", "nanodns.log.problems",
+                              "kraken.log_present", "kraken.sparse_extent", "kstuff.file", "kstuff.file_version"})
+            if (const nlohmann::json* v = facts_.get(k)) out[k] = *v;
+        out["ts"] = now;
+        p_.fs_rw()->write_file("/data/ps5medic/last_facts.json", medic::dump_safe(out, 1) + "\n");
     }
     r.history_saved = saved;
     last_findings_ = r.findings;
