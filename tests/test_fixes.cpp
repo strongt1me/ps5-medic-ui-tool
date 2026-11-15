@@ -473,10 +473,18 @@ json comparable_facts(const Facts& f) {
 // enthaelt aber nur leere Dateien und laesst /user/app weg (siehe snapshot_export.cpp).
 constexpr const char* kLiveOnlyRule = "storage.oversized_reservation";
 
+// Ebenso nur live auswertbar: Regeln, die den INHALT von Dateien brauchen (Version und Marken der Laufzeit-Bibliothek, Kopf und Volumes der Pack-Indizes,
+// Meldungen in kraken.log); der Export legt Spielordner nur als Namen an.
+bool live_only(const std::string& rule) {
+    static const std::set<std::string> rules = {"storage.oversized_reservation", "game.pack_runtime_mismatch", "smp.emulator_update_replaces_runtime", "game.pack_no_emu_index",
+                                                "game.ng_save_risk", "game.pack_incomplete", "kraken.pkg_sparse_extent", "game.incomplete_folder"};  // incomplete_folder: braucht sce_module, das der Export nicht anlegt
+    return rules.count(rule) != 0;
+}
+
 std::string findings_summary(const std::vector<Finding>& fs_) {
     std::string s;
     for (auto& f : fs_) {
-        if (f.rule_id == kLiveOnlyRule) continue;
+        if (live_only(f.rule_id)) continue;
         s += f.rule_id + "|" + f.fix + "|";
         for (auto e : f.evidence) {
             // Der Export ersetzt den Titel eines Spielstands ("<ID> <Name> (<Titel>)") durch einen Platzhalter: er gehoert nicht in einen Export (Datenschutz)

@@ -2,7 +2,7 @@
   "_license": "SPDX-License-Identifier: GPL-3.0-or-later (wie knowledge/rules.json; JSON kennt keine Kommentare)",
   "_note": "Nachschlagewerk fuer Fehlercodes: nur lesen und erklaeren, nichts wird veraendert. Jeder Eintrag nennt seine Quelle. level doc = Sony-Hilfeseite (am 9., 11. und 13. Nov. 2026 gegen die Seiten geprueft), community = keine Sony-Seite, nur Community-Angaben. Eintraege nach id sortiert. Schema: libmedic/src/error_codes.cpp",
   "schema_version": 1,
-  "db_version": "2026.11.17",
+  "db_version": "2026.11.18",
   "codes": [
     {
       "id": "0x80268001",
@@ -894,10 +894,12 @@
       },
       "notes": {
         "de": [
-          "Laut Sony löscht „Repair Console Storage“ keine Daten, „Reset PS5“ alle Benutzerdaten. Zu „Rebuild Database“ sagt Sony nichts zum Datenverlust."
+          "Laut Sony löscht „Repair Console Storage“ keine Daten, „Reset PS5“ alle Benutzerdaten. Zu „Rebuild Database“ sagt Sony nichts zum Datenverlust.",
+          "Medic-Hinweis (nicht von Sony): Auf einer gejailbreakten Konsole kann dieser Fehler von einem Spielordner kommen, dessen Programmdateien (eboot.bin, Module) kein Ausführungsrecht haben, zum Beispiel 0666 statt 0777 nach dem Kopieren per FTP (ampr-emu-ng, Issue 41). Der Check-up prüft das (Regel game.no_exec_permission); die Reparatur setzt die Rechte auf 0777."
         ],
         "en": [
-          "According to Sony, “Repair Console Storage” erases no data and “Reset PS5” deletes all user data. For “Rebuild Database” Sony says nothing about data loss."
+          "According to Sony, “Repair Console Storage” erases no data and “Reset PS5” deletes all user data. For “Rebuild Database” Sony says nothing about data loss.",
+          "Medic note (not from Sony): On a jailbroken console this error can come from a game folder whose program files (eboot.bin, modules) have no execute permission, for example 0666 instead of 0777 after copying over FTP (ampr-emu-ng, issue 41). The check-up looks for this (rule game.no_exec_permission); the fix sets the permissions to 0777."
         ]
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-107750-0/",
@@ -1132,6 +1134,14 @@
         "en": [
           "Update the game.",
           "For more help Sony points to “PlayStation Repairs”."
+        ]
+      },
+      "notes": {
+        "de": [
+          "Medic-Hinweis (nicht von Sony, nach Berichten): Bei Homebrew-Spielen kann die Laufzeit ampr-emu-ng dahinterstecken: Der Fehler erscheint beim Speichern oder Beenden mit den Fassungen 0.3.5 und 0.4.0 (ampr-emu-ng, Issues 60, 63, 64). Der Check-up liest die Version aus der libSceAmpr.sprx (Regel game.ng_save_risk) und meldet gepackte Spiele ohne ampr_emu.index (Regel game.pack_no_emu_index)."
+        ],
+        "en": [
+          "Medic note (not from Sony, based on reports): For homebrew games the runtime ampr-emu-ng can be behind it: the error appears when saving or quitting with builds 0.3.5 and 0.4.0 (ampr-emu-ng, issues 60, 63, 64). The check-up reads the version from the libSceAmpr.sprx (rule game.ng_save_risk) and reports packed games without an ampr_emu.index (rule game.pack_no_emu_index)."
         ]
       },
       "source": "https://www.playstation.com/en-us/support/error-codes/ps5/ce-108255-1/",

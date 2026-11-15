@@ -218,6 +218,46 @@
    "text": "Un'immagine (.exfat, .ffpfs o .ffpfsc) è più piccola di 512 byte, quindi è vuota o è solo un resto dopo un'interruzione, e non può essere montata. Copiala o costruiscila di nuovo. La riparazione sposta il file nella cartella nascosta .medic_broken accanto al file (mai eliminato, l'annullamento lo riporta). Se è in corso un trasferimento verso la console, lascialo prima finire.",
    "confidence_reason": "La dimensione viene letta; un file system di certo non sta in meno di 512 byte. Come ShadowMount+ tratti tali file non è stato osservato sulla console di prova."
   },
+  "game.no_exec_permission": {
+   "text": "I file programma di un gioco (eboot.bin, moduli) non hanno il permesso di esecuzione, ad esempio 0666 invece di 0777. La console non avvia questi file e segnala CE-107750-0. Succede spesso copiando via FTP, a seconda del server FTP. La riparazione imposta i file interessati a 0777; l'annullamento ripristina i vecchi permessi. Il contenuto dei file resta intatto.",
+   "confidence_reason": "I permessi vengono letti. Il fatto che la console non avvii un file senza permesso di esecuzione è stato osservato il 13 novembre 2026 sulla console di test con la nostra eboot.bin e confermato da un utente (ampr-emu-ng, issue 41) con una copia FTP."
+  },
+  "game.leftover_parts": {
+   "text": "In un percorso di scansione ci sono resti di copie o impacchettamenti interrotti (.part, .tmp, .teil, .neu, .unvollstaendig). Occupano spazio, ShadowMount+ li ignora e un nuovo impacchettamento può fallire a causa loro. Se è in corso un trasferimento o un impacchettamento, aspetta prima. La riparazione li sposta nella cartella nascosta .medic_broken accanto (mai eliminati, l'annullamento li riporta).",
+   "confidence_reason": "I nomi dei file vengono letti. Che si tratti di resti di operazioni interrotte deriva dai modelli dei nomi e dalla descrizione nel progetto Dump Forge (issue 15); Medic non sa se è in corso un'operazione."
+  },
+  "smp.image_name_too_long": {
+   "text": "Il nome file di un'immagine è troppo lungo per ShadowMount+: senza estensione sono ammessi al massimo 63 byte (58 per .ffpfsc), perché il nome di montaggio con il suo suffisso deve stare in 88 byte. Altrimenti l'immagine non viene montata anche se è integra. La riparazione accorcia il nome nella stessa cartella e mantiene l'ID del titolo; l'annullamento lo ripristina.",
+   "confidence_reason": "Lunghezza ed estensione vengono lette. Il limite (63 byte, 58 per .ffpfsc) è dedotto dalla costante del kernel per i nomi di montaggio (88 byte) e da Dump Forge e dal convertitore; non è stato misurato su una console."
+  },
+  "game.pack_runtime_mismatch": {
+   "text": "Un gioco con file impacchettati (ampr_zstd.index o ampr_assets.index) non ha la libreria di runtime adatta: fakelib/libSceAmpr.sprx manca, è l'originale di Sony o, per un pack zstd, la versione di Drakmor, che non sa leggere zstd. Il gioco allora non si avvia o si blocca presto. Metti una versione release di ampr-emu-ng (non il file di debug) in fakelib/libSceAmpr.sprx e disattiva gli aggiornamenti degli emulatori in ShadowMount+. Medic qui non modifica nulla.",
+   "confidence_reason": "Il runtime viene riconosciuto dal suo testo (verificato su file di ampr-emu-ng 0.3.4 e 0.4.0 e di ampr_emu 0.4.2.1). Che un pack zstd sia letto solo da ampr-emu-ng è scritto nella documentazione di Dump Forge; non è stato riprodotto su questa console."
+  },
+  "smp.emulator_update_replaces_runtime": {
+   "text": "ShadowMount+ ha attivato gli aggiornamenti degli emulatori e un gioco ha pack zstd. Con gli aggiornamenti attivi, ShadowMount+ sostituisce la libSceAmpr.sprx nel gioco con la propria versione; ma un pack zstd è letto solo da ampr-emu-ng, e il gioco non si avvia o si blocca. La riparazione disattiva update_enabled e auto_update_ampr (backup, annullamento). Poi salva in ShadowMount+ e, se il file è già stato sostituito, rimetti il file di ampr-emu-ng in fakelib. Gli aggiornamenti degli emulatori per altri giochi (DLC, PlayGo) vengono così persi.",
+   "confidence_reason": "Le impostazioni e i pack vengono letti. Che ShadowMount+ sostituisca la libreria con gli aggiornamenti attivi è scritto nella documentazione di Dump Forge e in diversi rapporti nel progetto ampr-emu-ng (issue 50, 53, 54, 55); non è stato riprodotto su questa console."
+  },
+  "game.pack_no_emu_index": {
+   "text": "Un gioco con pack non ha ampr_emu.index. Dump Forge la scrive per ogni gioco impacchettato (elenca tutti i file, sciolti e impacchettati); senza di essa il runtime non conosce i file e il gioco può bloccarsi o rimanere fermo durante il caricamento. Impacchetta di nuovo il gioco con Dump Forge o ripristina il file dal pack originale. Medic qui non modifica nulla.",
+   "confidence_reason": "L'assenza del file viene letta. Che Dump Forge la scriva sempre è scritto nella sua documentazione; che un gioco non si avvii senza di essa non è stato osservato."
+  },
+  "game.ng_save_risk": {
+   "text": "Nel gioco c'è una versione di ampr-emu-ng (0.3.5 o 0.4.0, release) per la quale gli utenti segnalano problemi di salvataggio, e la console ha già registrato CE-108255-1 o CE-107112-2 per questo gioco. Ciò è compatibile con un errore durante il salvataggio, il caricamento o l'uscita. Secondo il progetto, una versione più recente (prima in beta) lo risolve. Metti un file ampr-emu-ng più recente in fakelib/libSceAmpr.sprx oppure avvia il gioco non impacchettato. Il nesso non è dimostrato.",
+   "confidence_reason": "La versione viene letta dalla libreria. Che queste versioni causino problemi nel salvataggio si basa su rapporti nel progetto ampr-emu-ng (issue 60, 63, 64) e non è stato riprodotto su questa console."
+  },
+  "game.pack_incomplete": {
+   "text": "I file del pack zstd di un gioco sono incompleti: una parte (ampr_zstd-NNN.pak) manca, non ha la dimensione indicata nell'indice, oppure ampr_zstd.index è troncato. Il runtime non legge mai le parti mancanti; il gioco si blocca o resta fermo durante il caricamento. Copia di nuovo i file (meglio su un'unità exFAT, FAT32 consente al massimo 4 GiB per file) e confronta le dimensioni con la sorgente. Medic qui non modifica nulla.",
+   "confidence_reason": "Numero e dimensione dei file vengono letti e confrontati con la struttura del file indice descritta nella documentazione di Dump Forge. Per le immagini Medic controlla solo che i file esistano, non la loro dimensione."
+  },
+  "game.incomplete_folder": {
+   "text": "Una cartella in un percorso di scansione sembra un gioco ma è incompleta: manca eboot.bin o sce_sys/param.json, oppure param.json è illeggibile (segno di ordine dei byte, JSON non valido, nessun titleId come PPSA01234). ShadowMount+ e Kraken Mount saltano spesso una cartella simile senza messaggio. Copia di nuovo la cartella per intero o salva param.json come UTF-8 senza segno di ordine dei byte. Medic qui non modifica nulla.",
+   "confidence_reason": "I file vengono letti. Che i mounter saltino una cartella incompleta senza messaggio deriva dalla loro documentazione (Kraken Mount richiede eboot.bin e sce_sys/param.json) e da rapporti senza log; non osservato su questa console."
+  },
+  "kraken.pkg_sparse_extent": {
+   "text": "Kraken Mount rifiuta un .pkg: il layout del file del pacchetto ha un buco (sparse extent), e il pacchetto quindi non ottiene un riquadro; il messaggio compare solo in /data/krakenmount/kraken.log. Secondo il messaggio aiuta ricostruire il pacchetto con Dump Forge (--kraken stored). Una correzione nello stesso Kraken Mount è prevista nel progetto ma non era ancora in nessuna release. Medic qui non modifica nulla.",
+   "confidence_reason": "Il messaggio viene letto dal log. Che derivi da un layout con un buco è scritto nel progetto Kraken Mount (issue 4, 5, 8, 9, 13, 20); se ricostruire con --kraken stored aiuti non è stato verificato lì su un pacchetto reale."
+  },
   "game.eboot_invalid": {
    "text": "L'eboot.bin di una cartella di gioco è inutilizzabile: meno di 64 byte o semplice testo (per esempio una pagina di errore salvata). Un eboot.bin valido inizia come ELF o SELF. Probabilmente un download o una copia falliti; così il gioco non può avviarsi. Copia di nuovo il file dalla fonte. Medic controlla solo l'inizio del file.",
    "confidence_reason": "Dimensione e primi byte vengono letti. Che il gioco quindi non si avvii deriva dal formato del file ma non è stato osservato sulla console di prova; i formati sconosciuti non di testo volutamente non vengono segnalati."

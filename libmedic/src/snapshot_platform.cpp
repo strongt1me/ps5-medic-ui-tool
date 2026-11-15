@@ -145,18 +145,54 @@ private:
     std::map<std::string, std::map<std::string, std::string>> components_;
 };
 
+// Schreibzugriff auf einen Fixture-Ordner: alles geht an PosixRw, nur set_mode nicht, wenn der Ordner eine Modustabelle (modes.json) hat: dann aendert es die Tabelle
+// (sonst wuerden die echten Dateimodi des Git-Checkouts veraendert, die file_mode gar nicht liest)
+class SnapshotRw final : public IFileSystemRW {
+public:
+    SnapshotRw(PosixRw& rw, PosixFs& fs) : rw_(rw), fs_(fs) {}
+    bool write_file(const std::string& p, const std::string& c) override { return rw_.write_file(p, c); }
+    bool rename(const std::string& a, const std::string& b) override { return rw_.rename(a, b); }
+    bool make_dirs(const std::string& p) override { return rw_.make_dirs(p); }
+    bool remove_empty_dir(const std::string& p) override { return rw_.remove_empty_dir(p); }
+    bool append_file(const std::string& p, const std::string& c) override { return rw_.append_file(p, c); }
+    bool write_range(const std::string& p, std::uint64_t off, const std::string& c, bool sync) override { return rw_.write_range(p, off, c, sync); }
+    bool set_mode(const std::string& p, std::uint32_t mode) override {
+        if (!fs_.has_mode_table()) return rw_.set_mode(p, mode);
+        std::uint32_t cur = 0;
+        if (!fs_.file_mode(p, cur)) return false;  // nur, was die Tabelle kennt
+        fs_.table_set(p, mode);
+        return true;
+    }
+
+private:
+    PosixRw& rw_;
+    PosixFs& fs_;
+};
+
 class SnapshotPlatform final : public Platform {
 public:
     SnapshotPlatform(const std::string& root, bool writable)
-        : fs_(fs::path(root) / "fs"), rw_(fs::path(root) / "fs"), writable_(writable), procs_(fs::path(root)), sys_(fs::path(root)) {}
+        : fs_(fs::path(root) / "fs"), rw_(fs::path(root) / "fs"), writable_(writable), procs_(fs::path(root)), sys_(fs::path(root)) {
+        // modes.json: {"/pfad/datei": 438 oder "0666", ...}. Ohne die Datei kennt der Fixture-Ordner keine Dateimodi (sie kaemen aus dem Git-Checkout).
+        const auto j = load_json_or_null(fs::path(root) / "modes.json");
+        if (j.is_object()) {
+            std::map<std::string, std::uint32_t> table;
+            for (auto it = j.begin(); it != j.end(); ++it) {
+                if (it.value().is_number_integer()) table[it.key()] = it.value().get<std::uint32_t>() & 07777u;
+                else if (it.value().is_string()) table[it.key()] = static_cast<std::uint32_t>(std::strtoul(it.value().get<std::string>().c_str(), nullptr, 8)) & 07777u;
+            }
+            fs_.set_mode_table(std::move(table));
+        }
+    }
     const IFileSystem& fs() const override { return fs_; }
-    IFileSystemRW* fs_rw() override { return writable_ ? &rw_ : nullptr; }
+    IFileSystemRW* fs_rw() override { return writable_ ? &srw_ : nullptr; }
     const IProcessList& procs() const override { return procs_; }
     const ISystemInfo& sys() const override { return sys_; }
 
 private:
     PosixFs fs_;
     PosixRw rw_;
+    SnapshotRw srw_{rw_, fs_};
     bool writable_;
     SnapshotProcs procs_;
     SnapshotSys sys_;

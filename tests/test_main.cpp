@@ -667,6 +667,7 @@ int main() {
     text_policy_tests();
     review2_tests();
     review4_tests();
+    game_issue_tests();
     history_tests();
     selftest_tests();
     ui_tests();

@@ -2,6 +2,7 @@
 #include "medic/posix_fs.hpp"
 
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -111,6 +112,34 @@ bool PosixFs::is_dir(const std::string& path) const {
     return map_virtual_path(base_, path, p) && fs::is_directory(p, ec);
 }
 
+namespace {
+std::string normalized_virtual(const std::string& path) {  // doppelte und abschliessende Schraegstriche weglassen
+    std::string norm;
+    std::stringstream ss(path);
+    std::string seg;
+    while (std::getline(ss, seg, '/'))
+        if (!seg.empty() && seg != ".") norm += "/" + seg;
+    return norm;
+}
+}  // namespace
+
+void PosixFs::table_set(const std::string& path, std::uint32_t mode) { table_[normalized_virtual(path)] = mode & 07777u; }
+
+bool PosixFs::file_mode(const std::string& path, std::uint32_t& mode) const {
+    if (use_table_) {
+        const auto it = table_.find(normalized_virtual(path));
+        if (it == table_.end()) return false;
+        mode = it->second;
+        return true;
+    }
+    fs::path p;
+    struct stat st;
+    if (!modes_ || !map_virtual_path(base_, path, p) || ::lstat(p.c_str(), &st) != 0) return false;
+    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode)) return false;  // Symlinks und Sonderdateien: unbekannt
+    mode = static_cast<std::uint32_t>(st.st_mode & 07777);
+    return true;
+}
+
 std::vector<DirEntry> PosixFs::list_dir(const std::string& path) const {
     std::vector<DirEntry> out;
     fs::path p;
@@ -180,6 +209,18 @@ bool PosixRw::write_file(const std::string& path, const std::string& content) {
     return true;
 }
 
+bool PosixRw::set_mode(const std::string& path, std::uint32_t mode) {
+    fs::path p;
+    if (!map_virtual_path(base_, path, p) || !ancestors_clean(base_, path, false) || (mode & ~07777u) != 0) return false;
+    // O_NOFOLLOW + fchmod statt lstat + chmod: zwischen Pruefen und Setzen kann kein Symlink untergeschoben werden
+    const int fd = ::open(p.c_str(), O_RDONLY | O_NOFOLLOW);
+    if (fd < 0) return false;
+    struct stat st;
+    const bool ok = ::fstat(fd, &st) == 0 && (S_ISREG(st.st_mode) || S_ISDIR(st.st_mode)) && ::fchmod(fd, static_cast<mode_t>(mode)) == 0;
+    ::close(fd);
+    return ok;
+}
+
 bool PosixRw::write_range(const std::string& path, std::uint64_t offset, const std::string& content, bool sync) {
     fs::path p;
     std::error_code ec;
@@ -241,6 +282,15 @@ bool PosixRw::rename(const std::string& from, const std::string& to) {
         fold(nb);
         std::error_code ec2;
         if (a == b || a.parent_path() != b.parent_path() || na != nb || !fs::equivalent(a, b, ec2) || ec2) return false;
+    }
+    // Nur auf demselben Dateisystem (Marc, 14. Nov. 2026; Dump Forge: ein rename() ueber Dateisysteme hinweg kann den PS5-Kernel abstuerzen lassen). Alle Fixes
+    // verschieben in den Ordner daneben oder in einen Ordner im selben Scanpfad; das ist hier die letzte Absicherung. Geprueft wird gegen den ersten vorhandenen
+    // Ordner auf dem Weg zum Ziel, BEVOR neue Ordner entstehen (sonst bliebe bei einer Ablehnung ein leerer Ordner zurueck).
+    {
+        fs::path anc = b.parent_path();
+        while (anc.has_parent_path() && anc != anc.parent_path() && !fs::exists(anc, ec)) anc = anc.parent_path();
+        struct stat sa, sp;
+        if (::lstat(a.c_str(), &sa) != 0 || ::stat(anc.c_str(), &sp) != 0 || sa.st_dev != sp.st_dev) return false;
     }
     fs::create_directories(b.parent_path(), ec);
     fs::rename(a, b, ec);

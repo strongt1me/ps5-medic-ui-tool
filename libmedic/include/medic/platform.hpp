@@ -27,6 +27,13 @@ public:
     virtual bool read_file(const std::string& path, std::string& out) const = 0;
     // Liest hoechstens `len` Bytes ab `offset` (fuer Image-Header, ohne die ganze Datei zu laden).
     virtual bool read_range(const std::string& path, std::uint64_t offset, std::size_t len, std::string& out) const = 0;
+    // Dateimodus (st_mode & 07777) einer Datei oder eines Ordners, nur wo er etwas bedeutet (Konsole). false = unbekannt: Fixture-Ordner am PC (dort kaeme der
+    // Modus aus dem Git-Checkout), Symlinks, Fehler. Ein Fund wie "Programmdatei ohne Ausfuehrungsrecht" gilt nur, wo der Modus bekannt ist.
+    virtual bool file_mode(const std::string& path, std::uint32_t& mode) const {
+        (void)path;
+        (void)mode;
+        return false;
+    }
 };
 
 // Schreibzugriff. Wird ausschliesslich von der FixEngine benutzt (Pfad-Whitelist, Backup, Journal).
@@ -55,6 +62,13 @@ public:
         (void)offset;
         (void)content;
         (void)sync;
+        return false;
+    }
+    // Setzt den Modus (st_mode & 07777) einer Datei oder eines Ordners; folgt keinem Symlink. Standard: nicht unterstuetzt (false). Nur fuer den Fix
+    // chmod_program_files (Journal merkt sich den alten Modus, Rueckgaengig stellt ihn wieder her).
+    virtual bool set_mode(const std::string& path, std::uint32_t mode) {
+        (void)path;
+        (void)mode;
         return false;
     }
 };
@@ -154,6 +168,8 @@ struct Platform {
 // PC-Implementierung: liest einen Fixture-Ordner
 //   <root>/fs/...        simuliert das PS5-Dateisystem ("/data/..." -> <root>/fs/data/...)
 //   <root>/procs.json    ["etaHEN", "shadowmountplus", ...]; Eintraege duerfen Objekte sein: {"name":"kstuff.elf","start":1794060758}
+//   <root>/modes.json    {"/data/homebrew/X/eboot.bin": "0666", ...} (Zahl oder Oktal-Text): Dateimodi fuer IFileSystem::file_mode; ohne die Datei sind
+//                        sie unbekannt (die echten Modi des Git-Checkouts zaehlen nie)
 //   <root>/system.json   {"fw":"4.03","model":"...","storage":[{"mount":"/data","total":..,"free":..,"fstype":"bfs","ro":false}],
 //                         "components":{"kstuff":{"version":"1.10","origin":"echostretch"},"smp":{"version":"1.7"}},
 //                         "boot":1794060571, "ports":{"9021":true}, "temp":{"cpu":36,"soc":34}}

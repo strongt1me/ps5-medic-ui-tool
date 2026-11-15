@@ -1931,7 +1931,7 @@ void App::draw_fix_preview(Canvas& c) const {
         ++shown;
         last_shown = i + 1;
         c.fill_round_rect(M, y, cw, ph, 18, kPanel);
-        draw_badge(c, M + 30, y + 18, S(rename ? "fixprev.rename" : "fixprev.write"), kAccent);
+        draw_badge(c, M + 30, y + 18, S(rename ? "fixprev.rename" : (ch.kind == medic::Change::Kind::Chmod ? "fixprev.chmod" : "fixprev.write")), kAccent);
         int ty = y + 18 + 34 + 10;
         for (auto& l : path_lines) {
             small().draw(c, M + 36, ty, l, kText);

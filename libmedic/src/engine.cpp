@@ -188,6 +188,14 @@ bool append_journal(Platform& p, const json& rec, std::string& err) {
 bool revert_op(Platform& p, const PathPolicy& policy, const std::string& txn, const json& rec, std::string& err) {
     IFileSystemRW& rw = *p.fs_rw();
     const std::string path = str_of(rec, "path"), to = str_of(rec, "to");
+    if (str_of(rec, "op") == "chmod") {
+        const long long before = int_of(rec, "mode_before", -1);
+        if (before < 0 || before > 07777 || !rw.set_mode(path, static_cast<std::uint32_t>(before))) {
+            err = "Rechte zurücksetzen fehlgeschlagen: " + path;
+            return false;
+        }
+        return true;
+    }
     if (str_of(rec, "op") == "rename") {
         if (!rw.rename(to, path)) {
             err = "Zurückbenennen fehlgeschlagen: " + to + " -> " + path;
@@ -232,6 +240,18 @@ enum class OpState { Before, After, Other };
 OpState classify(const Platform& p, const PathPolicy& policy, const json& r, std::string& why) {
     const std::string path = str_of(r, "path"), to = str_of(r, "to");
     if (!policy.allowed(path, &why)) return OpState::Other;
+    if (str_of(r, "op") == "chmod") {
+        if (!p.fs().exists(path)) return OpState::Before;  // die Datei ist inzwischen weg (jemand hat sie geloescht): nichts zurueckzusetzen, der Rest laesst sich trotzdem rueckgaengig machen
+        std::uint32_t now = 0;
+        if (!p.fs().file_mode(path, now)) {
+            why = "Rechte nicht lesbar: " + path;
+            return OpState::Other;
+        }
+        if (static_cast<long long>(now) == int_of(r, "mode_after", -1)) return OpState::After;
+        if (static_cast<long long>(now) == int_of(r, "mode_before", -1)) return OpState::Before;
+        why = "Die Rechte wurden nach dem Fix verändert: " + path;
+        return OpState::Other;
+    }
     if (str_of(r, "op") == "rename") {
         if (!policy.allowed(to, &why)) return OpState::Other;
         const bool case_only = is_case_only_rename(path, to);  // exFAT/FAT: nur der Ordnereintrag sagt, welche Schreibweise gilt
@@ -371,7 +391,13 @@ ApplyResult apply_impl(const FixPlan& plan, Platform& p, const PathPolicy& polic
         std::string why;
         if (!policy.allowed(c.path, &why)) return fail(why);
         if (!paths_used.insert(PathPolicy::normalize(c.path)).second) return fail("Pfad mehrfach im Plan: " + c.path);
-        if (c.kind == Change::Kind::Rename) {
+        if (c.kind == Change::Kind::Chmod) {
+            if (!p.fs().exists(c.path)) return fail("Datei existiert nicht: " + c.path);
+            std::uint32_t now = 0;
+            if (!p.fs().file_mode(c.path, now)) return fail("Die Rechte sind nicht lesbar (Symlink oder Sonderdatei?): " + c.path);
+            if (now != c.base_mode) return fail("Die Rechte haben sich seit der Vorschau geändert (bitte neu prüfen): " + c.path);
+            if (c.mode > 07777 || c.mode == now) return fail("Ungültiger Zielmodus: " + c.path);
+        } else if (c.kind == Change::Kind::Rename) {
             if (!policy.allowed(c.to, &why)) return fail(why);
             if (!paths_used.insert(PathPolicy::normalize(c.to)).second) return fail("Pfad mehrfach im Plan: " + c.to);
             if (!p.fs().exists(c.path)) return fail("Quelle existiert nicht: " + c.path);
@@ -423,13 +449,26 @@ ApplyResult apply_impl(const FixPlan& plan, Platform& p, const PathPolicy& polic
     for (const Change& c : plan.changes) {
         json rec = {{"type", "op"}, {"txn", txn}, {"seq", seq}, {"ts", opt.timestamp}, {"fix", plan.fix_id}, {"rule", plan.rule_id}};
         const bool is_rename = c.kind == Change::Kind::Rename;
-        rec["op"] = is_rename ? "rename" : "write";
+        const bool is_chmod = c.kind == Change::Kind::Chmod;
+        rec["op"] = is_rename ? "rename" : (is_chmod ? "chmod" : "write");
         rec["path"] = c.path;
         if (is_rename) rec["to"] = c.to;
 
         json intent = {{"type", "intent"}, {"txn", txn}, {"seq", seq}, {"ts", opt.timestamp}, {"op", rec["op"]}, {"path", c.path}, {"roots", roots}};
 
-        if (is_rename) {
+        if (is_chmod) {
+            std::uint32_t before = 0;
+            if (!p.fs().file_mode(c.path, before)) return abort_all("Rechte nicht lesbar: " + c.path);
+            rec["mode_before"] = before;
+            rec["mode_after"] = c.mode;
+            intent["mode_before"] = before;
+            intent["mode_after"] = c.mode;
+            if (!append_journal(p, intent, err)) return abort_all(err);
+            if (!p.fs_rw()->set_mode(c.path, c.mode)) return abort_all("Rechte setzen fehlgeschlagen: " + c.path);
+            done.push_back(rec);  // ab hier ist die Operation passiert: fuer den Rollback vormerken
+            std::uint32_t after = 0;
+            if (!p.fs().file_mode(c.path, after) || after != c.mode) return abort_all("Nachprüfung fehlgeschlagen: " + c.path);
+        } else if (is_rename) {
             const Stat st = stat_path(p.fs(), c.path);
             bool ok = true;
             const std::string before = hash_file(p.fs(), c.path, ok);

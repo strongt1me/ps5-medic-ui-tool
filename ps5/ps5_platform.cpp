@@ -276,7 +276,7 @@ public:
 
 class Ps5Platform final : public Platform {
 public:
-    explicit Ps5Platform(bool writable) : fs_("/"), rw_("/"), writable_(writable) {}
+    explicit Ps5Platform(bool writable) : fs_("/", /*modes=*/true), rw_("/"), writable_(writable) {}
     const IFileSystem& fs() const override { return fs_; }
     IFileSystemRW* fs_rw() override { return writable_ ? &rw_ : nullptr; }
     const IProcessList& procs() const override { return procs_; }

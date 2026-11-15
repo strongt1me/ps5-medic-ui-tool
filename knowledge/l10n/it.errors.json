@@ -321,7 +321,8 @@
     "Se nulla aiuta, ripristinare la console («Settings > System > System Software > Reset Options > Reset Your Console»). Cancella tutti i dati nella memoria della console: prima fare un backup, poi reinstallare il gioco."
    ],
    "notes": [
-    "Secondo Sony «Repair Console Storage» non cancella dati e «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati."
+    "Secondo Sony «Repair Console Storage» non cancella dati e «Reset PS5» elimina tutti i dati utente. Per «Rebuild Database» Sony non dice nulla su perdite di dati.",
+    "Nota di Medic (non di Sony): su una console con jailbreak questo errore può dipendere da una cartella di gioco i cui file programma (eboot.bin, moduli) non hanno il permesso di esecuzione, ad esempio 0666 invece di 0777 dopo la copia via FTP (ampr-emu-ng, issue 41). Il check-up lo controlla (regola game.no_exec_permission); la riparazione imposta i permessi a 0777."
    ]
   },
   "CE-107857-8": {
@@ -406,6 +407,9 @@
    "steps": [
     "Aggiorna il gioco.",
     "Per ulteriore aiuto Sony rimanda a «PlayStation Repairs»."
+   ],
+   "notes": [
+    "Nota di Medic (non di Sony, secondo segnalazioni): nei giochi homebrew può esserci dietro il runtime ampr-emu-ng: l'errore compare durante il salvataggio o l'uscita con le versioni 0.3.5 e 0.4.0 (ampr-emu-ng, issue 60, 63, 64). Il check-up legge la versione da libSceAmpr.sprx (regola game.ng_save_risk) e segnala i giochi impacchettati senza ampr_emu.index (regola game.pack_no_emu_index)."
    ]
   },
   "CE-108262-9": {

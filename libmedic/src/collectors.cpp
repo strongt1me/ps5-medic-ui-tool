@@ -765,7 +765,7 @@ std::string sdk_raw_to_fw(std::uint32_t v) {
 
 // games.fw[]: PS5-Titel (PPSA...) unter /user/app mit der Firmware, die ihre param.json verlangt (SM+ legt dort je gemountetem Spiel
 // einen Ordner mit sce_sys/param.json an). games.need_backport[]: davon die Titel, die eine neuere Firmware verlangen, als die Konsole hat,
-// und fuer die es weder einen Backport-Ordner <Scanpfad>/backports/<TITLE_ID>/ gibt noch einen im Spiel eingebauten Backport (SDK-Version der
+// und fuer die es weder einen Backport-Ordner <Scanpfad>/backports/<TITLE_ID>[Zusatz]/ gibt noch einen im Spiel eingebauten Backport (SDK-Version der
 // eboot.bin nicht ueber der Firmware, games.fw[].backport_inline). Nur lesen.
 void collect_game_firmware(const Platform& p, Facts& f) {
     const IFileSystem& fs = p.fs();
@@ -786,6 +786,12 @@ void collect_game_firmware(const Platform& p, Facts& f) {
             if (e.is_object() && e.contains("titleid") && e["titleid"].is_string() && e.contains("path") && e["path"].is_string())
                 folders[e["titleid"].get<std::string>()].push_back(e["path"].get<std::string>());
 
+    // Ordnernamen unter <Scanpfad>/backports/: ShadowMount+ ab beta6 und Kraken Mount nehmen auch einen Namenszusatz ("backports/PPSA01234-Muster/", "PPSA01234*"),
+    // nicht nur den genauen Titel-ID-Namen (Auswahl vom 14. Nov. 2026, S11): sonst meldete Medic fuer so einen Ordner zu Unrecht "Backport fehlt"
+    std::vector<std::string> backport_names;
+    for (const auto& r : roots)
+        for (const auto& b : fs.list_dir(join_path(r, "backports")))
+            if (b.is_dir) backport_names.push_back(b.name);
     static const std::regex id_re("^PPSA[0-9]{5}$");
     json games = json::array(), need = json::array();
     for (const auto& app : fs.list_dir("/user/app")) {
@@ -797,8 +803,8 @@ void collect_game_firmware(const Platform& p, Facts& f) {
         const std::string required = decode_param_fw(param, "requiredSystemSoftwareVersion");
         if (required.empty()) continue;
         bool backport = false;
-        for (const auto& r : roots)
-            if (fs.is_dir(join_path(join_path(r, "backports"), app.name))) {
+        for (const auto& name : backport_names)
+            if (name.compare(0, app.name.size(), app.name) == 0) {  // genau die Titel-ID oder die Titel-ID mit Zusatz
                 backport = true;
                 break;
             }
@@ -1092,7 +1098,14 @@ void collect_shadowmount(const Platform& p, Facts& f) {
                     img["truncated"] = e.size < xi.volume_bytes ? 1 : 0;  // Datei kleiner als das beschriebene Dateisystem: unvollstaendige Kopie
                 }
             }
-            if (e.ext != ".dat") img["tiny"] = e.size < 512 ? 1 : 0;  // kleiner als ein Kopf: leer oder abgebrochen
+            if (e.ext != ".dat") {
+                img["tiny"] = e.size < 512 ? 1 : 0;  // kleiner als ein Kopf: leer oder abgebrochen
+                // Namenslaenge: ShadowMount+ haengt das Image unter /mnt/shadowmnt/<Name>_<8 Hex> ein, der Kernel erlaubt 88 Byte (MNAMELEN). Der Name ohne Endung darf
+                // hoechstens 63 Byte (UTF-8) lang sein, bei .ffpfsc 58 (Dump Forge F12 und Converter G09 rechnen unabhaengig gleich; am Geraet nicht gemessen).
+                const std::size_t stem = e.name.size() > e.ext.size() ? e.name.size() - e.ext.size() : e.name.size();
+                img["stem_bytes"] = stem;
+                img["name_too_long"] = stem > (e.ext == ".ffpfsc" ? 58u : 63u) ? 1 : 0;
+            }
             images.push_back(std::move(img));
         }
         if (e.level > depth) {  // von SM+ bei dieser Tiefe nicht gescannt
@@ -1557,6 +1570,90 @@ void collect_game_files(const Platform& p, Facts& f) {
             if (!reason.empty()) bad.push_back({{"titleid", t["titleid"]}, {"path", join_path(path, "eboot.bin")}, {"size", size}, {"reason", reason}});
         }
     f.set("games.eboot_problems", std::move(bad));
+
+    // Programmdateien ohne Ausfuehrungsbit (CE-107750-0): Die Konsole startet eine eboot.bin oder ein Modul nicht, das nicht ausfuehrbar ist. Je nach FTP-Server legt
+    // die Kopie die Dateien mit 0666 statt 0777 an (gemessen an FW 12.00: ftpsrv 0777 startet, zftpd 0666 startet nicht; eigener Konsolentest am 13. Nov. 2026 mit
+    // einer eboot.bin ohne Ausfuehrungsrecht). Geprueft werden nur die Dateien, die die Konsole als Programme laedt: eboot.bin, sce_module/, fakelib/, fakelib2/ und
+    // Media/Modules/ (.prx, .sprx, .self). Der Modus kommt nur von der Konsole (IFileSystem::file_mode); wo er unbekannt ist (PC-Fixture, Symlink), steht nichts da.
+    // games.noexec[]: titleid, path (Spielordner), count, files[] (bis 100) und modes[] (deren Modi, dezimal, gleiche Reihenfolge)
+    auto program_name = [](const std::string& name) {
+        const std::string l = lower(name);
+        for (const char* ext : {".prx", ".sprx", ".self"})
+            if (l.size() > std::char_traits<char>::length(ext) && l.compare(l.size() - std::char_traits<char>::length(ext), std::char_traits<char>::length(ext), ext) == 0) return true;
+        return false;
+    };
+    json noexec = json::array();
+    done.clear();
+    if (titles && titles->is_array())
+        for (const auto& t : *titles) {
+            if (!t.is_object() || !t.contains("path") || !t["path"].is_string() || !t.contains("titleid") || !t["titleid"].is_string()) continue;
+            const std::string path = t["path"].get<std::string>();
+            if (!done.insert(path).second || !fs.is_dir(path)) continue;
+            // exFAT und FAT kennen keine Dateimodi (die Einbindung nennt feste Werte): dort gibt es kein "fehlendes Ausfuehrungsrecht" und chmod bliebe wirkungslos
+            if (const std::string type = fstype_of(path); type == "exfatfs" || type == "msdosfs") continue;
+            std::vector<std::string> candidates = {join_path(path, "eboot.bin")};
+            for (const char* sub : {"sce_module", "fakelib", "fakelib2", "Media/Modules"}) {
+                const std::string dir = join_path(path, sub);
+                for (const auto& e : fs.list_dir(dir))
+                    if (!e.is_dir && program_name(e.name)) candidates.push_back(join_path(dir, e.name));
+            }
+            json files = json::array(), modes = json::array();
+            int count = 0;
+            for (const auto& c : candidates) {
+                std::uint32_t mode = 0;
+                if (!fs.file_mode(c, mode) || (mode & 0111u) != 0) continue;
+                ++count;
+                if (files.size() < 100) {
+                    files.push_back(c);
+                    modes.push_back(static_cast<long>(mode));
+                }
+            }
+            if (count > 0) noexec.push_back({{"titleid", t["titleid"]}, {"path", path}, {"count", count}, {"files", std::move(files)}, {"modes", std::move(modes)}});
+        }
+    f.set("games.noexec", std::move(noexec));
+}
+
+// Reste abgebrochener Kopier- und Packvorgaenge in den Scanpfaden: Dump Forge schreibt unter einem Zwischennamen und benennt erst nach der Pruefung um; bei einem
+// Abbruch (Strg-C, Absturz, Ruhemodus, Verbindungsverlust) bleiben die Reste liegen, und es loescht sie nie selbst. Der Converter hinterlaesst aehnliche Reste.
+// Erkannt werden nur eindeutige Muster: <Name>.<Job>-<PID>.part und andere *.part, .<Datei>.forge-<PID>-<n>.tmp, .forge-probe-<PID>.part, *.teil, *.neu,
+// *.unvollstaendig (Quellen: Dump Forge F04, finalize.rs; Converter G27). Gesucht wird direkt in den Scanpfaden (dort schreibt Forge seine Ausgabe). Ein Ordner mit
+// sce_sys oder eboot.bin gilt nie als Rest.
+// Ob gerade ein Job laeuft, laesst sich nicht erkennen (DirEntry hat keine Zeit): die Vorschau des Fixes sagt es, die Bestaetigung bleibt beim Nutzer.
+// leftovers.files[]: path, name, size (0 bei Ordnern), is_dir, root
+void collect_leftovers(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    auto leftover = [](const std::string& name) {
+        const std::string l = lower(name);
+        auto ends = [&](const char* s) {
+            const std::size_t n = std::char_traits<char>::length(s);
+            return l.size() > n && l.compare(l.size() - n, n, s) == 0;
+        };
+        if (ends(".part") || ends(".teil") || ends(".neu") || ends(".unvollstaendig")) return true;
+        if (l.rfind(".forge-probe-", 0) == 0) return true;
+        return l.size() > 1 && l[0] == '.' && l.find(".forge-") != std::string::npos && ends(".tmp");
+    };
+    json files = json::array();
+    std::set<std::string> seen;
+    const json* roots = f.get("smp.scan_roots");
+    if (roots && roots->is_array())
+        for (const auto& r : *roots) {
+            if (!r.is_string()) continue;
+            const std::string root = r.get<std::string>();
+            if (root.empty() || !seen.insert(root).second || !fs.is_dir(root)) continue;
+            for (const auto& e : fs.list_dir(root)) {
+                if (!leftover(e.name) || files.size() >= 200) continue;
+                if (e.is_dir) {  // ein Ordner, der wie ein vollstaendiges Spiel aussieht, ist kein Rest (z. B. "Spiel.neu" mit sce_sys und eboot.bin)
+                    bool game = false;
+                    for (const auto& k : fs.list_dir(join_path(root, e.name))) {
+                        const std::string kl = lower(k.name);
+                        if ((k.is_dir && kl == "sce_sys") || (!k.is_dir && kl == "eboot.bin")) game = true;
+                    }
+                    if (game) continue;
+                }
+                files.push_back({{"path", join_path(root, e.name)}, {"name", e.name}, {"size", e.is_dir ? 0 : e.size}, {"is_dir", e.is_dir}, {"root", root}});
+            }
+        }
+    f.set("leftovers.files", std::move(files));
 }
 
 // Vergleich mit den eigenen frueheren Messungen (Verlauf der Check-ups, history.hpp): Abweichung der jetzigen Temperatur vom Median der
@@ -1727,7 +1824,7 @@ void collect_app_registry(const Platform& p, Facts& f) {
 Facts collect_all(const Platform& p, const std::function<void(int, int)>& progress) {
     Facts f;
     json failed = json::array();
-    constexpr int kSteps = 23;  // 22 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
+    constexpr int kSteps = 27;  // 26 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
     int done = 0;
     // Jeder Collector einzeln: ein Fehler (z. B. beschaedigtes JSON in einer von Hand bearbeiteten Datei) beendet nicht den ganzen Check-up,
     // sondern wird als collector.failed vermerkt; die uebrigen Fakten bleiben gueltig (Audit 12. Nov. 2026)
@@ -1759,6 +1856,10 @@ Facts collect_all(const Platform& p, const std::function<void(int, int)>& progre
     MEDIC_RUN(collect_system_logs);
     MEDIC_RUN(collect_databases);
     MEDIC_RUN(collect_game_files);
+    MEDIC_RUN(collect_leftovers);
+    MEDIC_RUN(collect_game_runtime);
+    MEDIC_RUN(collect_game_folders);
+    MEDIC_RUN(collect_kraken);
     MEDIC_RUN(collect_baseline);
     MEDIC_RUN(collect_selftest);
     MEDIC_RUN(collect_fan_controller);

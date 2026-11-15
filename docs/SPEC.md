@@ -39,6 +39,9 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 | `pldmgr_enable_autoload` | `AUTOLOAD_ENABLED=1` in `/data/pldmgr/pldmgr_config.txt` setzen | Backup der Datei |
 | `quarantine_broken_elf` | Unbrauchbare ELF-Datei nach `.medic_broken/` daneben verschieben (nur Whitelist-Ordner, nie löschen) | Zurückverschieben |
 | `quarantine_empty_image` | Leeres oder abgebrochenes Image (unter 512 Byte) nach `.medic_broken/` daneben verschieben (nur Whitelist-Ordner, nie löschen) | Zurückverschieben |
+| `quarantine_leftovers` | Reste abgebrochener Kopier-/Packvorgänge (`.part`, `.tmp`, `.teil` ... direkt in den Scanpfaden) nach `.medic_broken/` im selben Ordner verschieben (nie löschen; Größenprüfung, falls die Datei noch wächst) | Zurückverschieben |
+| `rename_image_shorten` | Image-Name über 63 Byte (`.ffpfsc` 58) ohne Endung im selben Ordner kürzen, Titel-ID bleibt | Zurückbenennen |
+| `chmod_program_files` | `eboot.bin` und Module ohne Ausführungsrecht (`CE-107750-0`) auf 0777 setzen; das Journal merkt sich den alten Modus jeder Datei | Alte Rechte wiederherstellen |
 | `fix_image_nesting_hint` | Nur Hinweis + Anleitung (kein Auto-Fix, Images werden nicht verändert) | – |
 
 ### 4.3 Bericht

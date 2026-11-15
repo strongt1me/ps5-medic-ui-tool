@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <map>
 #include <regex>
 #include <set>
@@ -186,6 +187,17 @@ void plan_set_key(FixPlan& plan, const Finding& f, const Facts& facts, const IFi
     }
     std::string text = old_text;
     for (const auto& v : values) text = add_mode ? ini_add_value(text, t, v) : ini_set_value(text, t, v);
+    // "also": weitere Schluessel derselben Datei in einem Aufruf (ein Plan darf eine Datei nur einmal schreiben), z. B. update_enabled und auto_update_ampr
+    std::string also_shown;
+    if (p.contains("also") && p["also"].is_array())
+        for (const auto& a : p["also"]) {
+            if (!a.is_object()) continue;
+            const IniTarget t2{str_of(a, "section"), str_of(a, "key"), str_of(a, "legacy_key")};
+            const std::string v2 = str_of(a, "value");
+            if (t2.key.empty() || v2.empty()) continue;
+            text = ini_set_value(text, t2, v2);
+            also_shown += ", " + t2.key + "=" + v2;
+        }
     if (existed && text == old_text) {
         plan.warnings.push_back("Nichts zu tun: " + file + " enthält den Wert bereits");
         return;
@@ -197,7 +209,7 @@ void plan_set_key(FixPlan& plan, const Finding& f, const Facts& facts, const IFi
     c.check_base = true;
     c.base_existed = existed;
     c.base_sha = existed ? sha256_hex(old_text) : std::string();
-    const std::string shown = (t.section.empty() ? "" : "[" + t.section + "] ") + t.key + "=" + values.front() + (values.size() > 1 ? " ..." : "");
+    const std::string shown = (t.section.empty() ? "" : "[" + t.section + "] ") + t.key + "=" + values.front() + (values.size() > 1 ? " ..." : "") + also_shown;
     c.note_de = base_of(file) + " ändern: " + shown + " (vorher Backup)";
     c.note_en = "Change " + base_of(file) + ": " + shown + " (backup first)";
     plan.changes.push_back(std::move(c));
@@ -613,6 +625,155 @@ void plan_quarantine_image(FixPlan& plan, const Facts& facts, const IFileSystem&
     plan.hint_en = "The file is not deleted but moved to .medic_broken next to it (undo brings it back). If a transfer is running, let it finish first.";
 }
 
+// ---- quarantine_leftovers -----------------------------------------------------------------------------------------------------
+// Reste abgebrochener Kopier- und Packvorgaenge (leftovers.files[]: .part, .tmp, .teil ...) kommen nicht in den Papierkorb, sondern in den versteckten Ordner
+// .medic_broken im SELBEN Ordner (nie loeschen; derselbe Ordner, also dasselbe Dateisystem: ein rename ueber Dateisysteme kann den PS5-Kernel abstuerzen lassen).
+// Laeuft gerade noch ein Job, waere das Beiseitelegen schaedlich: die Vorschau sagt es, die Groessenpruefung (check_size) bricht ab, wenn die Datei noch waechst.
+
+void plan_quarantine_leftovers(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    const PathPolicy policy = policy_from_facts(facts);
+    std::set<std::string> targets;
+    for (const auto& lf : array_fact(facts, "leftovers.files")) {
+        const std::string path = str_of(lf, "path"), name = str_of(lf, "name");
+        if (path.empty() || name.empty() || name.find('/') != std::string::npos) continue;
+        if (std::string why; !policy.allowed(path, &why)) {
+            plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + path);
+            continue;
+        }
+        if (!fs.exists(path)) continue;  // inzwischen weg (der Job wurde beendet oder aufgeraeumt)
+        const std::string to = free_target(fs, targets, join_path(join_path(dir_of(path), ".medic_broken"), base_of(path)));
+        if (to.empty()) {
+            plan.warnings.push_back("Übersprungen (kein freier Zielname): " + path);
+            continue;
+        }
+        targets.insert(to);
+        Change c;
+        c.kind = Change::Kind::Rename;
+        c.path = path;
+        c.to = to;
+        c.note_de = "Rest eines abgebrochenen Vorgangs in den Ordner .medic_broken verschieben: " + base_of(path);
+        c.note_en = "Move the leftover of an interrupted job into the folder .medic_broken: " + base_of(path);
+        plan.changes.push_back(std::move(c));
+    }
+    if (plan.changes.empty()) plan.warnings.push_back("Keine Reste abgebrochener Vorgänge in den erlaubten Ordnern gefunden");
+    plan.hint_de = "Die Dateien werden nicht gelöscht, sondern nach .medic_broken daneben verschoben (Rückgängig holt sie zurück). Läuft gerade eine Übertragung oder ein Packvorgang, erst beenden lassen.";
+    plan.hint_en = "The files are not deleted but moved to .medic_broken next to them (undo brings them back). If a transfer or a packing job is running, let it finish first.";
+}
+
+// ---- rename_image_shorten -----------------------------------------------------------------------------------------------------
+// Ein Image-Name ueber der Grenze von ShadowMount+ (smp.images[].name_too_long: 63 Byte ohne Endung, bei .ffpfsc 58) laesst sich nicht einhaengen. Der Fix kuerzt den
+// Namen im selben Ordner (an einer UTF-8-Grenze) und behaelt eine Titel-ID, die sonst abgeschnitten wuerde; Rueckgaengig benennt zurueck.
+
+std::string utf8_prefix(const std::string& s, std::size_t n) {
+    if (n >= s.size()) return s;
+    while (n > 0 && (static_cast<unsigned char>(s[n]) & 0xC0) == 0x80) --n;  // nicht mitten in einem Zeichen schneiden
+    return s.substr(0, n);
+}
+
+std::string trim_name_end(std::string s) {
+    while (!s.empty() && (s.back() == ' ' || s.back() == '.' || s.back() == '_' || s.back() == '-')) s.pop_back();
+    return s;
+}
+
+std::string shorten_image_name(const std::string& name, const std::string& ext, std::size_t limit) {
+    const std::string stem = name.size() > ext.size() ? name.substr(0, name.size() - ext.size()) : name;
+    if (stem.size() <= limit) return name;
+    static const std::regex id_re("(PPSA|CUSA)[0-9]{5}");
+    std::string out = trim_name_end(utf8_prefix(stem, limit));
+    std::smatch m;
+    if (std::regex_search(stem, m, id_re) && out.find(m.str()) == std::string::npos) {
+        // Die Titel-ID stuende hinter der Grenze: vorne behalten, den Rest dahinter kuerzen
+        std::string rest = stem;
+        rest.erase(static_cast<std::size_t>(m.position()), static_cast<std::size_t>(m.length()));
+        while (!rest.empty() && (rest.front() == '_' || rest.front() == '-' || rest.front() == ' ')) rest.erase(rest.begin());
+        out = trim_name_end(m.str() + "_" + utf8_prefix(rest, limit - static_cast<std::size_t>(m.length()) - 1));
+    }
+    return out.empty() ? name : out + ext;
+}
+
+void plan_rename_image_shorten(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    const PathPolicy policy = policy_from_facts(facts);
+    std::set<std::string> targets;
+    for (const auto& img : array_fact(facts, "smp.images")) {
+        if (img.value("name_too_long", 0) != 1) continue;
+        const std::string ext = str_of(img, "ext"), name = str_of(img, "name"), path = str_of(img, "path");
+        if (name.empty() || path.empty()) continue;
+        if (std::string why; !policy.allowed(path, &why)) {
+            plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + path);
+            continue;
+        }
+        const std::string new_name = shorten_image_name(name, ext, ext == ".ffpfsc" ? 58 : 63);
+        if (new_name.empty() || new_name == name) {
+            plan.warnings.push_back("Übersprungen (Name lässt sich nicht kürzen): " + path);
+            continue;
+        }
+        const std::string to = join_path(dir_of(path), new_name);
+        if (fs.exists(to) || !targets.insert(to).second) {
+            plan.warnings.push_back("Übersprungen (Ziel existiert bereits): " + to);
+            continue;
+        }
+        Change c;
+        c.kind = Change::Kind::Rename;
+        c.path = path;
+        c.to = to;
+        c.note_de = "Zu langen Image-Namen kürzen (" + std::to_string(name.size()) + " auf " + std::to_string(new_name.size()) + " Byte)";
+        c.note_en = "Shorten the image name that is too long (" + std::to_string(name.size()) + " to " + std::to_string(new_name.size()) + " bytes)";
+        plan.changes.push_back(std::move(c));
+    }
+    if (plan.changes.empty()) plan.warnings.push_back("Kein zu langer Image-Name in den erlaubten Ordnern gefunden");
+    plan.hint_de = "Nur der Dateiname wird gekürzt (gleicher Ordner, die Titel-ID bleibt erhalten); Rückgängig stellt den alten Namen wieder her.";
+    plan.hint_en = "Only the file name is shortened (same folder, the title id is kept); undo restores the old name.";
+}
+
+// ---- chmod_program_files ------------------------------------------------------------------------------------------------------
+// Programmdateien ohne Ausfuehrungsbit (games.noexec[], CE-107750-0) bekommen den Modus 0777 (Marc, 14. Nov. 2026; gemessen: 0666 startet nicht, 0777 schon).
+// Nur die Dateien, die der Sammler nennt (eboot.bin, Module), nicht der ganze Spielordner: Daten brauchen kein Ausfuehrungsrecht. Das Journal merkt sich
+// den alten Modus jeder Datei, Rueckgaengig stellt ihn wieder her. Hoechstens kMaxChmodFiles je Plan; der naechste Check-up findet den Rest.
+constexpr std::uint32_t kProgramMode = 0777;
+constexpr std::size_t kMaxChmodFiles = 200;
+
+void plan_chmod_program_files(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    const PathPolicy policy = policy_from_facts(facts);
+    std::set<std::string> seen;
+    bool cut = false;
+    for (const auto& g : array_fact(facts, "games.noexec")) {
+        if (!g.is_object() || !g.contains("files") || !g["files"].is_array()) continue;
+        for (const auto& fj : g["files"]) {
+            if (!fj.is_string()) continue;
+            const std::string path = fj.get<std::string>();
+            if (path.empty() || !seen.insert(path).second) continue;
+            if (std::string why; !policy.allowed(path, &why)) {
+                plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + path);
+                continue;
+            }
+            std::uint32_t mode = 0;
+            if (!fs.file_mode(path, mode)) {
+                plan.warnings.push_back("Übersprungen (Rechte nicht lesbar): " + path);
+                continue;
+            }
+            if ((mode & 0111u) != 0) continue;  // inzwischen ausfuehrbar
+            if (plan.changes.size() >= kMaxChmodFiles) {
+                cut = true;
+                continue;
+            }
+            char buf[24];
+            std::snprintf(buf, sizeof buf, "%04o -> %04o", static_cast<unsigned>(mode), static_cast<unsigned>(kProgramMode));
+            Change c;
+            c.kind = Change::Kind::Chmod;
+            c.path = path;
+            c.mode = kProgramMode;
+            c.base_mode = mode;
+            c.note_de = std::string("Ausführungsrecht setzen (") + buf + "): " + base_of(path);
+            c.note_en = std::string("Set the execute permission (") + buf + "): " + base_of(path);
+            plan.changes.push_back(std::move(c));
+        }
+    }
+    if (cut) plan.warnings.push_back("Mehr als " + std::to_string(kMaxChmodFiles) + " Dateien: der Rest folgt nach dem nächsten Check-up");
+    if (plan.changes.empty()) plan.warnings.push_back("Keine Programmdatei ohne Ausführungsrecht in den erlaubten Ordnern gefunden");
+    plan.hint_de = "Nur die Rechte der genannten Programmdateien ändern sich (auf 0777); der Inhalt bleibt unberührt. Rückgängig stellt die alten Rechte wieder her.";
+    plan.hint_en = "Only the permissions of the listed program files change (to 0777); the content stays untouched. Undo restores the old permissions.";
+}
+
 // ---- pldmgr_enable_autoload ---------------------------------------------------------------------------------------------------
 void plan_pldmgr_enable(FixPlan& plan, const Finding& finding, const Facts& facts, const IFileSystem& fs) {
     Finding f = finding;
@@ -715,6 +876,12 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
         plan_quarantine_elf(plan, facts, fs);
     } else if (finding.fix == "quarantine_empty_image") {
         plan_quarantine_image(plan, facts, fs);
+    } else if (finding.fix == "quarantine_leftovers") {
+        plan_quarantine_leftovers(plan, facts, fs);
+    } else if (finding.fix == "rename_image_shorten") {
+        plan_rename_image_shorten(plan, facts, fs);
+    } else if (finding.fix == "chmod_program_files") {
+        plan_chmod_program_files(plan, facts, fs);
     } else if (finding.fix == "pldmgr_enable_autoload") {
         plan_pldmgr_enable(plan, finding, facts, fs);
     } else if (finding.fix == "smp_disable_conflicting_backpork") {
@@ -727,8 +894,23 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
     } else {
         plan.warnings.push_back("Unbekannter Fix: " + finding.fix);
     }
-    for (Change& c : plan.changes)  // Dateien, die beiseitegelegt werden: Groesse merken (siehe Change::check_size)
-        if (c.kind == Change::Kind::Rename && file_entry_size(fs, c.path, c.base_size)) c.check_size = true;
+    // Dateien, die beiseitegelegt werden: Groesse merken (siehe Change::check_size). Je Ordner einmal listen: bis zu 200 Reste in einem Scanpfad mit
+    // Tausenden Eintraegen riefen sonst je Datei den ganzen Ordner (mit stat je Eintrag) neu ab.
+    std::map<std::string, std::vector<DirEntry>> listings;
+    for (Change& c : plan.changes) {
+        if (c.kind != Change::Kind::Rename) continue;
+        const auto slash = c.path.rfind('/');
+        if (slash == std::string::npos || slash + 1 >= c.path.size()) continue;
+        const std::string dir = slash == 0 ? "/" : c.path.substr(0, slash), name = c.path.substr(slash + 1);
+        auto it = listings.find(dir);
+        if (it == listings.end()) it = listings.emplace(dir, fs.list_dir(dir)).first;
+        for (const auto& e : it->second)
+            if (e.name == name && !e.is_dir) {
+                c.base_size = e.size;
+                c.check_size = true;
+                break;
+            }
+    }
     return plan;
 }
 

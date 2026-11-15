@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.45",
+  "db_version": "2026.11.46",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2034,6 +2034,340 @@
         "reason": {
           "de": "Die Größe ist gelesen; ein Dateisystem passt sicher nicht in weniger als 512 Byte. Dass ShadowMount+ solche Dateien nur überspringt oder meldet, ist an der Test-Konsole nicht beobachtet.",
           "en": "The size is read; a file system certainly does not fit into fewer than 512 bytes. How ShadowMount+ treats such files was not observed on the test console."
+        }
+      }
+    },
+    {
+      "id": "game.no_exec_permission",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.noexec[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Programmdateien eines Spiels (eboot.bin, Module) haben kein Ausführungsrecht, zum Beispiel 0666 statt 0777. Die Konsole startet solche Dateien nicht und meldet CE-107750-0. Das passiert oft beim Kopieren per FTP, je nach FTP-Server. Der Fix setzt die betroffenen Dateien auf 0777; Rückgängig stellt die alten Rechte wieder her. Der Inhalt der Dateien bleibt unberührt.",
+        "en": "Program files of a game (eboot.bin, modules) have no execute permission, for example 0666 instead of 0777. The console does not start such files and reports CE-107750-0. This often happens when copying over FTP, depending on the FTP server. The fix sets the affected files to 0777; undo restores the old permissions. The content of the files stays untouched."
+      },
+      "evidence": "games.noexec[].path",
+      "fix": "chmod_program_files",
+      "source": "https://github.com/quer3q/ampr-emu-ng/issues/41",
+      "verified": "community",
+      "confidence": {
+        "level": "high",
+        "basis": "observed",
+        "reason": {
+          "de": "Die Rechte werden gelesen. Dass die Konsole eine Datei ohne Ausführungsrecht nicht startet, wurde am 13. November 2026 an der Test-Konsole mit der eigenen eboot.bin beobachtet und von einem Nutzer (ampr-emu-ng, Issue 41) mit einer FTP-Kopie bestätigt.",
+          "en": "The permissions are read. That the console does not start a file without execute permission was observed on the test console on 13 November 2026 with our own eboot.bin and confirmed by a user (ampr-emu-ng, issue 41) with an FTP copy."
+        }
+      }
+    },
+    {
+      "id": "game.leftover_parts",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "leftovers.files[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "In einem Scanpfad liegen Reste abgebrochener Kopier- oder Packvorgänge (.part, .tmp, .teil, .neu, .unvollstaendig). Sie belegen Platz, ShadowMount+ ignoriert sie, und ein erneuter Packvorgang kann an ihnen scheitern. Läuft gerade eine Übertragung oder ein Packvorgang, erst abwarten. Der Fix legt sie in den versteckten Ordner .medic_broken daneben (nie gelöscht, Rückgängig holt sie zurück).",
+        "en": "A scan path contains leftovers of interrupted copy or pack jobs (.part, .tmp, .teil, .neu, .unvollstaendig). They take up space, ShadowMount+ ignores them, and a new pack job can fail because of them. If a transfer or a pack job is running right now, wait first. The fix puts them into the hidden folder .medic_broken next to them (never deleted, undo brings them back)."
+      },
+      "evidence": "leftovers.files[].path",
+      "fix": "quarantine_leftovers",
+      "source": "https://github.com/quer3q/ps5-dump-forge/issues/15",
+      "verified": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "community",
+        "reason": {
+          "de": "Die Dateinamen sind gelesen. Dass es Reste abgebrochener Vorgänge sind, folgt aus den Namensmustern und der Beschreibung im Dump-Forge-Projekt (Issue 15); ob gerade ein Job läuft, erkennt Medic nicht.",
+          "en": "The file names are read. That they are leftovers of interrupted jobs follows from the name patterns and the description in the Dump Forge project (issue 15); whether a job is running right now, Medic cannot tell."
+        }
+      }
+    },
+    {
+      "id": "smp.image_name_too_long",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "smp.images[].name_too_long",
+            "eq": "1"
+          }
+        ]
+      },
+      "text": {
+        "de": "Der Dateiname eines Images ist zu lang für ShadowMount+: ohne Endung sind höchstens 63 Byte erlaubt (bei .ffpfsc 58), weil der Einhängename mit Anhang in 88 Byte passen muss. Das Image wird sonst nicht eingehängt, obwohl es heil ist. Der Fix kürzt den Namen im selben Ordner und behält die Titel-ID; Rückgängig benennt zurück.",
+        "en": "The file name of an image is too long for ShadowMount+: without the extension at most 63 bytes are allowed (58 for .ffpfsc), because the mount name with its suffix must fit into 88 bytes. Otherwise the image is not mounted even though it is intact. The fix shortens the name in the same folder and keeps the title id; undo renames it back."
+      },
+      "evidence": "smp.images[].path",
+      "fix": "rename_image_shorten",
+      "source": "https://github.com/quer3q/ps5-dump-forge/issues/33",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Länge und Endung sind gelesen. Die Grenze (63 Byte, bei .ffpfsc 58) ist aus der Kernel-Konstante für Einhängenamen (88 Byte) und aus Dump Forge und dem Converter abgeleitet, an einer Konsole nicht gemessen.",
+          "en": "Length and extension are read. The limit (63 bytes, 58 for .ffpfsc) is derived from the kernel constant for mount names (88 bytes) and from Dump Forge and the converter; it was not measured on a console."
+        }
+      }
+    },
+    {
+      "id": "game.pack_runtime_mismatch",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.runtime[].problem",
+            "in": [
+              "no_runtime",
+              "no_zstd_support",
+              "foreign_runtime"
+            ]
+          }
+        ]
+      },
+      "text": {
+        "de": "Ein Spiel mit gepackten Dateien (ampr_zstd.index oder ampr_assets.index) hat keine passende Laufzeit-Bibliothek: fakelib/libSceAmpr.sprx fehlt, ist das Original von Sony oder, bei einem zstd-Pack, die Fassung von Drakmor, die zstd nicht lesen kann. Das Spiel startet dann nicht oder stürzt früh ab. Lege eine Release-Fassung von ampr-emu-ng (nicht die Debug-Datei) als fakelib/libSceAmpr.sprx ab und schalte in ShadowMount+ die Emulator-Updates aus. Medic ändert hier nichts.",
+        "en": "A game with packed files (ampr_zstd.index or ampr_assets.index) has no matching runtime library: fakelib/libSceAmpr.sprx is missing, is Sony's original or, for a zstd pack, Drakmor's version, which cannot read zstd. The game then does not start or crashes early. Put a release build of ampr-emu-ng (not the debug file) at fakelib/libSceAmpr.sprx and turn off the emulator updates in ShadowMount+. Medic changes nothing here."
+      },
+      "evidence": "games.runtime[].path",
+      "fix": null,
+      "source": "https://github.com/quer3q/ps5-dump-forge/blob/main/docs/LZ4.md",
+      "verified": "doc",
+      "confidence": {
+        "level": "medium",
+        "basis": "doc",
+        "reason": {
+          "de": "Die Laufzeit wird an ihrem Text erkannt (an Dateien von ampr-emu-ng 0.3.4 und 0.4.0 und von ampr_emu 0.4.2.1 geprüft). Dass ein zstd-Pack nur von ampr-emu-ng gelesen wird, steht in der Dokumentation von Dump Forge; an dieser Konsole wurde es nicht nachgestellt.",
+          "en": "The runtime is recognised by its text (checked on files of ampr-emu-ng 0.3.4 and 0.4.0 and of ampr_emu 0.4.2.1). That a zstd pack is only read by ampr-emu-ng is stated in the Dump Forge documentation; it was not reproduced on this console."
+        }
+      }
+    },
+    {
+      "id": "smp.emulator_update_replaces_runtime",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.runtime[].pack",
+            "eq": "zstd"
+          },
+          {
+            "any": [
+              {
+                "fact": "smp.config.emulators.update_enabled",
+                "in": [
+                  "1",
+                  "true",
+                  "yes",
+                  "on"
+                ]
+              },
+              {
+                "fact": "smp.config.emulators.auto_update_ampr",
+                "in": [
+                  "1",
+                  "true",
+                  "yes",
+                  "on"
+                ]
+              },
+              {
+                "fact": "smp.config.update_emulators",
+                "in": [
+                  "1",
+                  "true",
+                  "yes",
+                  "on"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ hat Emulator-Updates eingeschaltet, und ein Spiel hat zstd-Packs. Bei eingeschalteten Updates tauscht ShadowMount+ die libSceAmpr.sprx im Spiel gegen seine eigene Fassung; ein zstd-Pack liest aber nur ampr-emu-ng, das Spiel startet nicht oder stürzt ab. Der Fix schaltet update_enabled und auto_update_ampr aus (Backup, Rückgängig). Danach in ShadowMount+ speichern und, falls die Datei schon ersetzt wurde, die ampr-emu-ng-Datei wieder ins fakelib legen. Emulator-Updates für andere Spiele (DLC, PlayGo) entfallen damit.",
+        "en": "ShadowMount+ has emulator updates turned on, and a game has zstd packs. With updates on, ShadowMount+ replaces the libSceAmpr.sprx in the game with its own version, but a zstd pack is only read by ampr-emu-ng, so the game does not start or crashes. The fix turns off update_enabled and auto_update_ampr (backup, undo). Afterwards save in ShadowMount+ and, if the file was already replaced, put the ampr-emu-ng file back into fakelib. Emulator updates for other games (DLC, PlayGo) are lost that way."
+      },
+      "evidence": "games.runtime[].path",
+      "fix": "smp_set_key",
+      "fix_params": {
+        "section": "emulators",
+        "key": "update_enabled",
+        "legacy_key": "update_emulators",
+        "value": "0",
+        "also": [
+          {
+            "section": "emulators",
+            "key": "auto_update_ampr",
+            "legacy_key": "auto_update_ampr",
+            "value": "0"
+          }
+        ]
+      },
+      "source": "https://github.com/quer3q/ps5-dump-forge/blob/main/docs/LZ4.md",
+      "verified": "doc",
+      "confidence": {
+        "level": "medium",
+        "basis": "doc",
+        "reason": {
+          "de": "Die Einstellungen und die Packs sind gelesen. Dass ShadowMount+ die Bibliothek bei eingeschalteten Updates ersetzt, steht in der Dokumentation von Dump Forge und in mehreren Berichten im ampr-emu-ng-Projekt (Issues 50, 53, 54, 55); an dieser Konsole wurde es nicht nachgestellt.",
+          "en": "The settings and the packs are read. That ShadowMount+ replaces the library when updates are on is stated in the Dump Forge documentation and in several reports in the ampr-emu-ng project (issues 50, 53, 54, 55); it was not reproduced on this console."
+        }
+      }
+    },
+    {
+      "id": "game.pack_no_emu_index",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.runtime[].index_missing",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Ein Spiel mit Packs hat keine ampr_emu.index. Dump Forge schreibt sie zu jedem gepackten Spiel (sie listet alle Dateien, lose und gepackt); ohne sie kennt die Laufzeit die Dateien nicht, und das Spiel kann abstürzen oder beim Laden hängen. Das Spiel mit Dump Forge neu packen oder die Datei vom Original-Pack wieder einspielen. Medic ändert hier nichts.",
+        "en": "A game with packs has no ampr_emu.index. Dump Forge writes it for every packed game (it lists all files, loose and packed); without it the runtime does not know the files, and the game can crash or hang while loading. Pack the game again with Dump Forge or restore the file from the original pack. Medic changes nothing here."
+      },
+      "evidence": "games.runtime[].path",
+      "fix": null,
+      "source": "https://github.com/quer3q/ps5-dump-forge/blob/main/docs/LZ4.md",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Das Fehlen der Datei ist gelesen. Dass Dump Forge sie immer schreibt, steht in dessen Dokumentation; ob ein Spiel ohne sie nicht startet, wurde nicht beobachtet.",
+          "en": "The missing file is read. That Dump Forge always writes it is stated in its documentation; whether a game does not start without it was not observed."
+        }
+      }
+    },
+    {
+      "id": "game.ng_save_risk",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.runtime[].save_risk",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Im Spiel liegt eine ampr-emu-ng-Fassung (0.3.5 oder 0.4.0, Release), bei der Nutzer Probleme beim Speichern melden, und die Konsole hat für dieses Spiel schon CE-108255-1 oder CE-107112-2 verzeichnet. Das passt zu einem Fehler beim Speichern, Laden oder Beenden. Laut dem Projekt behebt eine neuere Fassung (zunächst als Beta) das. Lege eine neuere ampr-emu-ng-Datei als fakelib/libSceAmpr.sprx ab oder starte das Spiel entpackt. Der Zusammenhang ist nicht bewiesen.",
+        "en": "The game contains an ampr-emu-ng build (0.3.5 or 0.4.0, release) for which users report problems when saving, and the console has already recorded CE-108255-1 or CE-107112-2 for this game. That fits an error when saving, loading or quitting. According to the project, a newer build (first as a beta) fixes it. Put a newer ampr-emu-ng file at fakelib/libSceAmpr.sprx or start the game unpacked. The connection is not proven."
+      },
+      "evidence": "games.runtime[].path",
+      "fix": null,
+      "source": "https://github.com/quer3q/ampr-emu-ng/issues/60",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Die Version ist aus der Bibliothek gelesen. Dass diese Fassungen beim Speichern Probleme machen, beruht auf Berichten im ampr-emu-ng-Projekt (Issues 60, 63, 64) und wurde an dieser Konsole nicht nachgestellt.",
+          "en": "The version is read from the library. That these builds cause trouble when saving rests on reports in the ampr-emu-ng project (issues 60, 63, 64) and was not reproduced on this console."
+        }
+      }
+    },
+    {
+      "id": "game.pack_incomplete",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.pack_problems[].problem",
+            "in": [
+              "index_header",
+              "index_truncated",
+              "volume_missing",
+              "volume_size"
+            ]
+          }
+        ]
+      },
+      "text": {
+        "de": "Die zstd-Pack-Dateien eines Spiels sind unvollständig: ein Teil (ampr_zstd-NNN.pak) fehlt, hat nicht die Größe laut Index, oder die ampr_zstd.index ist abgeschnitten. Die Laufzeit liest die fehlenden Teile nie; das Spiel stürzt ab oder hängt beim Laden. Kopiere die Dateien neu (am besten auf ein exFAT-Laufwerk, FAT32 erlaubt höchstens 4 GiB je Datei) und vergleiche die Größen mit der Quelle. Medic ändert hier nichts.",
+        "en": "The zstd pack files of a game are incomplete: a part (ampr_zstd-NNN.pak) is missing, does not have the size given in the index, or the ampr_zstd.index is cut off. The runtime never reads the missing parts; the game crashes or hangs while loading. Copy the files again (preferably to an exFAT drive, FAT32 allows at most 4 GiB per file) and compare the sizes with the source. Medic changes nothing here."
+      },
+      "evidence": "games.pack_problems[].path",
+      "fix": null,
+      "source": "https://github.com/quer3q/ps5-dump-forge/blob/main/docs/zstd.md",
+      "verified": "doc",
+      "confidence": {
+        "level": "medium",
+        "basis": "doc",
+        "reason": {
+          "de": "Anzahl und Größe der Dateien sind gelesen und mit dem Aufbau der Index-Datei verglichen, den die Dokumentation von Dump Forge beschreibt. Bei Images prüft Medic nur, ob die Dateien da sind, nicht ihre Größe.",
+          "en": "The number and size of the files are read and compared with the layout of the index file described in the Dump Forge documentation. For images Medic only checks that the files exist, not their size."
+        }
+      }
+    },
+    {
+      "id": "game.incomplete_folder",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.incomplete[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Ein Ordner in einem Scanpfad sieht wie ein Spiel aus, ist aber unvollständig: es fehlt die eboot.bin oder die sce_sys/param.json, oder die param.json ist unlesbar (Byte-Order-Marke, kein gültiges JSON, keine titleId wie PPSA01234). ShadowMount+ und Kraken Mount überspringen so einen Ordner oft ohne Meldung. Kopiere den Ordner vollständig neu oder speichere die param.json als UTF-8 ohne Byte-Order-Marke. Medic ändert hier nichts.",
+        "en": "A folder in a scan path looks like a game but is incomplete: the eboot.bin or sce_sys/param.json is missing, or the param.json is unreadable (byte order mark, not valid JSON, no titleId such as PPSA01234). ShadowMount+ and Kraken Mount often skip such a folder without a message. Copy the folder completely again or save the param.json as UTF-8 without a byte order mark. Medic changes nothing here."
+      },
+      "evidence": "games.incomplete[].path",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Dateien sind gelesen. Dass die Mounter einen unvollständigen Ordner ohne Meldung überspringen, folgt aus ihrer Dokumentation (Kraken Mount verlangt eboot.bin und sce_sys/param.json) und aus Berichten ohne Log; an dieser Konsole nicht beobachtet.",
+          "en": "The files are read. That the mounters skip an incomplete folder without a message follows from their documentation (Kraken Mount requires eboot.bin and sce_sys/param.json) and from reports without a log; not observed on this console."
+        }
+      }
+    },
+    {
+      "id": "kraken.pkg_sparse_extent",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.sparse_extent[].line",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount lehnt eine .pkg ab: Das Layout der Paketdatei hat eine Lücke (sparse extent), und das Paket bekommt deshalb keine Kachel; die Meldung steht nur in /data/krakenmount/kraken.log. Laut der Meldung hilft es, das Paket mit Dump Forge neu zu bauen (--kraken stored). Eine Korrektur in Kraken Mount selbst ist im Projekt vorgemerkt, war aber noch in keinem Release. Medic ändert hier nichts.",
+        "en": "Kraken Mount rejects a .pkg: the layout of the package file has a gap (sparse extent), so the package gets no tile; the message is only in /data/krakenmount/kraken.log. According to the message it helps to rebuild the package with Dump Forge (--kraken stored). A fix in Kraken Mount itself is planned in the project but was not in any release yet. Medic changes nothing here."
+      },
+      "evidence": "kraken.sparse_extent[].line",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount/issues/4",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Die Meldung ist aus dem Log gelesen. Dass sie von einem Layout mit Lücke kommt, steht im Kraken-Mount-Projekt (Issues 4, 5, 8, 9, 13, 20); ob das Neu-Packen mit --kraken stored hilft, wurde dort nicht an einem echten Paket geprüft.",
+          "en": "The message is read from the log. That it comes from a layout with a gap is stated in the Kraken Mount project (issues 4, 5, 8, 9, 13, 20); whether rebuilding with --kraken stored helps was not checked there on a real package."
         }
       }
     },

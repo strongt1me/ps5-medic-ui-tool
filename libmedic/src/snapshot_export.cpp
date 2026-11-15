@@ -445,6 +445,25 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
         k.close();  // Schreibfehler (Datentraeger voll) zeigen sich erst hier, nicht schon im Destruktor
         if (!k) ++ex.write_failures;
     }
+    // Modi der Programmdateien ohne Ausfuehrungsrecht (games.noexec[]): ohne sie liefe der Befund am PC nicht (modes.json, siehe platform.hpp)
+    if (const auto* ne = facts.get("games.noexec"); ne && ne->is_array()) {
+        json modes = json::object();
+        for (const auto& g : *ne) {
+            if (!g.is_object() || !g.contains("files") || !g["files"].is_array() || !g.contains("modes") || !g["modes"].is_array()) continue;
+            for (std::size_t i = 0; i < g["files"].size() && i < g["modes"].size(); ++i)
+                if (g["files"][i].is_string() && g["modes"][i].is_number_integer()) {
+                    char buf[16];
+                    std::snprintf(buf, sizeof buf, "%04o", static_cast<unsigned>(g["modes"][i].get<long>()));
+                    modes[g["files"][i].get<std::string>()] = buf;
+                }
+        }
+        if (!modes.empty()) {
+            std::ofstream m(dest / "modes.json", std::ios::binary);
+            m << dump_safe(modes, 2) << "\n";
+            m.close();
+            if (!m) ++ex.write_failures;
+        }
+    }
     {
         std::ofstream a(dest / "system.json", std::ios::binary), b(dest / "procs.json", std::ios::binary);
         a << dump_safe(sys, 2) << "\n";

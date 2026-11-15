@@ -1,0 +1,5 @@
+{
+ "/mnt/usb0/homebrew/PPSA00001-Muster/eboot.bin": "0666",
+ "/mnt/usb0/homebrew/PPSA00001-Muster/sce_module/libmuster.prx": "0666",
+ "/mnt/usb0/homebrew/PPSA00001-Muster/sce_module/ok.sprx": "0755"
+}

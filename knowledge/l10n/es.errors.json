@@ -321,7 +321,8 @@
     "Si nada ayuda, restablece la consola («Ajustes > Sistema > Software del sistema > Opciones de restablecimiento > Restablecer la consola»). Borra todos los datos del almacenamiento de la consola: haz antes una copia y luego vuelve a instalar el juego."
    ],
    "notes": [
-    "Según Sony, «Reparar almacenamiento de la consola» no borra datos y «Restablecer PS5» borra todos los datos de usuario. Sobre «Reconstruir base de datos» Sony no dice nada de pérdida de datos."
+    "Según Sony, «Reparar almacenamiento de la consola» no borra datos y «Restablecer PS5» borra todos los datos de usuario. Sobre «Reconstruir base de datos» Sony no dice nada de pérdida de datos.",
+    "Nota de Medic (no de Sony): en una consola con jailbreak este error puede deberse a una carpeta de juego cuyos archivos de programa (eboot.bin, módulos) no tienen permiso de ejecución, por ejemplo 0666 en lugar de 0777 tras copiar por FTP (ampr-emu-ng, issue 41). El chequeo lo comprueba (regla game.no_exec_permission); la reparación pone los permisos en 0777."
    ]
   },
   "CE-107857-8": {
@@ -406,6 +407,9 @@
    "steps": [
     "Pon el juego en su última versión.",
     "Para más ayuda Sony remite a «PlayStation Repairs»."
+   ],
+   "notes": [
+    "Nota de Medic (no de Sony, según informes): en los juegos homebrew puede estar detrás la biblioteca ampr-emu-ng: el error aparece al guardar o al salir con las versiones 0.3.5 y 0.4.0 (ampr-emu-ng, issues 60, 63, 64). El chequeo lee la versión de libSceAmpr.sprx (regla game.ng_save_risk) e informa de los juegos empaquetados sin ampr_emu.index (regla game.pack_no_emu_index)."
    ]
   },
   "CE-108262-9": {

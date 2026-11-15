@@ -24,6 +24,10 @@ void collect_savedata(const Platform& p, Facts& f);       // savedata.current_ac
 void collect_system_logs(const Platform& p, Facts& f);    // boot.log_last, boot.unclean[], boot.unclean_total/_14d, errors.total, errors.pairs[].{code,titleid,count,last,label}
 void collect_databases(const Platform& p, Facts& f);      // db.count, db.integrity_tested, db.files[].{path,name,size,readable,header_bad,truncated,unaligned,page_size,header_pages,journal_hot,journal_size,wal_size,integrity,integrity_note,integrity_skip}
 void collect_game_files(const Platform& p, Facts& f);    // games.case_mismatch[].{titleid,path,expected,actual,fstype,case_sensitive}
+void collect_game_runtime(const Platform& p, Facts& f);   // games.runtime[], games.pack_problems[]: libSceAmpr.sprx und Packs in Spielordnern und Images (collectors_games.cpp)
+void collect_game_folders(const Platform& p, Facts& f);   // games.incomplete[]: Ordner in Scanpfaden, die wie ein Spiel aussehen, aber unvollstaendig sind
+void collect_kraken(const Platform& p, Facts& f);         // kraken.log_present, kraken.sparse_extent[]: Meldungen aus /data/krakenmount/kraken.log
+void collect_leftovers(const Platform& p, Facts& f);       // leftovers.files[].{path,name,size,is_dir,root}: Reste abgebrochener Kopier-/Packvorgaenge in den Scanpfaden
 
 // Wuerde ShadowMount+ 1.7beta12 diesen Wert in einer v2-Datei annehmen? (Unbekannte Paare gelten als gueltig.) Auch die Fixes pruefen damit, was sie schreiben:
 // ein einziger ungueltiger Wert laesst SM+ die ganze Datei verwerfen.

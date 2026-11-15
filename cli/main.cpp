@@ -18,6 +18,8 @@
 #include "medic/rules.hpp"
 #include "medic/snapshot_export.hpp"
 
+#include <cstdio>
+
 #include <algorithm>
 #include <chrono>
 #include <cstring>
@@ -172,6 +174,10 @@ int cmd_fix(const Args& a) {
         const std::string& note = a.lang == "de" ? c.note_de : c.note_en;
         if (c.kind == medic::Change::Kind::Rename) {
             std::cout << "  VERSCHIEBEN  " << c.path << "\n          nach  " << c.to << "\n          " << note << "\n";
+        } else if (c.kind == medic::Change::Kind::Chmod) {
+            char modes[40];
+            std::snprintf(modes, sizeof modes, "%04o -> %04o", static_cast<unsigned>(c.base_mode), static_cast<unsigned>(c.mode));
+            std::cout << "  RECHTE       " << c.path << "\n          " << modes << "  " << note << "\n";
         } else {
             std::cout << "  SCHREIBEN    " << c.path << "\n          " << note << "\n";
             std::string old;

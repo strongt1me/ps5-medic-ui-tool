@@ -14,7 +14,7 @@
 // Fix-Parameter (fix_params in der Regel):
 //   rename_image_parentheses            keine
 //   rename_case_prx                     keine; liest games.case_mismatch[] (case_sensitive 1), benennt auf den erwarteten Namen im selben Ordner um
-//   smp_set_key                         section, key, legacy_key (optional), file (Standard config.ini),
+//   smp_set_key                         section, key, legacy_key (optional), file (Standard config.ini), also (optional: weitere {section,key,legacy_key,value} derselben Datei),
 //                                       mode "set" (Standard) | "add",
 //                                       value | from {array, field, agg: "max"|"distinct"}
 //   smp_disable_conflicting_backpork    files [Pfade], match (Regex, Standard "backpork")
@@ -26,6 +26,11 @@
 //                                       sonst Zeile auskommentieren (WebKit-Liste) bzw. entfernen (Payload Manager)
 //   quarantine_broken_elf               keine; liest payload.broken_elfs[], verschiebt nach <Ordner>/.medic_broken/ (nur Whitelist-Pfade)
 //   quarantine_empty_image              keine; liest smp.images[] mit tiny=1 (unter 512 Byte), verschiebt nach <Ordner>/.medic_broken/ (nur Whitelist-Pfade)
+//   quarantine_leftovers                keine; liest leftovers.files[] (.part, .tmp, .teil ... in den Scanpfaden), verschiebt nach <Ordner>/.medic_broken/ (derselbe Ordner,
+//                                       nie loeschen; check_size bricht ab, wenn die Datei noch waechst)
+//   rename_image_shorten                keine; liest smp.images[] mit name_too_long=1 (ueber 63 Byte ohne Endung, .ffpfsc 58) und kuerzt den Namen im selben Ordner (Titel-ID bleibt)
+//   chmod_program_files                 keine; liest games.noexec[] (Programmdateien ohne Ausfuehrungsbit), setzt jede Datei auf 0777 (Marc, 14. Nov. 2026:
+//                                       Rechte des Spielordners, gemessen: 0666 startet nicht, 0777 schon); nur Whitelist-Pfade, Journal merkt den alten Modus
 //   pldmgr_enable_autoload              keine; setzt AUTOLOAD_ENABLED=1 in /data/pldmgr/pldmgr_config.txt
 //   fix_image_nesting_hint              keine (nur Hinweis)
 #pragma once
@@ -40,11 +45,14 @@
 namespace medic {
 
 struct Change {
-    enum class Kind { Rename, WriteFile };
+    enum class Kind { Rename, WriteFile, Chmod };
     Kind kind = Kind::Rename;
-    std::string path;     // Quelle bzw. zu schreibende Datei
+    std::string path;     // Quelle bzw. zu schreibende Datei bzw. Datei, deren Modus sich aendert
     std::string to;       // nur Rename
     std::string content;  // nur WriteFile: neuer Gesamtinhalt
+    // Nur Chmod: neuer Modus (z. B. 0777) und der Modus beim Planen. Aendert sich der Modus bis zur Bestaetigung (jemand hat die Rechte inzwischen gesetzt),
+    // lehnt apply_plan ab; der alte Modus kommt ins Journal, Rueckgaengig stellt ihn wieder her.
+    std::uint32_t mode = 0, base_mode = 0;
     std::string note_de, note_en;
     // Nur WriteFile: Zustand der Datei, auf dem der Plan beruht. Ist check_base gesetzt, lehnt apply_plan ab, wenn sich die
     // Datei seit der Vorschau geaendert hat (ShadowMount+, FTP oder der Nutzer): sonst stuende im Diff etwas anderes als
