@@ -660,71 +660,6 @@ void plan_quarantine_leftovers(FixPlan& plan, const Facts& facts, const IFileSys
     plan.hint_en = "The files are not deleted but moved to .medic_broken next to them (undo brings them back). If a transfer or a packing job is running, let it finish first.";
 }
 
-// ---- rename_image_shorten -----------------------------------------------------------------------------------------------------
-// Ein Image-Name ueber der Grenze von ShadowMount+ (smp.images[].name_too_long: 63 Byte ohne Endung, bei .ffpfsc 58) laesst sich nicht einhaengen. Der Fix kuerzt den
-// Namen im selben Ordner (an einer UTF-8-Grenze) und behaelt eine Titel-ID, die sonst abgeschnitten wuerde; Rueckgaengig benennt zurueck.
-
-std::string utf8_prefix(const std::string& s, std::size_t n) {
-    if (n >= s.size()) return s;
-    while (n > 0 && (static_cast<unsigned char>(s[n]) & 0xC0) == 0x80) --n;  // nicht mitten in einem Zeichen schneiden
-    return s.substr(0, n);
-}
-
-std::string trim_name_end(std::string s) {
-    while (!s.empty() && (s.back() == ' ' || s.back() == '.' || s.back() == '_' || s.back() == '-')) s.pop_back();
-    return s;
-}
-
-std::string shorten_image_name(const std::string& name, const std::string& ext, std::size_t limit) {
-    const std::string stem = name.size() > ext.size() ? name.substr(0, name.size() - ext.size()) : name;
-    if (stem.size() <= limit) return name;
-    static const std::regex id_re("(PPSA|CUSA)[0-9]{5}");
-    std::string out = trim_name_end(utf8_prefix(stem, limit));
-    std::smatch m;
-    if (std::regex_search(stem, m, id_re) && out.find(m.str()) == std::string::npos) {
-        // Die Titel-ID stuende hinter der Grenze: vorne behalten, den Rest dahinter kuerzen
-        std::string rest = stem;
-        rest.erase(static_cast<std::size_t>(m.position()), static_cast<std::size_t>(m.length()));
-        while (!rest.empty() && (rest.front() == '_' || rest.front() == '-' || rest.front() == ' ')) rest.erase(rest.begin());
-        out = trim_name_end(m.str() + "_" + utf8_prefix(rest, limit - static_cast<std::size_t>(m.length()) - 1));
-    }
-    return out.empty() ? name : out + ext;
-}
-
-void plan_rename_image_shorten(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
-    const PathPolicy policy = policy_from_facts(facts);
-    std::set<std::string> targets;
-    for (const auto& img : array_fact(facts, "smp.images")) {
-        if (img.value("name_too_long", 0) != 1) continue;
-        const std::string ext = str_of(img, "ext"), name = str_of(img, "name"), path = str_of(img, "path");
-        if (name.empty() || path.empty()) continue;
-        if (std::string why; !policy.allowed(path, &why)) {
-            plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + path);
-            continue;
-        }
-        const std::string new_name = shorten_image_name(name, ext, ext == ".ffpfsc" ? 58 : 63);
-        if (new_name.empty() || new_name == name) {
-            plan.warnings.push_back("Übersprungen (Name lässt sich nicht kürzen): " + path);
-            continue;
-        }
-        const std::string to = join_path(dir_of(path), new_name);
-        if (fs.exists(to) || !targets.insert(to).second) {
-            plan.warnings.push_back("Übersprungen (Ziel existiert bereits): " + to);
-            continue;
-        }
-        Change c;
-        c.kind = Change::Kind::Rename;
-        c.path = path;
-        c.to = to;
-        c.note_de = "Zu langen Image-Namen kürzen (" + std::to_string(name.size()) + " auf " + std::to_string(new_name.size()) + " Byte)";
-        c.note_en = "Shorten the image name that is too long (" + std::to_string(name.size()) + " to " + std::to_string(new_name.size()) + " bytes)";
-        plan.changes.push_back(std::move(c));
-    }
-    if (plan.changes.empty()) plan.warnings.push_back("Kein zu langer Image-Name in den erlaubten Ordnern gefunden");
-    plan.hint_de = "Nur der Dateiname wird gekürzt (gleicher Ordner, die Titel-ID bleibt erhalten); Rückgängig stellt den alten Namen wieder her.";
-    plan.hint_en = "Only the file name is shortened (same folder, the title id is kept); undo restores the old name.";
-}
-
 // ---- chmod_program_files ------------------------------------------------------------------------------------------------------
 // Programmdateien ohne Ausfuehrungsbit (games.noexec[], CE-107750-0) bekommen den Modus 0777 (Marc, 14. Nov. 2026; gemessen: 0666 startet nicht, 0777 schon).
 // Nur die Dateien, die der Sammler nennt (eboot.bin, Module), nicht der ganze Spielordner: Daten brauchen kein Ausfuehrungsrecht. Das Journal merkt sich
@@ -878,8 +813,6 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
         plan_quarantine_image(plan, facts, fs);
     } else if (finding.fix == "quarantine_leftovers") {
         plan_quarantine_leftovers(plan, facts, fs);
-    } else if (finding.fix == "rename_image_shorten") {
-        plan_rename_image_shorten(plan, facts, fs);
     } else if (finding.fix == "chmod_program_files") {
         plan_chmod_program_files(plan, facts, fs);
     } else if (finding.fix == "pldmgr_enable_autoload") {

@@ -237,57 +237,6 @@ void leftover_tests() {
     }
 }
 
-// Zu lange Image-Namen (S17)
-void long_name_tests() {
-    Sandbox sb;
-    const std::string root = "/data/homebrew";
-    const std::string long_name = "PPSA00002-" + std::string(60, 'x') + ".exfat";               // 70 Byte ohne Endung
-    const std::string id_late = std::string(75, 'a') + "_PPSA00007.ffpfsc";                      // Titel-ID hinter der Grenze von 58
-    std::string umlauts = "PPSA00009-";
-    for (int i = 0; i < 40; ++i) umlauts += "\xC3\xA4";                                           // 10 + 80 Byte, jedes Zeichen 2 Byte
-    umlauts += ".exfat";
-    for (const auto& n : {long_name, id_late, umlauts}) spit(sb.real(root + "/" + n), std::string(1024, 'A'));
-    const std::string ok_name = "PPSA00005-" + std::string(53, 'y') + ".exfat";                  // genau 63 Byte
-    spit(sb.real(root + "/" + ok_name), std::string(1024, 'A'));
-
-    auto p = make_snapshot_platform(sb.dir.string(), true);
-    Facts f = collect_all(*p);
-    const json* imgs = f.get("smp.images");
-    int flagged = 0, total = 0;
-    if (imgs)
-        for (const auto& i : *imgs) {
-            ++total;
-            if (i.value("name_too_long", 0) == 1) ++flagged;
-            if (i["name"] == ok_name) CHECK(i["name_too_long"] == 0 && i["stem_bytes"] == 63, "Namen: genau 63 Byte sind erlaubt");
-        }
-    CHECK(total == 4 && flagged == 3, "Namen: drei zu lange Namen erkannt, der mit 63 Byte nicht (" + std::to_string(flagged) + "/" + std::to_string(total) + ")");
-
-    const RuleSet rs = load_rules_from_file(testutil::kShipped);
-    const auto findings = evaluate(rs, f);
-    const Finding* fd = find_rule(findings, "smp.image_name_too_long");
-    CHECK(fd && fd->fix == "rename_image_shorten", "Namen: Regel feuert mit dem Fix rename_image_shorten");
-    if (!fd) return;
-    FixPlan plan = plan_fix(*fd, f, p->fs());
-    CHECK(plan.changes.size() == 3, "Namen: Plan mit drei Umbenennungen (" + std::to_string(plan.changes.size()) + ")");
-    for (const auto& c : plan.changes) {
-        const std::string newname = c.to.substr(c.to.rfind('/') + 1);
-        const bool pfsc = newname.size() > 7 && newname.compare(newname.size() - 7, 7, ".ffpfsc") == 0;
-        const std::size_t stem = newname.size() - (pfsc ? 7 : 6);
-        CHECK(stem <= (pfsc ? 58u : 63u) && valid_utf8(newname) && c.to.rfind(root + "/", 0) == 0 && c.check_size, "Namen: gekuerzt, gueltiges UTF-8, selber Ordner: " + newname);
-        if (c.path.find("PPSA00007") != std::string::npos) CHECK(newname.find("PPSA00007") != std::string::npos, "Namen: eine sonst abgeschnittene Titel-ID bleibt im Namen: " + newname);
-        if (c.path.find("PPSA00002") != std::string::npos) CHECK(newname.rfind("PPSA00002", 0) == 0, "Namen: Titel-ID am Anfang bleibt vorn: " + newname);
-    }
-    const ApplyResult ar = apply_plan(plan, *p, policy_from_facts(f), {"20261114T140000Z", true});
-    CHECK(ar.ok, "Namen: Anwenden ok (" + ar.error + ")");
-    Facts after = collect_all(*p);
-    bool none = true;
-    if (const json* ai = after.get("smp.images"))
-        for (const auto& i : *ai) none = none && i.value("name_too_long", 0) == 0;
-    CHECK(none, "Namen: danach ist kein Name mehr zu lang");
-    const UndoResult ur = undo_txn(*p, policy_from_facts(f), ar.txn, "20261114T140100Z");
-    CHECK(ur.ok && stdfs::exists(sb.real(root + "/" + long_name)) && stdfs::exists(sb.real(root + "/" + id_late)) && stdfs::exists(sb.real(root + "/" + umlauts)), "Namen: Rueckgaengig stellt die alten Namen wieder her (" + ur.error + ")");
-}
-
 // Bausteine fuer Laufzeit-Bibliotheken und Pack-Indizes (Aufbau: docs/zstd.md von Dump Forge; Marken an echten Dateien geprueft, siehe collectors_games.cpp)
 std::string ng_lib(const std::string& version, bool debug = false) {
     return std::string("\x4f\x15\x3d\x1d", 4) + std::string(60, '\0') + (debug ? "ampr-emu-ng debugpack_format\0" : "") + "ampr-emu-ng " + version + std::string("\0AMPRZPK1\0", 10) + std::string(100, '\0');
@@ -783,7 +732,6 @@ void game_issue_tests() {
     misc_tests();
     nanodns_tests();
     leftover_tests();
-    long_name_tests();
     rename_device_tests();
     backport_name_tests();
     runtime_tests();

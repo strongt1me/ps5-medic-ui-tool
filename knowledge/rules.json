@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.48",
+  "db_version": "2026.11.49",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2130,34 +2130,6 @@
         "reason": {
           "de": "Die Dateinamen sind gelesen. Dass es Reste abgebrochener Vorgänge sind, folgt aus den Namensmustern und der Beschreibung im Dump-Forge-Projekt (Issue 15); ob gerade ein Job läuft, erkennt Medic nicht.",
           "en": "The file names are read. That they are leftovers of interrupted jobs follows from the name patterns and the description in the Dump Forge project (issue 15); whether a job is running right now, Medic cannot tell."
-        }
-      }
-    },
-    {
-      "id": "smp.image_name_too_long",
-      "severity": "info",
-      "when": {
-        "all": [
-          {
-            "fact": "smp.images[].name_too_long",
-            "eq": "1"
-          }
-        ]
-      },
-      "text": {
-        "de": "Der Dateiname eines Images ist zu lang für ShadowMount+: ohne Endung sind höchstens 63 Byte erlaubt (bei .ffpfsc 58), weil der Einhängename mit Anhang in 88 Byte passen muss. Das Image wird sonst nicht eingehängt, obwohl es heil ist. Der Fix kürzt den Namen im selben Ordner und behält die Titel-ID; Rückgängig benennt zurück.",
-        "en": "The file name of an image is too long for ShadowMount+: without the extension at most 63 bytes are allowed (58 for .ffpfsc), because the mount name with its suffix must fit into 88 bytes. Otherwise the image is not mounted even though it is intact. The fix shortens the name in the same folder and keeps the title id; undo renames it back."
-      },
-      "evidence": "smp.images[].path",
-      "fix": "rename_image_shorten",
-      "source": "https://github.com/quer3q/ps5-dump-forge/issues/33",
-      "verified": "todo",
-      "confidence": {
-        "level": "low",
-        "basis": "derived",
-        "reason": {
-          "de": "Länge und Endung sind gelesen. Die Grenze (63 Byte, bei .ffpfsc 58) ist aus der Kernel-Konstante für Einhängenamen (88 Byte) und aus Dump Forge und dem Converter abgeleitet, an einer Konsole nicht gemessen.",
-          "en": "Length and extension are read. The limit (63 bytes, 58 for .ffpfsc) is derived from the kernel constant for mount names (88 bytes) and from Dump Forge and the converter; it was not measured on a console."
         }
       }
     },

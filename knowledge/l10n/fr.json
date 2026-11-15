@@ -226,10 +226,6 @@
    "text": "Un chemin d'analyse contient des restes de copies ou d'empaquetages interrompus (.part, .tmp, .teil, .neu, .unvollstaendig). Ils occupent de la place, ShadowMount+ les ignore, et un nouvel empaquetage peut échouer à cause d'eux. Si un transfert ou un empaquetage est en cours, attendez d'abord. La réparation les place dans le dossier caché .medic_broken à côté (jamais supprimés, l'annulation les ramène).",
    "confidence_reason": "Les noms de fichiers sont lus. Qu'il s'agisse de restes de tâches interrompues découle des modèles de noms et de la description du projet Dump Forge (issue 15) ; Medic ne sait pas si une tâche est en cours."
   },
-  "smp.image_name_too_long": {
-   "text": "Le nom de fichier d'une image est trop long pour ShadowMount+ : sans l'extension, 63 octets au plus sont permis (58 pour .ffpfsc), car le nom de montage avec son suffixe doit tenir dans 88 octets. Sinon l'image n'est pas montée alors qu'elle est intacte. La réparation raccourcit le nom dans le même dossier et garde l'identifiant du titre ; l'annulation le rétablit.",
-   "confidence_reason": "La longueur et l'extension sont lues. La limite (63 octets, 58 pour .ffpfsc) est déduite de la constante du noyau pour les noms de montage (88 octets) et de Dump Forge et du convertisseur ; elle n'a pas été mesurée sur une console."
-  },
   "game.pack_runtime_mismatch": {
    "text": "Un jeu avec des fichiers empaquetés (ampr_zstd.index ou ampr_assets.index) n'a pas la bonne bibliothèque d'exécution : fakelib/libSceAmpr.sprx manque, est l'original de Sony ou, pour un pack zstd, la version de Drakmor, qui ne sait pas lire zstd. Le jeu ne démarre alors pas ou plante tôt. Placez une version release d'ampr-emu-ng (pas le fichier de débogage) dans fakelib/libSceAmpr.sprx et désactivez les mises à jour des émulateurs dans ShadowMount+. Medic ne modifie rien ici.",
    "confidence_reason": "La bibliothèque d'exécution est reconnue à son texte (vérifié sur des fichiers d'ampr-emu-ng 0.3.4 et 0.4.0 et d'ampr_emu 0.4.2.1). Qu'un pack zstd ne soit lu que par ampr-emu-ng figure dans la documentation de Dump Forge ; cela n'a pas été reproduit sur cette console."

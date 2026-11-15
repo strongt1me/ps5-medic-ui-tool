@@ -226,10 +226,6 @@
    "text": "In un percorso di scansione ci sono resti di copie o impacchettamenti interrotti (.part, .tmp, .teil, .neu, .unvollstaendig). Occupano spazio, ShadowMount+ li ignora e un nuovo impacchettamento può fallire a causa loro. Se è in corso un trasferimento o un impacchettamento, aspetta prima. La riparazione li sposta nella cartella nascosta .medic_broken accanto (mai eliminati, l'annullamento li riporta).",
    "confidence_reason": "I nomi dei file vengono letti. Che si tratti di resti di operazioni interrotte deriva dai modelli dei nomi e dalla descrizione nel progetto Dump Forge (issue 15); Medic non sa se è in corso un'operazione."
   },
-  "smp.image_name_too_long": {
-   "text": "Il nome file di un'immagine è troppo lungo per ShadowMount+: senza estensione sono ammessi al massimo 63 byte (58 per .ffpfsc), perché il nome di montaggio con il suo suffisso deve stare in 88 byte. Altrimenti l'immagine non viene montata anche se è integra. La riparazione accorcia il nome nella stessa cartella e mantiene l'ID del titolo; l'annullamento lo ripristina.",
-   "confidence_reason": "Lunghezza ed estensione vengono lette. Il limite (63 byte, 58 per .ffpfsc) è dedotto dalla costante del kernel per i nomi di montaggio (88 byte) e da Dump Forge e dal convertitore; non è stato misurato su una console."
-  },
   "game.pack_runtime_mismatch": {
    "text": "Un gioco con file impacchettati (ampr_zstd.index o ampr_assets.index) non ha la libreria di runtime adatta: fakelib/libSceAmpr.sprx manca, è l'originale di Sony o, per un pack zstd, la versione di Drakmor, che non sa leggere zstd. Il gioco allora non si avvia o si blocca presto. Metti una versione release di ampr-emu-ng (non il file di debug) in fakelib/libSceAmpr.sprx e disattiva gli aggiornamenti degli emulatori in ShadowMount+. Medic qui non modifica nulla.",
    "confidence_reason": "Il runtime viene riconosciuto dal suo testo (verificato su file di ampr-emu-ng 0.3.4 e 0.4.0 e di ampr_emu 0.4.2.1). Che un pack zstd sia letto solo da ampr-emu-ng è scritto nella documentazione di Dump Forge; non è stato riprodotto su questa console."

@@ -1117,11 +1117,6 @@ void collect_shadowmount(const Platform& p, Facts& f) {
             }
             if (e.ext != ".dat") {
                 img["tiny"] = e.size < 512 ? 1 : 0;  // kleiner als ein Kopf: leer oder abgebrochen
-                // Namenslaenge: ShadowMount+ haengt das Image unter /mnt/shadowmnt/<Name>_<8 Hex> ein, der Kernel erlaubt 88 Byte (MNAMELEN). Der Name ohne Endung darf
-                // hoechstens 63 Byte (UTF-8) lang sein, bei .ffpfsc 58 (Dump Forge F12 und Converter G09 rechnen unabhaengig gleich; am Geraet nicht gemessen).
-                const std::size_t stem = e.name.size() > e.ext.size() ? e.name.size() - e.ext.size() : e.name.size();
-                img["stem_bytes"] = stem;
-                img["name_too_long"] = stem > (e.ext == ".ffpfsc" ? 58u : 63u) ? 1 : 0;
             }
             images.push_back(std::move(img));
         }

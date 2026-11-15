@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Regel-Uebersicht
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.48, 86 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.49, 85 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -64,7 +64,6 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `smp.image_empty` | warning | alle | `quarantine_empty_image` | todo | Ein Image (.exfat, .ffpfs oder .ffpfsc) ist kleiner als 512 Byte, also leer oder nur ein Rest nach einem Abbruch, und lässt sich nicht ei... |
 | `smp.image_extra_folder` | warning | alle | `fix_image_nesting_hint` | doc | Im Image liegt das Spiel in einem zusätzlichen Ordner (/<ORDNER>/sce_sys/param.json statt /sce_sys/param.json). |
 | `smp.image_mount_0x60` | warning | alle | - | community | ShadowMount+ kann ein Image nicht einhängen (Fehler 0x00000060): Das Image ist angehängt, aber sein Dateisystem lässt sich nicht öffnen. |
-| `smp.image_name_too_long` | info | alle | `rename_image_shorten` | todo | Der Dateiname eines Images ist zu lang für ShadowMount+: ohne Endung sind höchstens 63 Byte erlaubt (bei .ffpfsc 58), weil der Einhängena... |
 | `smp.image_sector_autotune` | info | alle | - | doc | ShadowMount+ hat die Sektorgröße eines Images automatisch angepasst (ab 1.7beta12 steht der Wert in der profiles.ini unter [image:DATEI],... |
 | `smp.image_truncated` | warning | alle | - | doc | Ein Image (.exfat, .ffpfs oder .ffpfsc) ist kleiner, als sein Kopf angibt (VolumeLength bzw. |
 | `smp.kstuff_min_version` | critical | alle | - | doc | ShadowMount+ benötigt kstuff-lite ab Version 1.07. |

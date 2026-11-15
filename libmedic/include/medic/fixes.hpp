@@ -28,7 +28,6 @@
 //   quarantine_empty_image              keine; liest smp.images[] mit tiny=1 (unter 512 Byte), verschiebt nach <Ordner>/.medic_broken/ (nur Whitelist-Pfade)
 //   quarantine_leftovers                keine; liest leftovers.files[] (.part, .tmp, .teil ... in den Scanpfaden), verschiebt nach <Ordner>/.medic_broken/ (derselbe Ordner,
 //                                       nie loeschen; check_size bricht ab, wenn die Datei noch waechst)
-//   rename_image_shorten                keine; liest smp.images[] mit name_too_long=1 (ueber 63 Byte ohne Endung, .ffpfsc 58) und kuerzt den Namen im selben Ordner (Titel-ID bleibt)
 //   chmod_program_files                 keine; liest games.noexec[] (Programmdateien ohne Ausfuehrungsbit), setzt jede Datei auf 0777 (Marc, 14. Nov. 2026:
 //                                       Rechte des Spielordners, gemessen: 0666 startet nicht, 0777 schon); nur Whitelist-Pfade, Journal merkt den alten Modus
 //   pldmgr_enable_autoload              keine; setzt AUTOLOAD_ENABLED=1 in /data/pldmgr/pldmgr_config.txt
