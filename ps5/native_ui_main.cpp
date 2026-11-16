@@ -82,24 +82,29 @@ void flush_range(void* address, std::size_t length) {
 // riskieren). Sie liest stattdessen die Sprache, die der Dienst schreibt: zuerst die gewaehlte Sprache aus config.ini (language=xx), sonst die
 // Systemsprache, die der Dienst nach jedem Start in /data/ps5medic/system_language ablegt, sonst Englisch (Marc, 13. Nov. 2026).
 enum Msg { kMsgBye, kMsgNoVideo, kMsgNoFrameMem, kMsgNoMap, kMsgNoRegister, kMsgNoServiceFile, kMsgNoLoader, kMsgCheckLoader, kMsgNoAnswer, kMsgLogHint,
-           kMsgLost, kMsgRetry, kMsgCount };
+           kMsgLost, kMsgRetry, kMsgNeedSmp, kMsgCount };
 // Zeilen 0 bis 4 (Benachrichtigungen) bleiben ASCII, damit nichts verstuemmelt wird; die Statuszeilen nutzen die Schrift der UI (mit Akzenten).
 constexpr const char* kMsgs[5][kMsgCount] = {
     {"PS5 Medic: beendet.", "PS5 Medic: Bildausgabe nicht verfuegbar.", "PS5 Medic: Bildspeicher nicht verfuegbar.", "PS5 Medic: Bildspeicher nicht abbildbar.",
-     "PS5 Medic: Puffer nicht registrierbar.", "Dienstdatei fehlt: ", "ELF-Lader (Port 9021) nicht erreichbar.", "Jailbreak/Lader pruefen, dann die App neu starten.",
-     "Der Dienst antwortet nicht.", "Protokoll: ", "Verbindung zum Dienst verloren ...", "Neuer Versuch"},
+     "PS5 Medic: Puffer nicht registrierbar.", "Dienstdatei nicht lesbar: ", "ELF-Lader (Port 9021) nicht erreichbar.", "Jailbreak/Lader pruefen, dann die App neu starten.",
+     "Der Dienst antwortet nicht.", "Protokoll: ", "Verbindung zum Dienst verloren ...", "Neuer Versuch",
+     "Läuft ShadowMount+? Nur damit sieht die App /data. Starten, kurz warten, App neu starten."},
     {"PS5 Medic: closed.", "PS5 Medic: video output unavailable.", "PS5 Medic: frame memory unavailable.", "PS5 Medic: frame memory cannot be mapped.",
-     "PS5 Medic: buffer cannot be registered.", "Service file missing: ", "ELF loader (port 9021) not reachable.", "Check the jailbreak/loader, then restart the app.",
-     "The service is not responding.", "Log: ", "Connection to the service lost ...", "Trying again"},
+     "PS5 Medic: buffer cannot be registered.", "Service file not readable: ", "ELF loader (port 9021) not reachable.", "Check the jailbreak/loader, then restart the app.",
+     "The service is not responding.", "Log: ", "Connection to the service lost ...", "Trying again",
+     "Is ShadowMount+ running? Only then can the app see /data. Start it, wait briefly, restart the app."},
     {"PS5 Medic : ferme.", "PS5 Medic : sortie video indisponible.", "PS5 Medic : memoire d'image indisponible.", "PS5 Medic : memoire d'image non mappable.",
-     "PS5 Medic : tampon non enregistrable.", "Fichier du service introuvable : ", "Chargeur ELF (port 9021) injoignable.",
-     "Vérifiez le jailbreak/chargeur, puis relancez l'application.", "Le service ne répond pas.", "Journal : ", "Connexion au service perdue ...", "Nouvel essai"},
+     "PS5 Medic : tampon non enregistrable.", "Fichier du service illisible : ", "Chargeur ELF (port 9021) injoignable.",
+     "Vérifiez le jailbreak/chargeur, puis relancez l'application.", "Le service ne répond pas.", "Journal : ", "Connexion au service perdue ...", "Nouvel essai",
+     "ShadowMount+ est-il lancé ? Lui seul donne accès à /data. Lancez-le, patientez, relancez l'application."},
     {"PS5 Medic: chiuso.", "PS5 Medic: uscita video non disponibile.", "PS5 Medic: memoria immagine non disponibile.", "PS5 Medic: memoria immagine non mappabile.",
-     "PS5 Medic: buffer non registrabile.", "File del servizio mancante: ", "ELF loader (porta 9021) non raggiungibile.",
-     "Controllare jailbreak/loader, poi riavviare l'app.", "Il servizio non risponde.", "Registro: ", "Connessione al servizio persa ...", "Nuovo tentativo"},
+     "PS5 Medic: buffer non registrabile.", "File del servizio non leggibile: ", "ELF loader (porta 9021) non raggiungibile.",
+     "Controllare jailbreak/loader, poi riavviare l'app.", "Il servizio non risponde.", "Registro: ", "Connessione al servizio persa ...", "Nuovo tentativo",
+     "ShadowMount+ è attivo? Solo così l'app vede /data. Avvialo, attendi, riavvia l'app."},
     {"PS5 Medic: cerrado.", "PS5 Medic: salida de video no disponible.", "PS5 Medic: memoria de imagen no disponible.", "PS5 Medic: memoria de imagen no mapeable.",
-     "PS5 Medic: bufer no registrable.", "Falta el archivo del servicio: ", "Cargador ELF (puerto 9021) inaccesible.",
-     "Comprueba el jailbreak/cargador y reinicia la aplicación.", "El servicio no responde.", "Registro: ", "Conexión con el servicio perdida ...", "Reintentando"},
+     "PS5 Medic: bufer no registrable.", "No se puede leer el archivo del servicio: ", "Cargador ELF (puerto 9021) inaccesible.",
+     "Comprueba el jailbreak/cargador y reinicia la aplicación.", "El servicio no responde.", "Registro: ", "Conexión con el servicio perdida ...", "Reintentando",
+     "¿Está en marcha ShadowMount+? Solo así la app ve /data. Inícialo, espera y reinicia la app."},
 };
 int g_lang = 1;  // 0 de, 1 en, 2 fr, 3 it, 4 es; bis zur Erkennung Englisch
 const char* tr(Msg m) { return kMsgs[g_lang][m]; }
@@ -549,7 +554,7 @@ int main() {
                 trace(rc == 0 ? "Dienst-ELF an den Lader gesendet" : "Dienst-ELF konnte nicht gesendet werden");
                 if (rc != 0) {
                     const std::string line1 = rc == 1 ? std::string(tr(kMsgNoServiceFile)) + "/data/homebrew/PS5MEDIC/ps5medicservice.elf" : std::string(tr(kMsgNoLoader));
-                    show_status(line1.c_str(), tr(kMsgCheckLoader));
+                    show_status(line1.c_str(), rc == 1 ? tr(kMsgNeedSmp) : tr(kMsgCheckLoader));  // Datei nicht lesbar: meist laeuft ShadowMount+ nicht (es legt /data in die Sandbox der App)
                     wait_with_circle(3000);
                     continue;
                 }

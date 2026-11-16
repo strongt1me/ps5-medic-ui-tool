@@ -49,3 +49,8 @@ Ohne FTP: `make send-launcher PS5_HOST=<ip>` sendet `ps5medic-launcher.elf` (`ps
 - **Ablauf:** Der Dienst hängt seine **Build-Kennung** an das Hallo (`'H'`: u16 Breite, u16 Höhe, danach ASCII; ein älterer Dienst sendet nur 4 Byte). Die App vergleicht sie mit ihrer eigenen. Weicht sie ab oder fehlt sie, sendet die App `'X'` (beenden), wartet bis zu vier Sekunden, bis der Port frei ist, und sendet den neuen Dienst wie sonst. **Höchstens einmal je Start der App**: werden die Kennungen nie gleich, bleibt es bei einem Versuch, dann gilt der laufende Dienst.
 - **Kennung:** `tools/build_id.sh` hasht die Quelldateien (`libmedic`, `ps5`, `ui/src`, `ui/include`, `ui/i18n`, `knowledge`); Makefile (`-DMEDIC_BUILD_ID` für `service_main.o`) und `title/build_native_ui.sh` benutzen dasselbe Skript, `git` wird nicht gebraucht (das Worktree-Verzeichnis ist in der WSL nicht lesbar). Ohne Angabe gilt `dev` (Host-Bau).
 - **Folge:** Eine Änderung an Quellen oder Regeln beendet beim nächsten App-Start einmal den alten Dienst und lädt den neuen. Im `native.log` steht „Dienst hat eine andere Fassung (…) als die App (…): beende ihn und starte den neuen“.
+
+## ShadowMount+ muss laufen, damit die App ihre Dateien sieht (16. Nov. 2026)
+
+- ShadowMount+ legt `/data` per FakeLib in die Sandbox der App (im Log: „directory unmounted: /data -> /mnt/sandbox/FAKE42007_000/data“). Ist es angehalten, kann die App weder `/data/ps5medic/native.log` schreiben noch `/data/homebrew/PS5MEDIC/ps5medicservice.elf` lesen; die Datei ist per FTP da, die App meldete trotzdem „Dienstdatei fehlt“.
+- Die Meldung heißt jetzt „Dienstdatei nicht lesbar: …“ und nennt in der zweiten Zeile ShadowMount+: starten, kurz warten, App neu starten (fünf Sprachen, `ps5/native_ui_main.cpp`).
