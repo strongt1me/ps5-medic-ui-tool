@@ -143,9 +143,122 @@ LibInfo classify_lib(const std::string& b) {
 
 constexpr std::size_t kMaxLibBytes = 2u << 20;  // die Bibliotheken sind kleiner; mehr wird nicht gelesen
 
-// Eine Quelle auswerten: games.runtime[] und games.pack_problems[]
-void inspect_source(const Tree& tree, const std::string& titleid, const std::string& path, const char* kind, bool emu_updates, bool save_errors, json& runtime,
-                    json& problems) {
+// ng-Fassung vor 0.3.4 (S03): Frueher behobene Fehler (Stack-Ueberlauf bis 0.2.0, Dateinummern/Kernel-AIO bis 0.3.2, zu wenige Threads und zu kleiner Pool bis 0.3.3;
+// ampr-emu-ng Tabelle F2). Eine Beta-Endung (0.3.4-beta1) zaehlt wie ihre Zahl.
+bool ng_older_than_034(const std::string& v) {
+    int part[3] = {0, 0, 0};
+    std::size_t i = 0;
+    for (int k = 0; k < 3; ++k) {
+        if (i >= v.size() || !std::isdigit(static_cast<unsigned char>(v[i]))) return false;
+        long n = 0;
+        while (i < v.size() && std::isdigit(static_cast<unsigned char>(v[i]))) n = std::min(n * 10 + (v[i++] - '0'), 100000L);
+        part[k] = static_cast<int>(n);
+        if (k < 2) {
+            if (i >= v.size() || v[i] != '.') return false;  // "0.3" ohne dritte Zahl: unbekannt
+            ++i;
+        }
+    }
+    if (part[0] != 0) return false;
+    return part[1] < 3 || (part[1] == 3 && part[2] < 4);
+}
+
+// ---- ampr_emu.index (AMPRIDX3) -----------------------------------------------------------------------------------------------------------------------
+// Aufbau laut Dump Forge (vendor/ps5upload-fpkg/src/ampr_index.rs, an Spider-Man 2s ausgelieferter Index geprueft): Kopf 0x30 Byte (Magic, u32 3, u32 Satzgroesse 24, u64 Saetze @0x10,
+// u64 Pfadbytes @0x18, ...), danach je Satz {u32 Pfad-Offset, u32 Pfad-Laenge, u64 Groesse, i64 mtime}, danach die Pfade ("/app0/...", je mit NUL), danach die Hash-Tabelle.
+constexpr std::size_t kIdxHeader = 0x30, kIdxRecord = 24;
+constexpr std::uint64_t kBigIndexRecords = 200000;       // S21: ab etwa so vielen Dateien schaltet ng 0.3.5/0.4.0 die gepackten Dateien ab (Issue 53/61, Schaetzung ungeprueft)
+constexpr std::uint64_t kMaxIndexBytes = 24u << 20;       // S22: groessere Indizes werden nicht ganz gelesen
+constexpr std::uint64_t kMaxIndexRecordsTotal = 60000;   // S22: Arbeitsgrenze je Check-up (Sätze), danach bleibt der Rest ungeprueft
+constexpr std::size_t kMaxIndexDirs = 3000;               // S22: so viele Ordner werden je Quelle gelistet
+
+struct IndexBudget {
+    std::chrono::steady_clock::time_point deadline;
+    std::uint64_t records_left = kMaxIndexRecordsTotal;
+};
+
+struct IndexHead {
+    bool ok = false;
+    std::uint64_t records = 0, path_bytes = 0;
+};
+
+IndexHead read_index_head(const Tree& tree, const Item& idx) {
+    IndexHead h;
+    std::string head;
+    if (!tree.read_at(idx.name, 0, kIdxHeader, head) || head.size() < kIdxHeader || head.compare(0, 8, "AMPRIDX3") != 0 || le32(head, 8) != 3 || le32(head, 12) != kIdxRecord) return h;
+    h.records = le64(head, 0x10);
+    h.path_bytes = le64(head, 0x18);
+    if (h.records > (1ull << 32) || h.path_bytes > (1ull << 40)) return h;
+    // Die Dateigroesse muss die Saetze und Pfade fassen: sonst ist der Kopf unbrauchbar (nichts behaupten)
+    if (idx.size_known && idx.size < kIdxHeader + h.records * kIdxRecord + h.path_bytes) return h;
+    h.ok = true;
+    return h;
+}
+
+// Die Dateien, die der Index nennt, gegen den Baum pruefen (nur lose Spiele). Ausgenommen sind Dateien, die ein Backport oder ShadowMount+ ersetzen darf (eboot.bin, sce_sys,
+// sce_module, fakelib). Fehlende Dateien sind ein harter Befund; geaenderte Groessen werden nur gezaehlt (ein Index darf legitim abweichen). Mit Arbeits- und Zeitgrenze.
+void check_index_files(const Tree& tree, const Item& idx, const IndexHead& h, const std::string& titleid, const std::string& path, const char* kind, IndexBudget& budget, json& out) {
+    if (h.records == 0 || h.records > budget.records_left || kIdxHeader + h.records * kIdxRecord + h.path_bytes > kMaxIndexBytes) return;
+    const std::size_t need = static_cast<std::size_t>(h.records * kIdxRecord + h.path_bytes);
+    std::string data;
+    if (!tree.read_at(idx.name, kIdxHeader, need, data) || data.size() != need) return;
+    budget.records_left -= h.records;
+    std::map<std::string, std::vector<Item>> dirs;
+    std::set<std::string> unlistable;
+    std::uint64_t checked = 0, missing = 0, changed = 0;
+    json examples = json::array();
+    bool partial = false;
+    for (std::uint64_t i = 0; i < h.records; ++i) {
+        if ((i & 255) == 0 && std::chrono::steady_clock::now() > budget.deadline) {
+            partial = true;
+            break;
+        }
+        const std::size_t r = static_cast<std::size_t>(i * kIdxRecord);
+        const std::uint64_t off = le32(data, r), len = le32(data, r + 4), size = le64(data, r + 8);
+        const std::uint64_t base = h.records * kIdxRecord;
+        if (base + off + len >= data.size() || data[static_cast<std::size_t>(base + off + len)] != '\0') return;  // verdorbener Index: nichts behaupten
+        std::string p = data.substr(static_cast<std::size_t>(base + off), static_cast<std::size_t>(len));
+        for (auto& c : p)
+            if (c == '\\') c = '/';
+        if (p.size() < 6 || lower(p.substr(0, 6)) != "/app0/") continue;
+        p.erase(0, 6);
+        const std::string lp = lower(p);
+        if (lp == "eboot.bin" || lp.rfind("sce_sys/", 0) == 0 || lp.rfind("sce_module/", 0) == 0 || lp.rfind("fakelib", 0) == 0) continue;
+        const auto slash = p.rfind('/');
+        const std::string dir = slash == std::string::npos ? "" : p.substr(0, slash), name = slash == std::string::npos ? p : p.substr(slash + 1);
+        auto it = dirs.find(dir);
+        if (it == dirs.end()) {
+            if (dirs.size() >= kMaxIndexDirs) {
+                partial = true;
+                break;
+            }
+            std::vector<Item> items;
+            const bool ok = tree.list(dir, items);
+            if (!ok) unlistable.insert(dir);
+            it = dirs.emplace(dir, std::move(items)).first;
+        }
+        ++checked;
+        const Item* found = nullptr;
+        for (const auto& e : it->second)
+            if (!e.is_dir && e.name == name) found = &e;
+        if (!found) {
+            for (const auto& e : it->second)
+                if (!e.is_dir && lower(e.name) == lower(name)) found = &e;  // nur andere Schreibweise: Sache von game.il2cpp_case, hier nicht "fehlt"
+            if (found) continue;
+            ++missing;
+            if (examples.size() < 3) examples.push_back(p);
+        } else if (found->size_known && found->size != size) {
+            ++changed;
+        }
+    }
+    if (checked == 0) return;
+    out.push_back({{"titleid", titleid}, {"path", path}, {"kind", kind}, {"records", h.records}, {"checked", checked}, {"missing", missing}, {"changed", changed},
+                   {"partial", partial}, {"examples", std::move(examples)},
+                   {"desc", path + ": " + std::to_string(missing) + "/" + std::to_string(checked)}});
+}
+
+// Eine Quelle auswerten: games.runtime[], games.pack_problems[] und games.index_problems[]
+void inspect_source(const Tree& tree, const std::string& titleid, const std::string& path, const char* kind, bool emu_updates, bool save_errors, bool any_error, IndexBudget& budget,
+                    json& runtime, json& problems, json& index_problems) {
     std::vector<Item> root;
     if (!tree.list("", root)) return;
 
@@ -168,7 +281,11 @@ void inspect_source(const Tree& tree, const std::string& titleid, const std::str
             std::string head;
             if (tree.read_at(it->name, 0, 8, head) && head.compare(0, 4, "AMPR") == 0) pack = "lz4";
         }
-    const bool emu_index = find_item(root, "ampr_emu.index", false) != nullptr;
+    const Item* emu_item = find_item(root, "ampr_emu.index", false);
+    const bool emu_index = emu_item != nullptr;
+    const IndexHead emu_head = emu_item ? read_index_head(tree, *emu_item) : IndexHead{};
+    // S22: nur lose Spiele (ohne Pack): bei Packs liegen gepackte Dateien absichtlich nicht im Ordner. Auch Spiele ohne libSceAmpr im fakelib (kein Eintrag in games.runtime).
+    if (pack.empty() && emu_item && emu_head.ok) check_index_files(tree, *emu_item, emu_head, titleid, path, kind, budget, index_problems);
 
     // Bibliothek: fakelib2 hat bei ShadowMount+ Vorrang vor fakelib
     std::string lib_in, lib_name;
@@ -209,7 +326,13 @@ void inspect_source(const Tree& tree, const std::string& titleid, const std::str
                        // ampr-emu-ng 0.3.5 und 0.4.0 (Release): Speichern/Laden/Beenden haengt oder meldet CE-108255-1 und CE-107112-2 (Issues 60, 63, 64 im Projekt);
                        // laut Projekt erst in einer Beta behoben, deren Versionstext "0.4.0-beta..." lautet. 0.4.0 ist die ausgelieferte Release-Fassung: gemeldet
                        // wird nur mit Beleg, also wenn die Konsole einen dieser Fehler fuer genau diesen Titel verzeichnet hat (save_errors)
-                       {"save_risk", save_errors && li.kind == "ng" && (li.version == "0.3.5" || li.version == "0.4.0")}});
+                       {"save_risk", save_errors && li.kind == "ng" && (li.version == "0.3.5" || li.version == "0.4.0")},
+                       // S03: eine ng-Fassung vor 0.3.4 (alte, spaeter behobene Fehler), nur gemeldet, wenn die Konsole fuer genau diesen Titel einen Fehler verzeichnet hat
+                       {"old_version", li.kind == "ng" && ng_older_than_034(li.version)},
+                       {"old_risk", any_error && li.kind == "ng" && ng_older_than_034(li.version)},
+                       // S21: Zahl der Dateien laut ampr_emu.index (0 = Kopf unlesbar oder unstimmig) und die Gefahr bei 0.3.5/0.4.0 (Release), ab ca. 200000 Dateien
+                       {"emu_records", emu_head.ok ? emu_head.records : 0},
+                       {"index_risk", emu_head.ok && emu_head.records >= kBigIndexRecords && li.kind == "ng" && (li.version == "0.3.5" || li.version == "0.4.0")}});
 
     // zstd-Pack vollstaendig? (Format: docs/zstd.md von Dump Forge: Kopf 128 Byte, volume_count @20, volumes_off @72, strings_off @80, strings_len @88;
     // eine Volume-Datei je Eintrag, ampr_zstd-NNN.pak, die Groesse steht im Volume-Record) -- die Dateigroessen kennt nur ein Ordner
@@ -256,9 +379,11 @@ void inspect_source(const Tree& tree, const std::string& titleid, const std::str
 // games.runtime[]: titleid, path, kind (folder|image), pack ("zstd"|"lz4"|""), has_emu_index, lib_in (fakelib|fakelib2), lib_kind (ng|drakmor|other|missing|unreadable),
 // lib_version, lib_debug, problem ("", no_runtime, no_zstd_support, foreign_runtime), index_missing, save_risk. Nur Quellen mit Pack oder mit libSceAmpr.sprx im fakelib.
 // games.pack_problems[]: titleid, path, kind, problem (index_header, index_truncated, volume_missing, volume_size), detail, count.
+// games.runtime[] hat ausserdem old_version/old_risk (S03: ng vor 0.3.4, mit Fehler der Konsole fuer den Titel), emu_records und index_risk (S21: ab 200000 Dateien bei ng 0.3.5/0.4.0).
+// games.index_problems[]: titleid, path, kind, records, checked, missing, changed, partial, examples[], desc (S22: lose Spiele; Dateien laut ampr_emu.index fehlen im Baum).
 void collect_game_runtime(const Platform& p, Facts& f) {
     const IFileSystem& fs = p.fs();
-    json runtime = json::array(), problems = json::array();
+    json runtime = json::array(), problems = json::array(), index_problems = json::array();
     std::set<std::string> image_paths;
     if (const json* imgs = f.get("smp.images"); imgs && imgs->is_array())
         for (const auto& i : *imgs)
@@ -276,12 +401,13 @@ void collect_game_runtime(const Platform& p, Facts& f) {
     };
     const bool emu_updates = flag_on("smp.config.emulators.update_enabled") || flag_on("smp.config.emulators.auto_update_ampr") || flag_on("smp.config.update_emulators");
     // Titel, fuer die die Konsole einen Speicher-Fehler verzeichnet hat (Beleg fuer game.ng_save_risk)
-    std::set<std::string> save_error_titles;
+    std::set<std::string> save_error_titles, error_titles;  // error_titles: irgendein Fehlercode fuer den Titel (Beleg fuer game.runtime_old_version)
     if (const json* ep = f.get("errors.pairs"); ep && ep->is_array())
         for (const auto& e : *ep)
-            if (e.is_object() && e.contains("code") && e["code"].is_string() && e.contains("titleid") && e["titleid"].is_string() &&
-                (e["code"] == "CE-108255-1" || e["code"] == "CE-107112-2"))
-                save_error_titles.insert(e["titleid"].get<std::string>());
+            if (e.is_object() && e.contains("code") && e["code"].is_string() && e.contains("titleid") && e["titleid"].is_string()) {
+                error_titles.insert(e["titleid"].get<std::string>());
+                if (e["code"] == "CE-108255-1" || e["code"] == "CE-107112-2") save_error_titles.insert(e["titleid"].get<std::string>());
+            }
     const json* titles = f.get("smp.titles");
     std::set<std::string> done;
     int attempts = 0, skipped = 0;
@@ -289,6 +415,8 @@ void collect_game_runtime(const Platform& p, Facts& f) {
     // Zeitbudget (USB-Platten und PFSC-Images koennen langsam sein): danach bleibt der Rest ungeprueft und steht in games.runtime_skipped
     const auto started = std::chrono::steady_clock::now();
     constexpr auto kBudget = std::chrono::seconds(8);
+    IndexBudget index_budget;
+    index_budget.deadline = started + kBudget;
     if (titles && titles->is_array())
         for (const auto& t : *titles) {
             if (!t.is_object() || !t.contains("path") || !t["path"].is_string() || !t.contains("titleid") || !t["titleid"].is_string()) continue;
@@ -305,13 +433,14 @@ void collect_game_runtime(const Platform& p, Facts& f) {
                 const auto sz = image_sizes.find(path);
                 auto r = sz != image_sizes.end() ? ImageReader::open(fs, path, sz->second) : ImageReader::open(fs, path);
                 if (!r) continue;
-                inspect_source(ImageTree(std::move(r)), id, path, "image", emu_updates, save_error_titles.count(id) != 0, runtime, problems);
+                inspect_source(ImageTree(std::move(r)), id, path, "image", emu_updates, save_error_titles.count(id) != 0, error_titles.count(id) != 0, index_budget, runtime, problems, index_problems);
             } else {
-                inspect_source(FolderTree(fs, path), id, path, "folder", emu_updates, save_error_titles.count(id) != 0, runtime, problems);
+                inspect_source(FolderTree(fs, path), id, path, "folder", emu_updates, save_error_titles.count(id) != 0, error_titles.count(id) != 0, index_budget, runtime, problems, index_problems);
             }
         }
     f.set("games.runtime", std::move(runtime));
     f.set("games.pack_problems", std::move(problems));
+    f.set("games.index_problems", std::move(index_problems));
     f.set("games.runtime_skipped", skipped);  // so viele Quellen blieben ungeprueft (Grenze kMaxSources): "nicht gefunden" sagt dann nichts
 }
 

@@ -737,6 +737,109 @@ void misc_tests() {
     }
 }
 
+// AMPRIDX3 (Aufbau laut Dump Forge: Kopf 0x30, Saetze {off, len, size, mtime}, Pfade mit NUL); ohne Hash-Tabelle, der Sammler braucht sie nicht
+std::string idx_bytes(const std::vector<std::pair<std::string, std::uint64_t>>& files, std::uint64_t claimed_records = 0) {
+    std::string recs, paths;
+    auto le = [](std::string& s, std::uint64_t v, int n) {
+        for (int i = 0; i < n; ++i) s.push_back(static_cast<char>((v >> (8 * i)) & 0xFF));
+    };
+    for (const auto& [p, size] : files) {
+        const std::string full = "/app0/" + p;
+        le(recs, paths.size(), 4);
+        le(recs, full.size(), 4);
+        le(recs, size, 8);
+        le(recs, 0, 8);
+        paths += full;
+        paths.push_back('\0');
+    }
+    std::string head = "AMPRIDX3";
+    le(head, 3, 4);
+    le(head, 24, 4);
+    le(head, claimed_records ? claimed_records : files.size(), 8);
+    le(head, paths.size(), 8);
+    le(head, 0, 8);
+    le(head, 16, 4);
+    le(head, 2, 4);
+    return head + recs + paths;
+}
+
+// S03 (alte ng-Fassung), S21 (grosser Index), S22 (Dateien laut Index fehlen)
+void index_and_version_tests() {
+    const std::string root = "/data/homebrew";
+    const RuleSet rs = load_rules_from_file(testutil::kShipped);
+    Sandbox sb;
+    spit(sb.dir / "procs.json", R"(["shadowmountplus"])");
+    auto game = [&](const std::string& dir, const std::string& id, const std::string& lib_version, const std::string& index) {
+        spit(sb.real(root + "/" + dir + "/eboot.bin"), std::string("\x7f" "ELF") + std::string(124, '\0'));
+        spit(sb.real(root + "/" + dir + "/sce_sys/param.json"),
+             R"({"titleId":")" + id + R"(","requiredSystemSoftwareVersion":"0x0900000000000000","sdkVersion":"0x0900000000000000"})");
+        if (!lib_version.empty()) spit(sb.real(root + "/" + dir + "/fakelib/libSceAmpr.sprx"), std::string("\x4f\x15\x3d\x1d", 4) + std::string(60, '\0') + "ampr-emu-ng " + lib_version + std::string("\0", 1) + std::string(64, '\0'));
+        if (!index.empty()) spit(sb.real(root + "/" + dir + "/ampr_emu.index"), index);
+    };
+    game("V020", "PPSA00101", "0.2.0", "");
+    game("V033", "PPSA00102", "0.3.3", "");
+    game("V034", "PPSA00103", "0.3.4", "");
+    game("V040b", "PPSA00104", "0.4.0-beta1", "");
+    game("V100", "PPSA00105", "1.0.0", "");
+    game("V03", "PPSA00106", "0.3", "");  // unvollstaendige Version: unbekannt, nicht "alt"
+    // S22: Index mit drei Dateien; im Ordner fehlen d/c.bin und der ganze Ordner e/
+    game("L1", "PPSA00111", "", idx_bytes({{"d/a.bin", 1}, {"d/b.bin", 2}, {"d/c.bin", 3}, {"e/x.bin", 4}, {"eboot.bin", 9}, {"sce_sys/param.json", 9}, {"fakelib/l.sprx", 9}}));
+    spit(sb.real(root + "/L1/d/a.bin"), "a");
+    spit(sb.real(root + "/L1/d/b.bin"), "bb");
+    // Index, der groesser sein will als die Datei: nichts behaupten
+    game("L2", "PPSA00112", "", idx_bytes({{"d/a.bin", 1}}, 5000));
+    // Pack-Spiel: gepackte Dateien liegen absichtlich nicht im Ordner, der Index wird nicht gegen den Baum geprueft
+    game("L3", "PPSA00113", "0.4.0", idx_bytes({{"d/gepackt.bin", 1}}));
+    {
+        std::string zi = "AMPRZPK1";
+        zi.resize(128, '\0');
+        zi[8] = 1;
+        zi[12] = static_cast<char>(128);
+        spit(sb.real(root + "/L3/ampr_zstd.index"), zi);
+    }
+    // Index mit Gross-Zahl (S21), ng 0.3.5: Kopf nennt 200000 Saetze, die Datei fasst sie
+    {
+        std::string big = idx_bytes({}, 200000);
+        big.resize(0x30 + 200000 * 24, '\0');
+        game("B1", "PPSA00121", "0.3.5", big);
+        game("B2", "PPSA00122", "0.3.4", big);  // 0.3.4 lud solche Spiele noch
+    }
+
+    auto p = make_snapshot_platform(sb.dir.string(), true);
+    Facts f = collect_all(*p);
+    const json* rt = f.get("games.runtime");
+    auto entry = [&](const std::string& id) -> const json* {
+        if (rt)
+            for (const auto& e : *rt)
+                if (e["titleid"] == id) return &e;
+        return nullptr;
+    };
+    auto old_of = [&](const char* id) { const json* e = entry(id); return e && (*e)["old_version"] == true; };
+    CHECK(old_of("PPSA00101") && old_of("PPSA00102"), "Version: 0.2.0 und 0.3.3 gelten als alt");
+    CHECK(!old_of("PPSA00103") && !old_of("PPSA00104") && !old_of("PPSA00105") && !old_of("PPSA00106"), "Version: 0.3.4, 0.4.0-beta1, 1.0.0 und eine unvollstaendige Version gelten nicht als alt");
+    CHECK(entry("PPSA00102") && (*entry("PPSA00102"))["old_risk"] == false, "Version: ohne Fehlercode der Konsole kein old_risk");
+    CHECK(entry("PPSA00121") && (*entry("PPSA00121"))["index_risk"] == true && (*entry("PPSA00121"))["emu_records"] == 200000, "Index: 200000 Saetze bei 0.3.5 gelten als Gefahr");
+    CHECK(entry("PPSA00122") && (*entry("PPSA00122"))["index_risk"] == false, "Index: bei 0.3.4 keine Gefahr");
+    CHECK(entry("PPSA00113") && (*entry("PPSA00113"))["index_risk"] == false, "Index: ein kleiner Index ist keine Gefahr");
+
+    const json* ip = f.get("games.index_problems");
+    const json* l1 = nullptr;
+    int n_entries = 0;
+    if (ip)
+        for (const auto& e : *ip) {
+            ++n_entries;
+            if (e["titleid"] == "PPSA00111") l1 = &e;
+        }
+    CHECK(n_entries == 1 && l1, "Index-Dateien: nur das lose Spiel mit lesbarem Index hat einen Eintrag (kein Pack-Spiel, kein verdorbener Kopf)");
+    if (l1) {
+        CHECK((*l1)["checked"] == 4 && (*l1)["missing"] == 2 && (*l1)["changed"] == 0, "Index-Dateien: vier geprueft (eboot, sce_sys, fakelib zaehlen nie), zwei fehlen (d/c.bin und e/x.bin)");
+        CHECK((*l1)["examples"].size() == 2 && (*l1)["examples"][0] == "d/c.bin", "Index-Dateien: Beispiele nennen die fehlenden Pfade");
+    }
+    const auto findings = evaluate(rs, f);
+    CHECK(find_rule(findings, "game.index_files_missing") && find_rule(findings, "game.ng_index_too_big") && !find_rule(findings, "game.runtime_old_version"),
+          "Regeln: Index-Dateien und grosser Index feuern, alte Version nur mit Fehlercode");
+}
+
 // Halbfertiger Packordner (S32), Undo-Journale (S33), fakelib-Aufbau (S12) und abgeschaltete fakelib (S13)
 void layout_tests() {
     const std::string root = "/data/homebrew";
@@ -882,6 +985,7 @@ void layout_tests() {
 }  // namespace
 
 void game_issue_tests() {
+    index_and_version_tests();
     layout_tests();
     chmod_tests();
     misc_tests();

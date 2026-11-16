@@ -478,7 +478,8 @@ constexpr const char* kLiveOnlyRule = "storage.oversized_reservation";
 bool live_only(const std::string& rule) {
     static const std::set<std::string> rules = {"storage.oversized_reservation", "game.pack_runtime_mismatch", "smp.emulator_update_replaces_runtime", "game.pack_no_emu_index",
                                                 "game.ng_save_risk", "game.pack_incomplete", "kraken.pkg_sparse_extent", "game.incomplete_folder",  // incomplete_folder: braucht sce_module, das der Export nicht anlegt
-                                                "game.partial_folder", "game.fakelib_layout", "smp.fakelib_off_with_runtime"};  // Inhalte der Spielordner (Packdateien, fakelib), der Export legt nur die Namen der ersten Ebene an
+                                                "game.partial_folder", "game.fakelib_layout", "smp.fakelib_off_with_runtime", "game.runtime_old_version", "game.ng_index_too_big",
+                                                "game.index_files_missing"};  // Inhalte der Spielordner (Packdateien, fakelib), der Export legt nur die Namen der ersten Ebene an
     return rules.count(rule) != 0;
 }
 

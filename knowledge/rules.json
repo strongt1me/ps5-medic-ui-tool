@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.50",
+  "db_version": "2026.11.51",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2130,6 +2130,90 @@
         "reason": {
           "de": "Die Dateinamen sind gelesen. Dass es Reste abgebrochener Vorgänge sind, folgt aus den Namensmustern und der Beschreibung im Dump-Forge-Projekt (Issue 15); ob gerade ein Job läuft, erkennt Medic nicht.",
           "en": "The file names are read. That they are leftovers of interrupted jobs follows from the name patterns and the description in the Dump Forge project (issue 15); whether a job is running right now, Medic cannot tell."
+        }
+      }
+    },
+    {
+      "id": "game.runtime_old_version",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.runtime[].old_risk",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Im Spiel liegt eine alte ampr-emu-ng-Fassung (vor 0.3.4), und die Konsole hat für dieses Spiel einen Fehlercode verzeichnet. Frühere Fassungen hatten Fehler, die später behoben wurden: Stack-Überlauf (bis 0.2.0), Dateinummern und Kernel-AIO (bis 0.3.2), zu wenige Threads und ein zu kleiner Pool (bis 0.3.3). Typisch sind Schwarzbild, Hänger am Ladebildschirm oder Absturz. Ersetze die libSceAmpr.sprx im fakelib durch eine neuere Release-Fassung (die Datei besorgst du selbst). Medic ändert hier nichts.",
+        "en": "The game contains an old ampr-emu-ng build (before 0.3.4), and the console has recorded an error code for this game. Earlier builds had bugs that were fixed later: stack overflow (up to 0.2.0), file numbers and kernel AIO (up to 0.3.2), too few threads and a pool that was too small (up to 0.3.3). Typical symptoms are a black screen, a hang at the loading screen or a crash. Replace the libSceAmpr.sprx in fakelib with a newer release build (you get the file yourself). Medic changes nothing here."
+      },
+      "evidence": "games.runtime[].path",
+      "fix": null,
+      "source": "https://github.com/quer3q/ampr-emu-ng/issues/18",
+      "verified": "doc",
+      "confidence": {
+        "level": "low",
+        "basis": "doc",
+        "reason": {
+          "de": "Die Version steht im Text der Bibliothek (an echten Dateien geprüft) und der Fehlercode ist von der Konsole verzeichnet. Dass genau die alte Fassung die Ursache ist, folgt nur aus der Fehlerliste des ampr-emu-ng-Projekts (Tabelle F2); der Fehlercode kann auch eine andere Ursache haben.",
+          "en": "The version is read from the library's text (checked on real files) and the error code is recorded by the console. That exactly the old build is the cause follows only from the error list of the ampr-emu-ng project (table F2); the error code can have another cause."
+        }
+      }
+    },
+    {
+      "id": "game.ng_index_too_big",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.runtime[].index_risk",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Ein sehr großes Spiel (ab etwa 200 000 Dateien laut ampr_emu.index) nutzt ampr-emu-ng 0.3.5 oder 0.4.0. Diese Fassungen begrenzen den Index (0.3.5: gesamt 55 MiB, 0.4.0: Lookup-Tabellen 48 MiB) und schalten bei Überschreitung die gepackten Dateien ab; das Spiel stürzt dann mit „Something went wrong“ oder CE-108255-1 ab. Die Fassung 0.3.4 lud solche Spiele noch. Wenn das Spiel so abstürzt: libSceAmpr.sprx 0.3.4 verwenden (Emulator-Updates in ShadowMount+ aus und speichern) oder mit weniger Dateien packen. Die Grenze ist eine Schätzung aus den Berichten. Medic ändert hier nichts.",
+        "en": "A very large game (about 200,000 files or more according to ampr_emu.index) uses ampr-emu-ng 0.3.5 or 0.4.0. These builds limit the index (0.3.5: 55 MiB in total, 0.4.0: lookup tables 48 MiB) and turn the packed files off when it is exceeded; the game then crashes with “Something went wrong” or CE-108255-1. Build 0.3.4 still loaded such games. If the game crashes like that: use libSceAmpr.sprx 0.3.4 (turn emulator updates off in ShadowMount+ and save) or pack with fewer files. The limit is an estimate from the reports. Medic changes nothing here."
+      },
+      "evidence": "games.runtime[].path",
+      "fix": null,
+      "source": "https://github.com/quer3q/ampr-emu-ng/issues/53",
+      "verified": "doc",
+      "confidence": {
+        "level": "low",
+        "basis": "doc",
+        "reason": {
+          "de": "Die Zahl der Dateien steht im Kopf der ampr_emu.index (Aufbau laut Dump Forge, an einem ausgelieferten Index geprüft) und die Version im Text der Bibliothek. Die Schwelle von etwa 200 000 Dateien ist eine ungeprüfte Schätzung aus den Issues 53, 61 und 67; ob dieses Spiel wirklich über der Grenze liegt, wurde an dieser Konsole nicht gemessen.",
+          "en": "The number of files is in the header of ampr_emu.index (layout according to Dump Forge, checked on a released index) and the version in the library's text. The threshold of about 200,000 files is an unchecked estimate from issues 53, 61 and 67; whether this game really exceeds the limit was not measured on this console."
+        }
+      }
+    },
+    {
+      "id": "game.index_files_missing",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.index_problems[].missing",
+            "gt": "0"
+          }
+        ]
+      },
+      "text": {
+        "de": "In einem Spielordner fehlen Dateien, die die ampr_emu.index nennt (Beleg: Pfad und Zahl fehlender Dateien von den geprüften; Beispiele stehen in den Details). Ursache ist meist ein unvollständiger Dump (ein Entpacker hat Dateien weggelassen, ein Packer Ordner verloren) oder ein Index, der nicht mehr zum Ordner passt. Typisch: Absturz beim Laden einer Kampagne oder immer an derselben Stelle. Fehlende Dateien aus der Quelle ergänzen oder den Dump neu laden, danach den Index neu erzeugen lassen. Medic ändert hier nichts.",
+        "en": "In a game folder, files are missing that ampr_emu.index lists (evidence: path and number of missing files out of those checked; examples are in the details). The cause is usually an incomplete dump (an unpacker left files out, a packer lost folders) or an index that no longer matches the folder. Typical: a crash when loading a campaign or always at the same spot. Add the missing files from the source or load the dump again, then have the index created again. Medic changes nothing here."
+      },
+      "evidence": "games.index_problems[].desc",
+      "fix": null,
+      "source": "https://github.com/quer3q/ampr-emu-ng/issues/7",
+      "verified": "doc",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Der Index und der Ordnerbaum sind gelesen (Aufbau des Index laut Dump Forge). Dass fehlende Dateien den Absturz verursachen, folgt aus Berichten im ampr-emu-ng-Projekt (Issues 7, 8, 43, 45); ein Index darf aber legitim vom Ordner abweichen (Backport, nachträglich ersetzte Dateien). eboot.bin, sce_sys, sce_module und fakelib zählen deshalb nie. Gilt nur für Spiele ohne Pack.",
+          "en": "The index and the folder tree are read (layout of the index according to Dump Forge). That missing files cause the crash follows from reports in the ampr-emu-ng project (issues 7, 8, 43, 45); but an index may legitimately differ from the folder (backport, files replaced later). eboot.bin, sce_sys, sce_module and fakelib therefore never count. Applies only to games without a pack."
         }
       }
     },
