@@ -646,6 +646,114 @@ void collect_game_layout(const Platform& p, Facts& f) {
     f.set("games.with_fakelib", std::move(with_fakelib));
 }
 
+// games.unsigned_elf[], games.flex_small[], games.playgo_missing[], games.trophy_missing[] (S07, S08, S14, S24; nur Spielordner, keine Images). Alle vier sind Hinweise mit
+// hohem Fehlalarmrisiko und werden deshalb nur gemeldet, wenn dazu die Spur stimmt: S07, S08 und S14 nur, wenn die Konsole fuer den Titel einen Fehlercode verzeichnet hat
+// (S08 zusaetzlich mit ng-Laufzeit ab 0.3.4); S24 nur, wenn sce_sys/trophy2 Dateien hat, aber eine der drei Trophaeen-Dateien fehlt. Nur Namen und Kopfbytes, nie Inhalte.
+void collect_game_hints(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    std::set<std::string> error_titles, ng_titles, image_paths;
+    if (const json* ep = f.get("errors.pairs"); ep && ep->is_array())
+        for (const auto& e : *ep)
+            if (e.is_object() && e.contains("titleid") && e["titleid"].is_string()) error_titles.insert(e["titleid"].get<std::string>());
+    if (const json* rt = f.get("games.runtime"); rt && rt->is_array())
+        for (const auto& r : *rt)
+            if (r.is_object() && r.value("lib_kind", std::string()) == "ng" && r.contains("titleid") && r["titleid"].is_string() && !r.value("old_version", false))
+                ng_titles.insert(r["titleid"].get<std::string>());
+    if (const json* imgs = f.get("smp.images"); imgs && imgs->is_array())
+        for (const auto& i : *imgs)
+            if (i.is_object() && i.contains("path") && i["path"].is_string()) image_paths.insert(i["path"].get<std::string>());
+    bool playgo_emu = false;
+    for (const auto& e : fs.list_dir("/data/shadowmount/emus"))
+        if (lower(e.name).find("playgo") != std::string::npos) playgo_emu = true;
+
+    json unsigned_elf = json::array(), flex = json::array(), playgo = json::array(), trophy = json::array();
+    const json* titles = f.get("smp.titles");
+    std::set<std::string> done;
+    int checked = 0;
+    const auto started = std::chrono::steady_clock::now();
+    if (titles && titles->is_array())
+        for (const auto& t : *titles) {
+            if (!t.is_object() || !t.contains("path") || !t["path"].is_string() || !t.contains("titleid") || !t["titleid"].is_string()) continue;
+            const std::string path = t["path"].get<std::string>(), id = t["titleid"].get<std::string>();
+            if (image_paths.count(path) || !fs.is_dir(path) || !done.insert(path).second) continue;
+            if (checked >= 60 || std::chrono::steady_clock::now() - started > std::chrono::seconds(6)) break;
+            ++checked;
+            FolderTree tree(fs, path);
+            const bool has_error = error_titles.count(id) != 0;
+            std::vector<Item> root, sce, tmp;
+            tree.list("", root);
+
+            // S07: Programmdateien als reine ELF (e_type 0xFE10/0xFE18) statt signiert
+            if (has_error) {
+                json files = json::array();
+                const auto probe = [&](const std::string& rel) {
+                    std::string head;
+                    if (files.size() >= 3 || !tree.read_at(rel, 0, 0x12, head) || head.size() < 0x12 || head.compare(0, 4, "\x7f" "ELF") != 0) return;
+                    const unsigned type = static_cast<unsigned char>(head[0x10]) | (static_cast<unsigned>(static_cast<unsigned char>(head[0x11])) << 8);
+                    if (type == 0xFE10 || type == 0xFE18) files.push_back(rel);
+                };
+                if (find_item(root, "eboot.bin", false)) probe("eboot.bin");
+                for (const char* d : {"sce_module", "prx", "fakelib"})
+                    if (const Item* di = find_item(root, d, true)) {
+                        tree.list(di->name, tmp);
+                        int n = 0;
+                        for (const auto& it : tmp)
+                            if (!it.is_dir && ++n <= 40) probe(std::string(di->name) + "/" + it.name);
+                    }
+                if (!files.empty()) unsigned_elf.push_back({{"titleid", id}, {"path", path}, {"files", files}, {"desc", id + ": " + files[0].get<std::string>()}});
+            }
+
+            const Item* sd = find_item(root, "sce_sys", true);
+            if (!sd) continue;
+            tree.list(sd->name, sce);
+
+            // S08: kernel.flexibleMemorySize in der param.json klein, mit ng-Laufzeit und Fehlercode
+            if (has_error && ng_titles.count(id)) {
+                std::string text;
+                if (find_item(sce, "param.json", false) && tree.read_at("sce_sys/param.json", 0, 64u << 10, text)) {
+                    const json j = json::parse(text, nullptr, false);
+                    if (j.is_object() && j.contains("kernel") && j["kernel"].is_object() && j["kernel"].contains("flexibleMemorySize") && j["kernel"]["flexibleMemorySize"].is_number_unsigned()) {
+                        const std::uint64_t v = j["kernel"]["flexibleMemorySize"].get<std::uint64_t>();
+                        if (v < 429916160ull) flex.push_back({{"titleid", id}, {"path", path}, {"value", v}, {"desc", id + ": flexibleMemorySize " + std::to_string(v)}});
+                    }
+                }
+            }
+
+            // S14: PlayGo-Dateien im Spiel, aber kein libScePlayGo.sprx im fakelib und keine Emulator-Datei dafuer
+            if (has_error && !playgo_emu && (find_item(sce, "playgo-scenario.json", false) || find_item(sce, "playgo-chunk.dat", false))) {
+                bool stub = false;
+                for (const char* d : {"fakelib", "fakelib2"})
+                    if (const Item* fd = find_item(root, d, true)) {
+                        tree.list(fd->name, tmp);
+                        if (find_item(tmp, "libScePlayGo.sprx", false)) stub = true;
+                    }
+                if (!stub) playgo.push_back({{"titleid", id}, {"path", path}, {"desc", id + ": sce_sys/playgo-*, fakelib/libScePlayGo.sprx fehlt"}});
+            }
+
+            // S24: Trophaeen-Ordner mit Dateien, aber eine der drei Dateien fehlt
+            if (const Item* td = find_item(sce, "trophy2", true)) {
+                std::vector<Item> tro;
+                tree.list("sce_sys/" + td->name, tro);
+                if (!tro.empty()) {
+                    json missing = json::array();
+                    if (!find_item(sce, "nptitle.dat", false)) missing.push_back("sce_sys/nptitle.dat");
+                    if (!find_item(tro, "npbind.dat", false)) missing.push_back("sce_sys/trophy2/npbind.dat");
+                    bool uds_ok = false;
+                    if (const Item* ud = find_item(sce, "uds", true)) {
+                        tree.list("sce_sys/" + ud->name, tmp);
+                        uds_ok = find_item(tmp, "npbind.dat", false) != nullptr;
+                    }
+                    if (!uds_ok) missing.push_back("sce_sys/uds/npbind.dat");
+                    if (!missing.empty()) trophy.push_back({{"titleid", id}, {"path", path}, {"missing", missing}, {"desc", id + ": " + missing[0].get<std::string>()}});
+                }
+            }
+        }
+    f.set("games.unsigned_elf", std::move(unsigned_elf));
+    f.set("games.flex_small", std::move(flex));
+    f.set("games.playgo_missing", std::move(playgo));
+    f.set("games.trophy_missing", std::move(trophy));
+}
+
 // kraken.sparse_extent[], kraken.sysex_readonly[], kraken.pkg_other[], kraken.pkg_truncated[], kraken.cache_block[], kraken.ampr_foreign[]: je path (der Paketdatei,
 // wenn die Zeile sie nennt) und line. Kraken Mount schreibt seine Ablehnungen nur in /data/krakenmount/kraken.log (keine Kachel, kein Hinweis). Die Meldung zum
 // Layout mit Luecke nennt als Abhilfe das Neu-Packen mit "--kraken stored"; sie zaehlt nicht zu pkg_other, obwohl sie ebenfalls "unsupported package" sagt.
@@ -656,12 +764,13 @@ void collect_kraken(const Platform& p, Facts& f) {
     f.set("kraken.log_present", true);
     static const std::regex path_re("(/[^\\s\"']+\\.pkg)");
     struct Kind {
+        explicit Kind(const char* name) : fact(name) {}
         const char* fact;
         json out = json::array();
         std::set<std::string> seen;
     };
-    Kind sparse{"kraken.sparse_extent"}, sysex{"kraken.sysex_readonly"}, other{"kraken.pkg_other"}, trunc{"kraken.pkg_truncated"}, cache{"kraken.cache_block"},
-        foreign{"kraken.ampr_foreign"};
+    Kind sparse("kraken.sparse_extent"), sysex("kraken.sysex_readonly"), other("kraken.pkg_other"), trunc("kraken.pkg_truncated"), cache("kraken.cache_block"),
+        foreign("kraken.ampr_foreign");
     const auto has = [](const std::string& l, const char* s) { return l.find(s) != std::string::npos; };
     std::istringstream in(text);
     std::string line;

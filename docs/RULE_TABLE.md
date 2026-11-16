@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Regel-Uebersicht
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.52, 97 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.53, 101 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -19,6 +19,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `game.compat_known_bad` | info | alle | - | community | Laut der Kompatibilitätsliste für ZSTD- und LZ4-Sicherungen läuft dieses Spiel bei Testern nicht oder nur mit widersprüchlichen Berichten... |
 | `game.eboot_invalid` | warning | alle | - | todo | Die eboot.bin eines Spielordners ist unbrauchbar: kleiner als 64 Byte oder reiner Text (z. |
 | `game.fakelib_layout` | info | alle | - | doc | Ein Spiel hat einen unklaren fakelib-Aufbau (Beleg: Pfad und Art). |
+| `game.flex_memory_small` | info | alle | - | community | In sce_sys/param.json des Spiels steht kernel.flexibleMemorySize unter 429916160 (410 MiB), das Spiel nutzt die ng-Laufzeit ab 0.3.4, und... |
 | `game.il2cpp_case` | warning | alle | `rename_case_prx` | community | Im Spielordner heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Media/Modules). |
 | `game.il2cpp_case_latent` | info | alle | `rename_case_prx` | community | Im Spielordner auf einem exFAT-/FAT-Laufwerk heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Media/... |
 | `game.image_undo_journal` | warning | alle | - | community | Neben einem Image liegt ein Undo-Journal (<Image>.forge-undo, *.orig.part oder <Image>.undo). |
@@ -33,7 +34,10 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `game.pack_no_emu_index` | info | alle | - | todo | Ein Spiel mit Packs hat keine ampr_emu.index. |
 | `game.pack_runtime_mismatch` | warning | alle | - | doc | Ein Spiel mit gepackten Dateien (ampr_zstd.index oder ampr_assets.index) hat keine passende Laufzeit-Bibliothek: fakelib/libSceAmpr.sprx... |
 | `game.partial_folder` | warning | alle | `quarantine_partial_folder` | community | In einem Scanpfad liegt ein Packordner mit Volumes (ampr_zstd-NNN.pak), aber ohne ampr_zstd.index. |
+| `game.playgo_stub_missing` | info | alle | - | community | Das Spiel hat PlayGo-Dateien (sce_sys/playgo-scenario.json oder playgo-chunk.dat), aber weder libScePlayGo.sprx im fakelib noch eine Play... |
 | `game.runtime_old_version` | info | alle | - | doc | Im Spiel liegt eine alte ampr-emu-ng-Fassung (vor 0.3.4), und die Konsole hat für dieses Spiel einen Fehlercode verzeichnet. |
+| `game.trophy_files_missing` | info | alle | - | community | Im Spielordner gibt es sce_sys/trophy2 mit Dateien, aber mindestens eine der Trophäen-Dateien fehlt (sce_sys/nptitle.dat, sce_sys/uds/npb... |
+| `game.unsigned_elf` | info | alle | - | community | Mindestens eine Programmdatei des Spiels (eboot.bin, sce_module, prx oder fakelib) ist eine reine, nicht signierte ELF-Datei, und die Kon... |
 | `hen.etahen_crashed` | warning | alle | - | doc | etaHEN meldet einen Absturz seines Hauptdienstes ('main etaHEN has crashed'); Toolbox und Plugins fehlen danach. |
 | `hen.etahen_double_load` | warning | alle | - | doc | Es laufen mehrere etaHEN-Prozesse. |
 | `hen.etahen_game_rest_kill` | info | alle | - | doc | In etaHEN ist 'Game_rest_kill' (oder 'Util_rest_kill') eingeschaltet: Beim Ruhemodus beendet etaHEN das offene Spiel bzw. |

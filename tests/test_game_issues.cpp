@@ -1001,8 +1001,46 @@ void layout_tests() {
 
 }  // namespace
 
+// Hinweise S07/S08/S14/S24: nur mit Fehlercode zum Titel (S24 ohne)
+void hint_tests() {
+    Sandbox sb;
+    const std::string elf10(std::string("\x7f" "ELF") + std::string(12, '\0') + std::string("\x10\xfe", 2) + std::string(20, '\0'));
+    const std::string elf18(std::string("\x7f" "ELF") + std::string(12, '\0') + std::string("\x18\xfe", 2) + std::string(20, '\0'));
+    const std::string self_sig(std::string("\x4f\x15\x3d\x1d") + std::string(40, '\0'));
+    const std::string g = "/data/homebrew/PPSA00001-X";
+    spit(sb.real(g + "/eboot.bin"), self_sig);                     // signiert: kein Befund
+    spit(sb.real(g + "/sce_module/a.prx"), elf18);                 // reine ELF: Befund
+    spit(sb.real(g + "/fakelib/libSceAmpr.sprx"), self_sig);
+    spit(sb.real(g + "/sce_sys/playgo-chunk.dat"), "x");
+    spit(sb.real(g + "/sce_sys/param.json"), "{\"titleId\":\"PPSA00001\",\"kernel\":{\"flexibleMemorySize\":429916159}}");
+    spit(sb.real(g + "/sce_sys/trophy2/t.ucp"), "x");
+    auto mk = [&](bool with_error) {
+        Facts f;
+        f.set("smp.titles", json::array({json{{"titleid", "PPSA00001"}, {"path", g}}}));
+        f.set("games.runtime", json::array({json{{"titleid", "PPSA00001"}, {"lib_kind", "ng"}, {"old_version", false}}}));
+        if (with_error) f.set("errors.pairs", json::array({json{{"titleid", "PPSA00001"}, {"code", "CE-1-1"}}}));
+        return f;
+    };
+    auto p = make_snapshot_platform(sb.dir.string(), true);
+    auto n = [](const Facts& f, const char* k) { const json* v = f.get(k); return v ? v->size() : size_t(99); };
+    Facts a = mk(true);
+    collect_game_hints(*p, a);
+    CHECK(n(a, "games.unsigned_elf") == 1 && (*a.get("games.unsigned_elf"))[0]["files"][0] == "sce_module/a.prx", "Hinweise: e_type 0xFE18 in sce_module gemeldet, signierte eboot.bin nicht");
+    CHECK(n(a, "games.flex_small") == 1 && n(a, "games.playgo_missing") == 1 && n(a, "games.trophy_missing") == 1, "Hinweise: flexibleMemorySize, PlayGo und Trophaeen mit Fehlercode");
+    Facts b = mk(false);
+    collect_game_hints(*p, b);
+    CHECK(n(b, "games.unsigned_elf") == 0 && n(b, "games.flex_small") == 0 && n(b, "games.playgo_missing") == 0 && n(b, "games.trophy_missing") == 1, "Hinweise: ohne Fehlercode nur die Trophaeen-Dateien (S24 braucht keinen)");
+    spit(sb.real(g + "/sce_module/a.prx"), elf10 + "x");
+    spit(sb.real("/data/shadowmount/emus/libScePlayGo.sprx"), "x");
+    spit(sb.real(g + "/sce_sys/param.json"), "{\"titleId\":\"PPSA00001\",\"kernel\":{\"flexibleMemorySize\":429916160}}");
+    Facts c = mk(true);
+    collect_game_hints(*p, c);
+    CHECK(n(c, "games.unsigned_elf") == 1 && n(c, "games.flex_small") == 0 && n(c, "games.playgo_missing") == 0, "Hinweise: 429916160 ist nicht klein, eine PlayGo-Emulator-Datei schliesst S14 aus");
+}
+
 void game_issue_tests() {
     index_and_version_tests();
+    hint_tests();
     layout_tests();
     chmod_tests();
     misc_tests();

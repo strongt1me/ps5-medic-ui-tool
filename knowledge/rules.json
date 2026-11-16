@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.52",
+  "db_version": "2026.11.53",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2736,6 +2736,118 @@
         "reason": {
           "de": "Die Zeile ist aus dem Log gelesen. Ob die Datei Absicht ist (Test einer Fassung) oder ein Versehen, weiß Medic nicht; der Ordner selbst wurde nicht ausgewertet.",
           "en": "The line is read from the log. Whether the file is intentional (testing a version) or a slip, Medic cannot know; the folder itself was not evaluated."
+        }
+      }
+    },
+    {
+      "id": "game.unsigned_elf",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.unsigned_elf[].desc",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Mindestens eine Programmdatei des Spiels (eboot.bin, sce_module, prx oder fakelib) ist eine reine, nicht signierte ELF-Datei, und die Konsole hat für den Titel einen Fehlercode verzeichnet. Der Lader nimmt laut Dump Forge keine einfache ELF; solche Spiele müssen fake-signiert (fSELF) sein, sonst startet der Spielprozess oft nie („Something went wrong“ direkt beim Start). Erzeuge das Spiel mit einem Werkzeug neu, das die Programme signiert (Dump Forge ab 0.5.4, PS5 Dump & Image Converter). Ob die Datei die Ursache ist, ist offen. Medic ändert hier nichts.",
+        "en": "At least one program file of the game (eboot.bin, sce_module, prx or fakelib) is a plain, unsigned ELF file, and the console has recorded an error code for the title. According to Dump Forge the loader does not take a plain ELF; such games must be fake-signed (fSELF), otherwise the game process often never starts (\"Something went wrong\" right at launch). Build the game again with a tool that signs the programs (Dump Forge from 0.5.4, PS5 Dump & Image Converter). Whether the file is the cause is open. Medic changes nothing here."
+      },
+      "evidence": "games.unsigned_elf[].desc",
+      "fix": null,
+      "source": "https://github.com/quer3q/ps5-dump-forge",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Die Kopfbytes sind gelesen (ELF mit e_type 0xFE10 oder 0xFE18) und die Konsole hat einen Fehlercode für den Titel. Dass die unsignierte Datei den Fehler verursacht, ist eine Vermutung aus Berichten (Dump Forge, ampr-emu-ng); an einem echten Fall nicht bestätigt, und ein echtes Backup mit reiner ELF ist im Converter bekannt, bei dem offen blieb, ob es lief.",
+          "en": "The header bytes are read (ELF with e_type 0xFE10 or 0xFE18) and the console has an error code for the title. That the unsigned file causes the error is an assumption from reports (Dump Forge, ampr-emu-ng); not confirmed on a real case, and the Converter knows a real backup with a plain ELF where it stayed open whether it ran."
+        }
+      }
+    },
+    {
+      "id": "game.flex_memory_small",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.flex_small[].desc",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "In sce_sys/param.json des Spiels steht kernel.flexibleMemorySize unter 429916160 (410 MiB), das Spiel nutzt die ng-Laufzeit ab 0.3.4, und die Konsole hat für den Titel einen Fehlercode verzeichnet. Ein Melder berichtete, dass ein sehr früher Absturz im Spielcode oder ein „beschädigter Spielstand“ nach dem Anheben des Werts auf 429916160 oder nach dem Entfernen des kernel-Abschnitts verschwand; der Mechanismus ist nicht bestätigt. Wer das ausprobieren will, sichert die param.json zuerst selbst. Medic schreibt die param.json nicht um.",
+        "en": "In the game's sce_sys/param.json kernel.flexibleMemorySize is below 429916160 (410 MiB), the game uses the ng runtime from 0.3.4, and the console has recorded an error code for the title. A reporter said a very early crash in the game code or a \"corrupted save data\" message went away after raising the value to 429916160 or removing the kernel section; the mechanism is not confirmed. If you want to try it, back up the param.json first yourself. Medic does not rewrite the param.json."
+      },
+      "evidence": "games.flex_small[].desc",
+      "fix": null,
+      "source": "https://github.com/quer3q/ampr-emu-ng",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Der Wert und der Fehlercode sind gelesen. Eine belegte Schwelle gibt es nicht; die 429916160 stammen aus einem einzelnen Bericht, und der Mechanismus ist ungeklärt.",
+          "en": "The value and the error code are read. There is no proven threshold; the 429916160 come from a single report, and the mechanism is unexplained."
+        }
+      }
+    },
+    {
+      "id": "game.playgo_stub_missing",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.playgo_missing[].desc",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Das Spiel hat PlayGo-Dateien (sce_sys/playgo-scenario.json oder playgo-chunk.dat), aber weder libScePlayGo.sprx im fakelib noch eine PlayGo-Emulator-Datei unter /data/shadowmount/emus/, und die Konsole hat für den Titel einen Fehlercode verzeichnet. Bei einem Titel half laut Bericht das Ergänzen von libScePlayGo.sprx im fakelib (Vergleich des fakelib mit dem Dump); die meisten Spiele brauchen den Stub nicht. Medic legt keine Dateien an.",
+        "en": "The game has PlayGo files (sce_sys/playgo-scenario.json or playgo-chunk.dat) but neither libScePlayGo.sprx in the fakelib nor a PlayGo emulator file under /data/shadowmount/emus/, and the console has recorded an error code for the title. For one title, adding libScePlayGo.sprx to the fakelib helped according to a report (compare the fakelib with the dump); most games do not need the stub. Medic does not create files."
+      },
+      "evidence": "games.playgo_missing[].desc",
+      "fix": null,
+      "source": "https://github.com/quer3q/ampr-emu-ng",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Die Dateien und der Fehlercode sind gelesen. Dass der fehlende Stub das Schwarzbild verursacht, stammt aus einem einzelnen Bericht; die meisten Spiele laufen ohne ihn.",
+          "en": "The files and the error code are read. That the missing stub causes the black screen comes from a single report; most games run without it."
+        }
+      }
+    },
+    {
+      "id": "game.trophy_files_missing",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.trophy_missing[].desc",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Im Spielordner gibt es sce_sys/trophy2 mit Dateien, aber mindestens eine der Trophäen-Dateien fehlt (sce_sys/nptitle.dat, sce_sys/uds/npbind.dat oder sce_sys/trophy2/npbind.dat). Aus FPKG konvertierte Spiele haben diese Dateien verloren, wenn der Container-Eintrag verschlüsselt war (Dump Forge, Fix nach 0.5.5). Möglicherweise erscheinen dann keine Trophäen. Erzeuge das Spiel mit einer aktuellen Forge-Fassung neu oder ergänze die Dateien aus einer eigenen vollständigen Kopie. Medic ändert hier nichts und liest nie die Inhalte.",
+        "en": "The game folder has sce_sys/trophy2 with files, but at least one of the trophy files is missing (sce_sys/nptitle.dat, sce_sys/uds/npbind.dat or sce_sys/trophy2/npbind.dat). Games converted from FPKG lost these files when the container entry was encrypted (Dump Forge, fix after 0.5.5). Trophies may then not appear. Build the game again with a current Forge version or add the files from your own complete copy. Medic changes nothing here and never reads the contents."
+      },
+      "evidence": "games.trophy_missing[].desc",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount/issues/18",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Nur Dateinamen sind geprüft. Spiele ohne Trophäen haben die Dateien legitim nicht; ob bei diesem Spiel Trophäen fehlen, kann Medic nicht sehen, und in Kraken Mount Issue 18 fehlten sie bei allen Spielen, was für eine andere Ursache spricht.",
+          "en": "Only file names are checked. Games without trophies legitimately lack the files; whether trophies are missing for this game Medic cannot see, and in Kraken Mount issue 18 they were missing for all games, which points to another cause."
         }
       }
     },
