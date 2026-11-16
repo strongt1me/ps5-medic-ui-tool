@@ -642,20 +642,32 @@ int main() {
                 (void)medic::proto::send_message(sock, medic::proto::kShutdown, nullptr, 0);
                 // Die Verbindung offen lassen, bis der Dienst sie schliesst (Test Konsole 16. Nov. 2026): er liest das 'X' erst nach dem Laden, und eine sofort
                 // geschlossene Verbindung sah er nur als Abbruch und blieb stehen. Bis zu vier Sekunden; die Bildstreifen dabei verwerfen.
-                for (int i = 0; i < 40; ++i) {
+                // Eine echte Zeitgrenze (die erste Fassung zaehlte Durchlaeufe: strömten Bildstreifen, war sie in Millisekunden durch und schloss die Verbindung wieder).
+                bool closed = false;
+                const std::uint32_t wait_from = now_ms();
+                while (now_ms() - wait_from < 4000u) {
                     char drop[4096];
                     const ssize_t n = recv(sock, drop, sizeof drop, MSG_DONTWAIT);
-                    if (n == 0) break;  // vom Dienst geschlossen: er beendet sich
-                    if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) break;
-                    if (n < 0) (void)sceKernelUsleep(100000);
+                    if (n == 0) {  // vom Dienst geschlossen: er beendet sich
+                        closed = true;
+                        break;
+                    }
+                    if (n > 0) continue;  // Bildstreifen verwerfen, weiter lesen
+                    if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+                        (void)sceKernelUsleep(50000);
+                        continue;
+                    }
+                    break;  // Fehler: Verbindung weg
                 }
                 close(sock);
                 sock = -1;
-                for (int i = 0; i < 40; ++i) {  // bis zu vier Sekunden warten, bis der alte Dienst den Port freigibt
-                    const int s = medic::proto::connect_local(medic::proto::kPort, 1);
-                    if (s < 0) break;
-                    close(s);
-                    (void)sceKernelUsleep(100000);
+                if (closed) {  // nur dann den Port pruefen: jede Pruefverbindung zu einem noch lebenden Dienst loest bei ihm eine volle Sitzung aus
+                    for (int i = 0; i < 20; ++i) {
+                        const int s = medic::proto::connect_local(medic::proto::kPort, 1);
+                        if (s < 0) break;
+                        close(s);
+                        (void)sceKernelUsleep(100000);
+                    }
                 }
                 continue;
             }
