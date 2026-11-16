@@ -338,7 +338,8 @@ void support_tests() {
 
     Facts f;
     f.set("smp.titles", json::array({json{{"titleid", "PPSA99991"}, {"path", "/data/homebrew/Mein Geheimes Spiel"}, {"name", "Mein Geheimes Spiel"}},
-                                     json{{"titleid", "CUSA88882"}, {"path", "/mnt/usb0/Anderes Spiel.exfat"}}}));
+                                     json{{"titleid", "CUSA88882"}, {"path", "/mnt/usb0/Anderes Spiel.exfat"}},
+                                     json{{"titleid", "FAKE42007"}, {"path", "/data/homebrew/FAKE42007"}, {"name", "PS5 Medic Test"}}}));
     f.set("smp.images", json::array({json{{"path", "/mnt/usb0/Anderes Spiel.exfat"}}}));
     ReportInput in;
     in.created_utc = "20261116T120000Z";
@@ -363,6 +364,12 @@ void support_tests() {
     CHECK(names == std::vector<std::string>({"README.txt", "report_de.md", "report_en.md", "facts.json", "compare.txt"}), "Support: Dateien im Paket");
     CHECK(!has(all, "Geheimes") && !has(all, "Anderes Spiel") && !has(all, "PPSA99991") && !has(all, "CUSA88882") && !has(all, "PPSA12345") && !has(all, "192.168.1.94"),
           "Support: keine Namen, Titel-IDs oder Adressen im Paket");
+    {  // Homebrew-Kacheln (FAKE...) und PS5 Medic selbst bleiben lesbar; der Fusssatz des Berichts passt zum Paket
+        Pseudonyms ph;
+        ph.collect(in.facts);
+        CHECK(ph.apply("PS5 Medic Test FAKE42007") == "PS5 Medic Test FAKE42007", "Support: Homebrew-Kacheln werden nicht pseudonymisiert");
+        CHECK(!has(files[1].data, "sind enthalten") && has(files[1].data, "siehe README") && !has(files[2].data, "are included") && has(files[2].data, "see README"), "Support: Fusssatz nennt die Platzhalter statt der Namen");
+    }
     CHECK(has(all, "[TITLE-01]") && has(all, "[GAME-01]") && has(all, "[IP]"), "Support: Platzhalter statt Originalen");
     CHECK(has(b.key, "PPSA99991") && has(b.key, "Mein Geheimes Spiel") && has(b.key, "PPSA12345"), "Support: der Schluessel enthaelt die Originale (nur ausserhalb des Pakets)");
     CHECK(b.titles >= 3 && b.names >= 2, "Support: Zahl der ersetzten Titel und Namen");

@@ -111,6 +111,8 @@ void Pseudonyms::collect(const Facts& facts) {
         if (!a || !a->is_array()) return;
         for (const auto& e : *a) {
             if (!e.is_object()) continue;
+            // Homebrew-Kacheln (Titel-ID "FAKE...", auch PS5 Medic selbst) sind keine Spiele und verraten nichts
+            if (e.contains("titleid") && e["titleid"].is_string() && e["titleid"].get<std::string>().rfind("FAKE", 0) == 0) continue;
             if (e.contains("titleid") && e["titleid"].is_string()) add_title_id(e["titleid"].get<std::string>());
             if (e.contains("name") && e["name"].is_string()) add_name(e["name"].get<std::string>());
             name_of_path(e);
@@ -214,12 +216,22 @@ std::string make_zip(const std::vector<ZipEntry>& entries) {
 SupportBundle build_support_bundle(const ReportInput& in, const std::string& facts_json, const std::string& compare_text) {
     Pseudonyms ps;
     ps.collect(in.facts);
+    // Der Fusssatz des Berichts sagt "Namen sind enthalten"; im Paket sind sie ersetzt
+    const auto swap_footer = [](std::string s) {
+        const auto rep = [&](const char* from, const char* to) {
+            const auto i = s.find(from);
+            if (i != std::string::npos) s.replace(i, std::char_traits<char>::length(from), to);
+        };
+        rep("Datei- und Ordnernamen sind enthalten – vor dem Teilen prüfen.", "Titel-IDs und Namen von Spielen, Ordnern und Images sind durch Platzhalter ersetzt (siehe README).");
+        rep("File and folder names are included – check before sharing.", "Title IDs and names of games, folders and images are replaced by placeholders (see README).");
+        return s;
+    };
     const auto clean = [&](const std::string& s) { return ps.apply(anonymize(s)); };
 
     std::vector<ZipEntry> files;
     files.push_back({"README.txt", ""});  // Platz fuer die README (steht am Anfang des Pakets), Inhalt unten
-    files.push_back({"report_de.md", clean(build_report(in, ReportLang::De))});
-    files.push_back({"report_en.md", clean(build_report(in, ReportLang::En))});
+    files.push_back({"report_de.md", clean(swap_footer(build_report(in, ReportLang::De)))});
+    files.push_back({"report_en.md", clean(swap_footer(build_report(in, ReportLang::En)))});
     if (!facts_json.empty()) files.push_back({"facts.json", clean(facts_json)});
     if (!compare_text.empty()) files.push_back({"compare.txt", clean(compare_text)});
 

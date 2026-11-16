@@ -481,6 +481,7 @@ SupportResult LocalService::make_support() {
         }
         for (const auto& s : d.severity_changed) compare += "~ " + s.now.rule_id + " (" + medic::to_string(s.before) + " -> " + medic::to_string(s.now.severity) + ")\n";
         for (const auto& s : d.setup_changed) compare += "setup " + s.key + ": " + (s.from.empty() ? "-" : s.from) + " -> " + (s.to.empty() ? "-" : s.to) + "\n";
+        if (d.added.empty() && d.resolved.empty() && d.severity_changed.empty() && d.setup_changed.empty()) compare += "keine Unterschiede / no differences\n";
     }
     const medic::SupportBundle bundle = medic::build_support_bundle(in, medic::dump_safe(console_facts_json(), 1) + "\n", compare);
     // Neue Dateien, nie ueberschreiben: gibt es sie schon (zweiter Aufruf in derselben Sekunde), wird nichts geschrieben
