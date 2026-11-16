@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Tests der Fix-Engine: SHA-256, INI-Editor, Whitelist, apply -> undo = identischer Dateibaum, Rollback, Journal.
 #include "check.hpp"
+#include "medic/checks.hpp"
 #include "medic/collectors.hpp"
 #include "medic/casename.hpp"
 #include "medic/fixes.hpp"
@@ -227,6 +228,12 @@ void roundtrip(const FixCase& fc, int idx) {
     CHECK(ops == static_cast<int>(c.plan.changes.size()) && commits == 1, name + ": Journal enthaelt alle Operationen und einen Commit");
     auto h = history(*c.p);
     CHECK(h.size() == 1 && h[0].state == "applied", name + ": history = applied");
+    // "Behoben durch Reparatur": das Journal nennt die Regel des Befunds; eine Regel, die der Fix behebt, bekommt ihre Verknuepfung
+    CHECK(h[0].rule == fc.rule && h[0].fix == c.plan.fix_id, name + ": Journal nennt Regel und Fix");
+    if (fc.clears) {
+        const auto links = repairs_between(h, {fc.rule}, "00000000T000000Z", "");
+        CHECK(links.size() == 1 && links[0].fix == c.plan.fix_id && links[0].txn == ar.txn, name + ": behobene Regel ist mit der Reparatur verknuepft");
+    }
 
     UndoResult ur = undo_txn(*c.p, pol, ar.txn, ts + "u");
     CHECK(ur.ok, name + ": undo ok (" + ur.error + ")");
