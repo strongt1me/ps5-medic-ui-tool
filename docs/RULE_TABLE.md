@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Regel-Uebersicht
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.51, 92 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.52, 97 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -39,7 +39,12 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `hen.etahen_game_rest_kill` | info | alle | - | doc | In etaHEN ist 'Game_rest_kill' (oder 'Util_rest_kill') eingeschaltet: Beim Ruhemodus beendet etaHEN das offene Spiel bzw. |
 | `hen.etahen_with_kstufflite_latest_fw` | critical | >=13.60 | - | community | etaHEN und kstuff-lite laufen gleichzeitig. |
 | `hen.jb_too_early` | info | alle | - | community | Der erste Prozess der Jailbreak-Kette startete weniger als 60 Sekunden nach dem Einschalten. |
+| `kraken.ampr_foreign` | info | alle | - | community | Im Ordner /data/krakenmount/ampr/ liegt eine von Hand abgelegte Datei („is not a bundled ampr-emu-ng: kept“). |
+| `kraken.cache_block` | warning | alle | - | community | Kraken Mount erkennt eine .pkg, scheitert aber beim Aufbau des Caches („cache build … short compressed block“): Ein komprimierter Block r... |
 | `kraken.pkg_sparse_extent` | warning | alle | - | community | Kraken Mount lehnt eine .pkg ab: Das Layout der Paketdatei hat eine Lücke (sparse extent), und das Paket bekommt deshalb keine Kachel; di... |
+| `kraken.pkg_truncated` | warning | alle | - | community | Kraken Mount meldet für eine .pkg „truncated?“: Die Datei ist kürzer, als ihr Kopf angibt, etwa nach einem abgebrochenen Download oder ei... |
+| `kraken.pkg_unsupported` | warning | alle | - | community | Kraken Mount lehnt eine .pkg ab, weil sie kein Paket der Art ist, die es lesen kann (Meldung „unsupported package“ oder „not a PS5 packag... |
+| `kraken.sysex_readonly` | warning | alle | - | community | Kraken Mount konnte einen neuen Titel nicht anmelden: Die Konsole hat /system_ex schreibgeschützt eingehängt (os error 30), die Meldung s... |
 | `nanodns.log_problem` | info | alle | - | doc | Das nanoDNS-Log enthält Fehler: nanoDNS erreicht seine Upstream-DNS-Server nicht (dann scheitert jede Namensauflösung, Apps und Payload M... |
 | `payload.elf_invalid` | warning | alle | `quarantine_broken_elf` | doc | Mindestens eine ELF-Datei ist unbrauchbar: zu klein, ohne ELF-Kennung (oft eine gespeicherte HTML-Fehlerseite) oder abgeschnitten (abgebr... |
 | `payload.port_9021_closed` | warning | alle | - | todo | Port 9021 nimmt keine Verbindungen an, und weder elfldr noch etaHEN läuft: Es ist kein ELF-Loader aktiv, Payloads lassen sich nicht an di... |

@@ -1,0 +1,2 @@
+[09:59:59] info: start
+[10:00:00] error: cache build: /app0/x.bin: block at pkg offset 0x40000: a short compressed block runs past the file's end

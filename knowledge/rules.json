@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.51",
+  "db_version": "2026.11.52",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2596,6 +2596,146 @@
         "reason": {
           "de": "Die Meldung ist aus dem Log gelesen. Dass sie von einem Layout mit Lücke kommt, steht im Kraken-Mount-Projekt (Issues 4, 5, 8, 9, 13, 20); ob das Neu-Packen mit --kraken stored hilft, wurde dort nicht an einem echten Paket geprüft.",
           "en": "The message is read from the log. That it comes from a layout with a gap is stated in the Kraken Mount project (issues 4, 5, 8, 9, 13, 20); whether rebuilding with --kraken stored helps was not checked there on a real package."
+        }
+      }
+    },
+    {
+      "id": "kraken.sysex_readonly",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.sysex_readonly[].line",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount konnte einen neuen Titel nicht anmelden: Die Konsole hat /system_ex schreibgeschützt eingehängt (os error 30), die Meldung steht nur in /data/krakenmount/kraken.log. Der Titel bekommt keine Kachel, früher angemeldete Titel laufen weiter. Vermutlich hilft es, vor Kraken Mount etaHEN oder ShadowMount+ zu starten, die /system_ex beim Start neu einhängen; das ist nicht an dieser Konsole geprüft. Medic ändert hier nichts.",
+        "en": "Kraken Mount could not register a new title: the console has mounted /system_ex read-only (os error 30); the message is only in /data/krakenmount/kraken.log. The title gets no tile, titles registered earlier keep running. Starting etaHEN or ShadowMount+ before Kraken Mount probably helps, since they remount /system_ex at start; this was not checked on this console. Medic changes nothing here."
+      },
+      "evidence": "kraken.sysex_readonly[].line",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount/issues/7",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Die Meldung ist aus dem Log gelesen. Dass der Neueinhang durch etaHEN oder ShadowMount+ hilft, steht nur als ungetestete Vermutung im Kraken-Mount-Projekt (PR 22).",
+          "en": "The message is read from the log. That a remount by etaHEN or ShadowMount+ helps is only an untested assumption in the Kraken Mount project (PR 22)."
+        }
+      }
+    },
+    {
+      "id": "kraken.pkg_unsupported",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.pkg_other[].line",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount lehnt eine .pkg ab, weil sie kein Paket der Art ist, die es lesen kann (Meldung „unsupported package“ oder „not a PS5 package“): Es liest nur unverschlüsselte Debug-Pakete aus Dump Forge. Andere Paketarten (verschlüsselt, Retail, Patch, PS4) werden nicht angemeldet; die Meldung steht nur in /data/krakenmount/kraken.log. Medic ändert hier nichts.",
+        "en": "Kraken Mount rejects a .pkg because it is not a kind of package it can read (message \"unsupported package\" or \"not a PS5 package\"): it only reads unencrypted debug packages from Dump Forge. Other package kinds (encrypted, retail, patch, PS4) are not registered; the message is only in /data/krakenmount/kraken.log. Medic changes nothing here."
+      },
+      "evidence": "kraken.pkg_other[].line",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Die Meldung ist aus dem Log gelesen; welche Paketarten Kraken Mount ablehnt, steht in dessen Quelltext und Anleitung. Die Paketart selbst wurde nicht geprüft.",
+          "en": "The message is read from the log; which package kinds Kraken Mount rejects is stated in its source and manual. The package kind itself was not checked."
+        }
+      }
+    },
+    {
+      "id": "kraken.pkg_truncated",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.pkg_truncated[].line",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount meldet für eine .pkg „truncated?“: Die Datei ist kürzer, als ihr Kopf angibt, etwa nach einem abgebrochenen Download oder einer unvollständigen Kopie. Das Paket lässt sich nicht einhängen; die Meldung steht nur in /data/krakenmount/kraken.log. Kopiere die Datei erneut und vergleiche die Größe mit der Quelle, oder erzeuge das Paket neu. Medic ändert hier nichts.",
+        "en": "Kraken Mount reports \"truncated?\" for a .pkg: the file is shorter than its header says, for example after an aborted download or an incomplete copy. The package cannot be mounted; the message is only in /data/krakenmount/kraken.log. Copy the file again and compare its size with the source, or build the package again. Medic changes nothing here."
+      },
+      "evidence": "kraken.pkg_truncated[].line",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount/issues/10",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Die Meldung ist aus dem Log gelesen. Dass die Datei wirklich zu kurz ist, wurde nicht nachgemessen; die Ursache (Download oder Kopie) ist eine Vermutung aus dem Kraken-Mount-Issue 10.",
+          "en": "The message is read from the log. That the file really is too short was not measured; the cause (download or copy) is an assumption from Kraken Mount issue 10."
+        }
+      }
+    },
+    {
+      "id": "kraken.cache_block",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.cache_block[].line",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount erkennt eine .pkg, scheitert aber beim Aufbau des Caches („cache build … short compressed block“): Ein komprimierter Block reicht über das Dateiende hinaus. Das Paket bekommt den Status „error“. Eine belegte Abhilfe gibt es nicht; der Quelltext nennt nur, das Paket aus dem entpackten Spielordner neu zu erzeugen. Medic ändert hier nichts.",
+        "en": "Kraken Mount recognises a .pkg but fails while building the cache (\"cache build … short compressed block\"): a compressed block runs past the end of the file. The package gets the status \"error\". No proven remedy exists; the source only suggests building the package again from the unpacked game folder. Medic changes nothing here."
+      },
+      "evidence": "kraken.cache_block[].line",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount/issues/8",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Die Meldung ist aus dem Log gelesen. Die Ursache ist im Kraken-Mount-Issue 8 nur vermutet, eine Antwort oder Abhilfe gab es dort nicht.",
+          "en": "The message is read from the log. The cause is only assumed in Kraken Mount issue 8; there was no reply or remedy there."
+        }
+      }
+    },
+    {
+      "id": "kraken.ampr_foreign",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.ampr_foreign[].line",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Im Ordner /data/krakenmount/ampr/ liegt eine von Hand abgelegte Datei („is not a bundled ampr-emu-ng: kept“). Kraken Mount kopiert jede Datei aus diesem Ordner in das fakelib jedes Spiels; eine fremde libSceAmpr.sprx bleibt dort liegen, und alle Kraken-Spiele laufen dann mit dieser Fassung. Das ist gewollt, wenn du eine Fassung testest; sonst lösche die Datei selbst, dann legt Kraken Mount beim Start die mitgelieferte wieder an. Medic ändert hier nichts.",
+        "en": "A hand-placed file sits in /data/krakenmount/ampr/ (\"is not a bundled ampr-emu-ng: kept\"). Kraken Mount copies every file from this folder into the fakelib of every game; a foreign libSceAmpr.sprx stays there, and all Kraken games then run with that version. That is intended if you are testing a version; otherwise delete the file yourself, and Kraken Mount puts the bundled one back at start. Medic changes nothing here."
+      },
+      "evidence": "kraken.ampr_foreign[].line",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount/issues/6",
+      "verified": "community",
+      "confidence": {
+        "level": "low",
+        "basis": "community",
+        "reason": {
+          "de": "Die Zeile ist aus dem Log gelesen. Ob die Datei Absicht ist (Test einer Fassung) oder ein Versehen, weiß Medic nicht; der Ordner selbst wurde nicht ausgewertet.",
+          "en": "The line is read from the log. Whether the file is intentional (testing a version) or a slip, Medic cannot know; the folder itself was not evaluated."
         }
       }
     },

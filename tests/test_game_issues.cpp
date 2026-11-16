@@ -485,6 +485,23 @@ void folder_and_kraken_tests() {
     collect_kraken(*p, k);
     const json* ks = k.get("kraken.sparse_extent");
     CHECK(k.get("kraken.log_present") && ks && ks->size() == 2 && (*ks)[0]["path"] == "/data/homebrew/A.pkg" && (*ks)[1]["path"] == "/mnt/usb0/homebrew/B.pkg", "Kraken: zwei Pakete, je einmal, harmlose Zeilen ignoriert");
+    // weitere Meldungen aus kraken.log: je Art eigene Fakten, die Layout-Luecke zaehlt nicht zu "nicht lesbar"
+    spit(sb.real("/data/krakenmount/kraken.log"),
+         "[1] error: mkdir /system_ex/app/PPSA00081: Read-only filesystem (os error 30)\n"
+         "[2] error: /data/homebrew/A.pkg: unsupported package: the layout has a sparse extent at mount 0x4000; repack with --kraken stored\n"
+         "[3] error: /data/homebrew/B.pkg: not a PS5 package\n"
+         "[4] error: /data/homebrew/B.pkg: unsupported package\n"
+         "[5] error: /data/homebrew/A.pkg: file ends early (truncated?)\n"
+         "[6] error: cache build: /app0/x: block at pkg offset 0x40000: a short compressed block runs past the file's end\n"
+         "[7] info: ampr: /data/krakenmount/ampr/libSceAmpr.sprx is not a bundled ampr-emu-ng: kept\n"
+         "[8] error: /data/homebrew/Weg.pkg: not a PS5 package\n");
+    spit(sb.real("/data/homebrew/B.pkg"), "x");
+    Facts k2;
+    collect_kraken(*p, k2);
+    const auto sz = [&](const char* n) { const json* v = k2.get(n); return v ? v->size() : size_t(99); };
+    CHECK(sz("kraken.sysex_readonly") == 1 && sz("kraken.sparse_extent") == 1 && sz("kraken.pkg_other") == 1 && sz("kraken.pkg_truncated") == 1 && sz("kraken.cache_block") == 1 &&
+              sz("kraken.ampr_foreign") == 1,
+          "Kraken: jede Meldungsart einmal, Doppelte und entfernte Pakete weg, Luecke nicht als unlesbar");
     Facts none;
     Sandbox sb3;  // lebt bis zum Ende der Pruefung (ein Temporaeres waere vor dem Aufruf schon weg)
     auto empty = make_snapshot_platform(sb3.dir.string());

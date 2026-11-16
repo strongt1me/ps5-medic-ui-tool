@@ -646,28 +646,42 @@ void collect_game_layout(const Platform& p, Facts& f) {
     f.set("games.with_fakelib", std::move(with_fakelib));
 }
 
-// kraken.sparse_extent[]: path (der Paketdatei, wenn die Zeile sie nennt), line. Kraken Mount lehnt ein .pkg mit einer Luecke im Layout ab und schreibt die Meldung
-// nur in /data/krakenmount/kraken.log (keine Kachel, kein Hinweis); die Meldung nennt als Abhilfe das Neu-Packen mit "--kraken stored".
+// kraken.sparse_extent[], kraken.sysex_readonly[], kraken.pkg_other[], kraken.pkg_truncated[], kraken.cache_block[], kraken.ampr_foreign[]: je path (der Paketdatei,
+// wenn die Zeile sie nennt) und line. Kraken Mount schreibt seine Ablehnungen nur in /data/krakenmount/kraken.log (keine Kachel, kein Hinweis). Die Meldung zum
+// Layout mit Luecke nennt als Abhilfe das Neu-Packen mit "--kraken stored"; sie zaehlt nicht zu pkg_other, obwohl sie ebenfalls "unsupported package" sagt.
 // Nur Log lesen (Marc, 14. Nov. 2026: Kraken nur ueber kraken.log und config.toml).
 void collect_kraken(const Platform& p, Facts& f) {
     std::string text;
     if (!read_tail(p.fs(), "/data/krakenmount/kraken.log", 1u << 20, text)) return;
     f.set("kraken.log_present", true);
-    json out = json::array();
     static const std::regex path_re("(/[^\\s\"']+\\.pkg)");
-    std::set<std::string> seen;
+    struct Kind {
+        const char* fact;
+        json out = json::array();
+        std::set<std::string> seen;
+    };
+    Kind sparse{"kraken.sparse_extent"}, sysex{"kraken.sysex_readonly"}, other{"kraken.pkg_other"}, trunc{"kraken.pkg_truncated"}, cache{"kraken.cache_block"},
+        foreign{"kraken.ampr_foreign"};
+    const auto has = [](const std::string& l, const char* s) { return l.find(s) != std::string::npos; };
     std::istringstream in(text);
     std::string line;
     while (std::getline(in, line)) {
-        if (line.find("the layout has a sparse extent") == std::string::npos) continue;
+        Kind* k = nullptr;
+        if (has(line, "the layout has a sparse extent")) k = &sparse;
+        else if (has(line, "/system_ex") && has(line, "Read-only filesystem")) k = &sysex;
+        else if (has(line, "(truncated?)")) k = &trunc;
+        else if (has(line, "cache build:") && has(line, "short compressed block")) k = &cache;
+        else if (has(line, "is not a bundled ampr-emu-ng")) k = &foreign;
+        else if (has(line, "unsupported package") || has(line, "not a PS5 package")) k = &other;
+        if (!k) continue;
         cap_line(line);
         std::smatch m;
         const std::string path = std::regex_search(line, m, path_re) ? m[1].str() : std::string();
         if (!path.empty() && !p.fs().exists(path)) continue;  // das Paket wurde seither neu gebaut oder entfernt: die alte Logzeile gilt nicht mehr
-        if (!seen.insert(path.empty() ? line : path).second || out.size() >= 20) continue;
-        out.push_back({{"path", path}, {"line", line}});
+        if (!k->seen.insert(path.empty() ? line : path).second || k->out.size() >= 20) continue;
+        k->out.push_back({{"path", path}, {"line", line}});
     }
-    f.set("kraken.sparse_extent", std::move(out));
+    for (Kind* k : {&sparse, &sysex, &other, &trunc, &cache, &foreign}) f.set(k->fact, std::move(k->out));
 }
 
 }  // namespace medic

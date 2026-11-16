@@ -254,6 +254,26 @@
    "text": "Dans un dossier de jeu, il manque des fichiers que ampr_emu.index mentionne (preuve : chemin et nombre de fichiers manquants parmi ceux vérifiés ; des exemples figurent dans les détails). La cause est le plus souvent un dump incomplet (un décompresseur a omis des fichiers, un empaqueteur a perdu des dossiers) ou un index qui ne correspond plus au dossier. Typique : plantage au chargement d'une campagne ou toujours au même endroit. Ajoutez les fichiers manquants depuis la source ou rechargez le dump, puis faites recréer l'index. Medic ne modifie rien ici.",
    "confidence_reason": "L'index et l'arborescence sont lus (structure de l'index selon Dump Forge). Que des fichiers manquants causent le plantage découle de rapports du projet ampr-emu-ng (issues 7, 8, 43, 45) ; un index peut toutefois différer légitimement du dossier (backport, fichiers remplacés ensuite). eboot.bin, sce_sys, sce_module et fakelib ne comptent donc jamais. Ne vaut que pour les jeux sans pack."
   },
+  "kraken.sysex_readonly": {
+   "text": "Kraken Mount n'a pas pu enregistrer un nouveau titre : la console a monté /system_ex en lecture seule (os error 30) ; le message figure uniquement dans /data/krakenmount/kraken.log. Le titre n'a pas de vignette, les titres enregistrés avant continuent de fonctionner. Démarrer etaHEN ou ShadowMount+ avant Kraken Mount aide probablement, car ils remontent /system_ex au démarrage ; cela n'a pas été vérifié sur cette console. Medic ne modifie rien ici.",
+   "confidence_reason": "Le message est lu dans le journal. Que le remontage par etaHEN ou ShadowMount+ aide n'est qu'une hypothèse non testée du projet Kraken Mount (PR 22)."
+  },
+  "kraken.pkg_unsupported": {
+   "text": "Kraken Mount refuse un .pkg parce que ce n'est pas un type de paquet qu'il sait lire (message « unsupported package » ou « not a PS5 package ») : il ne lit que les paquets de débogage non chiffrés de Dump Forge. Les autres types (chiffrés, retail, patch, PS4) ne sont pas enregistrés ; le message figure uniquement dans /data/krakenmount/kraken.log. Medic ne modifie rien ici.",
+   "confidence_reason": "Le message est lu dans le journal ; les types de paquets refusés par Kraken Mount figurent dans son code source et son manuel. Le type du paquet lui-même n'a pas été vérifié."
+  },
+  "kraken.pkg_truncated": {
+   "text": "Kraken Mount signale « truncated? » pour un .pkg : le fichier est plus court que son en-tête ne l'indique, par exemple après un téléchargement interrompu ou une copie incomplète. Le paquet ne peut pas être monté ; le message figure uniquement dans /data/krakenmount/kraken.log. Copiez de nouveau le fichier et comparez sa taille avec la source, ou recréez le paquet. Medic ne modifie rien ici.",
+   "confidence_reason": "Le message est lu dans le journal. Que le fichier soit réellement trop court n'a pas été mesuré ; la cause (téléchargement ou copie) est une hypothèse issue de l'issue 10 de Kraken Mount."
+  },
+  "kraken.cache_block": {
+   "text": "Kraken Mount reconnaît un .pkg mais échoue lors de la construction du cache (« cache build … short compressed block ») : un bloc compressé dépasse la fin du fichier. Le paquet reçoit l'état « error ». Aucun remède prouvé n'existe ; le code source suggère seulement de recréer le paquet à partir du dossier du jeu décompressé. Medic ne modifie rien ici.",
+   "confidence_reason": "Le message est lu dans le journal. La cause n'est que supposée dans l'issue 8 de Kraken Mount ; il n'y a eu ni réponse ni remède."
+  },
+  "kraken.ampr_foreign": {
+   "text": "Un fichier déposé à la main se trouve dans /data/krakenmount/ampr/ (« is not a bundled ampr-emu-ng: kept »). Kraken Mount copie chaque fichier de ce dossier dans le fakelib de chaque jeu ; une libSceAmpr.sprx étrangère y reste, et tous les jeux Kraken tournent alors avec cette version. C'est voulu si vous testez une version ; sinon supprimez le fichier vous-même, et Kraken Mount remettra celui fourni au démarrage. Medic ne modifie rien ici.",
+   "confidence_reason": "La ligne est lue dans le journal. Medic ne sait pas si le fichier est voulu (test d'une version) ou une erreur ; le dossier lui-même n'a pas été analysé."
+  },
   "game.pack_runtime_mismatch": {
    "text": "Un jeu avec des fichiers empaquetés (ampr_zstd.index ou ampr_assets.index) n'a pas la bonne bibliothèque d'exécution : fakelib/libSceAmpr.sprx manque, est l'original de Sony ou, pour un pack zstd, la version de Drakmor, qui ne sait pas lire zstd. Le jeu ne démarre alors pas ou plante tôt. Placez une version release d'ampr-emu-ng (pas le fichier de débogage) dans fakelib/libSceAmpr.sprx et désactivez les mises à jour des émulateurs dans ShadowMount+. Medic ne modifie rien ici.",
    "confidence_reason": "La bibliothèque d'exécution est reconnue à son texte (vérifié sur des fichiers d'ampr-emu-ng 0.3.4 et 0.4.0 et d'ampr_emu 0.4.2.1). Qu'un pack zstd ne soit lu que par ampr-emu-ng figure dans la documentation de Dump Forge ; cela n'a pas été reproduit sur cette console."

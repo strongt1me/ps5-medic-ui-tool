@@ -1,0 +1,1 @@
+{"expect": [], "neg_for": ["kraken.sysex_readonly", "kraken.pkg_unsupported", "kraken.pkg_truncated", "kraken.cache_block", "kraken.ampr_foreign"]}

@@ -113,7 +113,7 @@ CheckResult LocalService::run_check() {
         nlohmann::json out = nlohmann::json::object();
         for (const char* k : {"games.runtime", "games.pack_problems", "games.index_problems", "games.noexec", "games.incomplete", "games.runtime_skipped", "leftovers.files", "games.partial_folders",
                               "games.undo_journals", "games.fakelib_layout", "games.with_fakelib", "nanodns.log.problems",
-                              "kraken.log_present", "kraken.sparse_extent", "kstuff.file", "kstuff.file_version"})
+                              "kraken.log_present", "kraken.sparse_extent", "kraken.sysex_readonly", "kraken.pkg_other", "kraken.pkg_truncated", "kraken.cache_block", "kraken.ampr_foreign", "kstuff.file", "kstuff.file_version"})
             if (const nlohmann::json* v = facts_.get(k)) out[k] = *v;
         out["ts"] = now;
         p_.fs_rw()->write_file("/data/ps5medic/last_facts.json", medic::dump_safe(out, 1) + "\n");
