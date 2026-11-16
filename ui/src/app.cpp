@@ -1602,6 +1602,7 @@ void App::draw_chrome(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     draw_icon_badge(c, Icon::Medic, M, 24, 66, kTintBlue);
     title().draw(c, M + 90, 28, S("app.title"), kText);
+    small().draw(c, M + 90 + title().width(S("app.title")) + 18, 50, std::string("v") + medic::kMedicVersion, kDim);  // Versionsangabe der App neben dem Titel
     std::string sys = has_result_ && !result_.fw.empty() ? S.fmt("header.system", {{"fw", result_.fw}, {"model", result_.model}})
                                                           : (has_result_ ? S("header.unknown") : std::string());
     if (result_.model.empty()) {  // ohne Modell bliebe "Firmware 12.00 · " mit haengendem Trenner stehen

@@ -640,6 +640,15 @@ int main() {
                 const std::string why = "Dienst hat eine andere Fassung (" + (theirs.empty() ? std::string("ohne Kennung") : theirs) + ") als die App (" + medic::proto::kBuildId + "): beende ihn und starte den neuen";
                 trace(why.c_str());
                 (void)medic::proto::send_message(sock, medic::proto::kShutdown, nullptr, 0);
+                // Die Verbindung offen lassen, bis der Dienst sie schliesst (Test Konsole 16. Nov. 2026): er liest das 'X' erst nach dem Laden, und eine sofort
+                // geschlossene Verbindung sah er nur als Abbruch und blieb stehen. Bis zu vier Sekunden; die Bildstreifen dabei verwerfen.
+                for (int i = 0; i < 40; ++i) {
+                    char drop[4096];
+                    const ssize_t n = recv(sock, drop, sizeof drop, MSG_DONTWAIT);
+                    if (n == 0) break;  // vom Dienst geschlossen: er beendet sich
+                    if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) break;
+                    if (n < 0) (void)sceKernelUsleep(100000);
+                }
                 close(sock);
                 sock = -1;
                 for (int i = 0; i < 40; ++i) {  // bis zu vier Sekunden warten, bis der alte Dienst den Port freigibt
