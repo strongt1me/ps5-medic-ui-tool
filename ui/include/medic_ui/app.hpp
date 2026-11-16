@@ -148,6 +148,7 @@ private:
     std::string fix_name(const std::string& id) const;
     // Meldung der Fix-Engine (deutsch) in der Sprache der Oberflaeche; fr/it/es: Englisch (wie die Hinweise der Fixes)
     std::string core_message(const std::string& de) const;
+    std::string core_text(const std::string& en) const;
     const medic::Finding* current_finding() const;
 
     IMedicService& svc_;

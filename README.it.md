@@ -161,7 +161,7 @@ medic-cli history|undo|export ...
 
 ## Traduzioni
 
-L'interfaccia si trova in `ui/i18n/<lingua>.json`; i testi di conoscenza per francese, italiano e spagnolo sono presenti come integrazione in `knowledge/l10n/` (regole, codici di errore, autotest). Se manca una voce, l'app mostra l'inglese. I rapporti e i testi dinamici dell'anteprima della riparazione (suggerimenti, note, avvisi e messaggi di errore) esistono solo in tedesco e inglese (fr/it/es mostrano l'inglese). `tools/l10n_extract.py` estrae i testi sorgente per i traduttori, `tools/l10n_check.py <lingua>` controlla una traduzione (chiavi, segnaposto, numeri, codici, percorsi).
+L'interfaccia si trova in `ui/i18n/<lingua>.json`; i testi di conoscenza per francese, italiano e spagnolo sono presenti come integrazione in `knowledge/l10n/` (regole, codici di errore, autotest). Se manca una voce, l'app mostra l'inglese. I rapporti e i testi dinamici dell'anteprima della riparazione (suggerimenti, note, avvisi e messaggi di errore) esistono in tutte e cinque le lingue; lo strumento da riga di comando `medic-cli` sul PC conosce solo tedesco e inglese. `tools/l10n_extract.py` estrae i testi sorgente per i traduttori, `tools/l10n_check.py <lingua>` controlla una traduzione (chiavi, segnaposto, numeri, codici, percorsi).
 
 ## Contribuire
 

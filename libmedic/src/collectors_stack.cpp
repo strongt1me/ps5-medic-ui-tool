@@ -120,7 +120,7 @@ void collect_pldmgr_autoload(const IFileSystem& fs, Facts& f, json& problems) {
     for (const auto& raw : split_lines(text)) {
         const std::string l = trim(raw);
         if (l.empty()) continue;
-        if (l.size() > kPldmgrMaxLine) add_problem(problems, "syntax", kPldmgrList, "Zeile laenger als 511 Zeichen");
+        if (l.size() > kPldmgrMaxLine) add_problem(problems, "syntax", kPldmgrList, ">511");
         else if (l[0] == '!' && (!all_digits(l.substr(1)) || l.size() > 9 || std::atol(l.c_str() + 1) > kPldmgrMaxDelayMs))
             add_problem(problems, "syntax", kPldmgrList, "Wartezeit ungueltig: " + l);
         else if (l[0] != '!' && l.find(',') != std::string::npos)

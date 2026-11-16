@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic_ui/service.hpp"
+#include "medic_ui/i18n.hpp"
 
 #include "medic/collectors.hpp"
 #include "medic/history.hpp"
@@ -523,6 +524,13 @@ ReportResult LocalService::make_report(medic::ReportLang lang) {
         in.error_title_de = e->title_de;
         in.error_title_en = e->title_en;
     }
+    // fr/it/es: Texte der Regeln, Messwerte, Selbsttests, Pruefbereiche und Fehlercodes aus der Uebersetzung der Oberflaeche
+    in.l10n = [](medic::ReportLang l, const char* section, const std::string& id, const char* field) -> const std::string* {
+        const std::string code = medic::report_lang_code(l);
+        for (const Lang x : kAllLangs)
+            if (code == lang_code(x)) return Knowledge::get(x).text(section, id, field);
+        return nullptr;
+    };
 
     // Der einzige Schreibzugriff ausserhalb der Fix-Engine: eine Markdown-Datei in /data/ps5medic/reports/.
     const std::string path = medic::report_path_for(ts);

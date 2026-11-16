@@ -727,7 +727,7 @@ void collect_game_hints(const Platform& p, Facts& f) {
                         tree.list(fd->name, tmp);
                         if (find_item(tmp, "libScePlayGo.sprx", false)) stub = true;
                     }
-                if (!stub) playgo.push_back({{"titleid", id}, {"path", path}, {"desc", id + ": sce_sys/playgo-*, fakelib/libScePlayGo.sprx fehlt"}});
+                if (!stub) playgo.push_back({{"titleid", id}, {"path", path}, {"desc", id + ": [!] sce_sys/playgo-*, fakelib/libScePlayGo.sprx"}});
             }
 
             // S24: Trophaeen-Ordner mit Dateien, aber eine der drei Dateien fehlt

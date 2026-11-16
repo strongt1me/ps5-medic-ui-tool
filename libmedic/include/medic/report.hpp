@@ -11,6 +11,7 @@
 #include "medic/selftest.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -19,7 +20,11 @@ namespace medic {
 constexpr const char* kMedicVersion = "0.4.0";
 constexpr const char* kReportDir = "/data/ps5medic/reports";
 
-enum class ReportLang { De, En };
+enum class ReportLang { De, En, Fr, It, Es };
+
+// Kuerzel der Berichtssprache ("de", "en", "fr", "it", "es") und umgekehrt (unbekannt: Englisch)
+const char* report_lang_code(ReportLang l);
+ReportLang report_lang_from_code(const std::string& code);
 
 // Eine Gruppe gleichartiger Fehlerzeilen aus dem Log (Zahlen und Kennungen sind beim Gruppieren ausgeblendet).
 struct UnknownLine {
@@ -44,6 +49,9 @@ struct ReportInput {
     std::string saved_path;      // wo der volle Bericht liegt (leer = nicht gespeichert)
     // Fehlercode, den der Nutzer im Nachschlagewerk fuer den Bericht vermerkt hat (leer = keiner), mit Titel in beiden Sprachen.
     std::string error_code, error_title_de, error_title_en;
+    // Uebersetzung der Daten-Texte (Regeln, Messwerte, Selbsttests, Pruefbereiche, Fehlercodes) fuer fr/it/es: liefert den Text oder nullptr.
+    // Leer: dort Englisch. Die Oberflaeche setzt sie aus ihrer Wissensuebersetzung (knowledge/l10n).
+    std::function<const std::string*(ReportLang, const char* section, const std::string& id, const char* field)> l10n;
 };
 
 // Fehlerartige Zeilen im ShadowMount+-Log (Fakt smp.log.lines), die zu keinem Befund gehoeren: Stoff fuer neue Regeln.

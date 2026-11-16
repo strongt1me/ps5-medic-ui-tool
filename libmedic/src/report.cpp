@@ -316,40 +316,63 @@ std::string mask_account_hex(const std::string& s) {
 
 // ---- Bausteine ---------------------------------------------------------------
 
-std::string label(Severity s, bool de) {
+// Wahl des Textes je Berichtssprache (de, en, fr, it, es)
+struct Lx {
+    ReportLang lang;
+    const char* operator()(const char* de, const char* en, const char* fr, const char* it, const char* es) const {
+        switch (lang) {
+            case ReportLang::De: return de;
+            case ReportLang::En: return en;
+            case ReportLang::Fr: return fr;
+            case ReportLang::It: return it;
+            case ReportLang::Es: return es;
+        }
+        return en;
+    }
+};
+
+// Text aus den Daten (de/en stehen dort selbst), fr/it/es aus der Uebersetzung der Oberflaeche (in.l10n), sonst Englisch.
+std::string pick_text(const ReportInput& in, ReportLang lang, const std::string& de, const std::string& en, const char* section, const std::string& id, const char* field) {
+    if (lang == ReportLang::De) return de;
+    if (lang == ReportLang::En || !in.l10n) return en;
+    const std::string* t = in.l10n(lang, section, id, field);
+    return t ? *t : en;
+}
+
+std::string label(Severity s, const Lx& T) {
     switch (s) {
-        case Severity::Critical: return de ? "KRITISCH" : "CRITICAL";
-        case Severity::Warning: return de ? "WARNUNG" : "WARNING";
-        case Severity::Info: return de ? "HINWEIS" : "NOTICE";
+        case Severity::Critical: return T("KRITISCH", "CRITICAL", "CRITIQUE", "CRITICO", "CRÍTICO");
+        case Severity::Warning: return T("WARNUNG", "WARNING", "ATTENTION", "AVVISO", "AVISO");
+        case Severity::Info: return T("HINWEIS", "NOTICE", "NOTE", "NOTA", "NOTA");
     }
     return "";
 }
 
-std::string verified_text(const std::string& v, bool de) {
-    if (v == "doc") return de ? "Dokumentation" : "documentation";
-    if (v == "community") return de ? "Community-Meldung" : "community report";
-    return de ? "noch nicht bestätigt" : "not verified yet";
+std::string verified_text(const std::string& v, const Lx& T) {
+    if (v == "doc") return T("Dokumentation", "documentation", "documentation", "documentazione", "documentación");
+    if (v == "community") return T("Community-Meldung", "community report", "rapport de la communauté", "segnalazione della community", "informe de la comunidad");
+    return T("noch nicht bestätigt", "not verified yet", "pas encore vérifié", "non ancora verificato", "aún sin verificar");
 }
 
-std::string level_text(const std::string& l, bool de) {
-    if (l == "high") return de ? "hoch" : "high";
-    if (l == "low") return de ? "niedrig" : "low";
-    return de ? "mittel" : "medium";
+std::string level_text(const std::string& l, const Lx& T) {
+    if (l == "high") return T("hoch", "high", "élevée", "alta", "alta");
+    if (l == "low") return T("niedrig", "low", "faible", "bassa", "baja");
+    return T("mittel", "medium", "moyenne", "media", "media");
 }
 
-std::string basis_text(const std::string& b, bool de) {
-    if (b == "observed") return de ? "an der Konsole beobachtet" : "observed on the console";
-    if (b == "doc") return de ? "Dokumentation" : "documentation";
-    if (b == "community") return de ? "Community-Meldung" : "community report";
-    if (b == "derived") return de ? "abgeleitet" : "derived";
-    return de ? "nicht bestätigt" : "not confirmed";
+std::string basis_text(const std::string& b, const Lx& T) {
+    if (b == "observed") return T("an der Konsole beobachtet", "observed on the console", "observé sur la console", "osservato sulla console", "observado en la consola");
+    if (b == "doc") return T("Dokumentation", "documentation", "documentation", "documentazione", "documentación");
+    if (b == "community") return T("Community-Meldung", "community report", "rapport de la communauté", "segnalazione della community", "informe de la comunidad");
+    if (b == "derived") return T("abgeleitet", "derived", "déduit", "dedotto", "deducido");
+    return T("nicht bestätigt", "not confirmed", "non confirmé", "non confermato", "no confirmado");
 }
 
-std::string state_text(const std::string& s, bool de) {
-    if (s == "applied") return de ? "angewendet" : "applied";
-    if (s == "undone") return de ? "rückgängig gemacht" : "undone";
-    if (s == "aborted") return de ? "abgebrochen" : "aborted";
-    return de ? "unvollständig" : "incomplete";
+std::string state_text(const std::string& s, const Lx& T) {
+    if (s == "applied") return T("angewendet", "applied", "appliquée", "applicata", "aplicada");
+    if (s == "undone") return T("rückgängig gemacht", "undone", "annulée", "annullata", "deshecha");
+    if (s == "aborted") return T("abgebrochen", "aborted", "interrompue", "interrotta", "abortada");
+    return T("unvollständig", "incomplete", "incomplète", "incompleta", "incompleta");
 }
 
 std::string time_text(const std::string& ts) {
@@ -383,10 +406,10 @@ bool proc_running(const Facts& f, const std::string& name) {
 }
 
 // "kstuff 1.10 (drakmor)", "laeuft, Version unbekannt" oder leer, wenn weder Version noch Prozess da sind.
-std::string component_line(const Facts& f, const char* proc, const char* version_key, const char* origin_key, bool de) {
+std::string component_line(const Facts& f, const char* proc, const char* version_key, const char* origin_key, const Lx& T) {
     const std::string v = str_fact(f, version_key), origin = origin_key ? str_fact(f, origin_key) : std::string();
     if (!v.empty()) return v + (origin.empty() ? "" : " (" + origin + ")");
-    if (proc && proc_running(f, proc)) return de ? "läuft, Version unbekannt" : "running, version unknown";
+    if (proc && proc_running(f, proc)) return T("läuft, Version unbekannt", "running, version unknown", "actif, version inconnue", "in esecuzione, versione sconosciuta", "en ejecución, versión desconocida");
     return {};
 }
 
@@ -529,24 +552,46 @@ std::string report_path_for(const std::string& timestamp) {
     return std::string(kReportDir) + "/report_" + timestamp + ".md";
 }
 
+const char* report_lang_code(ReportLang l) {
+    switch (l) {
+        case ReportLang::De: return "de";
+        case ReportLang::En: return "en";
+        case ReportLang::Fr: return "fr";
+        case ReportLang::It: return "it";
+        case ReportLang::Es: return "es";
+    }
+    return "en";
+}
+
+ReportLang report_lang_from_code(const std::string& code) {
+    if (code == "de") return ReportLang::De;
+    if (code == "fr") return ReportLang::Fr;
+    if (code == "it") return ReportLang::It;
+    if (code == "es") return ReportLang::Es;
+    return ReportLang::En;
+}
+
 std::string build_report(const ReportInput& in, ReportLang lang) {
-    const bool de = lang == ReportLang::De;
+    const Lx T{lang};
+    const auto pick = [&](const std::string& de_text, const std::string& en_text, const char* section, const std::string& id, const char* field) {
+        return pick_text(in, lang, de_text, en_text, section, id, field);
+    };
     const Facts& f = in.facts;
     std::ostringstream o;
 
-    o << (de ? "# PS5 Medic – Bericht\n\n" : "# PS5 Medic – Report\n\n");
-    o << "- " << (de ? "Erstellt: " : "Created: ") << time_text(in.created_utc) << "\n";
-    o << "- PS5 Medic " << kMedicVersion << ", " << (de ? "Regelbasis " : "rules ") << in.rules_version << " (" << in.rule_count << ")\n\n";
+    o << (T("# PS5 Medic – Bericht\n\n", "# PS5 Medic – Report\n\n", "# PS5 Medic – Rapport\n\n", "# PS5 Medic – Rapporto\n\n", "# PS5 Medic – Informe\n\n"));
+    o << "- " << (T("Erstellt: ", "Created: ", "Créé : ", "Creato: ", "Creado: ")) << time_text(in.created_utc) << "\n";
+    o << "- PS5 Medic " << kMedicVersion << ", " << (T("Regelbasis ", "rules ", "règles ", "regole ", "reglas ")) << in.rules_version << " (" << in.rule_count << ")\n\n";
 
-    o << (de ? "## Umgebung\n\n" : "## Environment\n\n");
+    o << (T("## Umgebung\n\n", "## Environment\n\n", "## Environnement\n\n", "## Ambiente\n\n", "## Entorno\n\n"));
     const std::string fw = str_fact(f, "fw.version"), model = str_fact(f, "fw.model");
-    o << "- " << (de ? "Firmware: " : "Firmware: ") << (fw.empty() ? (de ? "unbekannt" : "unknown") : fw) << "\n";
-    if (!model.empty()) o << "- " << (de ? "Modell: " : "Model: ") << model << "\n";
-    if (auto l = component_line(f, "kstuff", "kstuff.version", "kstuff.origin", de); !l.empty()) o << "- kstuff: " << l << "\n";
-    if (auto l = component_line(f, "shadowmountplus", "smp.version", nullptr, de); !l.empty()) o << "- ShadowMount+: " << l << "\n";
-    if (auto l = component_line(f, "etahen", "etahen.version", nullptr, de); !l.empty()) o << "- etaHEN: " << l << "\n";
+    o << "- " << (T("Firmware: ", "Firmware: ", "Firmware : ", "Firmware: ", "Firmware: ")) << (fw.empty() ? (T("unbekannt", "unknown", "inconnu", "sconosciuto", "desconocido")) : fw) << "\n";
+    if (!model.empty()) o << "- " << (T("Modell: ", "Model: ", "Modèle : ", "Modello: ", "Modelo: ")) << model << "\n";
+    if (auto l = component_line(f, "kstuff", "kstuff.version", "kstuff.origin", T); !l.empty()) o << "- kstuff: " << l << "\n";
+    if (auto l = component_line(f, "shadowmountplus", "smp.version", nullptr, T); !l.empty()) o << "- ShadowMount+: " << l << "\n";
+    if (auto l = component_line(f, "etahen", "etahen.version", nullptr, T); !l.empty()) o << "- etaHEN: " << l << "\n";
     if (auto v = str_fact(f, "ps5theme.version"); !v.empty()) o << "- ps5-theme: " << v << "\n";
-    if (auto p = known_payloads(f); !p.empty()) o << "- " << (de ? "Laufende Payloads: " : "Running payloads: ") << join(p, ", ") << "\n";
+    if (auto p = known_payloads(f); !p.empty()) o << "- " << (T("Laufende Payloads: ", "Running payloads: ", "Payloads actifs : ", "Payload in esecuzione: ", "Payloads en ejecución: ")) << join(p, ", ") << "\n";
     if (const json* m = f.get("storage.mounts"); m && m->is_array())
         for (const auto& s : *m) {
             // Leere Mountpunkte (/mnt/usb1 ohne Laufwerk, /mnt/ext0) melden auf der Konsole die Groesse eines winzigen
@@ -555,47 +600,47 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
             const double total = s["total"].get<double>(), free_b = s.contains("free") && s["free"].is_number() ? s["free"].get<double>() : 0;
             char pct[16];
             std::snprintf(pct, sizeof pct, "%.0f", 100.0 * free_b / total);
-            o << "- " << (de ? "Speicher " : "Storage ") << s.value("mount", std::string("?")) << ": " << size_text(free_b) << (de ? " frei von " : " free of ")
+            o << "- " << (T("Speicher ", "Storage ", "Stockage ", "Archiviazione ", "Almacenamiento ")) << s.value("mount", std::string("?")) << ": " << size_text(free_b) << (T(" frei von ", " free of ", " libres sur ", " liberi su ", " libres de "))
               << size_text(total) << " (" << pct << " %)\n";
         }
     o << "\n";
 
     if (!in.error_code.empty()) {
-        o << (de ? "## Gemeldeter Fehlercode\n\n" : "## Reported error code\n\n");
-        o << "- " << md_code(in.error_code) << ": " << (de ? in.error_title_de : in.error_title_en) << "\n\n";
+        o << (T("## Gemeldeter Fehlercode\n\n", "## Reported error code\n\n", "## Code d'erreur indiqué\n\n", "## Codice di errore indicato\n\n", "## Código de error indicado\n\n"));
+        o << "- " << md_code(in.error_code) << ": " << pick(in.error_title_de, in.error_title_en, "error_codes", in.error_code, "title") << "\n\n";
     }
 
-    o << (de ? "## Befunde (" : "## Findings (") << in.findings.size() << ")\n\n";
-    if (in.findings.empty()) o << (de ? "Keine Befunde.\n\n" : "No findings.\n\n");
+    o << (T("## Befunde (", "## Findings (", "## Résultats (", "## Rilevamenti (", "## Hallazgos (")) << in.findings.size() << ")\n\n";
+    if (in.findings.empty()) o << (T("Keine Befunde.\n\n", "No findings.\n\n", "Aucun résultat.\n\n", "Nessun rilevamento.\n\n", "Sin hallazgos.\n\n"));
     for (const auto& x : in.findings) {
-        o << "### [" << label(x.severity, de) << "] " << x.rule_id << "\n\n" << (de ? x.text_de : x.text_en) << "\n\n";
+        o << "### [" << label(x.severity, T) << "] " << x.rule_id << "\n\n" << pick(x.text_de, x.text_en, "rules", x.rule_id, "text") << "\n\n";
         const std::string label_text = evidence_label(x.evidence_path);
         for (const auto& e : x.evidence)
-            o << "- " << (de ? "Evidenz" : "Evidence") << (label_text.empty() ? "" : " (" + label_text + ")") << ": " << md_code(e) << "\n";
-        if (!x.fix.empty()) o << "- " << (de ? "Reparatur: " : "Repair: ") << md_code(x.fix) << "\n";
-        o << "- " << (de ? "Quelle: " : "Source: ") << x.source << " (" << verified_text(x.verified, de) << ")\n";
+            o << "- " << (T("Evidenz", "Evidence", "Preuve", "Prova", "Evidencia")) << (label_text.empty() ? "" : " (" + label_text + ")") << ": " << md_code(e) << "\n";
+        if (!x.fix.empty()) o << "- " << (T("Reparatur: ", "Repair: ", "Réparation : ", "Riparazione: ", "Reparación: ")) << md_code(x.fix) << "\n";
+        o << "- " << (T("Quelle: ", "Source: ", "Source : ", "Fonte: ", "Fuente: ")) << x.source << " (" << verified_text(x.verified, T) << ")\n";
         {
             const Confidence conf = effective_confidence(x);
-            const std::string& reason = de ? conf.reason_de : conf.reason_en;
-            o << "- " << (de ? "Verlässlichkeit: " : "Confidence: ") << level_text(conf.level, de) << " (" << basis_text(conf.basis, de) << ")";
-            if (!reason.empty()) o << (de ? ". Grund: " : ". Reason: ") << reason;
+            const std::string reason = pick(conf.reason_de, conf.reason_en, "rules", x.rule_id, "confidence_reason");
+            o << "- " << (T("Verlässlichkeit: ", "Confidence: ", "Confiance : ", "Affidabilità: ", "Confianza: ")) << level_text(conf.level, T) << " (" << basis_text(conf.basis, T) << ")";
+            if (!reason.empty()) o << (T(". Grund: ", ". Reason: ", ". Raison : ", ". Motivo: ", ". Motivo: ")) << reason;
             o << "\n";
         }
         {
             const std::string urgency = urgency_of(x);
-            o << "- " << (de ? "Dringlichkeit: " : "Urgency: ") << (urgency == "high" ? (de ? "hoch" : "high") : (urgency == "medium" ? (de ? "mittel" : "medium") : (de ? "niedrig" : "low")));
-            if (x.status == "new") o << (de ? ". Verlauf: neu seit der letzten Prüfung" : ". History: new since the last check");
+            o << "- " << (T("Dringlichkeit: ", "Urgency: ", "Urgence : ", "Urgenza: ", "Urgencia: ")) << (urgency == "high" ? (T("hoch", "high", "élevée", "alta", "alta")) : (urgency == "medium" ? (T("mittel", "medium", "moyenne", "media", "media")) : (T("niedrig", "low", "faible", "bassa", "baja"))));
+            if (x.status == "new") o << (T(". Verlauf: neu seit der letzten Prüfung", ". History: new since the last check", ". Historique : nouveau depuis le dernier diagnostic", ". Cronologia: nuovo dall'ultimo check-up", ". Historial: nuevo desde el último chequeo"));
             else if (x.status == "recurring") {
                 const std::string day = x.first_seen.size() >= 8 ? x.first_seen.substr(0, 4) + "-" + x.first_seen.substr(4, 2) + "-" + x.first_seen.substr(6, 2) : x.first_seen;
-                o << (de ? ". Verlauf: seit " : ". History: since ") << day << " (" << x.seen_runs << (de ? " Prüfungen in Folge)" : " checks in a row)");
+                o << (T(". Verlauf: seit ", ". History: since ", ". Historique : depuis le ", ". Cronologia: dal ", ". Historial: desde el ")) << day << " (" << x.seen_runs << (T(" Prüfungen in Folge)", " checks in a row)", " diagnostics de suite)", " check-up di fila)", " chequeos seguidos)"));
             }
-            if (is_pending(x)) o << (de ? ". Vorläufig: wird erst nach " : ". Provisional: confirmed only after ") << x.confirm_runs << (de ? " Prüfungen in Folge bestätigt" : " checks in a row");
+            if (is_pending(x)) o << (T(". Vorläufig: wird erst nach ", ". Provisional: confirmed only after ", ". Provisoire : confirmé seulement après ", ". Provvisorio: confermato solo dopo ", ". Provisional: se confirma solo tras ")) << x.confirm_runs << (T(" Prüfungen in Folge bestätigt", " checks in a row", " diagnostics de suite", " check-up di fila", " chequeos seguidos"));
             o << "\n";
         }
         o << "\n";
     }
     if (!in.metrics.empty()) {
-        o << (de ? "## Messwerte\n\n" : "## Measurements\n\n");
+        o << (T("## Messwerte\n\n", "## Measurements\n\n", "## Mesures\n\n", "## Misurazioni\n\n", "## Mediciones\n\n"));
         auto num = [](double v) {
             char b[32];
             std::snprintf(b, sizeof b, "%.1f", v);
@@ -605,35 +650,34 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
         };
         for (const auto& m : in.metrics) {
             const std::string unit = m.unit.empty() ? "" : (m.unit == "%" ? " %" : " " + m.unit);
-            o << "- " << (de ? m.text_de : m.text_en) << ": " << num(m.now) << unit;
+            o << "- " << pick(m.text_de, m.text_en, "metrics", m.id, "text") << ": " << num(m.now) << unit;
             std::string extra;
-            if (m.has_prev) extra += (de ? "zuletzt " : "last ") + num(m.prev);
-            if (m.has_typical && m.samples >= 3) extra += (extra.empty() ? "" : ", ") + std::string(de ? "üblich ≈ " : "usual ≈ ") + num(m.typical) + (de ? " (aus " : " (from ") + std::to_string(m.samples) + (de ? " Prüfungen)" : " checks)");
+            if (m.has_prev) extra += (T("zuletzt ", "last ", "dernier ", "ultimo ", "último ")) + num(m.prev);
+            if (m.has_typical && m.samples >= 3) extra += (extra.empty() ? "" : ", ") + std::string(T("üblich ≈ ", "usual ≈ ", "habituel ≈ ", "abituale ≈ ", "habitual ≈ ")) + num(m.typical) + (T(" (aus ", " (from ", " (sur ", " (da ", " (de ")) + std::to_string(m.samples) + (T(" Prüfungen)", " checks)", " diagnostics)", " check-up)", " chequeos)"));
             if (!extra.empty()) o << " (" << extra << ")";
             o << "\n";
         }
         o << "\n";
     }
     if (!in.selftests.empty()) {
-        o << (de ? "## Selbsttest\n\n" : "## Self-test\n\n");
-        o << (de ? "Nur lesende Tests. „Bestanden“ heißt „nicht aufgefallen“, nie „gesund“; „übersprungen“ und „nicht gelaufen“ heißen nicht bestanden.\n\n"
-                 : "Read-only tests. “Passed” means “nothing stood out”, never “healthy”; “skipped” and “not run” do not mean passed.\n\n");
-        if (!in.selftest_finished.empty()) o << (de ? "Letzter Lauf: " : "Last run: ") << time_text(in.selftest_finished) << "\n\n";
+        o << (T("## Selbsttest\n\n", "## Self-test\n\n", "## Autotest\n\n", "## Autotest\n\n", "## Autotest\n\n"));
+        o << (T("Nur lesende Tests. „Bestanden“ heißt „nicht aufgefallen“, nie „gesund“; „übersprungen“ und „nicht gelaufen“ heißen nicht bestanden.\n\n", "Read-only tests. “Passed” means “nothing stood out”, never “healthy”; “skipped” and “not run” do not mean passed.\n\n", "Tests en lecture seule. « Réussi » signifie « rien de remarqué », jamais « sain » ; « ignoré » et « non exécuté » ne signifient pas réussi.\n\n", "Test di sola lettura. «Superato» significa «nulla di anomalo», mai «sano»; «saltato» e «non eseguito» non significano superato.\n\n", "Pruebas de solo lectura. «Superado» significa «nada llamó la atención», nunca «sano»; «omitido» y «no ejecutado» no significan superado.\n\n"));
+        if (!in.selftest_finished.empty()) o << (T("Letzter Lauf: ", "Last run: ", "Dernière exécution : ", "Ultima esecuzione: ", "Última ejecución: ")) << time_text(in.selftest_finished) << "\n\n";
         auto status_name = [&](TestStatus st) -> std::string {
             switch (st) {
-                case TestStatus::Passed: return de ? "bestanden" : "passed";
-                case TestStatus::Warn: return de ? "Warnung" : "warning";
-                case TestStatus::Failed: return de ? "fehlgeschlagen" : "failed";
-                case TestStatus::Error: return de ? "Testfehler" : "test error";
-                case TestStatus::Cancelled: return de ? "abgebrochen" : "cancelled";
-                case TestStatus::Skipped: return de ? "übersprungen" : "skipped";
+                case TestStatus::Passed: return T("bestanden", "passed", "réussi", "superato", "superado");
+                case TestStatus::Warn: return T("Warnung", "warning", "avertissement", "avviso", "aviso");
+                case TestStatus::Failed: return T("fehlgeschlagen", "failed", "échec", "fallito", "fallido");
+                case TestStatus::Error: return T("Testfehler", "test error", "erreur de test", "errore del test", "error de prueba");
+                case TestStatus::Cancelled: return T("abgebrochen", "cancelled", "annulé", "annullato", "cancelado");
+                case TestStatus::Skipped: return T("übersprungen", "skipped", "ignoré", "saltato", "omitido");
                 case TestStatus::NotRun: break;
             }
-            return de ? "nicht gelaufen" : "not run";
+            return T("nicht gelaufen", "not run", "non exécuté", "non eseguito", "no ejecutado");
         };
         for (const auto& t : in.selftests) {
             const TestDef* def = find_test(t.id);
-            o << "- " << (def ? (de ? def->name_de : def->name_en) : t.id) << ": " << status_name(t.status);
+            o << "- " << (def ? pick(def->name_de, def->name_en, "selftests", def->id, "name") : t.id) << ": " << status_name(t.status);
             if (!t.reason.empty()) o << " (" << t.reason << ")";
             for (const auto& m : t.measurements) {
                 char b[32];
@@ -643,17 +687,17 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
                 o << ", " << m.name << " " << v << (m.unit.empty() ? "" : " " + m.unit);
             }
             o << "\n";
-            if (def && (t.status == TestStatus::Passed || t.status == TestStatus::Warn)) o << "  " << (de ? "Beweist nicht: " : "Does not prove: ") << (de ? def->proves_not_de : def->proves_not_en) << "\n";
+            if (def && (t.status == TestStatus::Passed || t.status == TestStatus::Warn)) o << "  " << (T("Beweist nicht: ", "Does not prove: ", "Ne prouve pas : ", "Non dimostra: ", "No demuestra: ")) << pick(def->proves_not_de, def->proves_not_en, "selftests", def->id, "proves_not") << "\n";
         }
         o << "\n";
     }
     if (!in.resolved.empty()) {
-        o << (de ? "## Seit der letzten Prüfung behoben (" : "## Resolved since the last check (") << in.resolved.size() << ")\n\n";
+        o << (T("## Seit der letzten Prüfung behoben (", "## Resolved since the last check (", "## Résolus depuis le dernier diagnostic (", "## Risolti dall'ultimo check-up (", "## Resueltos desde el último chequeo (")) << in.resolved.size() << ")\n\n";
         const auto links = repairs_between(in.history, in.resolved, in.prev_ts, in.created_utc);
         for (const auto& id : in.resolved) {
             o << "- " << id;
             for (const auto& l : links)
-                if (l.rule_id == id) o << (de ? " – durch Reparatur: " : " – by repair: ") << l.fix << " (" << l.ts << ")";
+                if (l.rule_id == id) o << (T(" – durch Reparatur: ", " – by repair: ", " – par réparation : ", " – con una riparazione: ", " – mediante reparación: ")) << l.fix << " (" << l.ts << ")";
             o << "\n";
         }
         o << "\n";
@@ -664,39 +708,36 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
         for (const auto& c : in.coverage)
             if (!c.tested) untested.push_back(&c);
         if (!untested.empty()) {
-            o << (de ? "## Nicht geprüft (" : "## Not checked (") << untested.size() << ")\n\n";
-            o << (de ? "Für diese Bereiche lagen keine lesbaren Daten vor. „Keine Befunde“ heißt dort nicht „in Ordnung“, sondern „nicht geprüft“.\n\n"
-                     : "No readable data was available for these areas. “No findings” there does not mean “fine”, it means “not checked”.\n\n");
-            for (const auto* c : untested) o << "- " << (de ? c->text_de : c->text_en) << "\n";
+            o << (T("## Nicht geprüft (", "## Not checked (", "## Non vérifié (", "## Non controllato (", "## Sin comprobar (")) << untested.size() << ")\n\n";
+            o << (T("Für diese Bereiche lagen keine lesbaren Daten vor. „Keine Befunde“ heißt dort nicht „in Ordnung“, sondern „nicht geprüft“.\n\n", "No readable data was available for these areas. “No findings” there does not mean “fine”, it means “not checked”.\n\n", "Aucune donnée lisible n'était disponible pour ces domaines. « Aucun résultat » ne signifie pas « en ordre » mais « non vérifié ».\n\n", "Per queste aree non c'erano dati leggibili. «Nessun rilevamento» qui non significa «a posto», ma «non controllato».\n\n", "No había datos legibles para estas áreas. «Sin hallazgos» no significa «todo bien», sino «sin comprobar».\n\n"));
+            for (const auto* c : untested) o << "- " << pick(c->text_de, c->text_en, "coverage", c->id, "text") << "\n";
             o << "\n";
         }
     }
 
     if (!in.unknown_lines.empty()) {
-        o << (de ? "## Unbekannte Fehlerzeilen (" : "## Unknown error lines (") << in.unknown_lines.size() << ")\n\n";
-        o << (de ? "Diese Zeilen im ShadowMount+-Log sehen nach Fehlern aus, passen aber zu keiner Regel. Wenn etwas nicht funktioniert, "
-                   "gehören sie in ein Issue des Projekts; daraus können neue Regeln entstehen.\n\n"
-                 : "These lines in the ShadowMount+ log look like errors but match no rule. If something does not work, they belong in an "
-                   "issue of the project; new rules can come from them.\n\n");
+        o << (T("## Unbekannte Fehlerzeilen (", "## Unknown error lines (", "## Lignes d'erreur inconnues (", "## Righe di errore sconosciute (", "## Líneas de error desconocidas (")) << in.unknown_lines.size() << ")\n\n";
+        o << (T("Diese Zeilen im ShadowMount+-Log sehen nach Fehlern aus, passen aber zu keiner Regel. Wenn etwas nicht funktioniert, "
+                   "gehören sie in ein Issue des Projekts; daraus können neue Regeln entstehen.\n\n", "These lines in the ShadowMount+ log look like errors but match no rule. If something does not work, they belong in an "
+                   "issue of the project; new rules can come from them.\n\n", "Ces lignes du journal de ShadowMount+ ressemblent à des erreurs mais ne correspondent à aucune règle. Si quelque chose ne fonctionne pas, elles sont à joindre à un ticket du projet ; de nouvelles règles peuvent en naître.\n\n", "Queste righe del registro di ShadowMount+ sembrano errori ma non corrispondono ad alcuna regola. Se qualcosa non funziona, vanno allegate a una issue del progetto; da esse possono nascere nuove regole.\n\n", "Estas líneas del registro de ShadowMount+ parecen errores pero no coinciden con ninguna regla. Si algo no funciona, deben ir en una incidencia del proyecto; de ellas pueden salir reglas nuevas.\n\n"));
         for (const auto& u : in.unknown_lines) o << "- " << u.count << "× " << md_code(u.example) << "\n";
         o << "\n";
     }
 
     if (!in.history.empty()) {
-        o << (de ? "## Reparaturen dieser Konsole\n\n" : "## Repairs on this console\n\n");
-        for (const auto& t : in.history) o << "- " << t.txn << ": " << t.fix << " (" << t.rule << ") – " << state_text(t.state, de) << "\n";
+        o << (T("## Reparaturen dieser Konsole\n\n", "## Repairs on this console\n\n", "## Réparations sur cette console\n\n", "## Riparazioni su questa console\n\n", "## Reparaciones en esta consola\n\n"));
+        for (const auto& t : in.history) o << "- " << t.txn << ": " << t.fix << " (" << t.rule << ") – " << state_text(t.state, T) << "\n";
         o << "\n";
     }
 
-    o << (de ? "---\nAnonymisiert: IP- und MAC-Adressen, Benutzer- und Konto-IDs sowie Seriennummern wurden entfernt. "
-               "Datei- und Ordnernamen sind enthalten – vor dem Teilen prüfen.\n"
-             : "---\nAnonymized: IP and MAC addresses, user and account IDs and serial numbers were removed. "
-               "File and folder names are included – check before sharing.\n");
+    o << (T("---\nAnonymisiert: IP- und MAC-Adressen, Benutzer- und Konto-IDs sowie Seriennummern wurden entfernt. "
+               "Datei- und Ordnernamen sind enthalten – vor dem Teilen prüfen.\n", "---\nAnonymized: IP and MAC addresses, user and account IDs and serial numbers were removed. "
+               "File and folder names are included – check before sharing.\n", "---\nAnonymisé : les adresses IP et MAC, les identifiants d'utilisateur et de compte ainsi que les numéros de série ont été supprimés. Les noms de fichiers et de dossiers sont inclus – à vérifier avant de partager.\n", "---\nAnonimizzato: indirizzi IP e MAC, ID utente e account e numeri di serie sono stati rimossi. I nomi di file e cartelle sono inclusi – controlla prima di condividere.\n", "---\nAnonimizado: se han eliminado las direcciones IP y MAC, los ID de usuario y de cuenta y los números de serie. Se incluyen nombres de archivos y carpetas – revísalos antes de compartir.\n"));
     return anonymize(o.str());
 }
 
 std::string build_report_compact(const ReportInput& in, ReportLang lang, std::size_t max_bytes, bool* truncated) {
-    const bool de = lang == ReportLang::De;
+    const Lx T{lang};
     const Facts& f = in.facts;
     if (truncated) *truncated = false;
 
@@ -710,32 +751,32 @@ std::string build_report_compact(const ReportInput& in, ReportLang lang, std::si
                                                                            {"ps5-theme", str_fact(f, "ps5theme.version")}})
         if (!v.empty()) versions += (versions.empty() ? "" : ", ") + name + " " + v;
     if (!versions.empty()) head += line(versions);
-    if (!in.error_code.empty()) head += line((de ? "Fehlercode " : "Error code ") + in.error_code);
-    head += line(in.findings.empty() ? (de ? "Keine Befunde" : "No findings")
-                                     : std::to_string(in.findings.size()) + (de ? " Befund(e):" : " finding(s):"));
+    if (!in.error_code.empty()) head += line((T("Fehlercode ", "Error code ", "Code d'erreur ", "Codice di errore ", "Código de error ")) + in.error_code);
+    head += line(in.findings.empty() ? (T("Keine Befunde", "No findings", "Aucun résultat", "Nessun rilevamento", "Sin hallazgos"))
+                                     : std::to_string(in.findings.size()) + (T(" Befund(e):", " finding(s):", " résultat(s) :", " rilevamento/i:", " hallazgo(s):")));
 
     {
         std::size_t untested = 0;
         for (const auto& c : in.coverage) untested += c.tested ? 0 : 1;
-        if (untested) head += line(std::to_string(untested) + (de ? " Bereich(e) nicht geprüft" : " area(s) not checked"));
+        if (untested) head += line(std::to_string(untested) + (T(" Bereich(e) nicht geprüft", " area(s) not checked", " domaine(s) non vérifié(s)", " area/e non controllata/e", " área(s) sin comprobar")));
     }
     if (!in.unknown_lines.empty())
-        head += line(std::to_string(in.unknown_lines.size()) + (de ? " unbekannte Fehlerzeile(n) im Bericht" : " unknown error line(s) in the report"));
+        head += line(std::to_string(in.unknown_lines.size()) + (T(" unbekannte Fehlerzeile(n) im Bericht", " unknown error line(s) in the report", " ligne(s) d'erreur inconnue(s) dans le rapport", " riga/righe di errore sconosciuta/e nel rapporto", " línea(s) de error desconocida(s) en el informe")));
 
     std::string foot;
-    if (!in.saved_path.empty()) foot = line((de ? "Bericht: " : "Report: ") + in.saved_path);
+    if (!in.saved_path.empty()) foot = line((T("Bericht: ", "Report: ", "Rapport : ", "Rapporto: ", "Informe: ")) + in.saved_path);
 
     std::string body;
     std::size_t shown = 0;
     for (const auto& x : in.findings) {
-        std::string block = line("[" + label(x.severity, de) + "] " + x.rule_id);
+        std::string block = line("[" + label(x.severity, T) + "] " + x.rule_id);
         std::size_t n = 0;
         const std::string label_text = evidence_label(x.evidence_path);
         for (const auto& e : x.evidence) {
             if (n++ >= 3) break;
             block += line(" > " + (label_text.empty() ? "" : label_text + ": ") + clip(anonymize(e), 90));
         }
-        const std::string more = line(de ? "... weitere Befunde im Bericht" : "... more findings in the report");
+        const std::string more = line(T("... weitere Befunde im Bericht", "... more findings in the report", "... autres résultats dans le rapport", "... altri rilevamenti nel rapporto", "... más hallazgos en el informe"));
         const bool last = shown + 1 == in.findings.size();
         if (head.size() + body.size() + block.size() + foot.size() + (last ? 0 : more.size()) > max_bytes) {
             body += more;

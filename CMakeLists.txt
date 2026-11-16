@@ -33,6 +33,7 @@ add_library(medic STATIC
   third_party/libdeflate/lib/x86/cpu_features.c
   libmedic/src/text_policy.cpp
   libmedic/src/core_messages.cpp
+  libmedic/src/core_l10n.cpp
   libmedic/src/sqlite_check.cpp
   libmedic/src/sha256.cpp
   libmedic/src/ini.cpp

@@ -4,6 +4,7 @@
 #include "medic_ui/font.hpp"
 #include "medic_ui/icons.hpp"
 
+#include "medic/core_l10n.hpp"
 #include "medic/core_messages.hpp"
 #include "medic/history.hpp"
 
@@ -469,7 +470,13 @@ std::string App::affected_text(std::size_t finding_index) const {
     return S.fmt("detail.affects", {{"list", list}});
 }
 
-std::string App::core_message(const std::string& de) const { return lang_ == Lang::De ? de : medic::core_message_en(de); }
+std::string App::core_message(const std::string& de) const {
+    if (lang_ == Lang::De) return de;
+    return core_text(medic::core_message_en(de));
+}
+
+// Englischer Text der Fix-Engine in der Sprache der Oberflaeche (fr/it/es: Fragmenttabelle, sonst Englisch)
+std::string App::core_text(const std::string& en) const { return lang_ == Lang::En || lang_ == Lang::De ? en : medic::core_text_l10n(en, lang_code(lang_)); }
 
 std::string App::fix_name(const std::string& id) const {
     const auto& S = Strings::get(lang_);
@@ -655,7 +662,7 @@ void App::open_games() {
 void App::open_report() {
     support_ = SupportResult{};
     support_done_ = false;
-    report_ = svc_.make_report(lang_ == Lang::De ? medic::ReportLang::De : medic::ReportLang::En);
+    report_ = svc_.make_report(medic::report_lang_from_code(lang_code(lang_)));
     qr_ok_ = medic::qr_encode(report_.qr_text, qr_);
     screen_ = Screen::Report;
 }
@@ -2052,7 +2059,7 @@ void App::draw_fix_preview(Canvas& c) const {
 
     int y = 232;
     // Unter den Aenderungen folgen bis zu zwei Warnungen und der Hinweis (je bis zu zwei Zeilen), darunter fest die Sicherungszeile bei H-150: Platz dafuer freihalten
-    const std::string& hint_text = lang_ == Lang::De ? plan_.hint_de : plan_.hint_en;
+    const std::string hint_text = lang_ == Lang::De ? plan_.hint_de : core_text(plan_.hint_en);
     const int note_lh = small().line_height() + 6;
     const int note_rows = static_cast<int>(std::min<std::size_t>(plan_.warnings.size(), 2)) + (hint_text.empty() ? 0 : static_cast<int>(wrap_text(small(), hint_text, cw - 16, 2).size()));
     const int y_limit = std::min(H - 210, H - 162 - note_rows * note_lh - 2 * (small().line_height() + 4));
@@ -2066,7 +2073,7 @@ void App::draw_fix_preview(Canvas& c) const {
     for (std::size_t i = static_cast<std::size_t>(std::clamp(prev_top_, 0, std::max(static_cast<int>(plan_.changes.size()) - 1, 0))); i < plan_.changes.size(); ++i) {
         const auto& ch = plan_.changes[i];
         const auto& pv = previews_[i];
-        const std::string note = lang_ == Lang::De ? ch.note_de : ch.note_en;  // fr/it/es: Englisch (dynamische Texte der Fix-Engine)
+        const std::string note = lang_ == Lang::De ? ch.note_de : core_text(ch.note_en);
         const bool rename = ch.kind == medic::Change::Kind::Rename;
         const auto path_lines = wrap_text(small(), ch.path, cw - 72, 2);
         const auto to_lines = rename ? wrap_text(small(), ch.to, cw - 72, 2) : std::vector<std::string>();
@@ -2120,7 +2127,7 @@ void App::draw_fix_preview(Canvas& c) const {
         small().draw(c, M + 8, y, elide(small(), S("fixprev.warnings") + ": " + core_message(plan_.warnings[i]), cw - 16), kWarn);
         y += small().line_height() + 6;
     }
-    const std::string& hint = hint_text;  // fr/it/es: Englisch
+    const std::string& hint = hint_text;
     if (!hint.empty())
         for (auto& l : wrap_text(small(), hint, cw - 16, 2)) {
             small().draw(c, M + 8, y, l, kText);
@@ -2131,7 +2138,7 @@ void App::draw_fix_preview(Canvas& c) const {
         std::vector<medic::BackupInfo> infos;
         for (const auto& pv : previews_) infos.push_back(pv.backup);
         const medic::BackupSummary bs = medic::backup_summary(infos);
-        const std::string where = bs.copies > 0 ? S.fmt("fixprev.bk_where", {{"dir", std::string(medic::kBackupRoot) + "/<Zeit>/"}, {"n", std::to_string(bs.copies)}, {"size", format_bytes(bs.bytes)}})
+        const std::string where = bs.copies > 0 ? S.fmt("fixprev.bk_where", {{"dir", std::string(medic::kBackupRoot) + "/<" + std::string(lang_ == Lang::De ? "Zeit" : lang_ == Lang::En ? "time" : lang_ == Lang::Fr ? "heure" : lang_ == Lang::It ? "ora" : "hora") + ">/"}, {"n", std::to_string(bs.copies)}, {"size", format_bytes(bs.bytes)}})
                                                 : S("fixprev.bk_none");
         small().draw(c, M + 8, H - 150 - (small().line_height() + 4), elide(small(), where, cw - 16), kText);
         small().draw(c, M + 8, H - 150, elide(small(), S("fixprev.backup"), cw - 16), kDim);

@@ -126,6 +126,28 @@ void report_tests_content() {
     CHECK(has(en, "# PS5 Medic – Report") && has(en, "### [CRITICAL] smp.a") && has(en, "English text smp.a") && has(en, "Storage /data:"), "Bericht EN");
     CHECK(has(en, "(community report)") && has(en, "Anonymized:"), "Bericht EN: Quelle und Hinweis");
 
+    // fr/it/es: Gerüst übersetzt, Daten-Texte aus in.l10n (sonst Englisch), kein deutscher Rest
+    {
+        ReportInput l = in;
+        l.l10n = [](ReportLang lang, const char* section, const std::string& id, const char* field) -> const std::string* {
+            static const std::string fr = "Texte français", it = "Testo italiano", es = "Texto español";
+            if (std::string(section) != "rules" || id != "smp.a" || std::string(field) != "text") return nullptr;
+            return lang == ReportLang::Fr ? &fr : lang == ReportLang::It ? &it : &es;
+        };
+        const std::string fr = build_report(l, ReportLang::Fr), it = build_report(l, ReportLang::It), es = build_report(l, ReportLang::Es);
+        CHECK(has(fr, "# PS5 Medic – Rapport") && has(fr, "## Résultats (2)") && has(fr, "### [CRITIQUE] smp.a") && has(fr, "Texte français") && has(fr, "English text smp.b") == false &&
+                  has(fr, "English text hen.b") && has(fr, "Stockage /data: 1350.0 GB libres sur 2000.0 GB"),
+              "Bericht FR: Gerüst, Text aus der Übersetzung, sonst Englisch");
+        CHECK(has(it, "# PS5 Medic – Rapporto") && has(it, "## Rilevamenti (2)") && has(it, "### [CRITICO] smp.a") && has(it, "Testo italiano") && has(it, "Archiviazione /data:"), "Bericht IT");
+        CHECK(has(es, "# PS5 Medic – Informe") && has(es, "## Hallazgos (2)") && has(es, "### [CRÍTICO] smp.a") && has(es, "Texto español") && has(es, "Almacenamiento /data:"), "Bericht ES");
+        for (const std::string* r : {&fr, &it, &es})
+            CHECK(!has(*r, "Befunde") && !has(*r, "Quelle:") && !has(*r, "Evidenz") && !has(*r, "Anonymisiert") && !has(*r, "Deutscher Text"), "Bericht fr/it/es ohne deutsche Gerüsttexte");
+        CHECK(has(fr, "Anonymisé :") && has(it, "Anonimizzato:") && has(es, "Anonimizado:"), "Bericht fr/it/es: Hinweis zur Anonymisierung");
+        const std::string cfr = build_report_compact(l, ReportLang::Fr, 640);
+        CHECK(has(cfr, "[CRITIQUE] smp.a") && has(cfr, "2 résultat(s) :"), "Kurzfassung FR");
+        CHECK(std::string(report_lang_code(ReportLang::Es)) == "es" && report_lang_from_code("it") == ReportLang::It && report_lang_from_code("xx") == ReportLang::En, "Berichtssprache: Kürzel");
+    }
+
     ReportInput none = in;
     none.findings.clear();
     none.history.clear();

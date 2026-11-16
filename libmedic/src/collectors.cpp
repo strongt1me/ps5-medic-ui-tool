@@ -998,10 +998,10 @@ void collect_shadowmount(const Platform& p, Facts& f) {
                                   {"target", m->section ? "[" + std::string(m->section) + "] " + m->key : std::string()},
                                   {"tsection", m->section ? m->section : ""}, {"tkey", m->key ? m->key : ""}, {"add", m->add}});
             } else if (const std::string bad = invalid_v2_value(l); !bad.empty()) {
-                problems.push_back({{"line", l.line}, {"text", "Zeile " + std::to_string(l.line) + ": " + bad}});
+                problems.push_back({{"line", l.line}, {"text", "L" + std::to_string(l.line) + ": " + bad}});
             }
         }
-        for (int n : cfg.unreadable_lines) problems.push_back({{"line", n}, {"text", "Zeile " + std::to_string(n) + ": weder Kommentar noch Sektion noch Schluessel=Wert"}});
+        for (int n : cfg.unreadable_lines) problems.push_back({{"line", n}, {"text", "L" + std::to_string(n)}});
         if (const json* ver = cfg.values.contains("config") && cfg.values["config"].is_object() && cfg.values["config"].contains("version") ? &cfg.values["config"]["version"] : nullptr;
             ver && ver->is_string() && ver->get<std::string>() != "2")
             problems.push_back({{"line", 0}, {"text", "[config] version = " + ver->get<std::string>() + " (erwartet: 2)"}});
@@ -1406,7 +1406,7 @@ void collect_system_logs(const Platform& p, Facts& f) {
         for (const auto& [key, a] : pairs) {
             const std::string day = a.last > 0 ? iso_from_epoch(a.last).substr(0, 10) : std::string();
             arr.push_back({{"code", key.first}, {"titleid", key.second}, {"count", a.count}, {"last", day}, {"last_epoch", a.last},
-                           {"label", key.first + " - " + (key.second.empty() ? std::string("System") : key.second) + " - " + std::to_string(a.count) + "x" + (day.empty() ? std::string() : ", zuletzt " + day)}});
+                           {"label", key.first + " - " + (key.second.empty() ? std::string("System") : key.second) + " - " + std::to_string(a.count) + "x" + (day.empty() ? std::string() : ", " + day)}});
         }
         f.set("errors.total", total);
         f.set("errors.pairs", std::move(arr));

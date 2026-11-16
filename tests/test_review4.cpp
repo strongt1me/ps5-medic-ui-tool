@@ -5,6 +5,7 @@
 #include "check.hpp"
 #include "medic/checks.hpp"
 #include "medic/collectors.hpp"
+#include "medic/core_l10n.hpp"
 #include "medic/core_messages.hpp"
 #include "medic/fixes.hpp"
 #include "medic/games.hpp"
@@ -348,7 +349,35 @@ void core_message_tests() {
             if (text.size() < 5 || text == "type" || text == "error") continue;  // Trenner wie ": " sind keine Meldung
             ++checked;
             CHECK(core_message_en(text) != text, std::string("Meldung hat eine englische Fassung: ") + text);
+            for (const char* lang : {"fr", "it", "es"})
+                CHECK(core_text_l10n(core_message_en(text), lang) != core_message_en(text), std::string("Meldung hat eine Fassung (") + lang + "): " + text);
         }
+    }
+    // Notizen und Hinweise der Fixes (englische Literale in fixes.cpp) sind in fr/it/es übersetzt
+    {
+        std::istringstream in(slurp(stdfs::path(MEDIC_SOURCE_DIR) / "libmedic" / "src" / "fixes.cpp"));
+        std::string line;
+        static const std::regex lit(R"re("((?:[^"\\]|\\.)*)")re");
+        bool inside = false;
+        int notes = 0;
+        while (std::getline(in, line)) {
+            const bool start = line.find("note_en") != std::string::npos || line.find("hint_en") != std::string::npos || line.find("en += ") != std::string::npos ||
+                               line.find("\"Autoload list:") != std::string::npos;
+            if (!inside && !start) continue;
+            if (line.find("//") != std::string::npos && line.find("//") < line.find('"')) continue;
+            inside = line.find(';') == std::string::npos;  // Literale gehen über mehrere Zeilen, bis das Semikolon kommt
+            for (auto it = std::sregex_iterator(line.begin(), line.end(), lit); it != std::sregex_iterator(); ++it) {
+                const std::string text = (*it)[1].str();
+                if (text.size() < 8 || text == "Autoload-Liste: " || text == "Autoload list: ") continue;  // Anfang eines zusammengesetzten Satzes
+                ++notes;
+                if (text == "correct the spelling of " || text == "comment out ") {  // Teilsatz: steht mit dem Anfang in der Tabelle
+                    CHECK(core_l10n_has_entry("Autoload list: " + text), "Teilsatz in der Tabelle: " + text);
+                    continue;
+                }
+                for (const char* lang : {"fr", "it", "es"}) CHECK(core_text_l10n(text, lang) != text, std::string("Notiz/Hinweis hat eine Fassung (") + lang + "): " + text);
+            }
+        }
+        CHECK(notes > 25, "Notizen und Hinweise gefunden (" + std::to_string(notes) + ")");
     }
     CHECK(checked > 40, "Meldungstexte der Engine gefunden (" + std::to_string(checked) + ")");
     CHECK(core_message_en("Nichts zu tun: /data/x enthält den Wert bereits") == "Nothing to do: /data/x already has the value", "Meldung: Fragmente rund um einen Pfad");

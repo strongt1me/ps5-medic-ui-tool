@@ -314,7 +314,7 @@ static void new_fact_tests() {
                 if (e["code"] == "WV-100002-0") wv = e["count"].get<long>();
             }
         CHECK(ce == 3 && wv == 6 && num(pos, "errors.total") == 9, "Fehlerverlauf: Paare gezaehlt (auch mit BOM am Dateianfang)");
-        CHECK(pr && (*pr)[0]["label"] == "CE-100001-1 - PPSA77401 - 3x, zuletzt 2026-11-07", "Fehlerverlauf: Beschriftung mit Code, Titel, Anzahl und letztem Tag");
+        CHECK(pr && (*pr)[0]["label"] == "CE-100001-1 - PPSA77401 - 3x, 2026-11-07", "Fehlerverlauf: Beschriftung mit Code, Titel, Anzahl und letztem Tag");
         CHECK(facts_of("a3_neg").get("errors.total") == nullptr, "Fehlerverlauf: ohne Ordner fehlt der Fakt (nicht geprueft), keine Summe 0");
     }
     {  // Datenbanken (SQLite): Kopf, Groesse, Journal
