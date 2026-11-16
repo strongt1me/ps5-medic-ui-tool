@@ -660,6 +660,41 @@ void plan_quarantine_leftovers(FixPlan& plan, const Facts& facts, const IFileSys
     plan.hint_en = "The files are not deleted but moved to .medic_broken next to them (undo brings them back). If a transfer or a packing job is running, let it finish first.";
 }
 
+// ---- quarantine_partial_folder ------------------------------------------------------------------------------------------------
+// Ein halbfertiger Packordner (games.partial_folders[]: ampr_zstd-NNN.pak, aber keine ampr_zstd.index; Dump Forge schreibt den Index zuletzt) kommt als GANZER Ordner
+// nach <Scanpfad>/.medic_broken/ (gleicher Scanpfad, also dasselbe Dateisystem; ShadowMount+ ueberspringt Namen mit Punkt am Anfang; nie loeschen, Rueckgaengig holt
+// ihn zurueck). Wird der Ordner gerade noch geschrieben, bricht das Verschieben den Job ab: die Vorschau sagt es, die Bestaetigung bleibt beim Nutzer.
+
+void plan_quarantine_partial_folder(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    const PathPolicy policy = policy_from_facts(facts);
+    std::set<std::string> targets;
+    for (const auto& pf : array_fact(facts, "games.partial_folders")) {
+        const std::string path = str_of(pf, "path"), name = str_of(pf, "name"), root = str_of(pf, "root");
+        if (path.empty() || name.empty() || root.empty() || name.find('/') != std::string::npos) continue;
+        if (std::string why; !policy.allowed(path, &why)) {
+            plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + path);
+            continue;
+        }
+        if (!fs.is_dir(path)) continue;  // inzwischen weg
+        const std::string to = free_target(fs, targets, join_path(join_path(root, ".medic_broken"), name));
+        if (to.empty()) {
+            plan.warnings.push_back("Übersprungen (kein freier Zielname): " + path);
+            continue;
+        }
+        targets.insert(to);
+        Change c;
+        c.kind = Change::Kind::Rename;
+        c.path = path;
+        c.to = to;
+        c.note_de = "Halbfertigen Packordner in den Ordner .medic_broken verschieben: " + name;
+        c.note_en = "Move the half-finished pack folder into the folder .medic_broken: " + name;
+        plan.changes.push_back(std::move(c));
+    }
+    if (plan.changes.empty()) plan.warnings.push_back("Kein halbfertiger Packordner in den erlaubten Ordnern gefunden");
+    plan.hint_de = "Der Ordner wird nicht gelöscht, sondern ganz nach .medic_broken im Scanpfad verschoben (Rückgängig holt ihn zurück). Wird er gerade noch geschrieben (Übertragung oder Packvorgang läuft), bricht das den Vorgang ab: erst beenden lassen.";
+    plan.hint_en = "The folder is not deleted but moved as a whole into .medic_broken in the scan path (undo brings it back). If it is still being written (a transfer or a pack job is running), this stops the job: let it finish first.";
+}
+
 // ---- chmod_program_files ------------------------------------------------------------------------------------------------------
 // Programmdateien ohne Ausfuehrungsbit (games.noexec[], CE-107750-0) bekommen den Modus 0777 (Marc, 14. Nov. 2026; gemessen: 0666 startet nicht, 0777 schon).
 // Nur die Dateien, die der Sammler nennt (eboot.bin, Module), nicht der ganze Spielordner: Daten brauchen kein Ausfuehrungsrecht. Das Journal merkt sich
@@ -813,6 +848,8 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
         plan_quarantine_image(plan, facts, fs);
     } else if (finding.fix == "quarantine_leftovers") {
         plan_quarantine_leftovers(plan, facts, fs);
+    } else if (finding.fix == "quarantine_partial_folder") {
+        plan_quarantine_partial_folder(plan, facts, fs);
     } else if (finding.fix == "chmod_program_files") {
         plan_chmod_program_files(plan, facts, fs);
     } else if (finding.fix == "pldmgr_enable_autoload") {

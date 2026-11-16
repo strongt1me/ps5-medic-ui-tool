@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.49",
+  "db_version": "2026.11.50",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2130,6 +2130,138 @@
         "reason": {
           "de": "Die Dateinamen sind gelesen. Dass es Reste abgebrochener Vorgänge sind, folgt aus den Namensmustern und der Beschreibung im Dump-Forge-Projekt (Issue 15); ob gerade ein Job läuft, erkennt Medic nicht.",
           "en": "The file names are read. That they are leftovers of interrupted jobs follows from the name patterns and the description in the Dump Forge project (issue 15); whether a job is running right now, Medic cannot tell."
+        }
+      }
+    },
+    {
+      "id": "game.partial_folder",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.partial_folders[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "In einem Scanpfad liegt ein Packordner mit Volumes (ampr_zstd-NNN.pak), aber ohne ampr_zstd.index. Dump Forge schreibt den Index zuletzt: Der Ordner stammt also aus einem abgebrochenen Kopier- oder Packvorgang (Abbruch, Ruhemodus, Verbindungsverlust) oder wird gerade noch geschrieben. Ein solches Spiel lässt sich nicht starten, und ein Neuversuch scheitert mit „already exists“. Läuft gerade eine Übertragung oder ein Packvorgang, erst abwarten. Der Fix verschiebt den ganzen Ordner nach .medic_broken im Scanpfad (nie gelöscht, Rückgängig holt ihn zurück); danach das Spiel neu packen oder kopieren.",
+        "en": "A scan path contains a pack folder with volumes (ampr_zstd-NNN.pak) but without ampr_zstd.index. Dump Forge writes the index last: so the folder comes from an interrupted copy or pack job (abort, rest mode, lost connection) or is still being written. Such a game cannot be started, and a retry fails with “already exists”. If a transfer or a pack job is running right now, wait first. The fix moves the whole folder into .medic_broken in the scan path (never deleted, undo brings it back); afterwards pack or copy the game again."
+      },
+      "evidence": "games.partial_folders[].path",
+      "fix": "quarantine_partial_folder",
+      "source": "https://github.com/quer3q/ps5-dump-forge/issues/42",
+      "verified": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "community",
+        "reason": {
+          "de": "Die Dateinamen sind gelesen. Dass Dump Forge den Index zuletzt schreibt und ein Abbruch diesen Zustand hinterlässt, steht im Dump-Forge-Projekt (Issues 42, 51, 15); ob gerade ein Job läuft, erkennt Medic nicht.",
+          "en": "The file names are read. That Dump Forge writes the index last and an abort leaves exactly this state is stated in the Dump Forge project (issues 42, 51, 15); whether a job is running right now, Medic cannot tell."
+        }
+      }
+    },
+    {
+      "id": "game.image_undo_journal",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.undo_journals[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Neben einem Image liegt ein Undo-Journal (<Image>.forge-undo, *.orig.part oder <Image>.undo). Das Image wurde in Dump Forge oder im Converter halb verändert; das Werkzeug stellt es beim nächsten Öffnen anhand des Journals zurück. Das Image nicht einhängen und nicht verschieben, und das Journal nicht löschen: sonst geht die Rückstellmöglichkeit verloren. Öffne das Image zuerst im Werkzeug. Medic fasst diese Dateien nie an.",
+        "en": "Next to an image lies an undo journal (<image>.forge-undo, *.orig.part or <image>.undo). The image was changed halfway in Dump Forge or in the Converter; the tool restores it from the journal the next time it opens it. Do not mount or move the image and do not delete the journal: otherwise the way back is lost. Open the image in the tool first. Medic never touches these files."
+      },
+      "evidence": "games.undo_journals[].path",
+      "fix": null,
+      "source": "https://github.com/quer3q/ps5-dump-forge/issues/21",
+      "verified": "community",
+      "confidence": {
+        "level": "medium",
+        "basis": "community",
+        "reason": {
+          "de": "Die Dateinamen sind gelesen und das Muster ist eindeutig (Maintainer-Kommentar in Issue 21 von Dump Forge, Converter G27). Ob das Image noch unfertig ist oder das Journal nur liegen blieb, ist von außen nicht zu sehen.",
+          "en": "The file names are read and the pattern is unambiguous (maintainer comment in Dump Forge issue 21, Converter G27). Whether the image is still unfinished or the journal was just left behind cannot be seen from outside."
+        }
+      }
+    },
+    {
+      "id": "game.fakelib_layout",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.fakelib_layout[].problem",
+            "in": [
+              "both",
+              "empty_shadow",
+              "extra_ampr"
+            ]
+          }
+        ]
+      },
+      "text": {
+        "de": "Ein Spiel hat einen unklaren fakelib-Aufbau (Beleg: Pfad und Art). ShadowMount+ hängt je Spiel genau einen Ordner ein: fakelib2 geht vor fakelib, und auch ein leerer Ordner gewinnt, die Dateien des anderen Ordners wirken dann nicht. „both“: fakelib und fakelib2 sind gefüllt, nur fakelib2 gilt. „empty_shadow“: ein leeres fakelib2 verdeckt ein gefülltes fakelib. „extra_ampr“: es liegt eine weitere libSceAmpr-Datei dabei (Debug-Fassung, Sicherungskopie); die Laufzeit wird nur unter dem Namen libSceAmpr.sprx geladen. Fülle nur einen Ordner und nimm Sicherungskopien heraus. Die Rangfolge hängt von der ShadowMount+-Version ab. Medic ändert hier nichts.",
+        "en": "A game has an unclear fakelib layout (evidence: path and kind). ShadowMount+ mounts exactly one folder per game: fakelib2 comes before fakelib, and even an empty folder wins, so the files of the other folder have no effect. “both”: fakelib and fakelib2 are filled, only fakelib2 counts. “empty_shadow”: an empty fakelib2 hides a filled fakelib. “extra_ampr”: another libSceAmpr file lies next to it (debug build, backup copy); the runtime is only loaded under the name libSceAmpr.sprx. Fill only one folder and take backup copies out. The order depends on the ShadowMount+ version. Medic changes nothing here."
+      },
+      "evidence": "games.fakelib_layout[].desc",
+      "fix": null,
+      "source": "https://github.com/quer3q/ampr-emu-ng/issues/8",
+      "verified": "doc",
+      "confidence": {
+        "level": "low",
+        "basis": "doc",
+        "reason": {
+          "de": "Die Ordner und Dateinamen sind gelesen. Die Rangfolge steht in der Anleitung des Converters und in einem Maintainer-Hinweis im ampr-emu-ng-Projekt (Issue 8); sie ist je ShadowMount+-Version verschieden und wurde an dieser Konsole nicht nachgestellt. Ein Spiel mit absichtlich zwei Ordnern ist ein Fehlalarm.",
+          "en": "The folders and file names are read. The order is stated in the Converter manual and in a maintainer note in the ampr-emu-ng project (issue 8); it differs per ShadowMount+ version and was not reproduced on this console. A game with two folders on purpose is a false alarm."
+        }
+      }
+    },
+    {
+      "id": "smp.fakelib_off_with_runtime",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "smp.fakelib_enabled",
+            "eq": "0"
+          },
+          {
+            "fact": "games.with_fakelib[].path",
+            "exists": true
+          },
+          {
+            "not": {
+              "fact": "proc.running",
+              "contains": "backpork"
+            }
+          }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ hat die fakelib-Funktion abgeschaltet ([fakelib] enabled = 0), aber mindestens ein Spiel hat Dateien in fakelib oder fakelib2 (Ersatzbibliotheken wie libSceAmpr.sprx oder ein Backport). Solche Spiele starten dann wie ohne diese Dateien, ohne Fehlermeldung. Der Fix setzt enabled auf 1 (Backup, Rückgängig); danach in ShadowMount+ speichern. Wer fakelib mit Absicht abgeschaltet hat (zum Beispiel im Betrieb mit Kraken Mount), lässt den Fix aus.",
+        "en": "ShadowMount+ has turned the fakelib feature off ([fakelib] enabled = 0), but at least one game has files in fakelib or fakelib2 (replacement libraries such as libSceAmpr.sprx or a backport). Such games then start as if these files did not exist, without an error message. The fix sets enabled to 1 (backup, undo); afterwards save in ShadowMount+. If you turned fakelib off on purpose (for example when running Kraken Mount), skip the fix."
+      },
+      "evidence": "games.with_fakelib[].path",
+      "fix": "smp_set_key",
+      "fix_params": {
+        "section": "fakelib",
+        "key": "enabled",
+        "legacy_key": "backport_fakelib",
+        "value": "1"
+      },
+      "source": "https://github.com/drakmor/ShadowMountPlus",
+      "verified": "doc",
+      "confidence": {
+        "level": "medium",
+        "basis": "doc",
+        "reason": {
+          "de": "Die Einstellung und die Ordner der Spiele sind gelesen. Dass ShadowMount+ bei enabled = 0 keine fakelib einhängt, steht in der Anleitung des Converters (Abschnitt G17); an dieser Konsole wurde es nicht nachgestellt. Eine absichtlich abgeschaltete fakelib (Kraken-Betrieb) wäre ein Fehlalarm.",
+          "en": "The setting and the games' folders are read. That ShadowMount+ mounts no fakelib at enabled = 0 is stated in the Converter manual (section G17); it was not reproduced on this console. A fakelib turned off on purpose (Kraken operation) would be a false alarm."
         }
       }
     },

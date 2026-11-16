@@ -1632,6 +1632,7 @@ void collect_leftovers(const Platform& p, Facts& f) {
             const std::size_t n = std::char_traits<char>::length(s);
             return l.size() > n && l.compare(l.size() - n, n, s) == 0;
         };
+        if (ends(".orig.part")) return false;  // Undo-Journal von Dump Forge (S33, games.undo_journals): Medic fasst es nie an
         if (ends(".part") || ends(".teil") || ends(".neu") || ends(".unvollstaendig")) return true;
         if (l.rfind(".forge-probe-", 0) == 0) return true;
         return l.size() > 1 && l[0] == '.' && l.find(".forge-") != std::string::npos && ends(".tmp");
@@ -1828,7 +1829,7 @@ void collect_app_registry(const Platform& p, Facts& f) {
 Facts collect_all(const Platform& p, const std::function<void(int, int)>& progress) {
     Facts f;
     json failed = json::array();
-    constexpr int kSteps = 29;  // 28 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
+    constexpr int kSteps = 30;  // 29 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
     int done = 0;
     // Jeder Collector einzeln: ein Fehler (z. B. beschaedigtes JSON in einer von Hand bearbeiteten Datei) beendet nicht den ganzen Check-up,
     // sondern wird als collector.failed vermerkt; die uebrigen Fakten bleiben gueltig (Audit 12. Nov. 2026)
@@ -1863,6 +1864,7 @@ Facts collect_all(const Platform& p, const std::function<void(int, int)>& progre
     MEDIC_RUN(collect_leftovers);
     MEDIC_RUN(collect_game_runtime);
     MEDIC_RUN(collect_game_folders);
+    MEDIC_RUN(collect_game_layout);
     MEDIC_RUN(collect_kraken);
     MEDIC_RUN(collect_kstuff_file);
     MEDIC_RUN(collect_compat);

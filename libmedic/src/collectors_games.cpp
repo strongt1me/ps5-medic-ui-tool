@@ -426,6 +426,97 @@ void collect_game_folders(const Platform& p, Facts& f) {
     f.set("games.incomplete", std::move(out));
 }
 
+// Aufbau der Spielordner und Reste in den Scanpfaden (Auswahl vom 16. Nov. 2026: S12, S32, S33). Nur Namen, kein Dateiinhalt.
+// games.partial_folders[]: path, name, root, paks (Zahl der ampr_zstd-NNN.pak), tmp (versteckte .ampr_zstd-*.tmp-Handles von Dump Forge). Ein Ordner direkt in
+//   einem Scanpfad mit zstd-Volumes, aber ohne ampr_zstd.index: Dump Forge schreibt den Index zuletzt, ein Abbruch laesst also genau diesen Zustand zurueck (S32).
+//   Ein Ordner, der gerade noch geschrieben wird, sieht genauso aus: Vorschau und Bestaetigung des Fixes sagen es.
+// games.undo_journals[]: path, name, kind (forge_undo, orig_part, undo), root. Neben einem Image liegt das Undo-Journal von Dump Forge (<Image>.forge-undo, *.orig.part)
+//   oder des Converters (<Image>.undo): das Image wurde halb veraendert, das Werkzeug stellt es beim naechsten Oeffnen zurueck (S33). Medic fasst diese Dateien nie an.
+// games.fakelib_layout[]: titleid, path, problem (both, empty_shadow, extra_ampr), detail, desc. S12: ShadowMount+ haengt je Spiel genau einen Ordner ein (fakelib2 vor fakelib,
+//   auch ein leerer gewinnt); eine zweite gefuellte Fassung, ein leeres fakelib2 oder eine weitere libSceAmpr*.sprx (Debug-Fassung, Sicherung) wirkt nicht wie gedacht.
+// games.with_fakelib[]: titleid, path -- Spiele (Ordner) mit mindestens einer Datei in fakelib oder fakelib2 (Grundlage von smp.fakelib_off_with_runtime, S13)
+void collect_game_layout(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    json partial = json::array(), journals = json::array(), layout = json::array(), with_fakelib = json::array();
+    std::set<std::string> seen;
+    auto ends = [](const std::string& l, const char* s) {
+        const std::size_t n = std::char_traits<char>::length(s);
+        return l.size() > n && l.compare(l.size() - n, n, s) == 0;
+    };
+    if (const json* roots = f.get("smp.scan_roots"); roots && roots->is_array())
+        for (const auto& r : *roots) {
+            if (!r.is_string()) continue;
+            const std::string root = r.get<std::string>();
+            if (root.empty() || !seen.insert(root).second || !fs.is_dir(root)) continue;
+            for (const auto& e : fs.list_dir(root)) {
+                const std::string l = lower(e.name);
+                if (!e.is_dir) {
+                    const char* kind = ends(l, ".forge-undo") ? "forge_undo" : ends(l, ".orig.part") ? "orig_part" : nullptr;
+                    if (!kind && ends(l, ".undo"))
+                        for (const char* ext : {".exfat.undo", ".ffpfs.undo", ".ffpfsc.undo", ".ffpkg.undo", ".img.undo"})
+                            if (ends(l, ext)) kind = "undo";
+                    if (kind && journals.size() < 100) journals.push_back({{"path", join_path(root, e.name)}, {"name", e.name}, {"kind", kind}, {"root", root}});
+                    continue;
+                }
+                if (e.name.empty() || e.name[0] == '.' || partial.size() >= 50) continue;
+                int paks = 0, tmp = 0;
+                bool index = false;
+                for (const auto& k : fs.list_dir(join_path(root, e.name))) {
+                    if (k.is_dir) continue;
+                    const std::string kl = lower(k.name);
+                    if (kl == "ampr_zstd.index") index = true;
+                    else if (kl.rfind("ampr_zstd-", 0) == 0 && ends(kl, ".pak")) ++paks;
+                    else if (kl.rfind(".ampr_zstd-", 0) == 0 && ends(kl, ".tmp")) ++tmp;
+                }
+                if (!index && (paks > 0 || tmp > 0)) partial.push_back({{"path", join_path(root, e.name)}, {"name", e.name}, {"root", root}, {"paks", paks}, {"tmp", tmp}});
+            }
+        }
+
+    // fakelib und fakelib2 je Spielordner (smp.titles); Images bleiben aussen vor (ihr Aufbau steht in games.runtime)
+    std::set<std::string> done;
+    int checked = 0;
+    const json* titles = f.get("smp.titles");
+    if (titles && titles->is_array())
+        for (const auto& t : *titles) {
+            if (!t.is_object() || !t.contains("path") || !t["path"].is_string() || !t.contains("titleid") || !t["titleid"].is_string()) continue;
+            const std::string path = t["path"].get<std::string>(), id = t["titleid"].get<std::string>();
+            if (!done.insert(path).second || !fs.is_dir(path)) continue;
+            if (++checked > 200) break;
+            std::vector<DirEntry> root_items = fs.list_dir(path);
+            std::vector<DirEntry> one, two;
+            bool has_one = false, has_two = false;
+            for (const auto& it : root_items) {
+                if (!it.is_dir) continue;
+                const std::string il = lower(it.name);
+                if (il == "fakelib") {
+                    has_one = true;
+                    one = fs.list_dir(join_path(path, it.name));
+                } else if (il == "fakelib2") {
+                    has_two = true;
+                    two = fs.list_dir(join_path(path, it.name));
+                }
+            }
+            if (!has_one && !has_two) continue;
+            if (!one.empty() || !two.empty()) with_fakelib.push_back({{"titleid", id}, {"path", path}});
+            auto add = [&](const char* problem, const std::string& detail) {
+                if (layout.size() < 100) layout.push_back({{"titleid", id}, {"path", path}, {"problem", problem}, {"detail", detail}, {"desc", path + ": " + problem}});
+            };
+            if (!one.empty() && !two.empty()) add("both", "fakelib, fakelib2");
+            else if (has_two && two.empty() && !one.empty()) add("empty_shadow", "fakelib2");
+            std::string extras;
+            for (const auto* dir : {&one, &two})
+                for (const auto& it : *dir) {
+                    const std::string il = lower(it.name);
+                    if (!it.is_dir && il.rfind("libsceampr", 0) == 0 && it.name != "libSceAmpr.sprx") extras += (extras.empty() ? "" : ", ") + it.name;
+                }
+            if (!extras.empty()) add("extra_ampr", extras);
+        }
+    f.set("games.partial_folders", std::move(partial));
+    f.set("games.undo_journals", std::move(journals));
+    f.set("games.fakelib_layout", std::move(layout));
+    f.set("games.with_fakelib", std::move(with_fakelib));
+}
+
 // kraken.sparse_extent[]: path (der Paketdatei, wenn die Zeile sie nennt), line. Kraken Mount lehnt ein .pkg mit einer Luecke im Layout ab und schreibt die Meldung
 // nur in /data/krakenmount/kraken.log (keine Kachel, kein Hinweis); die Meldung nennt als Abhilfe das Neu-Packen mit "--kraken stored".
 // Nur Log lesen (Marc, 14. Nov. 2026: Kraken nur ueber kraken.log und config.toml).

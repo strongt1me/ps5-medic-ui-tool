@@ -737,9 +737,152 @@ void misc_tests() {
     }
 }
 
+// Halbfertiger Packordner (S32), Undo-Journale (S33), fakelib-Aufbau (S12) und abgeschaltete fakelib (S13)
+void layout_tests() {
+    const std::string root = "/data/homebrew";
+    const RuleSet rs = load_rules_from_file(testutil::kShipped);
+
+    // S32 und S33: Namen direkt in den Scanpfaden
+    {
+        Sandbox sb;
+        spit(sb.real(root + "/PPSA00001-Teil/ampr_zstd-000.pak"), "p0");
+        spit(sb.real(root + "/PPSA00001-Teil/.ampr_zstd-001.pak.forge-9-1.tmp"), "tmp");
+        spit(sb.real(root + "/PPSA00002-Fertig/ampr_zstd.index"), "idx");
+        spit(sb.real(root + "/PPSA00002-Fertig/ampr_zstd-000.pak"), "p0");
+        spit(sb.real(root + "/PPSA00003-Tief/Medien/ampr_zstd-000.pak"), "p0");
+        spit(sb.real(root + "/.medic_broken/PPSA00004-Alt/ampr_zstd-000.pak"), "p0");
+        spit(sb.real(root + "/Muster.exfat"), std::string(1024, 'A'));
+        spit(sb.real(root + "/Muster.exfat.forge-undo"), "FORGEUNDO1");
+        spit(sb.real(root + "/Muster.exfat.orig.part"), "x");
+        spit(sb.real(root + "/Anderes.ffpfsc.undo"), "u");
+        spit(sb.real(root + "/Notizen.undo"), "kein Image davor");
+        spit(sb.real(root + "/Notizen.undo.txt"), "x");
+
+        auto p = make_snapshot_platform(sb.dir.string(), true);
+        Facts f;
+        f.set("smp.scan_roots", json::array({root}));
+        collect_game_layout(*p, f);
+        const json* pf = f.get("games.partial_folders");
+        CHECK(pf && pf->size() == 1 && (*pf)[0]["name"] == "PPSA00001-Teil" && (*pf)[0]["paks"] == 1 && (*pf)[0]["tmp"] == 1,
+              "Teilordner: nur der Ordner ohne Index (Volume und Temp-Handle gezaehlt), nicht der mit Index, nicht tiefer, nicht .medic_broken");
+        const json* uj = f.get("games.undo_journals");
+        std::string kinds;
+        if (uj)
+            for (const auto& x : *uj) kinds += x["name"].get<std::string>() + "=" + x["kind"].get<std::string>() + ";";
+        CHECK(uj && uj->size() == 3 && kinds.find("Muster.exfat.forge-undo=forge_undo;") != std::string::npos && kinds.find("Muster.exfat.orig.part=orig_part;") != std::string::npos &&
+                  kinds.find("Anderes.ffpfsc.undo=undo;") != std::string::npos,
+              "Journale: forge-undo, orig.part und <Image>.undo erkannt, Notizen.undo nicht: " + kinds);
+
+        collect_leftovers(*p, f);
+        const json* lf = f.get("leftovers.files");
+        CHECK(lf && lf->empty(), "Journale: eine .orig.part gilt nicht als Rest (S31 fasst Journale nie an)");
+
+        const auto findings = evaluate(rs, f);
+        const Finding* undo = find_rule(findings, "game.image_undo_journal");
+        CHECK(undo && undo->fix.empty(), "Journale: Regel feuert und hat keinen Fix");
+        const Finding* part = find_rule(findings, "game.partial_folder");
+        CHECK(part && part->fix == "quarantine_partial_folder", "Teilordner: Regel feuert mit dem Fix quarantine_partial_folder");
+        if (!part) return;
+
+        FixPlan plan = plan_fix(*part, f, p->fs());
+        CHECK(plan.changes.size() == 1 && plan.changes[0].kind == Change::Kind::Rename && plan.changes[0].to == root + "/.medic_broken/PPSA00001-Teil",
+              "Teilordner: Plan verschiebt den ganzen Ordner nach .medic_broken im selben Scanpfad");
+        PosixRw rw(sb.dir / "fs");
+        struct W final : Platform {
+            Platform* base;
+            PosixRw* rw_;
+            W(Platform* b, PosixRw* r) : base(b), rw_(r) {}
+            const IFileSystem& fs() const override { return base->fs(); }
+            const IProcessList& procs() const override { return base->procs(); }
+            const ISystemInfo& sys() const override { return base->sys(); }
+            IFileSystemRW* fs_rw() override { return rw_; }
+        } wp(p.get(), &rw);
+        const ApplyResult ok = apply_plan(plan, wp, policy_from_facts(f), {"20261116T120000Z", true});
+        CHECK(ok.ok, "Teilordner: Anwenden ok (" + ok.error + ")");
+        CHECK(!stdfs::exists(sb.real(root + "/PPSA00001-Teil")) && testutil::slurp(sb.real(root + "/.medic_broken/PPSA00001-Teil/ampr_zstd-000.pak")) == "p0",
+              "Teilordner: Ordner samt Inhalt liegt unveraendert in .medic_broken");
+        CHECK(stdfs::exists(sb.real(root + "/Muster.exfat.forge-undo")) && stdfs::exists(sb.real(root + "/Muster.exfat.orig.part")) && stdfs::exists(sb.real(root + "/PPSA00002-Fertig/ampr_zstd.index")),
+              "Teilordner: Journale und der fertige Ordner bleiben unberuehrt");
+        Facts again;
+        again.set("smp.scan_roots", json::array({root}));
+        collect_game_layout(wp, again);
+        CHECK(again.get("games.partial_folders") && again.get("games.partial_folders")->empty(), "Teilordner: danach meldet der Check-up nichts mehr");
+        const UndoResult u = undo_txn(wp, policy_from_facts(f), ok.txn, "20261116T120100Z");
+        CHECK(u.ok && testutil::slurp(sb.real(root + "/PPSA00001-Teil/ampr_zstd-000.pak")) == "p0" && !stdfs::exists(sb.real(root + "/.medic_broken/PPSA00001-Teil")),
+              "Teilordner: Rueckgaengig holt den Ordner zurueck (" + u.error + ")");
+    }
+
+    // S12: fakelib-Aufbau je Spiel
+    {
+        Sandbox sb;
+        spit(sb.dir / "procs.json", R"(["shadowmountplus"])");
+        const std::string param = R"({"titleId":"PPSA000XX","requiredSystemSoftwareVersion":"0x0900000000000000","sdkVersion":"0x0900000000000000"})";
+        auto game = [&](const std::string& dir, const std::string& id) {
+            std::string pj = param;
+            pj.replace(pj.find("PPSA000XX"), 9, id);
+            spit(sb.real(root + "/" + dir + "/eboot.bin"), std::string("\x7f" "ELF") + std::string(124, '\0'));
+            spit(sb.real(root + "/" + dir + "/sce_sys/param.json"), pj);
+        };
+        game("A-Beide", "PPSA00011");
+        spit(sb.real(root + "/A-Beide/fakelib/libSceAmpr.sprx"), "x");
+        spit(sb.real(root + "/A-Beide/fakelib2/libSceAmpr.sprx"), "x");
+        game("B-LeeresZwei", "PPSA00012");
+        spit(sb.real(root + "/B-LeeresZwei/fakelib/libSceAmpr.sprx"), "x");
+        stdfs::create_directories(sb.real(root + "/B-LeeresZwei/fakelib2"));
+        game("C-Extra", "PPSA00013");
+        spit(sb.real(root + "/C-Extra/fakelib/libSceAmpr.sprx"), "x");
+        spit(sb.real(root + "/C-Extra/fakelib/libSceAmpr-debug.sprx"), "x");
+        spit(sb.real(root + "/C-Extra/fakelib/libSceAmpr.sprx.bak"), "x");
+        game("D-Sauber", "PPSA00014");
+        spit(sb.real(root + "/D-Sauber/fakelib/libSceAmpr.sprx"), "x");
+        spit(sb.real(root + "/D-Sauber/fakelib/libSceFoo.sprx"), "x");
+        game("E-LeeresEins", "PPSA00015");
+        stdfs::create_directories(sb.real(root + "/E-LeeresEins/fakelib"));
+        spit(sb.real(root + "/E-LeeresEins/fakelib2/libSceAmpr.sprx"), "x");  // fakelib leer, fakelib2 gefuellt: gewinnt ohnehin
+        game("F-Keine", "PPSA00016");
+
+        auto p = make_snapshot_platform(sb.dir.string(), true);
+        Facts f = collect_all(*p);
+        const json* lay = f.get("games.fakelib_layout");
+        std::string seen;
+        if (lay)
+            for (const auto& x : *lay) seen += x["path"].get<std::string>().substr(root.size() + 1) + "=" + x["problem"].get<std::string>() + ";";
+        CHECK(lay && lay->size() == 3 && seen.find("A-Beide=both;") != std::string::npos && seen.find("B-LeeresZwei=empty_shadow;") != std::string::npos && seen.find("C-Extra=extra_ampr;") != std::string::npos,
+              "fakelib: beide gefuellt, leeres fakelib2 und weitere libSceAmpr-Dateien erkannt: " + seen);
+        const json* wf = f.get("games.with_fakelib");
+        CHECK(wf && wf->size() == 5, "fakelib: fuenf Spiele haben Dateien in fakelib oder fakelib2");
+        CHECK(find_rule(evaluate(rs, f), "game.fakelib_layout") != nullptr, "fakelib: Regel game.fakelib_layout feuert");
+    }
+
+    // S13: fakelib abgeschaltet, ein Spiel hat Dateien in fakelib
+    {
+        Sandbox sb;
+        spit(sb.dir / "procs.json", R"(["shadowmountplus"])");
+        spit(sb.real("/data/shadowmount/config.ini"), "[config]\nversion = 2\n\n[fakelib]\nenabled = 0\n");
+        spit(sb.real(root + "/PPSA00041-Spiel/eboot.bin"), std::string("\x7f" "ELF") + std::string(124, '\0'));
+        spit(sb.real(root + "/PPSA00041-Spiel/sce_sys/param.json"), R"({"titleId":"PPSA00041","requiredSystemSoftwareVersion":"0x0900000000000000","sdkVersion":"0x0900000000000000"})");
+        spit(sb.real(root + "/PPSA00041-Spiel/fakelib/libSceAmpr.sprx"), "x");
+        auto p = make_snapshot_platform(sb.dir.string(), true);
+        Facts f = collect_all(*p);
+        const auto findings = evaluate(rs, f);
+        const Finding* fd = find_rule(findings, "smp.fakelib_off_with_runtime");
+        CHECK(fd && fd->fix == "smp_set_key", "fakelib aus: Regel feuert mit dem Fix smp_set_key");
+        if (!fd) return;
+        FixPlan plan = plan_fix(*fd, f, p->fs());
+        CHECK(plan.changes.size() == 1 && plan.changes[0].kind == Change::Kind::WriteFile && plan.changes[0].path == "/data/shadowmount/config.ini" &&
+                  plan.changes[0].content.find("[fakelib]\nenabled=1") != std::string::npos && plan.changes[0].content.find("enabled=0") == std::string::npos,
+              "fakelib aus: Plan setzt [fakelib] enabled auf 1 (nur diese Datei)");
+        // BackPork laeuft: die Abschaltung hat dann einen Grund, nichts wird vorgeschlagen
+        spit(sb.dir / "procs.json", R"(["shadowmountplus","backpork"])");
+        auto p2 = make_snapshot_platform(sb.dir.string(), true);
+        CHECK(find_rule(evaluate(rs, collect_all(*p2)), "smp.fakelib_off_with_runtime") == nullptr, "fakelib aus: bei laufendem BackPork keine Meldung");
+    }
+}
+
 }  // namespace
 
 void game_issue_tests() {
+    layout_tests();
     chmod_tests();
     misc_tests();
     nanodns_tests();

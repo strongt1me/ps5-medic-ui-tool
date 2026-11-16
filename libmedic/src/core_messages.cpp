@@ -21,6 +21,8 @@ const std::pair<const char*, const char*> kFragments[] = {
      "No program file without execute permission found in the allowed folders"},
     {"Keine Reste abgebrochener Vorgänge in den erlaubten Ordnern gefunden",
      "No leftovers of interrupted jobs found in the allowed folders"},
+    {"Kein halbfertiger Packordner in den erlaubten Ordnern gefunden",
+     "No half-finished pack folder found in the allowed folders"},
     {"Kein zu langer Image-Name in den erlaubten Ordnern gefunden",
      "No image name that is too long found in the allowed folders"},
     {"Übersprungen (Name lässt sich nicht kürzen): ",

@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Regel-Uebersicht
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.49, 85 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.50, 89 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -18,8 +18,10 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `errors.recurring_title` | warning | alle | - | todo | Der Fehlerverlauf (/system_data/priv/error/history) enthält denselben CE-Fehlercode mehrfach für denselben Titel: Der Titel startet oder... |
 | `game.compat_known_bad` | info | alle | - | community | Laut der Kompatibilitätsliste für ZSTD- und LZ4-Sicherungen läuft dieses Spiel bei Testern nicht oder nur mit widersprüchlichen Berichten... |
 | `game.eboot_invalid` | warning | alle | - | todo | Die eboot.bin eines Spielordners ist unbrauchbar: kleiner als 64 Byte oder reiner Text (z. |
+| `game.fakelib_layout` | info | alle | - | doc | Ein Spiel hat einen unklaren fakelib-Aufbau (Beleg: Pfad und Art). |
 | `game.il2cpp_case` | warning | alle | `rename_case_prx` | community | Im Spielordner heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Media/Modules). |
 | `game.il2cpp_case_latent` | info | alle | `rename_case_prx` | community | Im Spielordner auf einem exFAT-/FAT-Laufwerk heißt die Datei Il2cppUserAssemblies.prx statt Il2CppUserAssemblies.prx (Unity-Spiel, Media/... |
+| `game.image_undo_journal` | warning | alle | - | community | Neben einem Image liegt ein Undo-Journal (<Image>.forge-undo, *.orig.part oder <Image>.undo). |
 | `game.incomplete_folder` | warning | alle | - | todo | Ein Ordner in einem Scanpfad sieht wie ein Spiel aus, ist aber unvollständig: es fehlt die eboot.bin oder die sce_sys/param.json, oder di... |
 | `game.leftover_parts` | warning | alle | `quarantine_leftovers` | community | In einem Scanpfad liegen Reste abgebrochener Kopier- oder Packvorgänge (.part, .tmp, .teil, .neu, .unvollstaendig). |
 | `game.needs_backport` | warning | alle | - | todo | Für diese Spiele verlangt die param.json eine höhere Firmware-Version als die der Konsole, und in den Scanpfaden fehlt der Ordner backpor... |
@@ -28,6 +30,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `game.pack_incomplete` | warning | alle | - | doc | Die zstd-Pack-Dateien eines Spiels sind unvollständig: ein Teil (ampr_zstd-NNN.pak) fehlt, hat nicht die Größe laut Index, oder die ampr_... |
 | `game.pack_no_emu_index` | info | alle | - | todo | Ein Spiel mit Packs hat keine ampr_emu.index. |
 | `game.pack_runtime_mismatch` | warning | alle | - | doc | Ein Spiel mit gepackten Dateien (ampr_zstd.index oder ampr_assets.index) hat keine passende Laufzeit-Bibliothek: fakelib/libSceAmpr.sprx... |
+| `game.partial_folder` | warning | alle | `quarantine_partial_folder` | community | In einem Scanpfad liegt ein Packordner mit Volumes (ampr_zstd-NNN.pak), aber ohne ampr_zstd.index. |
 | `hen.etahen_crashed` | warning | alle | - | doc | etaHEN meldet einen Absturz seines Hauptdienstes ('main etaHEN has crashed'); Toolbox und Plugins fehlen danach. |
 | `hen.etahen_double_load` | warning | alle | - | doc | Es laufen mehrere etaHEN-Prozesse. |
 | `hen.etahen_game_rest_kill` | info | alle | - | doc | In etaHEN ist 'Game_rest_kill' (oder 'Util_rest_kill') eingeschaltet: Beim Ruhemodus beendet etaHEN das offene Spiel bzw. |
@@ -58,6 +61,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `smp.emulator_update_replaces_runtime` | warning | alle | `smp_set_key` | doc | ShadowMount+ hat Emulator-Updates eingeschaltet, und ein Spiel hat zstd-Packs. |
 | `smp.exfat_cluster` | info | alle | - | doc | Dieses .exfat-Image hat Cluster kleiner als 64 KB und ist dadurch langsamer. |
 | `smp.fakelib_handoff_stuck` | warning | alle | - | community | Ein beendeter Prozess blockiert die Aufräumschlange der Fakelib: danach starten Backport-Spiele ohne Fakelib und stürzen ab. |
+| `smp.fakelib_off_with_runtime` | warning | alle | `smp_set_key` | doc | ShadowMount+ hat die fakelib-Funktion abgeschaltet ([fakelib] enabled = 0), aber mindestens ein Spiel hat Dateien in fakelib oder fakelib... |
 | `smp.ffpfsc_direct_files` | warning | alle | `fix_image_nesting_hint` | doc | Der .ffpfsc-Container enthält direkt Spieldateien. |
 | `smp.fw900_kstuff_fork` | info | =9.00 | - | community | Auf FW 9.00 starten Dumps mit der kstuff-lite-Version von EchoStretch laut Nutzerberichten teils nicht („can't launch the game or app“). |
 | `smp.image_cache_full` | warning | alle | - | community | ShadowMount+ hat einen Mount zurückgenommen, weil der Image-Cache voll war (gemeldet bei 64 Einträgen und über 100 Images auf dem Laufwerk). |
