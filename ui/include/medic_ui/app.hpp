@@ -78,6 +78,8 @@ private:
     void open_stored(int index);
     void leave_stored();
     void open_compare(int index);
+    void open_compare_latest();
+    bool cmp_from_findings_ = false;  // Vergleich kam direkt aus dem Befund-Bildschirm (Kreis fuehrt dorthin zurueck)
     void open_games();
     void open_report();
     void open_rules_update();

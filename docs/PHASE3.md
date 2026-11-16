@@ -126,3 +126,9 @@ Frage von Marc: „Wird in der App auch untersucht, wenn ein Spiel nicht startet
 - **Oberfläche:** `Screen::GameList`, `Screen::GameDetail`. Links, was Medic zum Titel gefunden hat; rechts „Mögliche Gründe“ = die Befunde des Titels. Kreuz öffnet einen Befund im bekannten Detail-Bildschirm (Reparatur wie dort; Kreis geht zur Spielansicht zurück, nach einer Reparatur zur Befundliste). Start hat jetzt fünf kleine Kacheln (Spiele ganz rechts).
 - **Grenzen:** Medic sieht nur Spuren, die auf der Konsole liegen. Ein Absturz ohne Spur bleibt unerkannt; die Ansicht sagt das („Das heißt nicht, dass alles in Ordnung ist“). Sie arbeitet auf dem Check-up der Sitzung, nicht auf alten Ständen aus dem Verlauf.
 - Tests: `games_tests` in `tests/test_ui.cpp` (Zusammenführung mit synthetischen Titeln, Sortierung, unbekannte Registrierung, Bedienung mit der Fixture `g1_pos`, leere Liste). Name und Pfade in Tests und Vorschau sind synthetisch.
+
+### Vorher/Nachher-Vergleich erweitert (16. Nov. 2026)
+
+- `compare_checks` meldet zusätzlich **Schweregradwechsel** (dieselbe Regel, anderer Grad; steht nicht mehr unter „unverändert“) und **geänderte Einrichtung**: Firmware, Modell und Regelstand aus jedem Check-up, dazu das neue, optionale Feld `setup` der Check-up-Datei (ShadowMount+-Version, kstuff-Version, Zahl der Spiele, ampr-emu-ng-Versionen; nur Texte, keine Pfade oder Titel). Alte Dateien ohne `setup` bleiben lesbar; ihre fehlenden Einträge gelten nicht als „neu“.
+- **Direkter Einstieg:** Links auf dem Befund-Bildschirm vergleicht den jetzigen Check-up mit dem davor; Kreis führt zurück zur Befundliste. Nur lesend, keine Reparatur, kein Netz.
+- Test: `checks_archive_tests` (Schweregradwechsel, Einrichtung, alte Datei, Speichern und Laden von `setup`).

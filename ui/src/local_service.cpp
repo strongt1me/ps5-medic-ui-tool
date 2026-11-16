@@ -105,6 +105,23 @@ CheckResult LocalService::run_check() {
         sc.coverage = r.coverage;
         sc.resolved = r.resolved;
         sc.metrics = r.metrics;
+        // Einrichtung fuer den Vergleich zweier Check-ups: Versionen der Bausteine und Zahl der Spiele
+        const auto text_fact = [&](const char* k) {
+            const nlohmann::json* v = facts_.get(k);
+            return v && v->is_string() ? v->get<std::string>() : std::string();
+        };
+        if (const std::string v = text_fact("smp.version"); !v.empty()) sc.setup.emplace_back("smp.version", v);
+        if (const std::string v = text_fact("kstuff.file_version"); !v.empty()) sc.setup.emplace_back("kstuff.file_version", v);
+        if (const nlohmann::json* t = facts_.get("smp.titles"); t && t->is_array()) sc.setup.emplace_back("games.count", std::to_string(t->size()));
+        if (const nlohmann::json* rt = facts_.get("games.runtime"); rt && rt->is_array()) {
+            std::set<std::string> vers;
+            for (const auto& e : *rt)
+                if (e.is_object() && e.value("lib_kind", std::string()) == "ng" && e.contains("lib_version") && e["lib_version"].is_string() && !e["lib_version"].get<std::string>().empty())
+                    vers.insert(e["lib_version"].get<std::string>());
+            std::string joined;
+            for (const auto& v : vers) joined += (joined.empty() ? "" : ", ") + v;
+            if (!joined.empty()) sc.setup.emplace_back("ampr.versions", joined);
+        }
         saved = medic::save_check(p_, sc) && saved;
     }
     // Die Fakten zu Spielen, Resten, nanoDNS, Kraken und kstuff dieses Check-ups (nur auf der Konsole, nicht im Bericht): zeigen, was Medic gelesen hat, auch wenn

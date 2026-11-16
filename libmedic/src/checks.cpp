@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <map>
 #include <set>
 
 namespace medic {
@@ -39,7 +40,9 @@ json to_json(const StoredCheck& c) {
     json m = json::array();
     for (const auto& x : c.metrics)
         m.push_back({{"id", x.id}, {"unit", x.unit}, {"text_de", x.text_de}, {"text_en", x.text_en}, {"now", x.now}, {"has_prev", x.has_prev}, {"prev", x.prev}, {"has_typical", x.has_typical}, {"typical", x.typical}, {"samples", x.samples}});
-    return {{"version", 1}, {"ts", c.ts}, {"fw", c.fw}, {"model", c.model}, {"rules_version", c.rules_version}, {"findings", f}, {"coverage", cov}, {"resolved", c.resolved}, {"metrics", m}};
+    json setup = json::object();
+    for (const auto& kv : c.setup) setup[kv.first] = kv.second;
+    return {{"version", 1}, {"ts", c.ts}, {"fw", c.fw}, {"model", c.model}, {"rules_version", c.rules_version}, {"findings", f}, {"coverage", cov}, {"resolved", c.resolved}, {"metrics", m}, {"setup", setup}};
 }
 
 namespace {
@@ -90,6 +93,9 @@ bool from_json(const json& j, StoredCheck& c) {
     if (j.contains("resolved") && j["resolved"].is_array())
         for (const auto& x : j["resolved"])
             if (x.is_string()) c.resolved.push_back(x.get<std::string>());
+    if (j.contains("setup") && j["setup"].is_object())
+        for (auto it = j["setup"].begin(); it != j["setup"].end(); ++it)
+            if (it.value().is_string()) c.setup.emplace_back(it.key(), it.value().get<std::string>());
     if (j.contains("metrics") && j["metrics"].is_array())
         for (const auto& x : j["metrics"]) {
             if (!x.is_object()) continue;
@@ -168,12 +174,35 @@ std::vector<CheckSummary> list_checks(const IFileSystem& fs) {
 
 CheckDiff compare_checks(const StoredCheck& newer, const StoredCheck& older) {
     CheckDiff d;
-    std::set<std::string> in_older, in_newer;
-    for (const auto& f : older.findings) in_older.insert(f.rule_id);
+    std::map<std::string, Severity> sev_older;
+    std::set<std::string> in_newer;
+    for (const auto& f : older.findings) sev_older.emplace(f.rule_id, f.severity);
     for (const auto& f : newer.findings) in_newer.insert(f.rule_id);
-    for (const auto& f : newer.findings) (in_older.count(f.rule_id) ? d.unchanged : d.added).push_back(f);
+    for (const auto& f : newer.findings) {
+        const auto it = sev_older.find(f.rule_id);
+        if (it == sev_older.end()) d.added.push_back(f);
+        else if (it->second != f.severity) d.severity_changed.push_back({f, it->second});
+        else d.unchanged.push_back(f);
+    }
     for (const auto& f : older.findings)
         if (!in_newer.count(f.rule_id)) d.resolved.push_back(f);
+
+    // Einrichtung: Firmware, Modell und Regelstand stehen in jedem Check-up, der Rest nur in neueren Dateien.
+    std::map<std::string, std::string> a, b;
+    std::vector<std::string> order;
+    const auto put = [&](std::map<std::string, std::string>& m, const std::string& k, const std::string& v) {
+        if (m.emplace(k, v).second && std::find(order.begin(), order.end(), k) == order.end()) order.push_back(k);
+    };
+    for (const auto& kv : std::vector<std::pair<std::string, std::string>>{{"fw", older.fw}, {"model", older.model}, {"rules_version", older.rules_version}}) put(a, kv.first, kv.second);
+    for (const auto& kv : std::vector<std::pair<std::string, std::string>>{{"fw", newer.fw}, {"model", newer.model}, {"rules_version", newer.rules_version}}) put(b, kv.first, kv.second);
+    for (const auto& kv : older.setup) put(a, kv.first, kv.second);
+    for (const auto& kv : newer.setup) put(b, kv.first, kv.second);
+    for (const auto& k : order) {
+        const bool base = k == "fw" || k == "model" || k == "rules_version";
+        if (!base && older.setup.empty()) continue;  // alte Datei ohne Einrichtungsdaten: nichts zum Vergleichen
+        const std::string from = a.count(k) ? a[k] : std::string(), to = b.count(k) ? b[k] : std::string();
+        if (from != to) d.setup_changed.push_back({k, from, to});
+    }
     return d;
 }
 

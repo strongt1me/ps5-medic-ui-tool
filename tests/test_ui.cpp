@@ -3108,6 +3108,39 @@ void checks_archive_tests() {
     const CheckDiff d = compare_checks(a, b);
     CHECK(d.added.size() == 1 && d.added[0].rule_id == "r.new" && d.resolved.size() == 1 && d.resolved[0].rule_id == "r.gone" && d.unchanged.size() == 1 && d.unchanged[0].rule_id == "r.both", "Vergleich: neu, behoben, unveraendert");
     CHECK(compare_checks(a, a).added.empty() && compare_checks(a, a).resolved.empty(), "Vergleich: gleicher Check-up ohne Unterschiede");
+    {  // Schweregradwechsel und Einrichtung
+        StoredCheck n2, o2;
+        n2.findings = {fnd("r.up", Severity::Warning), fnd("r.same", Severity::Info)};
+        o2.findings = {fnd("r.up", Severity::Info), fnd("r.same", Severity::Info)};
+        n2.fw = "12.00";
+        o2.fw = "12.00";
+        n2.rules_version = "2026.11.54";
+        o2.rules_version = "2026.11.53";
+        n2.setup = {{"smp.version", "1.7beta12"}, {"games.count", "9"}, {"ampr.versions", "0.4.1"}};
+        o2.setup = {{"smp.version", "1.7beta11"}, {"games.count", "9"}, {"kstuff.file_version", "1.7.1"}};
+        const CheckDiff d2 = compare_checks(n2, o2);
+        CHECK(d2.severity_changed.size() == 1 && d2.severity_changed[0].now.rule_id == "r.up" && d2.severity_changed[0].before == Severity::Info &&
+                  d2.unchanged.size() == 1 && d2.unchanged[0].rule_id == "r.same" && d2.added.empty() && d2.resolved.empty(),
+              "Vergleich: Schweregradwechsel steht nicht unter unveraendert");
+        std::map<std::string, std::pair<std::string, std::string>> sc;
+        for (const auto& c : d2.setup_changed) sc[c.key] = {c.from, c.to};
+        CHECK(sc.size() == 4 && sc["rules_version"] == std::make_pair(std::string("2026.11.53"), std::string("2026.11.54")) && sc["smp.version"].second == "1.7beta12" &&
+                  sc["ampr.versions"].first.empty() && sc["kstuff.file_version"].second.empty() && !sc.count("games.count") && !sc.count("fw"),
+              "Vergleich: geaenderte Einrichtung, neu und weggefallen, Gleiches nicht");
+        StoredCheck legacy = o2;  // alte Datei ohne Einrichtungsdaten: deren setup-Eintraege sind nicht "neu"
+        legacy.setup.clear();
+        legacy.rules_version = n2.rules_version;
+        CHECK(compare_checks(n2, legacy).setup_changed.empty(), "Vergleich: alte Datei ohne Einrichtung meldet keine Einrichtungsaenderung");
+        auto plr = make_snapshot_platform(t.dir.string(), true);
+        StoredCheck rt = n2;
+        rt.ts = "20261111T130500Z";
+        std::string rid;
+        StoredCheck back;
+        const std::map<std::string, std::string> want_setup(n2.setup.begin(), n2.setup.end());
+        const bool rt_ok = save_check(*plr, rt, &rid) && load_check(plr->fs(), rid, back);
+        const std::map<std::string, std::string> got_setup(back.setup.begin(), back.setup.end());
+        CHECK(rt_ok && got_setup == want_setup, "Check-ups: die Einrichtung bleibt beim Speichern und Laden erhalten");
+    }
 
     // Oberflaeche: Liste, ansehen, nie reparieren, zurueck zum aktuellen, Vergleich
     {

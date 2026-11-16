@@ -593,6 +593,16 @@ void App::open_compare(int index) {
     screen_ = Screen::CheckCompare;
 }
 
+// Direkter Vergleich des jetzigen Check-ups mit dem davor (aus dem Befund-Bildschirm); mit Kreis zurueck zur Befundliste.
+void App::open_compare_latest() {
+    chk_ = svc_.checks();
+    chk_sel_ = chk_top_ = 0;
+    chk_expanded_ = false;
+    if (chk_.size() < 2) return;  // es gibt noch keinen frueheren Check-up
+    open_compare(0);
+    if (screen_ == Screen::CheckCompare) cmp_from_findings_ = true;
+}
+
 void App::open_games() {
     games_ = svc_.games();
     game_sel_ = game_top_ = gd_sel_ = gd_top_ = 0;
@@ -855,7 +865,9 @@ void App::handle(Button b) {
                     if (!viewing_old_) start_check();
                 } else screen_ = Screen::Detail;
             } else if (b == Button::Triangle) begin_fix(sel_, Screen::Findings);
-            else if (b == Button::Square) {
+            else if (b == Button::Left) {
+                if (!viewing_old_) open_compare_latest();
+            } else if (b == Button::Square) {
                 if (!viewing_old_) open_report();
             } else if (b == Button::Circle) {
                 if (viewing_old_) leave_stored();
@@ -964,13 +976,17 @@ void App::handle(Button b) {
             break;
         }
         case Screen::CheckCompare: {
-            const int rows = static_cast<int>(cmp_diff_.added.size() + cmp_diff_.resolved.size() + cmp_diff_.unchanged.size()) + 3;
+            const auto extra = [](std::size_t n) { return n ? static_cast<int>(n) + 1 : 0; };  // Kopfzeile + Eintraege, nur wenn es welche gibt
+            const int rows = static_cast<int>(cmp_diff_.added.size() + cmp_diff_.resolved.size() + cmp_diff_.unchanged.size()) + 3 + extra(cmp_diff_.severity_changed.size()) + extra(cmp_diff_.setup_changed.size());
             const int max_top = std::max(rows - kCmpVisible, 0);
             if (b == Button::Up) cmp_top_ = std::max(cmp_top_ - 1, 0);
             else if (b == Button::Down) cmp_top_ = std::min(cmp_top_ + 1, max_top);
             else if (b == Button::L1) cmp_top_ = std::max(cmp_top_ - kCmpVisible, 0);
             else if (b == Button::R1) cmp_top_ = std::min(cmp_top_ + kCmpVisible, max_top);
-            else if (b == Button::Circle) screen_ = Screen::CheckList;
+            else if (b == Button::Circle) {
+                screen_ = cmp_from_findings_ ? Screen::Findings : Screen::CheckList;
+                cmp_from_findings_ = false;
+            }
             break;
         }
         case Screen::History:
@@ -1759,6 +1775,8 @@ void App::draw_findings(Canvas& c) const {
     hints.emplace_back(PadGlyph::Cross, S("common.open"));
     if (const auto* f = current_finding(); f && !f->fix.empty() && !viewing_old_) hints.emplace_back(PadGlyph::Triangle, S(is_hint_fix(f->fix) ? "common.guide" : "common.repair"));
     if (!viewing_old_) hints.emplace_back(PadGlyph::Square, S("common.report"));
+    if (!viewing_old_ && (!result_.resolved.empty() || std::any_of(result_.findings.begin(), result_.findings.end(), [](const medic::Finding& f) { return !f.status.empty(); })))
+        hints.emplace_back(PadGlyph::LeftRight, S("common.compare"));  // es gibt einen frueheren Check-up
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }
@@ -2454,7 +2472,7 @@ void App::draw_compare(Canvas& c) const {
         bool head;
         std::string text;
         Color col;
-        const medic::Finding* f;
+        const medic::Finding* f;  // nullptr bei Kopfzeilen und Einrichtungszeilen
     };
     std::vector<Row> rows;
     auto section = [&](const char* key, const std::vector<medic::Finding>& v, Color col) {
@@ -2463,7 +2481,20 @@ void App::draw_compare(Canvas& c) const {
     };
     section("compare.added", cmp_diff_.added, kWarn);
     section("compare.resolved", cmp_diff_.resolved, kOk);
+    if (!cmp_diff_.severity_changed.empty()) {
+        rows.push_back({true, S.fmt("compare.severity", {{"n", std::to_string(cmp_diff_.severity_changed.size())}}), kWarn, nullptr});
+        for (const auto& sc : cmp_diff_.severity_changed)
+            rows.push_back({false, finding_title(sc.now) + " (" + S(sev_key(sc.before)) + " > " + S(sev_key(sc.now.severity)) + ")", kText, &sc.now});
+    }
     section("compare.unchanged", cmp_diff_.unchanged, kDim);
+    if (!cmp_diff_.setup_changed.empty()) {
+        rows.push_back({true, S.fmt("compare.setup", {{"n", std::to_string(cmp_diff_.setup_changed.size())}}), kAccent, nullptr});
+        for (const auto& sc : cmp_diff_.setup_changed) {
+            const std::string key = "compare.setup." + sc.key;
+            const std::string label = S.has(key) ? S(key) : sc.key;
+            rows.push_back({false, label + ": " + (sc.from.empty() ? "-" : sc.from) + " > " + (sc.to.empty() ? "-" : sc.to), kText, nullptr});
+        }
+    }
     const int total = static_cast<int>(rows.size());
     c.fill_round_rect(M, 232, W - 2 * M, 700, 20, kPanel);
     int y = 244;
@@ -2471,13 +2502,15 @@ void App::draw_compare(Canvas& c) const {
         const Row& r = rows[static_cast<std::size_t>(i)];
         if (r.head) {
             body().draw(c, M + 36, y, r.text, r.col);
-        } else {
+        } else if (r.f) {
             draw_icon(c, sev_icon(r.f->severity), M + 56, y + 20, 30, sev_color(r.f->severity), sev_color(r.f->severity));
             body().draw(c, M + 92, y + 4, elide(body(), r.text, W - 2 * M - 92 - 100), kText);
+        } else {
+            body().draw(c, M + 56, y + 4, elide(body(), r.text, W - 2 * M - 56 - 100), kText);
         }
         y += 50;
     }
-    if (cmp_diff_.added.empty() && cmp_diff_.resolved.empty() && total < kCmpVisible) small().draw(c, M + 36, y + 10, S("compare.same"), kDim);
+    if (cmp_diff_.added.empty() && cmp_diff_.resolved.empty() && cmp_diff_.severity_changed.empty() && cmp_diff_.setup_changed.empty() && total < kCmpVisible) small().draw(c, M + 36, y + 10, S("compare.same"), kDim);
     small().draw(c, M + 8, H - 138, S("compare.note"), kDim);
     if (total > kCmpVisible) {
         const int track_h = 676, thumb_h = std::max(40, track_h * kCmpVisible / total);

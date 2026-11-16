@@ -25,6 +25,8 @@ struct StoredCheck {
     std::vector<CoverageResult> coverage;
     std::vector<std::string> resolved;
     std::vector<MetricChange> metrics;
+    // Einrichtung dieses Check-ups (Schluessel -> Text, z. B. "smp.version" -> "1.7beta12"); fehlt in aelteren Dateien. Nur zum Vergleich.
+    std::vector<std::pair<std::string, std::string>> setup;
 };
 
 struct CheckSummary {
@@ -44,8 +46,20 @@ bool load_check(const IFileSystem& fs, const std::string& id, StoredCheck& out);
 
 // Vergleich zweier Check-ups nach Regel-ID: neu (nur im neueren), behoben (nur im aelteren), unveraendert (in beiden). Die Befunde stammen
 // aus dem Check-up, in dem sie stehen (bei "unveraendert" aus dem neueren).
+// severity_changed: Regel in beiden Check-ups, aber mit anderem Schweregrad (steht nicht in "unchanged"). setup_changed: geaenderte Einrichtung
+// (Firmware, Modell, Regelstand und die Eintraege aus StoredCheck::setup); from/to leer = fehlte. Ohne Einrichtungsdaten im aelteren
+// Check-up (alte Datei) werden dessen setup-Eintraege nicht als "neu" gemeldet.
+struct SeverityChange {
+    Finding now;
+    Severity before = Severity::Info;
+};
+struct SetupChange {
+    std::string key, from, to;
+};
 struct CheckDiff {
     std::vector<Finding> added, resolved, unchanged;
+    std::vector<SeverityChange> severity_changed;
+    std::vector<SetupChange> setup_changed;
 };
 CheckDiff compare_checks(const StoredCheck& newer, const StoredCheck& older);
 
