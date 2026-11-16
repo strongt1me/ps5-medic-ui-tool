@@ -110,8 +110,7 @@ int main(int argc, char** argv) {
         app.handle(Button::Down);
         app.handle(Button::Cross);  // Check-up-Verlauf
         shot("06a_checklist");
-        app.handle(Button::Down);
-        app.handle(Button::Cross);  // einen alten Check-up ansehen
+        app.handle(Button::Cross);  // den neuesten gespeicherten Check-up ansehen (die Liste ist zugeklappt, die erste Zeile ist ausgewaehlt)
         shot("06c_stored_check");
         app.handle(Button::Circle);
         app.handle(Button::Triangle);  // mit dem davor vergleichen

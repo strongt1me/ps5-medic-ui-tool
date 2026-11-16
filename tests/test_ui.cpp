@@ -710,6 +710,41 @@ void edge_tests() {
     press(a, {Button::Cross, Button::Down, Button::Up});
     CHECK(a.screen() == App::Screen::History, "Edge: Kreuz im leeren Verlauf tut nichts");
 
+    // Vorschau mit mehreren Aenderungen verschiedener Art: Sicherungszeile je Aenderung und Summe unten, nichts ueberlappt (Bild zur Sichtpruefung im Temp-Ordner)
+    {
+        FakeService multi;
+        multi.result.findings.push_back(mk_finding("rule.multi", Severity::Warning, true));
+        multi.plan = mk_plan();
+        multi.plan.fix_id = "quarantine_leftovers";
+        multi.plan.changes[0].note_de = "config.ini aendern: [general] debug=1 (vorher Backup)";
+        multi.plan.changes[0].note_en = "Change config.ini: [general] debug=1 (backup first)";
+        for (int i = 0; i < 3; ++i) {
+            Change c;
+            c.kind = Change::Kind::Rename;
+            c.path = "/data/homebrew/Spiel-" + std::to_string(i) + "/ampr_zstd.index.part";
+            c.to = "/data/homebrew/Spiel-" + std::to_string(i) + "/.medic_broken/ampr_zstd.index.part";
+            c.note_de = "Rest einer abgebrochenen Uebertragung beiseitelegen";
+            c.note_en = "Set aside a leftover of an interrupted transfer";
+            multi.plan.changes.push_back(c);
+        }
+        Change ch;
+        ch.kind = Change::Kind::Chmod;
+        ch.path = "/data/homebrew/Spiel-0/eboot.bin";
+        ch.mode = 0777;
+        ch.base_mode = 0666;
+        ch.note_de = "Rechte 0666 -> 0777";
+        ch.note_en = "Permissions 0666 -> 0777";
+        multi.plan.changes.push_back(ch);
+        multi.plan.warnings = {"ein Ziel wurde uebersprungen"};
+        App m(multi);
+        Canvas mc(App::kWidth, App::kHeight);
+        run_check_via_ui(m, mc);
+        press(m, {Button::Triangle});
+        CHECK(m.screen() == App::Screen::FixPreview, "Vorschau: Plan mit mehreren Aenderungen");
+        m.render(mc);
+        write_png((std::filesystem::temp_directory_path() / "medic_fixprev_multi.png").string(), mc, 2);
+    }
+
     // Viele und sehr lange Eintraege
     FakeService big;
     for (int i = 0; i < 25; ++i) big.result.findings.push_back(mk_finding("rule." + std::to_string(i), i % 3 == 0 ? Severity::Critical : (i % 3 == 1 ? Severity::Warning : Severity::Info), i % 2 == 0));
@@ -3108,6 +3143,28 @@ void checks_archive_tests() {
     const CheckDiff d = compare_checks(a, b);
     CHECK(d.added.size() == 1 && d.added[0].rule_id == "r.new" && d.resolved.size() == 1 && d.resolved[0].rule_id == "r.gone" && d.unchanged.size() == 1 && d.unchanged[0].rule_id == "r.both", "Vergleich: neu, behoben, unveraendert");
     CHECK(compare_checks(a, a).added.empty() && compare_checks(a, a).resolved.empty(), "Vergleich: gleicher Check-up ohne Unterschiede");
+    {  // "Behoben durch Reparatur X": nur Reparaturen zwischen den beiden Check-ups, abgeschlossen und nicht zurueckgenommen
+        auto tx = [](const char* txn, const char* ts, const char* fix, const char* rule, const char* state) {
+            TxnInfo x;
+            x.txn = txn;
+            x.ts = ts;
+            x.fix = fix;
+            x.rule = rule;
+            x.state = state;
+            return x;
+        };
+        const std::vector<TxnInfo> j = {tx("t1", "20261116T090000Z", "smp_set_key", "r.a", "applied"),      tx("t2", "20261115T090000Z", "chmod_program_files", "r.b", "applied"),
+                                        tx("t3", "20261116T093000Z", "autoload_fix_missing", "r.c", "undone"), tx("t4", "20261116T200000Z", "smp_set_key", "r.d", "applied"),
+                                        tx("t5", "20261116T080000Z", "smp_set_key", "r.e", "applied"),         tx("t6", "20261116T091500Z", "quarantine_leftovers", "r.e", "applied"),
+                                        tx("t7", "20261116T094500Z", "smp_set_key", "r.f", "aborted")};
+        const auto links = repairs_between(j, {"r.a", "r.b", "r.c", "r.d", "r.e", "r.f", "r.x"}, "20261115T100000Z", "20261116T100000Z");
+        std::map<std::string, std::string> by;
+        for (const auto& l : links) by[l.rule_id] = l.fix + "/" + l.txn;
+        CHECK(by.size() == 2 && by["r.a"] == "smp_set_key/t1" && by["r.e"] == "quarantine_leftovers/t6",
+              "Verknuepfung: nur Reparaturen im Zeitfenster; zurueckgenommen, abgebrochen, vor oder nach dem Fenster zaehlen nicht; die juengste je Regel");
+        CHECK(repairs_between(j, {"r.a"}, "", "20261116T100000Z").empty(), "Verknuepfung: ohne frueheren Check-up keine Behauptung");
+        CHECK(repairs_between(j, {"r.d"}, "20261116T100000Z", "").size() == 1, "Verknuepfung: ohne obere Grenze zaehlt auch eine spaetere Reparatur");
+    }
     {  // Schweregradwechsel und Einrichtung
         StoredCheck n2, o2;
         n2.findings = {fnd("r.up", Severity::Warning), fnd("r.same", Severity::Info)};
@@ -3151,6 +3208,18 @@ void checks_archive_tests() {
         run_check_via_ui(app, cv);  // frischer Check-up
         CHECK(app.screen() == App::Screen::Findings, "Check-up-Verlauf: aktueller Check-up da");
         const std::size_t live_n = app.finding_count();
+        {  // Support-Paket aus dem Bericht: schreibt ZIP und Schluessel als neue Dateien im eigenen Ordner, nie ueberschreiben
+            press(app, {Button::Square});
+            CHECK(app.screen() == App::Screen::Report, "Support: Bericht offen");
+            const std::size_t before = count_files(t.dir / "fs/data/ps5medic/support");
+            press(app, {Button::Triangle});
+            app.render(cv);
+            CHECK(count_files(t.dir / "fs/data/ps5medic/support") == before + 2, "Support: ZIP und Schluessel liegen im Support-Ordner");
+            press(app, {Button::Triangle});  // zweiter Druck tut nichts
+            CHECK(count_files(t.dir / "fs/data/ps5medic/support") == before + 2, "Support: kein zweites Paket durch erneutes Druecken");
+            press(app, {Button::Circle});
+            CHECK(app.screen() == App::Screen::Findings, "Support: Kreis fuehrt zurueck");
+        }
         press(app, {Button::Circle, Button::Down, Button::Cross});
         CHECK(app.screen() == App::Screen::CheckList, "Check-up-Verlauf: Start -> Verlauf zeigt die Check-ups");
         app.render(cv);

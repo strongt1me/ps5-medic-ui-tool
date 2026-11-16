@@ -589,6 +589,11 @@ void App::open_compare(int index) {
     chk_unreadable_ = !svc_.load_check(chk_[static_cast<std::size_t>(index)].id, cmp_new_) || !svc_.load_check(chk_[static_cast<std::size_t>(index) + 1].id, cmp_old_);
     if (chk_unreadable_) return;
     cmp_diff_ = medic::compare_checks(cmp_new_, cmp_old_);
+    {  // Welche behobenen Regeln hat eine Reparatur dieser App behoben? (Journal; zwischen den beiden Check-ups)
+        std::vector<std::string> gone;
+        for (const auto& f : cmp_diff_.resolved) gone.push_back(f.rule_id);
+        cmp_repairs_ = medic::repairs_between(svc_.history(), gone, cmp_old_.ts, cmp_new_.ts);
+    }
     cmp_top_ = 0;
     screen_ = Screen::CheckCompare;
 }
@@ -610,6 +615,8 @@ void App::open_games() {
 }
 
 void App::open_report() {
+    support_ = SupportResult{};
+    support_done_ = false;
     report_ = svc_.make_report(lang_ == Lang::De ? medic::ReportLang::De : medic::ReportLang::En);
     qr_ok_ = medic::qr_encode(report_.qr_text, qr_);
     screen_ = Screen::Report;
@@ -1069,6 +1076,10 @@ void App::handle(Button b) {
             break;
         case Screen::Report:
             if (b == Button::Circle) screen_ = Screen::Findings;
+            else if (b == Button::Triangle && !support_done_) {  // Support-Paket: schreibt nur neue Dateien im eigenen Ordner
+                support_ = svc_.make_support();
+                support_done_ = true;
+            }
             break;
         case Screen::ErrorCodes:  // Nachschlagen: nur lesen, keine Taste loest etwas aus
             if (err_input_) {
@@ -1803,6 +1814,10 @@ void App::draw_report(Canvas& c) const {
     if (report_.truncated) paragraph(small(), S("report.truncated"), kWarn, 3);
     paragraph(small(), S("report.anon"), kDim, 5);
     if (!reported_error_.empty()) paragraph(small(), S.fmt("report.error_code", {{"code", reported_error_}}), kOk, 2);
+    if (support_done_) {
+        if (support_.saved) paragraph(small(), S.fmt("report.support_saved", {{"path", support_.path}, {"key", support_.key_path}}), kOk, 6);
+        else paragraph(small(), S(std::string("report.support_err.") + (support_.error.empty() ? "write_failed" : support_.error)), kWarn, 3);
+    }
 
     // Rechts: QR-Code
     const int ax = 1036, ay = 150, aw = 788, ah = 800;
@@ -1812,7 +1827,10 @@ void App::draw_report(Canvas& c) const {
     } else {
         draw_qr_code(c, qr_, ax, ay, aw, ah);
     }
-    draw_hints(c, {{PadGlyph::Circle, S("common.back")}});
+    std::vector<std::pair<PadGlyph, std::string>> hints;
+    if (!support_done_) hints.emplace_back(PadGlyph::Triangle, S("common.support"));
+    hints.emplace_back(PadGlyph::Circle, S("common.back"));
+    draw_hints(c, hints);
 }
 
 void App::draw_detail(Canvas& c) const {
@@ -2475,12 +2493,18 @@ void App::draw_compare(Canvas& c) const {
         const medic::Finding* f;  // nullptr bei Kopfzeilen und Einrichtungszeilen
     };
     std::vector<Row> rows;
-    auto section = [&](const char* key, const std::vector<medic::Finding>& v, Color col) {
+    auto section = [&](const char* key, const std::vector<medic::Finding>& v, Color col, bool with_repairs = false) {
         rows.push_back({true, S.fmt(key, {{"n", std::to_string(v.size())}}), col, nullptr});
-        for (const auto& f : v) rows.push_back({false, finding_title(f), col, &f});
+        for (const auto& f : v) {
+            std::string text = finding_title(f);
+            if (with_repairs)
+                for (const auto& l : cmp_repairs_)
+                    if (l.rule_id == f.rule_id) text += " – " + S.fmt("compare.by_repair", {{"fix", fix_name(l.fix)}});
+            rows.push_back({false, text, col, &f});
+        }
     };
     section("compare.added", cmp_diff_.added, kWarn);
-    section("compare.resolved", cmp_diff_.resolved, kOk);
+    section("compare.resolved", cmp_diff_.resolved, kOk, true);
     if (!cmp_diff_.severity_changed.empty()) {
         rows.push_back({true, S.fmt("compare.severity", {{"n", std::to_string(cmp_diff_.severity_changed.size())}}), kWarn, nullptr});
         for (const auto& sc : cmp_diff_.severity_changed)

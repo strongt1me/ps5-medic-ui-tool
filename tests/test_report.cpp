@@ -4,8 +4,11 @@
 #include "medic/collectors.hpp"
 #include "medic/qr.hpp"
 #include "medic/report.hpp"
+#include "medic/support.hpp"
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <string>
 
 using namespace medic;
@@ -304,7 +307,98 @@ void confidence_report_tests() {
 
 }  // namespace
 
+
+// Liest ein ZIP ohne Kompression (wie make_zip es schreibt) zurueck und prueft Kopf, CRC und Verzeichnis.
+bool read_stored_zip(const std::string& z, std::vector<ZipEntry>& out) {
+    const auto u16 = [&](std::size_t o) { return static_cast<unsigned>(static_cast<unsigned char>(z[o])) | (static_cast<unsigned>(static_cast<unsigned char>(z[o + 1])) << 8); };
+    const auto u32 = [&](std::size_t o) { return u16(o) | (u16(o + 2) << 16); };
+    if (z.size() < 22 || u32(z.size() - 22) != 0x06054b50) return false;
+    const std::size_t n = u16(z.size() - 22 + 10), cd = u32(z.size() - 22 + 16);
+    std::size_t p = cd;
+    for (std::size_t i = 0; i < n; ++i) {
+        if (p + 46 > z.size() || u32(p) != 0x02014b50) return false;
+        const std::uint32_t crc = u32(p + 16), size = u32(p + 24);
+        const std::size_t nl = u16(p + 28), off = u32(p + 42);
+        if (u16(p + 10) != 0 || off + 30 > z.size() || u32(off) != 0x04034b50) return false;
+        const std::size_t data = off + 30 + u16(off + 26) + u16(off + 28);
+        if (data + size > z.size()) return false;
+        ZipEntry e{z.substr(p + 46, nl), z.substr(data, size)};
+        if (crc32_ieee(e.data) != crc) return false;
+        out.push_back(std::move(e));
+        p += 46 + nl + u16(p + 30) + u16(p + 32);
+    }
+    return true;
+}
+
+void support_tests() {
+    CHECK(crc32_ieee("123456789") == 0xCBF43926u && crc32_ieee("") == 0u, "Support: CRC-32 Pruefwert");
+    CHECK(support_path_for("20261116T120000Z") == "/data/ps5medic/support/support_20261116T120000Z.zip" && support_key_path_for("20261116T120000Z") == "/data/ps5medic/support/support_20261116T120000Z_key.txt" &&
+              support_path_for("../x").empty() && support_path_for("").empty(),
+          "Support: Pfade, ungueltiger Zeitstempel ergibt keinen");
+
+    Facts f;
+    f.set("smp.titles", json::array({json{{"titleid", "PPSA99991"}, {"path", "/data/homebrew/Mein Geheimes Spiel"}, {"name", "Mein Geheimes Spiel"}},
+                                     json{{"titleid", "CUSA88882"}, {"path", "/mnt/usb0/Anderes Spiel.exfat"}}}));
+    f.set("smp.images", json::array({json{{"path", "/mnt/usb0/Anderes Spiel.exfat"}}}));
+    ReportInput in;
+    in.created_utc = "20261116T120000Z";
+    in.rules_version = "2026.11.54";
+    in.facts = f;
+    Finding fd;
+    fd.rule_id = "game.test";
+    fd.severity = Severity::Warning;
+    fd.text_de = "Problem in Mein Geheimes Spiel (PPSA99991) unter 192.168.1.94 mit Konto";
+    fd.text_en = "Problem in Mein Geheimes Spiel (PPSA99991) at 192.168.1.94";
+    fd.evidence = {"/mnt/usb0/Anderes Spiel.exfat", "Log: CUSA88882 und PPSA12345 gestartet"};
+    in.findings = {fd};
+    const SupportBundle b = build_support_bundle(in, "{\"x\":\"/data/homebrew/Mein Geheimes Spiel/eboot.bin\"}\n", "+ game.test\n");
+    std::vector<ZipEntry> files;
+    CHECK(read_stored_zip(b.zip, files), "Support: ZIP ist in sich stimmig (Kopf, CRC, Verzeichnis)");
+    std::vector<std::string> names;
+    std::string all;
+    for (const auto& e : files) {
+        names.push_back(e.name);
+        all += e.data + "\n";
+    }
+    CHECK(names == std::vector<std::string>({"README.txt", "report_de.md", "report_en.md", "facts.json", "compare.txt"}), "Support: Dateien im Paket");
+    CHECK(!has(all, "Geheimes") && !has(all, "Anderes Spiel") && !has(all, "PPSA99991") && !has(all, "CUSA88882") && !has(all, "PPSA12345") && !has(all, "192.168.1.94"),
+          "Support: keine Namen, Titel-IDs oder Adressen im Paket");
+    CHECK(has(all, "[TITLE-01]") && has(all, "[GAME-01]") && has(all, "[IP]"), "Support: Platzhalter statt Originalen");
+    CHECK(has(b.key, "PPSA99991") && has(b.key, "Mein Geheimes Spiel") && has(b.key, "PPSA12345"), "Support: der Schluessel enthaelt die Originale (nur ausserhalb des Pakets)");
+    CHECK(b.titles >= 3 && b.names >= 2, "Support: Zahl der ersetzten Titel und Namen");
+    CHECK(has(files[0].data, "nicht in diesem Paket") || has(files[0].data, "not part of this package"), "Support: README erklaert den Schluessel");
+    {  // Behoben durch Reparatur im Bericht
+        ReportInput r2;
+        r2.created_utc = "20261116T120000Z";
+        r2.prev_ts = "20261116T100000Z";
+        r2.resolved = {"r.fixed", "r.other"};
+        TxnInfo tx;
+        tx.txn = "t1";
+        tx.ts = "20261116T110000Z";
+        tx.fix = "smp_set_key";
+        tx.rule = "r.fixed";
+        tx.state = "applied";
+        r2.history = {tx};
+        const std::string de = build_report(r2, ReportLang::De), en = build_report(r2, ReportLang::En);
+        CHECK(has(de, "- r.fixed – durch Reparatur: smp_set_key (20261116T110000Z)") && has(en, "- r.fixed – by repair: smp_set_key (20261116T110000Z)"), "Bericht: behoben durch Reparatur");
+        CHECK(has(de, "- r.other\n") && !has(de, "r.other – "), "Bericht: ohne Reparatur im Journal keine Verknuepfung erfunden");
+        r2.prev_ts.clear();
+        CHECK(!has(build_report(r2, ReportLang::De), "durch Reparatur"), "Bericht: ohne vorige Pruefung keine Verknuepfung");
+    }
+    const SupportBundle b2 = build_support_bundle(in, "", "");
+    std::vector<ZipEntry> f2;
+    CHECK(read_stored_zip(b2.zip, f2) && f2.size() == 3, "Support: ohne Fakten und Vergleich nur README und Berichte");
+    // Zur Gegenprobe mit einem fremden Entpacker (python3 -m zipfile -t): Datei im Temp-Ordner ablegen
+    std::ofstream(std::filesystem::temp_directory_path() / "medic_support_test.zip", std::ios::binary) << b.zip;
+    // Pseudonyme: kurze und allgemeine Namen bleiben unberuehrt
+    Pseudonyms ps;
+    ps.add_name("games");
+    ps.add_name("ab");
+    CHECK(ps.name_count() == 0 && ps.apply("games ab") == "games ab", "Support: zu kurze und allgemeine Namen werden nicht ersetzt");
+}
+
 void report_tests() {
+    support_tests();
     anonymize_tests();
     report_tests_content();
     compact_tests();

@@ -34,6 +34,7 @@ struct ReportInput {
     std::vector<Finding> findings;
     std::vector<CoverageResult> coverage;  // Pruefbereiche (nicht gepruefte stehen im Bericht)
     std::vector<std::string> resolved;     // seit der letzten Pruefung behobene Regeln (Verlauf)
+    std::string prev_ts;                   // Zeit der letzten Pruefung davor (leer: keine); Grundlage fuer "behoben durch Reparatur"
     std::vector<MetricChange> metrics;     // Messwerte mit Veraenderung (Verlauf)
     std::vector<TestResult> selftests;     // Ergebnis des letzten Selbsttests (leer: keiner gelaufen)
     std::string selftest_finished;

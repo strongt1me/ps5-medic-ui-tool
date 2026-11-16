@@ -79,6 +79,7 @@ private:
     void leave_stored();
     void open_compare(int index);
     void open_compare_latest();
+    std::vector<medic::RepairLink> cmp_repairs_;  // behobene Regeln des Vergleichs, die eine Reparatur dieser App behoben hat
     bool cmp_from_findings_ = false;  // Vergleich kam direkt aus dem Befund-Bildschirm (Kreis fuehrt dorthin zurueck)
     void open_games();
     void open_report();
@@ -261,6 +262,8 @@ private:
     bool err_from_finding_ = false;  // Code kam per Quadrat aus einem Befund: Kreis geht dorthin zurueck, kein Blaettern
 
     ReportResult report_;
+    SupportResult support_;       // Ergebnis des Support-Pakets dieser Berichtsansicht
+    bool support_done_ = false;
     medic::QrCode qr_;       // einmal beim Oeffnen kodiert, nicht in jedem Bild
     bool qr_ok_ = false;
 };

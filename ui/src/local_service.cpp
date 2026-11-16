@@ -4,6 +4,8 @@
 #include "medic/collectors.hpp"
 #include "medic/history.hpp"
 #include "medic/jsondump.hpp"
+#include "medic/support.hpp"
+#include "medic/checks.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -76,6 +78,7 @@ CheckResult LocalService::run_check() {
     // Verlauf: gegen die letzte Pruefung vergleichen, dann diese Pruefung anhaengen (ohne Schreibzugriff nur der Vergleich).
     const std::string now = clock_();
     const auto hist = medic::load_history(p_.fs());
+    prev_run_ts_ = hist.empty() ? std::string() : hist.back().ts;
     const auto metrics = medic::evaluate_metrics(rules_, facts_);
     r.resolved = medic::annotate_with_history(r.findings, hist, now);
     // "Behoben" nur, wenn die Regel auch ausgewertet werden konnte: fehlt einer ihrer Fakten (Lesefehler, USB gezogen), ist sie nicht behoben,
@@ -127,11 +130,7 @@ CheckResult LocalService::run_check() {
     // Die Fakten zu Spielen, Resten, nanoDNS, Kraken und kstuff dieses Check-ups (nur auf der Konsole, nicht im Bericht): zeigen, was Medic gelesen hat, auch wenn
     // kein Befund entstand (Laufzeit-Version in Images, Pack-Zustand, Beleg-Zeilen)
     if (saved && p_.fs_rw() && p_.fs().is_dir("/data/ps5medic")) {  // nur auf der Konsole (Medic-Ordner vorhanden) und zusammen mit dem gespeicherten Check-up
-        nlohmann::json out = nlohmann::json::object();
-        for (const char* k : {"games.runtime", "games.pack_problems", "games.index_problems", "games.noexec", "games.incomplete", "games.runtime_skipped", "leftovers.files", "games.partial_folders",
-                              "games.undo_journals", "games.fakelib_layout", "games.with_fakelib", "games.unsigned_elf", "games.flex_small", "games.playgo_missing", "games.trophy_missing", "nanodns.log.problems",
-                              "kraken.log_present", "kraken.sparse_extent", "kraken.sysex_readonly", "kraken.pkg_other", "kraken.pkg_truncated", "kraken.cache_block", "kraken.ampr_foreign", "kstuff.file", "kstuff.file_version"})
-            if (const nlohmann::json* v = facts_.get(k)) out[k] = *v;
+        nlohmann::json out = console_facts_json();
         out["ts"] = now;
         p_.fs_rw()->write_file("/data/ps5medic/last_facts.json", medic::dump_safe(out, 1) + "\n");
     }
@@ -442,11 +441,67 @@ void LocalService::selftest_abort() {
 
 bool LocalService::selftest_end(const std::vector<medic::TestResult>& results, bool cancelled) { return medic::selftest_finish(p_, clock_(), results, cancelled); }
 
+nlohmann::json LocalService::console_facts_json() const {
+    nlohmann::json out = nlohmann::json::object();
+    for (const char* k : {"games.runtime", "games.pack_problems", "games.index_problems", "games.noexec", "games.incomplete", "games.runtime_skipped", "leftovers.files", "games.partial_folders",
+                          "games.undo_journals", "games.fakelib_layout", "games.with_fakelib", "games.unsigned_elf", "games.flex_small", "games.playgo_missing", "games.trophy_missing", "nanodns.log.problems",
+                          "kraken.log_present", "kraken.sparse_extent", "kraken.sysex_readonly", "kraken.pkg_other", "kraken.pkg_truncated", "kraken.cache_block", "kraken.ampr_foreign", "kstuff.file", "kstuff.file_version"})
+        if (const nlohmann::json* v = facts_.get(k)) out[k] = *v;
+    return out;
+}
+
+SupportResult LocalService::make_support() {
+    SupportResult r;
+    const std::string ts = clock_();
+    const std::string zip_path = medic::support_path_for(ts), key_path = medic::support_key_path_for(ts);
+    if (!p_.fs_rw() || zip_path.empty()) {
+        r.error = "no_write";
+        return r;
+    }
+    medic::ReportInput in = medic::make_report_input(p_, facts_, rules_, last_findings_, ts);
+    in.resolved = last_resolved_;
+    in.prev_ts = prev_run_ts_;
+    in.metrics = last_metrics_;
+    // Vergleich mit dem vorigen Check-up (nur Regelnamen, Schweregrade, Einrichtung), wenn es einen gibt
+    std::string compare;
+    const auto list = medic::list_checks(p_.fs());
+    medic::StoredCheck a, b;
+    if (list.size() >= 2 && medic::load_check(p_.fs(), list[0].id, a) && medic::load_check(p_.fs(), list[1].id, b)) {
+        const medic::CheckDiff d = medic::compare_checks(a, b);
+        compare = "Check-up " + a.ts + " gegen " + b.ts + " / check-up " + a.ts + " vs " + b.ts + "\n";
+        for (const auto& f : d.added) compare += "+ " + f.rule_id + " (" + medic::to_string(f.severity) + ")\n";
+        std::vector<std::string> gone;
+        for (const auto& f : d.resolved) gone.push_back(f.rule_id);
+        const auto repairs = medic::repairs_between(medic::history(p_), gone, b.ts, a.ts);
+        for (const auto& f : d.resolved) {
+            compare += "- " + f.rule_id + " (" + medic::to_string(f.severity) + ")";
+            for (const auto& l : repairs)
+                if (l.rule_id == f.rule_id) compare += " by repair: " + l.fix + " (" + l.ts + ")";
+            compare += "\n";
+        }
+        for (const auto& s : d.severity_changed) compare += "~ " + s.now.rule_id + " (" + medic::to_string(s.before) + " -> " + medic::to_string(s.now.severity) + ")\n";
+        for (const auto& s : d.setup_changed) compare += "setup " + s.key + ": " + (s.from.empty() ? "-" : s.from) + " -> " + (s.to.empty() ? "-" : s.to) + "\n";
+    }
+    const medic::SupportBundle bundle = medic::build_support_bundle(in, medic::dump_safe(console_facts_json(), 1) + "\n", compare);
+    // Neue Dateien, nie ueberschreiben: gibt es sie schon (zweiter Aufruf in derselben Sekunde), wird nichts geschrieben
+    if (p_.fs().exists(zip_path) || p_.fs().exists(key_path) || !p_.fs_rw()->write_file(key_path, bundle.key) || !p_.fs_rw()->write_file(zip_path, bundle.zip)) {
+        r.error = "write_failed";
+        return r;
+    }
+    r.saved = true;
+    r.path = zip_path;
+    r.key_path = key_path;
+    r.titles = bundle.titles;
+    r.names = bundle.names;
+    return r;
+}
+
 ReportResult LocalService::make_report(medic::ReportLang lang) {
     ReportResult r;
     const std::string ts = clock_();
     medic::ReportInput in = medic::make_report_input(p_, facts_, rules_, last_findings_, ts);
     in.resolved = last_resolved_;
+    in.prev_ts = prev_run_ts_;
     in.metrics = last_metrics_;
     if (const medic::ErrorCode* e = error_codes_.find(reported_error_)) {
         in.error_code = e->id;

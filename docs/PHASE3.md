@@ -132,3 +132,16 @@ Frage von Marc: „Wird in der App auch untersucht, wenn ein Spiel nicht startet
 - `compare_checks` meldet zusätzlich **Schweregradwechsel** (dieselbe Regel, anderer Grad; steht nicht mehr unter „unverändert“) und **geänderte Einrichtung**: Firmware, Modell und Regelstand aus jedem Check-up, dazu das neue, optionale Feld `setup` der Check-up-Datei (ShadowMount+-Version, kstuff-Version, Zahl der Spiele, ampr-emu-ng-Versionen; nur Texte, keine Pfade oder Titel). Alte Dateien ohne `setup` bleiben lesbar; ihre fehlenden Einträge gelten nicht als „neu“.
 - **Direkter Einstieg:** Links auf dem Befund-Bildschirm vergleicht den jetzigen Check-up mit dem davor; Kreis führt zurück zur Befundliste. Nur lesend, keine Reparatur, kein Netz.
 - Test: `checks_archive_tests` (Schweregradwechsel, Einrichtung, alte Datei, Speichern und Laden von `setup`).
+
+### Support-Paket (16. Nov. 2026)
+
+- Im Bericht-Bildschirm legt Dreieck ein **Support-Paket** an: `/data/ps5medic/support/support_<Zeit>.zip` (ZIP ohne Kompression, `libmedic/src/support.cpp`) mit `README.txt`, `report_de.md`, `report_en.md`, `facts.json` (die gelesenen Fakten zu Spielen, Kraken, kstuff) und, wenn es einen früheren Check-up gibt, `compare.txt` (neu, behoben, Schweregrad, Einrichtung).
+- **Anonymisiert** wie der Bericht (IP/MAC, Konto-IDs, Seriennummern) und zusätzlich **pseudonymisiert**: Titel-IDs (auch PPSA/CUSA-Kennungen im Text) werden zu `[TITLE-nn]`, Namen von Spielen, Spielordnern und Images zu `[GAME-nn]`. Der **Schlüssel** (Platzhalter → Original) liegt nur als eigene Datei `support_<Zeit>_key.txt` daneben und gehört nie ins Paket. Kurze (unter 4 Zeichen) und allgemeine Namen („games“, „data“ …) werden nicht ersetzt.
+- Schreibt nur neue Dateien im eigenen Ordner (nie überschreiben, nie löschen), kein Netz, keine Spielinhalte. Zeitstempel im ZIP fest auf 1980-01-01.
+- Tests: `support_tests` in `tests/test_report.cpp` (CRC-Prüfwert, ZIP-Selbstprüfung, kein Name/keine ID/keine Adresse im Paket, Schlüssel nur außerhalb) und der Ablauf im UI-Test; Gegenprobe mit `python3 -m zipfile -t` und `unzip -t`.
+
+### „Behoben durch Reparatur“ (16. Nov. 2026)
+
+- `repairs_between` (`libmedic/src/checks.cpp`) verknüpft eine **behobene Regel** mit dem **Journal**: je Regel die jüngste Transaktion, die abgeschlossen (`applied`), nicht zurückgenommen oder abgebrochen ist und deren Zeit **nach dem früheren und höchstens beim späteren Check-up** liegt. Ohne früheren Check-up oder ohne passende Transaktion (von Hand behoben, durch ein Update) gibt es keinen Eintrag; es wird nichts dazuerfunden.
+- Angezeigt im **Vergleich** („Befund … – durch Reparatur: <Name>“), im **Bericht** (`## Seit der letzten Prüfung behoben`, mit Fix-ID und Zeit) und in `compare.txt` des Support-Pakets. Der Bericht nutzt dafür `ReportInput::prev_ts` (Zeit der Prüfung davor).
+- Nur lesend: das Journal wird nur gelesen. Tests: `checks_archive_tests` (Zeitfenster, zurückgenommen, abgebrochen, jüngste je Regel) und `support_tests` (Bericht).

@@ -50,6 +50,14 @@ struct ReportResult {
     bool truncated = false;  // die Kurzfassung laesst Befunde weg
 };
 
+// Support-Paket (ZIP, anonymisiert) und der Schluessel dazu; beides nur im eigenen Ordner /data/ps5medic/support/.
+struct SupportResult {
+    bool saved = false;
+    std::string path, key_path;
+    std::string error;  // "no_write" | "write_failed" (leer bei Erfolg)
+    std::size_t titles = 0, names = 0;  // ersetzte Titel-IDs und Namen
+};
+
 // Groesse der Kurzfassung im QR-Code: bis Version 20 (97 Module) bleibt er vom Sofa aus mit dem Handy lesbar.
 constexpr std::size_t kQrMaxBytes = 640;
 
@@ -91,6 +99,7 @@ public:
     // Bericht zum letzten Check-up: schreibt ihn (nur) nach /data/ps5medic/reports/ und liefert die QR-Kurzfassung.
     // Die UI ruft das nur auf Quadrat-Taste auf.
     virtual ReportResult make_report(medic::ReportLang lang) = 0;
+    virtual SupportResult make_support() { SupportResult r; r.error = "no_write"; return r; }  // nur der lokale Dienst schreibt
     // Manuelles Regel-Update aus einer Datei (siehe libmedic/include/medic/rule_update.hpp). check schreibt nichts; install und
     // rollback schreiben und werden von der UI nur nach ausdruecklicher Bestaetigung (Kreuz) aufgerufen. Nach Erfolg gelten die
     // neuen bzw. wiederhergestellten Regeln sofort fuer den naechsten Check-up.
@@ -187,6 +196,8 @@ public:
     std::vector<medic::GameInfo> games() override;
     medic::UndoResult undo(const std::string& txn) override;
     ReportResult make_report(medic::ReportLang lang) override;
+    SupportResult make_support() override;
+    nlohmann::json console_facts_json() const;
     medic::RuleUpdateOffer check_rule_update() override;
     medic::RuleUpdateResult install_rule_update() override;
     medic::RuleUpdateResult rollback_rule_update() override;
@@ -223,6 +234,7 @@ private:
     medic::Facts facts_;
     std::vector<medic::Finding> last_findings_;
     std::vector<std::string> last_resolved_;
+    std::string prev_run_ts_;  // Zeit der Pruefung vor der letzten (Verlauf); Grundlage fuer "behoben durch Reparatur"
     medic::Facts selftest_facts_;  // frische Fakten des laufenden Selbsttests
     std::unique_ptr<medic::TestSession> selftest_session_;
     std::string selftest_id_;

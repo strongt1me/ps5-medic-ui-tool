@@ -206,4 +206,20 @@ CheckDiff compare_checks(const StoredCheck& newer, const StoredCheck& older) {
     return d;
 }
 
+std::vector<RepairLink> repairs_between(const std::vector<TxnInfo>& journal, const std::vector<std::string>& rule_ids, const std::string& after_ts,
+                                        const std::string& until_ts) {
+    std::vector<RepairLink> out;
+    if (after_ts.empty()) return out;  // ohne frueheren Check-up ist nicht zu sagen, was seitdem geschah
+    for (const auto& id : rule_ids) {
+        const TxnInfo* best = nullptr;
+        for (const auto& t : journal) {
+            if (t.rule != id || t.state != "applied" || t.ts.empty()) continue;
+            if (t.ts <= after_ts || (!until_ts.empty() && t.ts > until_ts)) continue;
+            if (!best || t.ts > best->ts) best = &t;
+        }
+        if (best) out.push_back({id, best->fix, best->txn, best->ts});
+    }
+    return out;
+}
+
 }  // namespace medic

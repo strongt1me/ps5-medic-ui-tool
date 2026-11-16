@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/report.hpp"
 
+#include "medic/checks.hpp"
 #include "medic/history.hpp"
 
 #include <algorithm>
@@ -648,7 +649,13 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
     }
     if (!in.resolved.empty()) {
         o << (de ? "## Seit der letzten Prüfung behoben (" : "## Resolved since the last check (") << in.resolved.size() << ")\n\n";
-        for (const auto& id : in.resolved) o << "- " << id << "\n";
+        const auto links = repairs_between(in.history, in.resolved, in.prev_ts, in.created_utc);
+        for (const auto& id : in.resolved) {
+            o << "- " << id;
+            for (const auto& l : links)
+                if (l.rule_id == id) o << (de ? " – durch Reparatur: " : " – by repair: ") << l.fix << " (" << l.ts << ")";
+            o << "\n";
+        }
         o << "\n";
     }
 

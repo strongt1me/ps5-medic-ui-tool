@@ -5,6 +5,7 @@
 // Zeit bekommt die neue ein Suffix). Die Dateien liegen nur im eigenen Ordner und koennen Pfade und Titelnamen aus den Belegen enthalten
 // (wie die Berichte); sie verlassen die Konsole nur, wenn jemand sie abholt. Der Verlauf fuer Vergleiche und Dringlichkeit bleibt history.hpp.
 #pragma once
+#include "medic/fixes.hpp"
 #include "medic/history.hpp"
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
@@ -62,5 +63,15 @@ struct CheckDiff {
     std::vector<SetupChange> setup_changed;
 };
 CheckDiff compare_checks(const StoredCheck& newer, const StoredCheck& older);
+
+// "Behoben durch Reparatur X": Welche der behobenen Regeln hat eine Reparatur dieser App behoben? Gesucht wird im Journal (history()) je Regel die
+// jungste abgeschlossene, nicht zurueckgenommene Transaktion, deren Zeit nach `after_ts` (frueherer Check-up) und hoechstens bei `until_ts`
+// (spaeterer Check-up; leer = offen) liegt. Eine Regel ohne solche Transaktion wurde anders behoben (von Hand, durch ein Update) und bekommt
+// keinen Eintrag: nichts wird dazuerfunden.
+struct RepairLink {
+    std::string rule_id, fix, txn, ts;
+};
+std::vector<RepairLink> repairs_between(const std::vector<TxnInfo>& journal, const std::vector<std::string>& rule_ids, const std::string& after_ts,
+                                        const std::string& until_ts);
 
 }  // namespace medic
