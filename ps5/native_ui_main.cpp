@@ -290,6 +290,9 @@ public:
     bool quit = false;
     int progress = 0;  // letzter 'G'-Wert des Dienstes (0..100)
     std::size_t received = 0;  // bisher gelesene Bytes (zeigt, dass der Dienst noch sendet)
+    bool hello_seen = false;   // das Hallo des Dienstes ist angekommen
+    // Build-Kennung des Dienstes aus dem Hallo; leer bei einem Dienst ohne Kennung (aelter als diese Pruefung)
+    std::string service_build() const { return hello_got_ > 4 ? std::string(reinterpret_cast<const char*>(hello_) + 4, hello_got_ - 4) : std::string(); }
 
     // false: Verbindung weg
     bool pump(int fd) {
@@ -370,6 +373,8 @@ private:
             }
             return;
         }
+        if (type_ == medic::proto::kHello)  // das Hallo samt Build-Kennung des Dienstes aufheben (kommt in beliebig vielen Stuecken an)
+            for (std::size_t i = 0; i < n && hello_got_ < sizeof hello_; ++i) hello_[hello_got_++] = skip_[i];
         body_left_ -= n;
         if (type_ == medic::proto::kBand) band_off_ += n;
     }
@@ -379,6 +384,7 @@ private:
             in_frame_ = false;
         }
         if (type_ == medic::proto::kQuit) quit = true;
+        if (type_ == medic::proto::kHello) hello_seen = true;
         if (type_ == medic::proto::kProgress && skip_[0] <= 100) progress = skip_[0];
         head_got_ = 0;
         type_ = 0;
@@ -388,6 +394,8 @@ private:
     std::uint8_t head_[5] = {};
     std::uint8_t sub_[4] = {};
     std::uint8_t skip_[512] = {};
+    std::uint8_t hello_[4 + medic::proto::kMaxBuildId] = {};
+    std::size_t hello_got_ = 0;
     std::size_t head_got_ = 0, sub_got_ = 0, body_left_ = 0, band_off_ = 0;
     char type_ = 0;
     bool in_frame_ = false;  // Streifen eines Bildes empfangen, das abschliessende 'P' fehlt noch
@@ -528,6 +536,8 @@ int main() {
     int sock = -1;
     bool first_frame_logged = false;
     std::uint32_t connected_at = 0;  // Zeitpunkt der Verbindung bzw. der letzten Daten des Dienstes: kommt 60 s lang nichts und kein erstes Bild, bedient der Dienst diese Verbindung nicht
+    bool build_checked = false;        // die Build-Kennung des Dienstes ist auf dieser Verbindung schon verglichen
+    bool restarted_for_build = false;  // den alten Dienst gab es schon einmal zu beenden: kein zweiter Versuch (keine Endlosschleife, falls die Kennungen nie gleich werden)
     std::size_t seen_bytes = 0;      // reader.received beim letzten Blick (Daten zuruecksetzen connected_at: eine App im Hintergrund hat nach der Rueckkehr volle Puffer, keinen haengenden Dienst)
     for (;;) {
         // --- Verbindung herstellen (notfalls den Dienst starten) ---
@@ -556,6 +566,7 @@ int main() {
                 continue;
             }
             trace("Mit dem Dienst verbunden");
+            build_checked = false;
             connected_at = now_ms();
             reader = StreamReader(screen.data());
             seen_bytes = 0;
@@ -619,6 +630,26 @@ int main() {
             show_status(tr(kMsgLost), tr(kMsgRetry));
             wait_with_circle(2500);  // lesbar stehen lassen, bevor der neue Versuch das Bild ersetzt
             continue;
+        }
+        // Versionsabgleich: laeuft noch ein Dienst aus einer aelteren Fassung (nach einem Update, App nicht ordentlich beendet), wuerde er bedient und der neue nie geladen
+        if (reader.hello_seen && !build_checked) {
+            build_checked = true;
+            const std::string theirs = reader.service_build();
+            if (theirs != medic::proto::kBuildId && !restarted_for_build) {
+                restarted_for_build = true;
+                const std::string why = "Dienst hat eine andere Fassung (" + (theirs.empty() ? std::string("ohne Kennung") : theirs) + ") als die App (" + medic::proto::kBuildId + "): beende ihn und starte den neuen";
+                trace(why.c_str());
+                (void)medic::proto::send_message(sock, medic::proto::kShutdown, nullptr, 0);
+                close(sock);
+                sock = -1;
+                for (int i = 0; i < 40; ++i) {  // bis zu vier Sekunden warten, bis der alte Dienst den Port freigibt
+                    const int s = medic::proto::connect_local(medic::proto::kPort, 1);
+                    if (s < 0) break;
+                    close(s);
+                    (void)sceKernelUsleep(100000);
+                }
+                continue;
+            }
         }
         if (reader.frame_ready) {
             reader.frame_ready = false;

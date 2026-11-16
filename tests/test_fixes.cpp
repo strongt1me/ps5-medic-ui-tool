@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Tests der Fix-Engine: SHA-256, INI-Editor, Whitelist, apply -> undo = identischer Dateibaum, Rollback, Journal.
 #include "check.hpp"
+#include "medic/ignore.hpp"
 #include "medic/checks.hpp"
 #include "medic/collectors.hpp"
 #include "medic/casename.hpp"
@@ -1086,8 +1087,41 @@ void backup_preview_tests() {
     CHECK(none.copies == 0 && none.bytes == 0, "Sicherungs-Vorschau: leerer Plan");
 }
 
+// Befunde ausblenden: Regeln der Liste, Schweregrad, Speichern und Laden
+void ignore_tests() {
+    CHECK(can_hide(Severity::Warning) && can_hide(Severity::Info) && !can_hide(Severity::Critical), "Ausblenden: kritisch nie");
+    std::vector<IgnoreEntry> e;
+    CHECK(!is_hidden("r.a", Severity::Warning, e), "Ausblenden: ohne Eintrag ist nichts ausgeblendet");
+    e = set_hidden(e, "r.a", Severity::Warning, "20261116T100000Z", true);
+    CHECK(is_hidden("r.a", Severity::Warning, e) && is_hidden("r.a", Severity::Info, e), "Ausblenden: gilt beim Schweregrad von damals und darunter");
+    CHECK(!is_hidden("r.a", Severity::Critical, e) && !is_hidden("r.b", Severity::Warning, e), "Ausblenden: nicht fuer Kritisch und nicht fuer andere Regeln");
+    e = set_hidden(e, "r.i", Severity::Info, "20261116T100100Z", true);
+    CHECK(!is_hidden("r.i", Severity::Warning, e), "Ausblenden: ein Hinweis, der zur Warnung wird, erscheint wieder");
+    CHECK(set_hidden(e, "r.c", Severity::Critical, "t", true).size() == e.size(), "Ausblenden: kritisch wird abgelehnt");
+    e = set_hidden(e, "r.a", Severity::Warning, "20261116T110000Z", false);
+    CHECK(e.size() == 2 && !e[0].active && !is_hidden("r.a", Severity::Warning, e), "Ausblenden: wieder anzeigen laesst den Eintrag als Spur stehen");
+    e = set_hidden(e, "r.a", Severity::Info, "20261116T120000Z", true);
+    CHECK(e.size() == 2 && e[0].active && e[0].severity == Severity::Info && !is_hidden("r.a", Severity::Warning, e), "Ausblenden: erneutes Ausblenden gilt fuer den neuen Schweregrad");
+
+    TempCopy tmp("a1_neg");
+    auto p = make_snapshot_platform(tmp.dir.string(), true);
+    CHECK(load_ignored(p->fs()).empty(), "Ausblenden: ohne Datei leer");
+    CHECK(save_ignored(*p, e), "Ausblenden: speichern");
+    const auto back = load_ignored(p->fs());
+    CHECK(back.size() == 2 && back[0].rule_id == "r.a" && back[0].active && back[0].severity == Severity::Info && back[1].rule_id == "r.i", "Ausblenden: Laden ergibt dieselbe Liste");
+    auto ro = make_snapshot_platform(tmp.dir.string(), false);
+    CHECK(!save_ignored(*ro, e), "Ausblenden: ohne Schreibzugriff wird nichts gespeichert");
+    {
+        std::filesystem::create_directories(tmp.dir / "fs/data/ps5medic");
+        std::ofstream(tmp.dir / "fs/data/ps5medic/ignored.json", std::ios::binary) << "{kaputt";
+        auto p2 = make_snapshot_platform(tmp.dir.string(), true);
+        CHECK(load_ignored(p2->fs()).empty(), "Ausblenden: kaputte Datei blendet nichts aus");
+    }
+}
+
 void fix_tests() {
     backup_preview_tests();
+    ignore_tests();
     export_tests();
     sha_tests();
     fw_tests();

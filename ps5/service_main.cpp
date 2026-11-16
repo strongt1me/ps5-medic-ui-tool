@@ -201,10 +201,12 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
     progress(95);
 
     trace("Sitzung: Regeln und Fehlercodes geladen, Oberflaeche und Bilder bereit");
-    std::uint8_t hello[4];
+    std::uint8_t hello[4 + proto::kMaxBuildId];
     proto::put16(hello, proto::kWidth);
     proto::put16(hello + 2, proto::kHeight);
-    if (!proto::send_message(client, proto::kHello, hello, sizeof hello)) return false;
+    std::size_t hello_len = 4;
+    for (const char* b = proto::kBuildId; *b && hello_len < sizeof hello; ++b) hello[hello_len++] = static_cast<std::uint8_t>(*b);  // Build-Kennung fuer den Versionsabgleich der App
+    if (!proto::send_message(client, proto::kHello, hello, hello_len)) return false;
 
     Canvas canvas(proto::kWidth, proto::kHeight);
     std::vector<std::uint32_t> sent(static_cast<std::size_t>(proto::kWidth) * proto::kHeight, 0);

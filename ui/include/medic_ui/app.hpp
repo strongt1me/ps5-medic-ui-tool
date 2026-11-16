@@ -24,7 +24,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, CheckList, CheckCompare, GameList, GameDetail, Splash };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, CheckList, CheckCompare, GameList, GameDetail, Hidden, Splash };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
 
@@ -71,6 +71,12 @@ private:
 
     void start_check();
     void begin_fix(int index, Screen origin);
+    // Befunde ausblenden: all_findings_ = alle Befunde des Check-ups, result_.findings = die sichtbaren, hidden_ = die ausgeblendeten (Reihenfolge wie im Check-up)
+    void adopt_findings();         // nach einem Check-up: Liste der Ausblendungen laden und aufteilen
+    void refilter();               // result_.findings/hidden_ aus all_findings_ und ignore_ neu bilden
+    void hide_current(bool from_detail);
+    void restore_hidden(int index);
+    void draw_hidden(Canvas& c) const;
     void move_selection(int& sel, int& top, int count, int visible, int delta);
     void page_selection(int& sel, int& top, int count, int visible, int dir);
     void open_history();
@@ -261,6 +267,9 @@ private:
     std::string err_typed_;
     bool err_from_finding_ = false;  // Code kam per Quadrat aus einem Befund: Kreis geht dorthin zurueck, kein Blaettern
 
+    std::vector<medic::Finding> all_findings_, hidden_;
+    std::vector<medic::IgnoreEntry> ignore_;
+    int hid_sel_ = 0, hid_top_ = 0;
     ReportResult report_;
     SupportResult support_;       // Ergebnis des Support-Pakets dieser Berichtsansicht
     bool support_done_ = false;

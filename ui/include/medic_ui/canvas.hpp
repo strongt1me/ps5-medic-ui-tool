@@ -15,7 +15,7 @@ constexpr Color rgb(unsigned r, unsigned g, unsigned b) { return 0xFF000000u | (
 // Mischt `src` (mit eigenem Alpha) ueber `dst`; `cover` (0..255) skaliert das Alpha zusaetzlich (Kantenglaettung).
 Color blend(Color dst, Color src, unsigned cover = 255);
 
-enum class PadGlyph { Cross, Circle, Square, Triangle, UpDown, LeftRight, Shoulders };
+enum class PadGlyph { Cross, Circle, Square, Triangle, UpDown, LeftRight, Shoulders, Options };
 
 class Canvas {
 public:

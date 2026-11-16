@@ -129,6 +129,13 @@ $(PS5_SERVICE_ELF): $(PS5_SERVICE_OBJS)
 	@mkdir -p $(dir $@)
 	$(PS5_CXX) $^ -lkernel_sys -lSceSystemService -o $@
 
+# Build-Kennung von App und Dienst (ps5/service_protocol.hpp): Hash der Quellen (tools/build_id.sh), dieselbe Regel wie in title/build_native_ui.sh.
+MEDIC_BUILD_ID := $(shell bash tools/build_id.sh 2>/dev/null || echo dev)
+# Die Kennung steckt im Objekt: aendert sie sich, muss service_main.o neu entstehen (der Stempel wird nur bei einer Aenderung neu geschrieben).
+$(shell mkdir -p $(PS5_BUILD); echo "$(MEDIC_BUILD_ID)" | cmp -s - $(PS5_BUILD)/build_id.stamp || echo "$(MEDIC_BUILD_ID)" > $(PS5_BUILD)/build_id.stamp)
+$(PS5_BUILD)/ps5/service_main.o: $(PS5_BUILD)/build_id.stamp
+$(PS5_BUILD)/ps5/service_main.o: private PS5_CXXFLAGS += '-DMEDIC_BUILD_ID="$(MEDIC_BUILD_ID)"'
+
 ps5-service: $(PS5_SERVICE_ELF)
 
 # Startbild: ui/assets/splash.jpg steckt per .incbin im Objekt (docs/PHASE3.md)

@@ -171,6 +171,11 @@ void Canvas::draw_pad_glyph(PadGlyph g, int cx, int cy, int size, Color c) {
             segs = {{ax, ay, bx, by}, {bx, by, cx2, by}, {cx2, by, ax, ay}};
             break;
         }
+        case PadGlyph::Options: {  // drei waagerechte Striche (wie das Menue-Zeichen der Options-Taste)
+            const float k = 0.30f * s, d = 0.20f * s;
+            segs = {{fx - k, fy - d, fx + k, fy - d}, {fx - k, fy, fx + k, fy}, {fx - k, fy + d, fx + k, fy + d}};
+            break;
+        }
         case PadGlyph::UpDown: {
             const float k = 0.20f * s;
             segs = {{fx - k, fy - 0.14f * s, fx, fy - 0.34f * s}, {fx, fy - 0.34f * s, fx + k, fy - 0.14f * s},

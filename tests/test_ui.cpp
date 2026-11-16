@@ -35,6 +35,7 @@ struct FakeService : IMedicService {
     FixPlan plan;
     ApplyResult apply_result{true, "T1", ""};
     std::vector<TxnInfo> hist;
+    std::vector<IgnoreEntry> ign;  // Ausblendungen im Speicher
     UndoResult undo_result{true, ""};
     int checks = 0, plans = 0, applies = 0, undos = 0, reports = 0;
     int selftest_begins = 0, selftest_runs = 0, selftest_ends = 0;
@@ -147,6 +148,12 @@ struct FakeService : IMedicService {
     }
     std::string read_text(const std::string&) override { return "a=1\nb=2\n"; }
     std::vector<TxnInfo> history() override { return hist; }
+    std::vector<IgnoreEntry> ignored() override { return ign; }
+    bool set_hidden(const std::string& rule_id, Severity sev, bool hide) override {
+        if (hide && !can_hide(sev)) return false;
+        ign = ::medic::set_hidden(ign, rule_id, sev, "20261116T120000Z", hide);
+        return true;
+    }
     UndoResult undo(const std::string& t) override {
         ++undos;
         last_undo = t;
@@ -709,6 +716,40 @@ void edge_tests() {
     a.render(cv);
     press(a, {Button::Cross, Button::Down, Button::Up});
     CHECK(a.screen() == App::Screen::History, "Edge: Kreuz im leeren Verlauf tut nichts");
+
+    // Befunde ausblenden: Options blendet Warnung/Hinweis aus, Kritisch nie; Rechts zeigt die Liste, Kreuz dort zeigt wieder an
+    {
+        FakeService hs;
+        hs.result.findings = {mk_finding("h.crit", Severity::Critical, false), mk_finding("h.warn", Severity::Warning, false), mk_finding("h.info", Severity::Info, false)};
+        App h(hs);
+        Canvas hc(App::kWidth, App::kHeight);
+        run_check_via_ui(h, hc);
+        CHECK(h.finding_count() == 3 && h.screen() == App::Screen::Findings, "Ausblenden: drei sichtbare Befunde");
+        press(h, {Button::Options});
+        CHECK(h.finding_count() == 3 && hs.ign.empty(), "Ausblenden: ein kritischer Befund laesst sich nicht ausblenden");
+        press(h, {Button::Down, Button::Options});
+        CHECK(h.finding_count() == 2 && hs.ign.size() == 1 && hs.ign[0].rule_id == "h.warn", "Ausblenden: die Warnung ist weg und gemerkt");
+        h.render(hc);
+        write_png((std::filesystem::temp_directory_path() / "medic_findings_chip.png").string(), hc, 2);  // Sichtpruefung: Chip "Ausgeblendet 1"
+        press(h, {Button::Right});
+        CHECK(h.screen() == App::Screen::Hidden, "Ausblenden: Rechts oeffnet die Liste der ausgeblendeten");
+        h.render(hc);
+        write_png((std::filesystem::temp_directory_path() / "medic_hidden_list.png").string(), hc, 2);
+        press(h, {Button::Cross});
+        CHECK(h.screen() == App::Screen::Findings && h.finding_count() == 3 && !hs.ign[0].active, "Ausblenden: Wieder anzeigen bringt den Befund zurueck (Eintrag bleibt inaktiv)");
+        press(h, {Button::Down, Button::Down, Button::Options});
+        CHECK(h.finding_count() == 2, "Ausblenden: auch ein Hinweis laesst sich ausblenden");
+        press(h, {Button::Right, Button::Circle});
+        CHECK(h.screen() == App::Screen::Findings, "Ausblenden: Kreis fuehrt aus der Liste zurueck");
+        // Nach einem neuen Check-up bleibt der Befund ausgeblendet; Steigt der Schweregrad, erscheint er wieder
+        press(h, {Button::Circle});
+        run_check_via_ui(h, hc);
+        CHECK(h.finding_count() == 2, "Ausblenden: gilt auch beim naechsten Check-up");
+        hs.result.findings[2].severity = Severity::Warning;
+        press(h, {Button::Circle});
+        run_check_via_ui(h, hc);
+        CHECK(h.finding_count() == 3, "Ausblenden: ein hoeherer Schweregrad zeigt den Befund wieder");
+    }
 
     // Vorschau mit mehreren Aenderungen verschiedener Art: Sicherungszeile je Aenderung und Summe unten, nichts ueberlappt (Bild zur Sichtpruefung im Temp-Ordner)
     {
@@ -3219,6 +3260,11 @@ void checks_archive_tests() {
             CHECK(count_files(t.dir / "fs/data/ps5medic/support") == before + 2, "Support: kein zweites Paket durch erneutes Druecken");
             press(app, {Button::Circle});
             CHECK(app.screen() == App::Screen::Findings, "Support: Kreis fuehrt zurueck");
+            // Ausblenden ueber den echten Dienst: Datei entsteht, Warnung ja, kritisch nein
+            CHECK(s2.set_hidden("r.test", Severity::Warning, true) && std::filesystem::exists(t.dir / "fs/data/ps5medic/ignored.json") && s2.ignored().size() == 1 && s2.ignored()[0].rule_id == "r.test",
+                  "Ausblenden: der Dienst speichert die Ausblendung in ignored.json");
+            CHECK(!s2.set_hidden("r.crit", Severity::Critical, true) && s2.ignored().size() == 1, "Ausblenden: der Dienst lehnt kritische Befunde ab");
+            CHECK(s2.set_hidden("r.test", Severity::Warning, false) && !s2.ignored().empty() && !s2.ignored()[0].active, "Ausblenden: Wieder anzeigen macht den Eintrag inaktiv");
         }
         press(app, {Button::Circle, Button::Down, Button::Cross});
         CHECK(app.screen() == App::Screen::CheckList, "Check-up-Verlauf: Start -> Verlauf zeigt die Check-ups");

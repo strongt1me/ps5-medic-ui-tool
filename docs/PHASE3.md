@@ -145,3 +145,11 @@ Frage von Marc: „Wird in der App auch untersucht, wenn ein Spiel nicht startet
 - `repairs_between` (`libmedic/src/checks.cpp`) verknüpft eine **behobene Regel** mit dem **Journal**: je Regel die jüngste Transaktion, die abgeschlossen (`applied`), nicht zurückgenommen oder abgebrochen ist und deren Zeit **nach dem früheren und höchstens beim späteren Check-up** liegt. Ohne früheren Check-up oder ohne passende Transaktion (von Hand behoben, durch ein Update) gibt es keinen Eintrag; es wird nichts dazuerfunden.
 - Angezeigt im **Vergleich** („Befund … – durch Reparatur: <Name>“), im **Bericht** (`## Seit der letzten Prüfung behoben`, mit Fix-ID und Zeit) und in `compare.txt` des Support-Pakets. Der Bericht nutzt dafür `ReportInput::prev_ts` (Zeit der Prüfung davor).
 - Nur lesend: das Journal wird nur gelesen. Tests: `checks_archive_tests` (Zeitfenster, zurückgenommen, abgebrochen, jüngste je Regel) und `support_tests` (Bericht).
+
+### Befunde ausblenden (16. Nov. 2026)
+
+- Warnungen und Hinweise, die man nicht selbst beheben kann, lassen sich **ausblenden** (Marc, 16. Nov.): **Options** auf der Befundliste oder im Detail. **Kritische Befunde lassen sich nicht ausblenden.** Auf der Befundliste zeigt ein Chip „Ausgeblendet n“; **Rechts** öffnet die Liste der ausgeblendeten Befunde, **Kreuz** dort zeigt einen wieder an.
+- Gespeichert wird je **Regel** in `/data/ps5medic/ignored.json` (`libmedic/src/ignore.cpp`): Regel-ID, Schweregrad beim Ausblenden, Zeit, aktiv. **Nichts wird gelöscht**: „Wieder anzeigen“ setzt den Eintrag auf inaktiv. Ohne Datei oder bei kaputtem Inhalt wird nichts ausgeblendet.
+- **Nur die Anzeige** ändert sich. Gespeicherte Check-ups, Verlauf, Bericht, Support-Paket und der Vergleich enthalten weiter **alle** Befunde (Medic soll nichts verschweigen). Die Prüfung nach einer Reparatur („behoben?“) sieht auch eine ausgeblendete Regel.
+- **Steigt der Schweregrad** (Hinweis → Warnung → kritisch), erscheint der Befund wieder: ausgeblendet gilt nur für den Schweregrad von damals und darunter. Ein alter Check-up (Ansicht „Verlauf“) zeigt immer alle Befunde.
+- Tests: `ignore_tests` (Regeln, Speichern, Laden, kaputte Datei), UI-Ablauf in `tests/test_ui.cpp`, Speichern über den Dienst.

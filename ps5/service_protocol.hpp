@@ -3,7 +3,7 @@
 // fuehrt Reparaturen aus) ueber TCP auf 127.0.0.1. Siehe docs/NATIVE.md. Gemeinsam fuer beide Seiten; nur Standardbibliothek und POSIX-Sockets.
 //
 // Aufbau jeder Nachricht: u8 Typ, u32 Laenge (little endian), danach `Laenge` Bytes.
-//   Dienst -> App:  'H' Hallo       (u16 Breite, u16 Hoehe)
+//   Dienst -> App:  'H' Hallo       (u16 Breite, u16 Hoehe, danach optional die Build-Kennung des Dienstes als ASCII-Text; fehlt sie, ist der Dienst aelter)
 //                   'B' Streifen    (u16 y0, u16 Zeilen, dann Zeilen*Breite ARGB-Pixel, 0xAARRGGBB little endian)
 //                   'P' Bild fertig (leer): jetzt anzeigen
 //                   'Q' Ende        (leer): die Oberflaeche wurde beendet, App schliessen
@@ -23,6 +23,14 @@
 #include <unistd.h>
 
 namespace medic::proto {
+
+// Build-Kennung: Makefile und title/build_native_ui.sh setzen dieselbe Kennung (git-Stand, "+" bei ungesicherten Aenderungen) in App und Dienst. Der Dienst nennt sie
+// im Hallo; weicht sie von der der App ab, beendet die App den alten Dienst und sendet den neuen (einmal je Start). Ohne Angabe "dev".
+#ifndef MEDIC_BUILD_ID
+#define MEDIC_BUILD_ID "dev"
+#endif
+constexpr const char* kBuildId = MEDIC_BUILD_ID;
+constexpr std::size_t kMaxBuildId = 40;  // laenger wird abgeschnitten (Hallo ist 4 Byte plus Kennung)
 
 constexpr int kPort = 9060;
 constexpr int kLoaderPort = 9021;

@@ -40,6 +40,7 @@ add_library(medic STATIC
   libmedic/src/engine.cpp
   libmedic/src/diff.cpp
   libmedic/src/report.cpp
+  libmedic/src/ignore.cpp
   libmedic/src/support.cpp
   libmedic/src/rule_update.cpp
   libmedic/src/qr.cpp

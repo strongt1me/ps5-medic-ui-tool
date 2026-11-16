@@ -13,6 +13,7 @@
 #include "medic/rule_download.hpp"
 #include "medic/rule_update.hpp"
 #include "medic/history.hpp"
+#include "medic/ignore.hpp"
 #include "medic/rules.hpp"
 #include "medic/selftest.hpp"
 
@@ -85,6 +86,9 @@ public:
     virtual medic::ApplyResult apply_fix(const medic::FixPlan& plan) = 0;
     virtual std::string read_text(const std::string& path) = 0;  // fuer die Diff-Vorschau; leer, wenn nicht lesbar
     virtual std::vector<medic::TxnInfo> history() = 0;
+    // Befunde ausblenden (nur die Anzeige; Verlauf, Check-up-Dateien und Bericht behalten alle Befunde). Der Standard speichert nichts.
+    virtual std::vector<medic::IgnoreEntry> ignored() { return {}; }
+    virtual bool set_hidden(const std::string& /*rule_id*/, medic::Severity /*severity*/, bool /*hide*/) { return false; }
     // Archiv der Check-ups (libmedic/include/medic/checks.hpp): jeder Check-up einzeln, nur lesend; neueste zuerst.
     virtual std::vector<medic::CheckSummary> checks() { return {}; }
     virtual bool load_check(const std::string& id, medic::StoredCheck& out) {
@@ -197,6 +201,8 @@ public:
     medic::UndoResult undo(const std::string& txn) override;
     ReportResult make_report(medic::ReportLang lang) override;
     SupportResult make_support() override;
+    std::vector<medic::IgnoreEntry> ignored() override;
+    bool set_hidden(const std::string& rule_id, medic::Severity severity, bool hide) override;
     nlohmann::json console_facts_json() const;
     medic::RuleUpdateOffer check_rule_update() override;
     medic::RuleUpdateResult install_rule_update() override;

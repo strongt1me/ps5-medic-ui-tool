@@ -450,6 +450,14 @@ nlohmann::json LocalService::console_facts_json() const {
     return out;
 }
 
+std::vector<medic::IgnoreEntry> LocalService::ignored() { return medic::load_ignored(p_.fs()); }
+
+bool LocalService::set_hidden(const std::string& rule_id, medic::Severity severity, bool hide) {
+    if (hide && !medic::can_hide(severity)) return false;  // kritische Befunde bleiben sichtbar
+    const std::string ts = clock_();
+    return medic::save_ignored(p_, medic::set_hidden(medic::load_ignored(p_.fs()), rule_id, severity, ts, hide));
+}
+
 SupportResult LocalService::make_support() {
     SupportResult r;
     const std::string ts = clock_();

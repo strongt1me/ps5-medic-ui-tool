@@ -38,7 +38,7 @@ std::string backup_line(const Strings& S, const medic::BackupInfo& b) {
 
 
 constexpr int W = App::kWidth, H = App::kHeight, M = 96;
-constexpr int kListVisible = 4, kHistVisible = 6, kErrVisible = 8, kChkRows = 7, kChkBigH = 124, kChkToggleH = 64, kChkRowH = 76, kCmpVisible = 13, kGameVisible = 8, kGdVisible = 5;
+constexpr int kListVisible = 4, kHidVisible = 6, kHistVisible = 6, kErrVisible = 8, kChkRows = 7, kChkBigH = 124, kChkToggleH = 64, kChkRowH = 76, kCmpVisible = 13, kGameVisible = 8, kGdVisible = 5;
 
 const Color kBg = rgb(14, 18, 24), kPanel = rgb(23, 29, 38), kPanelHi = rgb(33, 42, 56), kLine = rgb(42, 52, 66);
 const Color kText = rgb(232, 237, 242), kDim = rgb(141, 153, 168), kAccent = rgb(76, 154, 255);
@@ -608,6 +608,44 @@ void App::open_compare_latest() {
     if (screen_ == Screen::CheckCompare) cmp_from_findings_ = true;
 }
 
+void App::adopt_findings() {
+    all_findings_ = result_.findings;
+    ignore_ = svc_.ignored();
+    refilter();
+}
+
+void App::refilter() {
+    result_.findings.clear();
+    hidden_.clear();
+    for (const auto& f : all_findings_) (medic::is_hidden(f.rule_id, f.severity, ignore_) ? hidden_ : result_.findings).push_back(f);
+    const int n = static_cast<int>(result_.findings.size());
+    sel_ = std::clamp(sel_, 0, std::max(n - 1, 0));
+    top_ = std::clamp(top_, 0, std::max(n - 1, 0));
+    const int hn = static_cast<int>(hidden_.size());
+    hid_sel_ = std::clamp(hid_sel_, 0, std::max(hn - 1, 0));
+    hid_top_ = std::clamp(hid_top_, 0, std::max(hn - 1, 0));
+}
+
+// Den gewaehlten Befund ausblenden (nur Warnungen und Hinweise, nie im Stand eines alten Check-ups)
+void App::hide_current(bool from_detail) {
+    if (viewing_old_ || sel_ < 0 || sel_ >= static_cast<int>(result_.findings.size())) return;
+    const medic::Finding f = result_.findings[static_cast<std::size_t>(sel_)];
+    if (!medic::can_hide(f.severity)) return;
+    if (!svc_.set_hidden(f.rule_id, f.severity, true)) return;
+    ignore_ = svc_.ignored();
+    refilter();
+    if (from_detail) screen_ = Screen::Findings;
+}
+
+void App::restore_hidden(int index) {
+    if (index < 0 || index >= static_cast<int>(hidden_.size())) return;
+    const medic::Finding f = hidden_[static_cast<std::size_t>(index)];
+    if (!svc_.set_hidden(f.rule_id, f.severity, false)) return;
+    ignore_ = svc_.ignored();
+    refilter();
+    if (hidden_.empty()) screen_ = Screen::Findings;
+}
+
 void App::open_games() {
     games_ = svc_.games();
     game_sel_ = game_top_ = gd_sel_ = gd_top_ = 0;
@@ -793,6 +831,8 @@ void App::finish_updates() {
     if (rules_ok) {
         has_result_ = false;
         result_ = CheckResult{};
+        all_findings_.clear();
+        hidden_.clear();
         sel_ = top_ = 0;
     }
 }
@@ -874,7 +914,13 @@ void App::handle(Button b) {
             } else if (b == Button::Triangle) begin_fix(sel_, Screen::Findings);
             else if (b == Button::Left) {
                 if (!viewing_old_) open_compare_latest();
-            } else if (b == Button::Square) {
+            } else if (b == Button::Right) {
+                if (!viewing_old_ && !hidden_.empty()) {
+                    hid_sel_ = hid_top_ = 0;
+                    screen_ = Screen::Hidden;
+                }
+            } else if (b == Button::Options) hide_current(false);
+            else if (b == Button::Square) {
                 if (!viewing_old_) open_report();
             } else if (b == Button::Circle) {
                 if (viewing_old_) leave_stored();
@@ -889,7 +935,9 @@ void App::handle(Button b) {
                 if (!viewing_old_) begin_fix(sel_, Screen::Detail);
             }
             else if (b == Button::Square) open_error_for_finding();
-            else if (b == Button::Circle) screen_ = detail_from_game_ ? Screen::GameDetail : Screen::Findings;
+            else if (b == Button::Options) {
+                if (!detail_from_game_) hide_current(true);  // aus dem Spiel-Detail nicht: dort steht ein Befund fuer genau ein Spiel
+            } else if (b == Button::Circle) screen_ = detail_from_game_ ? Screen::GameDetail : Screen::Findings;
             break;
         case Screen::FixPreview:
             if (b == Button::Up || b == Button::L1) {  // viele Aenderungen: blaettern (Kreuz wendet immer ALLE an, die Vorschau muss sie zeigen koennen); L1/R1 springen eine Seite
@@ -980,6 +1028,16 @@ void App::handle(Button b) {
                     }
                 }
             } else if (b == Button::Circle) screen_ = Screen::GameList;
+            break;
+        }
+        case Screen::Hidden: {
+            const int hn = static_cast<int>(hidden_.size());
+            if (b == Button::Up) move_selection(hid_sel_, hid_top_, hn, kHidVisible, -1);
+            else if (b == Button::Down) move_selection(hid_sel_, hid_top_, hn, kHidVisible, 1);
+            else if (b == Button::L1) page_selection(hid_sel_, hid_top_, hn, kHidVisible, -1);
+            else if (b == Button::R1) page_selection(hid_sel_, hid_top_, hn, kHidVisible, 1);
+            else if (b == Button::Cross) restore_hidden(hid_sel_);
+            else if (b == Button::Circle) screen_ = Screen::Findings;
             break;
         }
         case Screen::CheckCompare: {
@@ -1192,6 +1250,7 @@ void App::update() {
         pending_check_ = false;
         result_ = run_check_with_progress();
         has_result_ = true;
+        adopt_findings();
         refresh_game_names();
         sel_ = top_ = 0;
         screen_ = Screen::Findings;
@@ -1204,9 +1263,10 @@ void App::update() {
     if (verify_ == Verify::Pending && verify_rendered_ && screen_ == Screen::FixDone) {  // Re-Detect nach der Reparatur
         result_ = svc_.run_check();
         has_result_ = true;
+        const bool still = std::any_of(result_.findings.begin(), result_.findings.end(), [&](const medic::Finding& f) { return f.rule_id == verify_rule_; });  // vor dem Ausblenden: auch eine ausgeblendete Regel zaehlt
+        adopt_findings();
         refresh_game_names();
         sel_ = top_ = 0;
-        const bool still = std::any_of(result_.findings.begin(), result_.findings.end(), [&](const medic::Finding& f) { return f.rule_id == verify_rule_; });
         verify_ = still ? Verify::Persists : Verify::Fixed;
     }
     if (pending_download_ && download_rendered_) {  // erst ausfuehren, wenn "Lade herunter ..." sichtbar war
@@ -1250,6 +1310,7 @@ void App::render(Canvas& c) const {
         case Screen::UndoConfirm: draw_undo_confirm(c); break;
         case Screen::CheckList: draw_checklist(c); break;
         case Screen::CheckCompare: draw_compare(c); break;
+        case Screen::Hidden: draw_hidden(c); break;
         case Screen::GameList: draw_gamelist(c); break;
         case Screen::GameDetail: draw_gamedetail(c); break;
         case Screen::Splash: break;  // unten: das Bild ersetzt alles
@@ -1725,8 +1786,14 @@ void App::draw_findings(Canvas& c) const {
                 ty += body().line_height() + 6;
             }
         }
+        if (!viewing_old_ && !hidden_.empty()) body().draw(c, M + 8, 650, S.fmt("findings.hidden_none", {{"n", std::to_string(hidden_.size())}}), kText);  // unter dem Feld: dessen Text kann bis zum unteren Rand reichen
         if (viewing_old_) draw_hints(c, {{PadGlyph::Circle, S("common.back")}});
-        else draw_hints(c, {{PadGlyph::Cross, S("common.retest")}, {PadGlyph::Square, S("common.report")}, {PadGlyph::Circle, S("common.back")}});
+        else {
+            std::vector<std::pair<PadGlyph, std::string>> eh = {{PadGlyph::Cross, S("common.retest")}, {PadGlyph::Square, S("common.report")}};
+            if (!hidden_.empty()) eh.emplace_back(PadGlyph::LeftRight, S("common.hidden_list"));
+            eh.emplace_back(PadGlyph::Circle, S("common.back"));
+            draw_hints(c, eh);
+        }
         return;
     }
 
@@ -1742,6 +1809,13 @@ void App::draw_findings(Canvas& c) const {
         c.fill_round_rect(cx, 142, w, 34, 17, kPanel);
         draw_icon(c, sev_icon(sev), cx + 24, 159, 22, sev_color(sev), sev_color(sev));
         small().draw(c, cx + 44, 146, label, kText);
+        cx += w + 14;
+    }
+    if (!viewing_old_ && !hidden_.empty()) {  // Hinweis auf ausgeblendete Befunde (Rechts oeffnet die Liste)
+        const std::string label = S.fmt("findings.hidden_chip", {{"n", std::to_string(hidden_.size())}});
+        const int w = small().width(label) + 34;
+        c.fill_round_rect(cx, 142, w, 34, 17, kPanel);
+        small().draw(c, cx + 17, 146, label, kDim);
         cx += w + 14;
     }
     const int last = std::min(n, top_ + kListVisible);
@@ -1786,8 +1860,10 @@ void App::draw_findings(Canvas& c) const {
     hints.emplace_back(PadGlyph::Cross, S("common.open"));
     if (const auto* f = current_finding(); f && !f->fix.empty() && !viewing_old_) hints.emplace_back(PadGlyph::Triangle, S(is_hint_fix(f->fix) ? "common.guide" : "common.repair"));
     if (!viewing_old_) hints.emplace_back(PadGlyph::Square, S("common.report"));
-    if (!viewing_old_ && (!result_.resolved.empty() || std::any_of(result_.findings.begin(), result_.findings.end(), [](const medic::Finding& f) { return !f.status.empty(); })))
-        hints.emplace_back(PadGlyph::LeftRight, S("common.compare"));  // es gibt einen frueheren Check-up
+    if (const auto* f = current_finding(); f && !viewing_old_ && medic::can_hide(f->severity)) hints.emplace_back(PadGlyph::Options, S("common.hide"));
+    const bool can_compare = !viewing_old_ && (!result_.resolved.empty() || std::any_of(result_.findings.begin(), result_.findings.end(), [](const medic::Finding& f) { return !f.status.empty(); }));  // es gibt einen frueheren Check-up
+    if (can_compare || (!viewing_old_ && !hidden_.empty()))
+        hints.emplace_back(PadGlyph::LeftRight, S(can_compare ? (hidden_.empty() ? "common.compare" : "common.compare_hidden") : "common.hidden_list"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }
@@ -2477,6 +2553,34 @@ void App::draw_gamedetail(Canvas& c) const {
         const std::size_t fi = g.findings[static_cast<std::size_t>(gd_sel_)];
         if (fi < result_.findings.size() && find_error_index(errors_, finding_text(result_.findings[fi])) >= 0) hints.emplace_back(PadGlyph::Square, S("common.lookup"));
     }
+    hints.emplace_back(PadGlyph::Circle, S("common.back"));
+    draw_hints(c, hints);
+}
+
+void App::draw_hidden(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    title_icon(c, Icon::Info, kTintBlue, S("hidden.title"));
+    small().draw(c, M + 4, 192, S("hidden.sub"), kDim);
+    const int n = static_cast<int>(hidden_.size());
+    const int cw = W - 2 * M, ch = 120, gap = 12;
+    int y = 232;
+    const int last = std::min(n, hid_top_ + kHidVisible);
+    for (int i = hid_top_; i < last; ++i, y += ch + gap) {
+        const auto& f = hidden_[static_cast<std::size_t>(i)];
+        const Color sc = sev_color(f.severity);
+        card(c, M, y, cw, ch, i == hid_sel_);
+        c.fill_round_rect(M, y + 14, 10, ch - 28, 5, sc);
+        draw_icon_badge(c, sev_icon(f.severity), M + 34, y + (ch - 64) / 2, 64, sc);
+        const int tx = M + 120;
+        const int bw = draw_badge(c, tx, y + 12, S(sev_key(f.severity)), sc);
+        body().draw(c, tx + bw + 16, y + 10, elide(body(), finding_title(f), cw - 120 - bw - 16 - 32), kText);
+        const auto lines = wrap_text(small(), finding_desc(f), cw - 120 - 36, 2);
+        for (std::size_t k = 0; k < lines.size(); ++k) small().draw(c, tx, y + 58 + static_cast<int>(k) * (small().line_height() + 4), lines[k], kDim);
+    }
+    if (n > kHidVisible) text_right(c, small(), W - M, 148, S.fmt("findings.range", {{"from", std::to_string(hid_top_ + 1)}, {"to", std::to_string(last)}, {"n", std::to_string(n)}}), kDim);
+    std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
+    if (n > kHidVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
+    hints.emplace_back(PadGlyph::Cross, S("common.show_again"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);
 }

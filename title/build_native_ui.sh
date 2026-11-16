@@ -34,13 +34,16 @@ B=$OUTROOT/obj
 rm -rf "$B"
 mkdir -p "$B"
 
+# Build-Kennung wie im Makefile (Hash der Quellen, tools/build_id.sh): App und Dienst muessen dieselbe tragen (ps5/service_protocol.hpp)
+BUILD_ID=$(bash "$REPO/tools/build_id.sh" 2>/dev/null || echo dev)
+
 common=(-target x86_64-sie-ps5 -fvisibility-nodllstorageclass=default -isysroot "$SDK"
         -isystem "$SDK/target/include/c++/v1" -isystem "$SDK/target/include"
         -fno-stack-protector -fno-plt -femulated-tls -O2 -ffunction-sections -fdata-sections -Wall -Wextra)
 cxx=("$CLANG" "${common[@]}" -std=c++20 -fno-exceptions -fno-rtti
      -I"$REPO/libmedic/include" -I"$REPO/third_party" -I"$REPO/ps5" -I"$REPO/ui/include" -I"$REPO/ui/src"
      "-DMEDIC_SPLASH_PATH=\"$REPO/ui/assets/splash.jpg\"" "-DMEDIC_BACKGROUND_PATH=\"$REPO/ui/assets/background.jpg\""
-     -DNDEBUG=1 -DMEDIC_NATIVE_APP=1 -DNLOHMANN_JSON_NOEXCEPTION=1)
+     -DNDEBUG=1 -DMEDIC_NATIVE_APP=1 -DNLOHMANN_JSON_NOEXCEPTION=1 "-DMEDIC_BUILD_ID=\"$BUILD_ID\"")
 
 sources=(
     ps5/native_ui_main.cpp ps5/native_shim.cpp ps5/native_runtime.cpp
