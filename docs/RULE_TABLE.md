@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Regel-Uebersicht
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.53, 101 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.54, 101 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -45,7 +45,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `hen.jb_too_early` | info | alle | - | community | Der erste Prozess der Jailbreak-Kette startete weniger als 60 Sekunden nach dem Einschalten. |
 | `kraken.ampr_foreign` | info | alle | - | community | Im Ordner /data/krakenmount/ampr/ liegt eine von Hand abgelegte Datei („is not a bundled ampr-emu-ng: kept“). |
 | `kraken.cache_block` | warning | alle | - | community | Kraken Mount erkennt eine .pkg, scheitert aber beim Aufbau des Caches („cache build … short compressed block“): Ein komprimierter Block r... |
-| `kraken.pkg_sparse_extent` | warning | alle | - | community | Kraken Mount lehnt eine .pkg ab: Das Layout der Paketdatei hat eine Lücke (sparse extent), und das Paket bekommt deshalb keine Kachel; di... |
+| `kraken.pkg_sparse_extent` | info | alle | - | community | Kraken Mount hat eine .pkg abgelehnt: Das Layout der Paketdatei hat eine Lücke (sparse extent), und das Paket bekam deshalb keine Kachel;... |
 | `kraken.pkg_truncated` | warning | alle | - | community | Kraken Mount meldet für eine .pkg „truncated?“: Die Datei ist kürzer, als ihr Kopf angibt, etwa nach einem abgebrochenen Download oder ei... |
 | `kraken.pkg_unsupported` | warning | alle | - | community | Kraken Mount lehnt eine .pkg ab, weil sie kein Paket der Art ist, die es lesen kann (Meldung „unsupported package“ oder „not a PS5 packag... |
 | `kraken.sysex_readonly` | warning | alle | - | community | Kraken Mount konnte einen neuen Titel nicht anmelden: Die Konsole hat /system_ex schreibgeschützt eingehängt (os error 30), die Meldung s... |

@@ -247,7 +247,7 @@
    "confidence_reason": "La version est lue dans le texte de la bibliothèque (vérifié sur de vrais fichiers) et le code d'erreur est enregistré par la console. Que cette ancienne version soit la cause ne découle que de la liste d'erreurs du projet ampr-emu-ng (tableau F2) ; le code d'erreur peut avoir une autre cause."
   },
   "game.ng_index_too_big": {
-   "text": "Un très gros jeu (environ 200 000 fichiers ou plus selon ampr_emu.index) utilise ampr-emu-ng 0.3.5 ou 0.4.0. Ces versions limitent l'index (0.3.5 : 55 Mio au total, 0.4.0 : tables de recherche 48 Mio) et désactivent les fichiers empaquetés en cas de dépassement ; le jeu plante alors avec « Something went wrong » ou CE-108255-1. La version 0.3.4 chargeait encore de tels jeux. Si le jeu plante ainsi : utilisez libSceAmpr.sprx 0.3.4 (désactivez les mises à jour des émulateurs dans ShadowMount+ et enregistrez) ou empaquetez moins de fichiers. La limite est une estimation tirée des rapports. Medic ne modifie rien ici.",
+   "text": "Un très gros jeu (environ 200 000 fichiers ou plus selon ampr_emu.index) utilise ampr-emu-ng 0.3.5 ou 0.4.0. Ces versions limitent l'index (0.3.5 : 55 MiB au total, 0.4.0 : tables de recherche 48 MiB) et désactivent les fichiers empaquetés en cas de dépassement ; le jeu plante alors avec « Something went wrong » ou CE-108255-1. À partir d'ampr-emu-ng 0.4.1 cette limite n'existe plus (nouvel index de fichiers ; les notes de version citent entre autres les issues 53, 61, 67, 72). Placez libSceAmpr.sprx 0.4.1 ou plus récent dans fakelib/libSceAmpr.sprx (désactivez les mises à jour d'émulateur dans ShadowMount+ et enregistrez). Le seuil d'environ 200 000 fichiers est une estimation tirée des rapports. Medic ne modifie rien ici.",
    "confidence_reason": "Le nombre de fichiers figure dans l'en-tête d'ampr_emu.index (structure selon Dump Forge, vérifiée sur un index publié) et la version dans le texte de la bibliothèque. Le seuil d'environ 200 000 fichiers est une estimation non vérifiée tirée des issues 53, 61 et 67 ; on n'a pas mesuré sur cette console si ce jeu dépasse vraiment la limite."
   },
   "game.index_files_missing": {
@@ -303,7 +303,7 @@
    "confidence_reason": "L'absence du fichier est lue. Que Dump Forge l'écrive toujours figure dans sa documentation ; qu'un jeu ne démarre pas sans elle n'a pas été observé."
   },
   "game.ng_save_risk": {
-   "text": "Le jeu contient une version d'ampr-emu-ng (0.3.5 ou 0.4.0, release) pour laquelle des utilisateurs signalent des problèmes de sauvegarde, et la console a déjà enregistré CE-108255-1 ou CE-107112-2 pour ce jeu. Cela correspond à une erreur à l'enregistrement, au chargement ou à la fermeture. Selon le projet, une version plus récente (d'abord en bêta) corrige cela. Placez un fichier ampr-emu-ng plus récent dans fakelib/libSceAmpr.sprx ou lancez le jeu non empaqueté. Le lien n'est pas prouvé.",
+   "text": "Le jeu contient une version d'ampr-emu-ng (0.3.5 ou 0.4.0, release) pour laquelle des utilisateurs signalent des problèmes de sauvegarde, et la console a déjà enregistré CE-108255-1 ou CE-107112-2 pour ce jeu. Cela correspond à une erreur à l'enregistrement, au chargement ou à la fermeture. Selon les notes de version, ampr-emu-ng 0.4.1 corrige cela (issues 60, 63, 64). Placez ampr-emu-ng 0.4.1 ou plus récent dans fakelib/libSceAmpr.sprx ou lancez le jeu non empaqueté. Le lien n'est pas prouvé.",
    "confidence_reason": "La version est lue dans la bibliothèque. Que ces versions posent problème à la sauvegarde repose sur des rapports du projet ampr-emu-ng (issues 60, 63, 64) et n'a pas été reproduit sur cette console."
   },
   "game.pack_incomplete": {
@@ -315,7 +315,7 @@
    "confidence_reason": "Les fichiers sont lus. Que les monteurs ignorent un dossier incomplet sans message découle de leur documentation (Kraken Mount exige eboot.bin et sce_sys/param.json) et de rapports sans journal ; non observé sur cette console."
   },
   "kraken.pkg_sparse_extent": {
-   "text": "Kraken Mount refuse un .pkg : la disposition du fichier de paquet a un trou (sparse extent), et le paquet n'obtient donc pas de tuile ; le message n'est que dans /data/krakenmount/kraken.log. Selon le message, il aide de reconstruire le paquet avec Dump Forge (--kraken stored). Une correction dans Kraken Mount lui-même est prévue dans le projet mais n'était dans aucune version. Medic ne modifie rien ici.",
+   "text": "Kraken Mount a rejeté une .pkg : la disposition du fichier de paquet comporte un trou (sparse extent), si bien que le paquet n'a pas de vignette ; le message n'apparaît que dans /data/krakenmount/kraken.log. Depuis kraken-mount 0.2.0, ces paquets sont aussi pris en charge ; le message vient alors d'une version plus ancienne (le journal n'est pas vidé). Envoyez une fois le kraken-mount.elf actuel à elfldr (port 9021) ; le premier démarrage reconstruit ensuite les caches et demande un peu d'espace libre. Medic ne modifie rien ici.",
    "confidence_reason": "Le message est lu dans le journal. Qu'il provienne d'une disposition avec un trou figure dans le projet Kraken Mount (issues 4, 5, 8, 9, 13, 20) ; qu'une reconstruction avec --kraken stored aide n'y a pas été vérifié sur un vrai paquet."
   },
   "game.compat_known_bad": {

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.53",
+  "db_version": "2026.11.54",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2173,8 +2173,8 @@
         ]
       },
       "text": {
-        "de": "Ein sehr großes Spiel (ab etwa 200 000 Dateien laut ampr_emu.index) nutzt ampr-emu-ng 0.3.5 oder 0.4.0. Diese Fassungen begrenzen den Index (0.3.5: gesamt 55 MiB, 0.4.0: Lookup-Tabellen 48 MiB) und schalten bei Überschreitung die gepackten Dateien ab; das Spiel stürzt dann mit „Something went wrong“ oder CE-108255-1 ab. Die Fassung 0.3.4 lud solche Spiele noch. Wenn das Spiel so abstürzt: libSceAmpr.sprx 0.3.4 verwenden (Emulator-Updates in ShadowMount+ aus und speichern) oder mit weniger Dateien packen. Die Grenze ist eine Schätzung aus den Berichten. Medic ändert hier nichts.",
-        "en": "A very large game (about 200,000 files or more according to ampr_emu.index) uses ampr-emu-ng 0.3.5 or 0.4.0. These builds limit the index (0.3.5: 55 MiB in total, 0.4.0: lookup tables 48 MiB) and turn the packed files off when it is exceeded; the game then crashes with “Something went wrong” or CE-108255-1. Build 0.3.4 still loaded such games. If the game crashes like that: use libSceAmpr.sprx 0.3.4 (turn emulator updates off in ShadowMount+ and save) or pack with fewer files. The limit is an estimate from the reports. Medic changes nothing here."
+        "de": "Ein sehr großes Spiel (ab etwa 200 000 Dateien laut ampr_emu.index) nutzt ampr-emu-ng 0.3.5 oder 0.4.0. Diese Fassungen begrenzen den Index (0.3.5: gesamt 55 MiB, 0.4.0: Lookup-Tabellen 48 MiB) und schalten bei Überschreitung die gepackten Dateien ab; das Spiel stürzt dann mit „Something went wrong“ oder CE-108255-1 ab. Ab ampr-emu-ng 0.4.1 gibt es diese Grenze nicht mehr (neuer Dateiindex, laut Release-Notizen u. a. Issues 53, 61, 67, 72). Lege libSceAmpr.sprx 0.4.1 oder neuer als fakelib/libSceAmpr.sprx ab (Emulator-Updates in ShadowMount+ aus und speichern). Die Schwelle von etwa 200 000 Dateien ist eine Schätzung aus den Berichten. Medic ändert hier nichts.",
+        "en": "A very large game (about 200,000 files or more according to ampr_emu.index) uses ampr-emu-ng 0.3.5 or 0.4.0. These builds limit the index (0.3.5: 55 MiB in total, 0.4.0: lookup tables 48 MiB) and turn the packed files off when it is exceeded; the game then crashes with \"Something went wrong\" or CE-108255-1. From ampr-emu-ng 0.4.1 on this limit is gone (new file index; the release notes list issues 53, 61, 67, 72 among the fixes). Put libSceAmpr.sprx 0.4.1 or newer at fakelib/libSceAmpr.sprx (turn emulator updates off in ShadowMount+ and save). The threshold of about 200,000 files is an estimate from the reports. Medic changes nothing here."
       },
       "evidence": "games.runtime[].path",
       "fix": null,
@@ -2494,8 +2494,8 @@
         ]
       },
       "text": {
-        "de": "Im Spiel liegt eine ampr-emu-ng-Fassung (0.3.5 oder 0.4.0, Release), bei der Nutzer Probleme beim Speichern melden, und die Konsole hat für dieses Spiel schon CE-108255-1 oder CE-107112-2 verzeichnet. Das passt zu einem Fehler beim Speichern, Laden oder Beenden. Laut dem Projekt behebt eine neuere Fassung (zunächst als Beta) das. Lege eine neuere ampr-emu-ng-Datei als fakelib/libSceAmpr.sprx ab oder starte das Spiel entpackt. Der Zusammenhang ist nicht bewiesen.",
-        "en": "The game contains an ampr-emu-ng build (0.3.5 or 0.4.0, release) for which users report problems when saving, and the console has already recorded CE-108255-1 or CE-107112-2 for this game. That fits an error when saving, loading or quitting. According to the project, a newer build (first as a beta) fixes it. Put a newer ampr-emu-ng file at fakelib/libSceAmpr.sprx or start the game unpacked. The connection is not proven."
+        "de": "Im Spiel liegt eine ampr-emu-ng-Fassung (0.3.5 oder 0.4.0, Release), bei der Nutzer Probleme beim Speichern melden, und die Konsole hat für dieses Spiel schon CE-108255-1 oder CE-107112-2 verzeichnet. Das passt zu einem Fehler beim Speichern, Laden oder Beenden. Laut den Release-Notizen behebt ampr-emu-ng 0.4.1 das (Issues 60, 63, 64). Lege ampr-emu-ng 0.4.1 oder neuer als fakelib/libSceAmpr.sprx ab oder starte das Spiel entpackt. Der Zusammenhang ist nicht bewiesen.",
+        "en": "The game contains an ampr-emu-ng build (0.3.5 or 0.4.0, release) for which users report problems when saving, and the console has already recorded CE-108255-1 or CE-107112-2 for this game. That fits an error when saving, loading or quitting. According to the release notes, ampr-emu-ng 0.4.1 fixes it (issues 60, 63, 64). Put ampr-emu-ng 0.4.1 or newer at fakelib/libSceAmpr.sprx or start the game unpacked. The connection is not proven."
       },
       "evidence": "games.runtime[].path",
       "fix": null,
@@ -2573,7 +2573,7 @@
     },
     {
       "id": "kraken.pkg_sparse_extent",
-      "severity": "warning",
+      "severity": "info",
       "when": {
         "all": [
           {
@@ -2583,8 +2583,8 @@
         ]
       },
       "text": {
-        "de": "Kraken Mount lehnt eine .pkg ab: Das Layout der Paketdatei hat eine Lücke (sparse extent), und das Paket bekommt deshalb keine Kachel; die Meldung steht nur in /data/krakenmount/kraken.log. Laut der Meldung hilft es, das Paket mit Dump Forge neu zu bauen (--kraken stored). Eine Korrektur in Kraken Mount selbst ist im Projekt vorgemerkt, war aber noch in keinem Release. Medic ändert hier nichts.",
-        "en": "Kraken Mount rejects a .pkg: the layout of the package file has a gap (sparse extent), so the package gets no tile; the message is only in /data/krakenmount/kraken.log. According to the message it helps to rebuild the package with Dump Forge (--kraken stored). A fix in Kraken Mount itself is planned in the project but was not in any release yet. Medic changes nothing here."
+        "de": "Kraken Mount hat eine .pkg abgelehnt: Das Layout der Paketdatei hat eine Lücke (sparse extent), und das Paket bekam deshalb keine Kachel; die Meldung steht nur in /data/krakenmount/kraken.log. Seit kraken-mount 0.2.0 werden auch solche Pakete unterstützt, die Meldung stammt dann von einer älteren Fassung (das Log wird nicht geleert). Sende die aktuelle kraken-mount.elf einmal an elfldr (Port 9021); der erste Start danach baut die Caches neu und braucht etwas freien Platz. Medic ändert hier nichts.",
+        "en": "Kraken Mount rejected a .pkg: the layout of the package file has a gap (sparse extent), so the package got no tile; the message is only in /data/krakenmount/kraken.log. Since kraken-mount 0.2.0 such packages are supported too, so the message then comes from an older build (the log is not cleared). Send the current kraken-mount.elf to elfldr once (port 9021); the first start afterwards rebuilds the caches and needs some free space. Medic changes nothing here."
       },
       "evidence": "kraken.sparse_extent[].line",
       "fix": null,
