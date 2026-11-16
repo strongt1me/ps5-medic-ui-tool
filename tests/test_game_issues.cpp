@@ -97,21 +97,24 @@ void chmod_tests() {
     const RuleSet rs = load_rules_from_file(testutil::kShipped);
     const auto findings = evaluate(rs, f);
     const Finding* fd = find_rule(findings, "game.no_exec_permission");
-    CHECK(fd && fd->fix == "chmod_program_files", "Rechte: Regel feuert mit dem Fix chmod_program_files");
+    CHECK(fd && fd->fix.empty(), "Rechte: Regel feuert, ohne Reparatur (Marc, 16. Nov. 2026: S13 nur erklaeren)");
     if (!fd) return;
-    FixPlan plan = plan_fix(*fd, f, p.fs());
-    CHECK(plan.changes.size() == 3, "Rechte: Plan mit drei Aenderungen");
-    bool kinds_ok = !plan.changes.empty();
-    for (const auto& c : plan.changes) kinds_ok = kinds_ok && c.kind == Change::Kind::Chmod && c.mode == 0777 && (c.base_mode == 0666 || c.base_mode == 0644);
-    CHECK(kinds_ok, "Rechte: jede Aenderung setzt 0777 und kennt den alten Modus");
-
-    // Ausserhalb der Whitelist (kein Scanpfad): nichts geplant
-    {
-        Facts nofacts = f;
-        nofacts.set("smp.scan_roots", json::array());
-        const FixPlan none = plan_fix(*fd, nofacts, p.fs());
-        CHECK(none.changes.empty() && !none.warnings.empty(), "Rechte: ausserhalb der erlaubten Ordner wird nichts geplant");
-    }
+    CHECK(plan_fix(*fd, f, p.fs()).changes.empty(), "Rechte: ohne Fix plant plan_fix nichts");
+    // Die Rechte-Aenderung der Engine (Change::Kind::Chmod) bleibt als Baustein; getestet mit einem von Hand gebauten Plan
+    FixPlan plan;
+    plan.fix_id = "test_chmod";
+    plan.rule_id = "test";
+    const auto add_chmod = [&](const std::string& path, std::uint32_t base) {
+        Change c;
+        c.kind = Change::Kind::Chmod;
+        c.path = path;
+        c.mode = 0777;
+        c.base_mode = base;
+        plan.changes.push_back(std::move(c));
+    };
+    add_chmod(game + "/eboot.bin", 0666);
+    add_chmod(game + "/sce_module/libfoo.prx", 0666);
+    add_chmod(game + "/Media/Modules/Unity.prx", 0644);
 
     // Aendert jemand die Rechte nach der Vorschau, lehnt apply_plan ab
     {
@@ -150,7 +153,7 @@ void chmod_tests() {
     CHECK(undone, "Rechte: der Verlauf zeigt die Transaktion als rueckgaengig gemacht");
 
     // Wurde eine Datei nach dem Fix erneut veraendert, fasst Rueckgaengig nichts an
-    const ApplyResult ar2 = apply_plan(plan_fix(*fd, f, p.fs()), p, policy_from_facts(f), {"20261114T120300Z", true});
+    const ApplyResult ar2 = apply_plan(plan, p, policy_from_facts(f), {"20261114T120300Z", true});
     CHECK(ar2.ok, "Rechte: zweites Anwenden ok (" + ar2.error + ")");
     set_mode(sb.real(game + "/sce_module/libfoo.prx"), 0700);  // jemand anderes hat die Rechte inzwischen gesetzt
     const UndoResult ur2 = undo_txn(p, policy_from_facts(f), ar2.txn, "20261114T120400Z");
@@ -579,7 +582,18 @@ void review_followup_tests() {
         const Finding* fd = find_rule(findings, "game.no_exec_permission");
         CHECK(fd != nullptr, "Rechte: Regel feuert (Rueckgaengig-Test)");
         if (fd) {
-            const ApplyResult ar = apply_plan(plan_fix(*fd, f, p.fs()), p, policy_from_facts(f), {"20261115T110000Z", true});
+            FixPlan plan;
+            plan.fix_id = "test_chmod";
+            plan.rule_id = "test";
+            for (const char* rel : {"/eboot.bin", "/sce_module/a.prx"}) {
+                Change c;
+                c.kind = Change::Kind::Chmod;
+                c.path = game + rel;
+                c.mode = 0777;
+                c.base_mode = 0666;
+                plan.changes.push_back(std::move(c));
+            }
+            const ApplyResult ar = apply_plan(plan, p, policy_from_facts(f), {"20261115T110000Z", true});
             CHECK(ar.ok, "Rechte: Anwenden ok (" + ar.error + ")");
             stdfs::remove(sb.real(game + "/sce_module/a.prx"));  // jemand hat die Datei inzwischen geloescht
             const UndoResult ur = undo_txn(p, policy_from_facts(f), ar.txn, "20261115T110100Z");

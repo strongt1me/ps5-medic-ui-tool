@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Regel-Uebersicht
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.54, 101 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.55, 101 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -29,7 +29,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `game.needs_backport` | warning | alle | - | todo | Für diese Spiele verlangt die param.json eine höhere Firmware-Version als die der Konsole, und in den Scanpfaden fehlt der Ordner backpor... |
 | `game.ng_index_too_big` | info | alle | - | doc | Ein sehr großes Spiel (ab etwa 200 000 Dateien laut ampr_emu.index) nutzt ampr-emu-ng 0.3.5 oder 0.4.0. |
 | `game.ng_save_risk` | info | alle | - | community | Im Spiel liegt eine ampr-emu-ng-Fassung (0.3.5 oder 0.4.0, Release), bei der Nutzer Probleme beim Speichern melden, und die Konsole hat f... |
-| `game.no_exec_permission` | warning | alle | `chmod_program_files` | community | Programmdateien eines Spiels (eboot.bin, Module) haben kein Ausführungsrecht, zum Beispiel 0666 statt 0777. |
+| `game.no_exec_permission` | warning | alle | - | community | Programmdateien eines Spiels (eboot.bin, Module) haben kein Ausführungsrecht, zum Beispiel 0666 statt 0777. |
 | `game.pack_incomplete` | warning | alle | - | doc | Die zstd-Pack-Dateien eines Spiels sind unvollständig: ein Teil (ampr_zstd-NNN.pak) fehlt, hat nicht die Größe laut Index, oder die ampr_... |
 | `game.pack_no_emu_index` | info | alle | - | todo | Ein Spiel mit Packs hat keine ampr_emu.index. |
 | `game.pack_runtime_mismatch` | warning | alle | - | doc | Ein Spiel mit gepackten Dateien (ampr_zstd.index oder ampr_assets.index) hat keine passende Laufzeit-Bibliothek: fakelib/libSceAmpr.sprx... |

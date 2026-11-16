@@ -219,7 +219,7 @@
    "confidence_reason": "La dimensione viene letta; un file system di certo non sta in meno di 512 byte. Come ShadowMount+ tratti tali file non è stato osservato sulla console di prova."
   },
   "game.no_exec_permission": {
-   "text": "I file programma di un gioco (eboot.bin, moduli) non hanno il permesso di esecuzione, ad esempio 0666 invece di 0777. La console non avvia questi file e segnala CE-107750-0. Succede spesso copiando via FTP, a seconda del server FTP. La riparazione imposta i file interessati a 0777; l'annullamento ripristina i vecchi permessi. Il contenuto dei file resta intatto.",
+   "text": "I file di programma di un gioco (eboot.bin, moduli) non hanno il permesso di esecuzione, per esempio 0666 invece di 0777. La console non avvia tali file e segnala CE-107750-0. Succede spesso copiando via FTP, a seconda del server FTP. Imposta i permessi di questi file su 0777 nel programma FTP (chmod 777); il contenuto resta intatto. Medic qui non modifica nulla.",
    "confidence_reason": "I permessi vengono letti. Il fatto che la console non avvii un file senza permesso di esecuzione è stato osservato il 13 novembre 2026 sulla console di test con la nostra eboot.bin e confermato da un utente (ampr-emu-ng, issue 41) con una copia FTP."
   },
   "game.leftover_parts": {

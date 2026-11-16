@@ -30,8 +30,6 @@
 //                                       nie loeschen; check_size bricht ab, wenn die Datei noch waechst)
 //   quarantine_partial_folder           keine; liest games.partial_folders[] (zstd-Volumes ohne ampr_zstd.index), verschiebt den ganzen Ordner nach <Scanpfad>/.medic_broken/
 //                                       (derselbe Scanpfad, nie loeschen; Marc, 16. Nov. 2026: S32)
-//   chmod_program_files                 keine; liest games.noexec[] (Programmdateien ohne Ausfuehrungsbit), setzt jede Datei auf 0777 (Marc, 14. Nov. 2026:
-//                                       Rechte des Spielordners, gemessen: 0666 startet nicht, 0777 schon); nur Whitelist-Pfade, Journal merkt den alten Modus
 //   pldmgr_enable_autoload              keine; setzt AUTOLOAD_ENABLED=1 in /data/pldmgr/pldmgr_config.txt
 //   fix_image_nesting_hint              keine (nur Hinweis)
 #pragma once

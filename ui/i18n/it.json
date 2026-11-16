@@ -319,7 +319,6 @@
 "fix.quarantine_empty_image": "Metti da parte un'immagine vuota",
 "fix.quarantine_leftovers": "Metti da parte i resti di operazioni interrotte",
 "fix.quarantine_partial_folder": "Metti da parte una cartella di pack incompleta",
-"fix.chmod_program_files": "Imposta il permesso di esecuzione dei file programma",
 "fix.pldmgr_enable_autoload": "Attiva l'autoload nel Payload Manager",
 "errors.live": "Cosa vede Medic ora",
 "errors.live_none": "Avvia un check-up e Medic mostra qui lo stato attuale della console.",

@@ -319,7 +319,6 @@
   "fix.quarantine_empty_image": "Apartar una imagen vacía",
   "fix.quarantine_leftovers": "Apartar los restos de tareas interrumpidas",
   "fix.quarantine_partial_folder": "Apartar una carpeta de pack a medias",
-  "fix.chmod_program_files": "Dar permiso de ejecución a los archivos de programa",
   "fix.pldmgr_enable_autoload": "Activar la autocarga en el Payload Manager",
   "errors.live": "Lo que Medic ve ahora",
   "errors.live_none": "Haz un chequeo y Medic mostrará aquí el estado actual de la consola.",

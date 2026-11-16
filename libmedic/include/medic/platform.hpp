@@ -64,8 +64,8 @@ public:
         (void)sync;
         return false;
     }
-    // Setzt den Modus (st_mode & 07777) einer Datei oder eines Ordners; folgt keinem Symlink. Standard: nicht unterstuetzt (false). Nur fuer den Fix
-    // chmod_program_files (Journal merkt sich den alten Modus, Rueckgaengig stellt ihn wieder her).
+    // Setzt den Modus (st_mode & 07777) einer Datei oder eines Ordners; folgt keinem Symlink. Standard: nicht unterstuetzt (false). Fuer Aenderungen der Art
+    // Change::Kind::Chmod (Journal merkt sich den alten Modus, Rueckgaengig stellt ihn wieder her); die Regel game.no_exec_permission bietet seit 16. Nov. 2026 keinen Fix mehr an.
     virtual bool set_mode(const std::string& path, std::uint32_t mode) {
         (void)path;
         (void)mode;

@@ -695,55 +695,6 @@ void plan_quarantine_partial_folder(FixPlan& plan, const Facts& facts, const IFi
     plan.hint_en = "The folder is not deleted but moved as a whole into .medic_broken in the scan path (undo brings it back). If it is still being written (a transfer or a pack job is running), this stops the job: let it finish first.";
 }
 
-// ---- chmod_program_files ------------------------------------------------------------------------------------------------------
-// Programmdateien ohne Ausfuehrungsbit (games.noexec[], CE-107750-0) bekommen den Modus 0777 (Marc, 14. Nov. 2026; gemessen: 0666 startet nicht, 0777 schon).
-// Nur die Dateien, die der Sammler nennt (eboot.bin, Module), nicht der ganze Spielordner: Daten brauchen kein Ausfuehrungsrecht. Das Journal merkt sich
-// den alten Modus jeder Datei, Rueckgaengig stellt ihn wieder her. Hoechstens kMaxChmodFiles je Plan; der naechste Check-up findet den Rest.
-constexpr std::uint32_t kProgramMode = 0777;
-constexpr std::size_t kMaxChmodFiles = 200;
-
-void plan_chmod_program_files(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
-    const PathPolicy policy = policy_from_facts(facts);
-    std::set<std::string> seen;
-    bool cut = false;
-    for (const auto& g : array_fact(facts, "games.noexec")) {
-        if (!g.is_object() || !g.contains("files") || !g["files"].is_array()) continue;
-        for (const auto& fj : g["files"]) {
-            if (!fj.is_string()) continue;
-            const std::string path = fj.get<std::string>();
-            if (path.empty() || !seen.insert(path).second) continue;
-            if (std::string why; !policy.allowed(path, &why)) {
-                plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + path);
-                continue;
-            }
-            std::uint32_t mode = 0;
-            if (!fs.file_mode(path, mode)) {
-                plan.warnings.push_back("Übersprungen (Rechte nicht lesbar): " + path);
-                continue;
-            }
-            if ((mode & 0111u) != 0) continue;  // inzwischen ausfuehrbar
-            if (plan.changes.size() >= kMaxChmodFiles) {
-                cut = true;
-                continue;
-            }
-            char buf[24];
-            std::snprintf(buf, sizeof buf, "%04o -> %04o", static_cast<unsigned>(mode), static_cast<unsigned>(kProgramMode));
-            Change c;
-            c.kind = Change::Kind::Chmod;
-            c.path = path;
-            c.mode = kProgramMode;
-            c.base_mode = mode;
-            c.note_de = std::string("Ausführungsrecht setzen (") + buf + "): " + base_of(path);
-            c.note_en = std::string("Set the execute permission (") + buf + "): " + base_of(path);
-            plan.changes.push_back(std::move(c));
-        }
-    }
-    if (cut) plan.warnings.insert(plan.warnings.begin(), "Mehr als " + std::to_string(kMaxChmodFiles) + " Dateien: der Rest folgt nach dem nächsten Check-up");  // zuerst: die Vorschau zeigt nur die ersten Hinweise
-    if (plan.changes.empty()) plan.warnings.push_back("Keine Programmdatei ohne Ausführungsrecht in den erlaubten Ordnern gefunden");
-    plan.hint_de = "Nur die Rechte der genannten Programmdateien ändern sich (auf 0777); der Inhalt bleibt unberührt. Rückgängig stellt die alten Rechte wieder her.";
-    plan.hint_en = "Only the permissions of the listed program files change (to 0777); the content stays untouched. Undo restores the old permissions.";
-}
-
 // ---- pldmgr_enable_autoload ---------------------------------------------------------------------------------------------------
 void plan_pldmgr_enable(FixPlan& plan, const Finding& finding, const Facts& facts, const IFileSystem& fs) {
     Finding f = finding;
@@ -875,8 +826,6 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
         plan_quarantine_leftovers(plan, facts, fs);
     } else if (finding.fix == "quarantine_partial_folder") {
         plan_quarantine_partial_folder(plan, facts, fs);
-    } else if (finding.fix == "chmod_program_files") {
-        plan_chmod_program_files(plan, facts, fs);
     } else if (finding.fix == "pldmgr_enable_autoload") {
         plan_pldmgr_enable(plan, finding, facts, fs);
     } else if (finding.fix == "smp_disable_conflicting_backpork") {

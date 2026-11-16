@@ -219,7 +219,7 @@
    "confidence_reason": "La taille est lue ; un système de fichiers ne tient certainement pas dans moins de 512 octets. La façon dont ShadowMount+ traite ces fichiers n'a pas été observée sur la console de test."
   },
   "game.no_exec_permission": {
-   "text": "Les fichiers programme d'un jeu (eboot.bin, modules) n'ont pas le droit d'exécution, par exemple 0666 au lieu de 0777. La console ne démarre pas ces fichiers et signale CE-107750-0. Cela arrive souvent lors de la copie par FTP, selon le serveur FTP. La réparation met les fichiers concernés à 0777 ; l'annulation rétablit les anciens droits. Le contenu des fichiers reste intact.",
+   "text": "Les fichiers de programme d'un jeu (eboot.bin, modules) n'ont pas le droit d'exécution, par exemple 0666 au lieu de 0777. La console ne démarre pas ces fichiers et signale CE-107750-0. Cela arrive souvent lors d'une copie par FTP, selon le serveur FTP. Mettez les droits de ces fichiers sur 0777 dans votre client FTP (chmod 777) ; le contenu reste intact. Medic ne modifie rien ici.",
    "confidence_reason": "Les droits sont lus. Que la console ne démarre pas un fichier sans droit d'exécution a été observé le 13 novembre 2026 sur la console de test avec notre propre eboot.bin, et confirmé par un utilisateur (ampr-emu-ng, issue 41) avec une copie FTP."
   },
   "game.leftover_parts": {

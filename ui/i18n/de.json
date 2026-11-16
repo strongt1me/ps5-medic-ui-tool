@@ -319,7 +319,6 @@
   "fix.quarantine_empty_image": "Leeres Image beiseitelegen",
   "fix.quarantine_leftovers": "Reste abgebrochener Vorgänge beiseitelegen",
   "fix.quarantine_partial_folder": "Halbfertigen Packordner beiseitelegen",
-  "fix.chmod_program_files": "Ausführungsrecht der Programmdateien setzen",
   "fix.pldmgr_enable_autoload": "Autoload im Payload Manager einschalten",
   "errors.live": "Was Medic gerade sieht",
   "errors.live_none": "Starte einen Check-up, dann zeigt Medic hier den aktuellen Zustand der Konsole.",

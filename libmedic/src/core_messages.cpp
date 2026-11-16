@@ -12,7 +12,7 @@ namespace {
 
 // Deutsches Fragment -> englisches Fragment; laengere zuerst. Pfade und Namen in den Meldungen bleiben stehen.
 const std::pair<const char*, const char*> kFragments[] = {
-    // Rechte setzen (chmod_program_files, Change::Kind::Chmod)
+    // Rechte setzen (Change::Kind::Chmod)
     {"Die Rechte haben sich seit der Vorschau geändert (bitte neu prüfen): ",
      "The permissions changed since the preview (please check again): "},
     {"Die Rechte sind nicht lesbar (Symlink oder Sonderdatei?): ",

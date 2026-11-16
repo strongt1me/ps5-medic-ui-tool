@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.54",
+  "db_version": "2026.11.55",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2061,11 +2061,11 @@
         ]
       },
       "text": {
-        "de": "Programmdateien eines Spiels (eboot.bin, Module) haben kein Ausführungsrecht, zum Beispiel 0666 statt 0777. Die Konsole startet solche Dateien nicht und meldet CE-107750-0. Das passiert oft beim Kopieren per FTP, je nach FTP-Server. Der Fix setzt die betroffenen Dateien auf 0777; Rückgängig stellt die alten Rechte wieder her. Der Inhalt der Dateien bleibt unberührt.",
-        "en": "Program files of a game (eboot.bin, modules) have no execute permission, for example 0666 instead of 0777. The console does not start such files and reports CE-107750-0. This often happens when copying over FTP, depending on the FTP server. The fix sets the affected files to 0777; undo restores the old permissions. The content of the files stays untouched."
+        "de": "Programmdateien eines Spiels (eboot.bin, Module) haben kein Ausführungsrecht, zum Beispiel 0666 statt 0777. Die Konsole startet solche Dateien nicht und meldet CE-107750-0. Das passiert oft beim Kopieren per FTP, je nach FTP-Server. Setze die Rechte dieser Dateien im FTP-Programm auf 0777 (chmod 777); der Inhalt bleibt dabei unberührt. Medic ändert hier nichts.",
+        "en": "Program files of a game (eboot.bin, modules) have no execute permission, for example 0666 instead of 0777. The console does not start such files and reports CE-107750-0. This often happens when copying over FTP, depending on the FTP server. Set the permissions of these files to 0777 in your FTP program (chmod 777); the content stays untouched. Medic changes nothing here."
       },
       "evidence": "games.noexec[].path",
-      "fix": "chmod_program_files",
+      "fix": null,
       "source": "https://github.com/quer3q/ampr-emu-ng/issues/41",
       "verified": "community",
       "confidence": {
