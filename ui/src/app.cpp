@@ -1817,7 +1817,6 @@ void App::draw_findings(Canvas& c) const {
         const int w = small().width(label) + 34;
         c.fill_round_rect(cx, 142, w, 34, 17, kPanel);
         small().draw(c, cx + 17, 146, label, kDim);
-        cx += w + 14;
     }
     const int last = std::min(n, top_ + kListVisible);
     if (n > kListVisible)

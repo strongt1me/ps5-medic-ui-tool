@@ -143,7 +143,13 @@ CheckResult LocalService::run_check() {
 
 std::vector<medic::GameInfo> LocalService::games() {
     if (!facts_.get("fw.version")) return {};  // noch kein Check-up
-    return medic::collect_game_infos(facts_, last_findings_);
+    // Die Indizes in GameInfo::findings beziehen sich auf die Befundliste, die die UI zeigt: ohne die ausgeblendeten Befunde (sonst verschoeben sie sich,
+    // und "Betrifft: ..." und die Spieldetails zeigten den falschen Befund)
+    const auto ignored = medic::load_ignored(p_.fs());
+    std::vector<medic::Finding> visible;
+    for (const auto& f : last_findings_)
+        if (!medic::is_hidden(f.rule_id, f.severity, ignored)) visible.push_back(f);
+    return medic::collect_game_infos(facts_, visible);
 }
 
 medic::FixPlan LocalService::plan_fix(const medic::Finding& f) { return medic::plan_fix(f, facts_, p_.fs()); }

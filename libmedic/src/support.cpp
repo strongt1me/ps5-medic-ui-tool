@@ -4,6 +4,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstdio>
 #include <set>
@@ -145,16 +146,16 @@ std::string Pseudonyms::key_text() const {
 }
 
 std::uint32_t crc32_ieee(const std::string& data) {
-    static std::uint32_t table[256];
-    static bool init = false;
-    if (!init) {
+    // Die Tabelle entsteht einmal beim ersten Aufruf (C++11: die Initialisierung einer lokalen static-Variable ist threadsicher)
+    static const std::array<std::uint32_t, 256> table = [] {
+        std::array<std::uint32_t, 256> tb{};
         for (std::uint32_t i = 0; i < 256; ++i) {
             std::uint32_t c = i;
             for (int k = 0; k < 8; ++k) c = (c & 1) ? 0xEDB88320u ^ (c >> 1) : c >> 1;
-            table[i] = c;
+            tb[i] = c;
         }
-        init = true;
-    }
+        return tb;
+    }();
     std::uint32_t c = 0xFFFFFFFFu;
     for (unsigned char b : data) c = table[(c ^ b) & 0xff] ^ (c >> 8);
     return c ^ 0xFFFFFFFFu;

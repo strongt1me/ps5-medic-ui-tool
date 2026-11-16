@@ -3441,6 +3441,40 @@ void games_tests() {
         press(app, {Button::Circle, Button::Up, Button::Up, Button::Up, Button::Up, Button::Up, Button::Cross});
         CHECK(app.screen() == App::Screen::Running, "Spiele: Start-Auswahl 0 ist weiter der Check-up");
     }
+    // Ausblenden und Spiele: die Indizes der Spiele gehoeren zur sichtbaren Befundliste (sonst zeigte "Betrifft" den falschen Befund)
+    {
+        const RuleSet rules = load_rules_from_file(std::string(MEDIC_SOURCE_DIR) + "/knowledge/rules.json");
+        TempCopy tc("g1_pos");
+        auto pl = make_snapshot_platform(tc.dir.string(), true);
+        LocalService svc(*pl, rules, [] { return std::string("20261111T120000Z"); });
+        const CheckResult r = svc.run_check();
+        const auto before = svc.games();
+        int hide_at = -1;
+        for (std::size_t i = 0; i < r.findings.size() && hide_at < 0; ++i)
+            if (can_hide(r.findings[i].severity)) hide_at = static_cast<int>(i);
+        CHECK(!before.empty() && hide_at >= 0, "Ausblenden/Spiele: Ausgangslage (ein ausblendbarer Befund, Spiele da)");
+        if (hide_at >= 0 && !before.empty()) {
+            const Finding hidden = r.findings[static_cast<std::size_t>(hide_at)];
+            CHECK(svc.set_hidden(hidden.rule_id, hidden.severity, true), "Ausblenden/Spiele: Befund ausgeblendet");
+            std::vector<Finding> visible;
+            for (const auto& f : r.findings)
+                if (f.rule_id != hidden.rule_id) visible.push_back(f);
+            bool aligned = true;
+            for (const auto& g : svc.games()) {
+                std::set<std::string> now, want;
+                for (const std::size_t idx : g.findings) {
+                    if (idx >= visible.size()) aligned = false;
+                    else now.insert(visible[idx].rule_id);
+                }
+                for (const auto& b : before)
+                    if (b.titleid == g.titleid)
+                        for (const std::size_t idx : b.findings)
+                            if (r.findings[idx].rule_id != hidden.rule_id) want.insert(r.findings[idx].rule_id);
+                if (now != want) aligned = false;
+            }
+            CHECK(aligned, "Ausblenden/Spiele: die Befund-Indizes der Spiele gehoeren zur sichtbaren Liste");
+        }
+    }
     // Leere Liste
     {
         FakeService fk;
