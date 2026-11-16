@@ -82,6 +82,26 @@ struct FixOptions {
 // Erzeugt den Plan, ohne etwas zu veraendern. Unbekannte Fixes ergeben einen leeren Plan mit Warnung.
 FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& fs, const FixOptions& opt = {});
 
+// ---- Sicherungs-Vorschau -------------------------------------------------
+// Was apply_plan fuer eine Aenderung sichert (ohne etwas zu schreiben); die UI zeigt es vor dem Bestaetigen.
+//   Copy    bestehende Datei wird ueberschrieben: Kopie unter /data/ps5medic/backups/<Zeit>/ (bytes = Groesse der Kopie)
+//   Created Datei gibt es noch nicht: Rueckgaengig legt die neue Datei beiseite (keine Kopie)
+//   Moved   Umbenennen/Verschieben: keine Kopie, Rueckgaengig verschiebt zurueck
+//   Chmod   nur die Rechte: der alte Modus steht im Journal
+struct BackupInfo {
+    enum class Kind { Copy, Created, Moved, Chmod };
+    Kind kind = Kind::Moved;
+    std::uint64_t bytes = 0;
+};
+// existed/size: Zustand der Zieldatei beim Planen (nur fuer WriteFile; die UI kennt kein Dateisystem, sie liest den alten Inhalt ueber den Dienst).
+BackupInfo backup_info(const Change& c, bool existed, std::uint64_t size);
+
+struct BackupSummary {
+    int copies = 0, created = 0, moves = 0, chmods = 0;
+    std::uint64_t bytes = 0;  // Summe der Kopien
+};
+BackupSummary backup_summary(const std::vector<BackupInfo>& infos);
+
 // ---- Whitelist ----------------------------------------------------------
 
 class PathPolicy {

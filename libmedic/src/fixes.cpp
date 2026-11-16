@@ -822,6 +822,31 @@ bool file_entry_size(const IFileSystem& fs, const std::string& path, std::uint64
     return false;
 }
 
+BackupInfo backup_info(const Change& c, bool existed, std::uint64_t size) {
+    BackupInfo b;
+    switch (c.kind) {
+        case Change::Kind::Rename: b.kind = BackupInfo::Kind::Moved; break;
+        case Change::Kind::Chmod: b.kind = BackupInfo::Kind::Chmod; break;
+        case Change::Kind::WriteFile:
+            b.kind = existed ? BackupInfo::Kind::Copy : BackupInfo::Kind::Created;
+            if (existed) b.bytes = size;
+            break;
+    }
+    return b;
+}
+
+BackupSummary backup_summary(const std::vector<BackupInfo>& infos) {
+    BackupSummary s;
+    for (const auto& b : infos)
+        switch (b.kind) {
+            case BackupInfo::Kind::Copy: ++s.copies; s.bytes += b.bytes; break;
+            case BackupInfo::Kind::Created: ++s.created; break;
+            case BackupInfo::Kind::Moved: ++s.moves; break;
+            case BackupInfo::Kind::Chmod: ++s.chmods; break;
+        }
+    return s;
+}
+
 FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& fs, const FixOptions& opt) {
     FixPlan plan;
     plan.fix_id = finding.fix;

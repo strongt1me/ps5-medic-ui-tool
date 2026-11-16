@@ -8,12 +8,34 @@
 #include "medic/history.hpp"
 
 #include <algorithm>
+#include <cstdio>
 #include <iterator>
 #include <cmath>
 
 namespace medic::ui {
 
 namespace {
+
+// Dateigroesse kurz und lesbar (1,2 KB / 3,4 MB); nur fuer die Sicherungs-Anzeige.
+std::string format_bytes(std::uint64_t b) {
+    char buf[32];
+    if (b < 1024) std::snprintf(buf, sizeof buf, "%u B", static_cast<unsigned>(b));
+    else if (b < 1024ull * 1024) std::snprintf(buf, sizeof buf, "%.1f KB", static_cast<double>(b) / 1024.0);
+    else std::snprintf(buf, sizeof buf, "%.1f MB", static_cast<double>(b) / (1024.0 * 1024.0));
+    return buf;
+}
+
+std::string backup_line(const Strings& S, const medic::BackupInfo& b) {
+    using K = medic::BackupInfo::Kind;
+    switch (b.kind) {
+        case K::Copy: return S.fmt("fixprev.bk_copy", {{"size", format_bytes(b.bytes)}});
+        case K::Created: return S("fixprev.bk_created");
+        case K::Chmod: return S("fixprev.bk_chmod");
+        case K::Moved: break;
+    }
+    return S("fixprev.bk_move");
+}
+
 
 constexpr int W = App::kWidth, H = App::kHeight, M = 96;
 constexpr int kListVisible = 4, kHistVisible = 6, kErrVisible = 8, kChkRows = 7, kChkBigH = 124, kChkToggleH = 64, kChkRowH = 76, kCmpVisible = 13, kGameVisible = 8, kGdVisible = 5;
@@ -767,9 +789,14 @@ void App::begin_fix(int index, Screen origin) {
     previews_.assign(plan_.changes.size(), Preview{});
     for (std::size_t i = 0; i < plan_.changes.size(); ++i) {
         const auto& ch = plan_.changes[i];
-        if (ch.kind != medic::Change::Kind::WriteFile) continue;
+        if (ch.kind != medic::Change::Kind::WriteFile) {
+            previews_[i].backup = medic::backup_info(ch, false, 0);
+            continue;
+        }
+        const std::string old_text = svc_.read_text(ch.path);
+        previews_[i].backup = medic::backup_info(ch, ch.check_base ? ch.base_existed : !old_text.empty(), old_text.size());
         std::vector<medic::DiffLine> all;
-        previews_[i].diff_ok = medic::diff_lines(svc_.read_text(ch.path), ch.content, all);
+        previews_[i].diff_ok = medic::diff_lines(old_text, ch.content, all);
         for (auto& d : all)
             if (d.tag != ' ') previews_[i].changed.push_back(d);
         if (!previews_[i].diff_ok) previews_[i].changed.push_back({'!', Strings::get(lang_)("preview.too_big")});  // sonst stuende dort nichts und die Datei wuerde trotzdem geschrieben
@@ -1916,7 +1943,7 @@ void App::draw_fix_preview(Canvas& c) const {
     const std::string& hint_text = lang_ == Lang::De ? plan_.hint_de : plan_.hint_en;
     const int note_lh = small().line_height() + 6;
     const int note_rows = static_cast<int>(std::min<std::size_t>(plan_.warnings.size(), 2)) + (hint_text.empty() ? 0 : static_cast<int>(wrap_text(small(), hint_text, cw - 16, 2).size()));
-    const int y_limit = std::min(H - 210, H - 162 - note_rows * note_lh - (small().line_height() + 4));
+    const int y_limit = std::min(H - 210, H - 162 - note_rows * note_lh - 2 * (small().line_height() + 4));
     int shown = 0;
     if (plan_.empty()) {
         c.fill_round_rect(M, y, cw, 110, 18, kPanel);
@@ -1934,7 +1961,7 @@ void App::draw_fix_preview(Canvas& c) const {
         const auto note_lines = wrap_text(small(), note, cw - 72, 2);
         const int diff_rows = rename ? 0 : static_cast<int>(std::min<std::size_t>(pv.changed.size(), 6)) + (pv.changed.size() > 6 ? 1 : 0);
         const int lh = small().line_height() + 4;
-        const int ph = 20 + 34 + 10 + static_cast<int>(path_lines.size() + to_lines.size() + note_lines.size() + diff_rows) * lh + (rename ? lh : 0) + 18;
+        const int ph = 20 + 34 + 10 + static_cast<int>(path_lines.size() + to_lines.size() + note_lines.size() + diff_rows + 1) * lh + (rename ? lh : 0) + 18;
         if (y + ph > y_limit) {
             small().draw(c, M + 8, y, S.fmt("fixprev.changes_more", {{"n", std::to_string(plan_.changes.size() - i)}}), kDim);
             y += lh;
@@ -1965,7 +1992,11 @@ void App::draw_fix_preview(Canvas& c) const {
             const auto& d = pv.changed[k];
             small().draw(c, M + 36, ty, elide(small(), std::string(1, d.tag) + " " + d.text, cw - 72), d.tag == '+' ? kOk : kCrit);
         }
-        if (pv.changed.size() > 6) small().draw(c, M + 36, ty, S.fmt("fixprev.diff_more", {{"n", std::to_string(pv.changed.size() - 6)}}), kDim);
+        if (pv.changed.size() > 6) {
+            small().draw(c, M + 36, ty, S.fmt("fixprev.diff_more", {{"n", std::to_string(pv.changed.size() - 6)}}), kDim);
+            ty += lh;
+        }
+        small().draw(c, M + 36, ty, elide(small(), backup_line(S, pv.backup), cw - 72), pv.backup.kind == medic::BackupInfo::Kind::Copy ? kAccent : kDim);
         y += ph + 14;
     }
     prev_page_ = std::max(shown, 1);  // so viele Aenderungen zeigte diese Seite: L1/R1 springen genau so weit
@@ -1984,7 +2015,15 @@ void App::draw_fix_preview(Canvas& c) const {
             y += small().line_height() + 6;
         }
 
-    if (!plan_.empty()) small().draw(c, M + 8, H - 150, elide(small(), S("fixprev.backup"), cw - 16), kDim);
+    if (!plan_.empty()) {
+        std::vector<medic::BackupInfo> infos;
+        for (const auto& pv : previews_) infos.push_back(pv.backup);
+        const medic::BackupSummary bs = medic::backup_summary(infos);
+        const std::string where = bs.copies > 0 ? S.fmt("fixprev.bk_where", {{"dir", std::string(medic::kBackupRoot) + "/<Zeit>/"}, {"n", std::to_string(bs.copies)}, {"size", format_bytes(bs.bytes)}})
+                                                : S("fixprev.bk_none");
+        small().draw(c, M + 8, H - 150 - (small().line_height() + 4), elide(small(), where, cw - 16), kText);
+        small().draw(c, M + 8, H - 150, elide(small(), S("fixprev.backup"), cw - 16), kDim);
+    }
     std::vector<std::pair<PadGlyph, std::string>> hints;
     if (!plan_.empty()) hints.emplace_back(PadGlyph::Cross, S("common.confirm"));
     hints.emplace_back(PadGlyph::Circle, S("common.cancel"));

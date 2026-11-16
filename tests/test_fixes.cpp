@@ -1060,7 +1060,27 @@ void case_fold_tests() {
         }
 }
 
+// Sicherungs-Vorschau: was apply_plan sichert, ohne zu schreiben
+void backup_preview_tests() {
+    Change w;
+    w.kind = Change::Kind::WriteFile;
+    w.path = "/data/x/config.ini";
+    Change r;
+    r.kind = Change::Kind::Rename;
+    Change m;
+    m.kind = Change::Kind::Chmod;
+    const BackupInfo cw = backup_info(w, true, 1500), cn = backup_info(w, false, 0), cr = backup_info(r, false, 0), cm = backup_info(m, false, 0);
+    CHECK(cw.kind == BackupInfo::Kind::Copy && cw.bytes == 1500, "Sicherungs-Vorschau: bestehende Datei wird kopiert");
+    CHECK(cn.kind == BackupInfo::Kind::Created && cn.bytes == 0, "Sicherungs-Vorschau: neue Datei hat keine Kopie");
+    CHECK(cr.kind == BackupInfo::Kind::Moved && cm.kind == BackupInfo::Kind::Chmod, "Sicherungs-Vorschau: Verschieben und Rechte ohne Kopie");
+    const BackupSummary s = backup_summary({cw, cn, cr, cr, cm, backup_info(w, true, 500)});
+    CHECK(s.copies == 2 && s.bytes == 2000 && s.created == 1 && s.moves == 2 && s.chmods == 1, "Sicherungs-Vorschau: Summe");
+    const BackupSummary none = backup_summary({});
+    CHECK(none.copies == 0 && none.bytes == 0, "Sicherungs-Vorschau: leerer Plan");
+}
+
 void fix_tests() {
+    backup_preview_tests();
     export_tests();
     sha_tests();
     fw_tests();

@@ -65,6 +65,7 @@ private:
     struct Preview {  // Darstellung einer geplanten Aenderung
         std::vector<medic::DiffLine> changed;  // nur + und - Zeilen (WriteFile)
         bool diff_ok = true;
+        medic::BackupInfo backup;  // was apply_plan davon sichert (nur Anzeige)
     };
     enum class DoneKind { Fix, Undo };
 
