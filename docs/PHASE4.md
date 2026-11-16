@@ -51,5 +51,5 @@ Encoder: [Nayukis QR-Code-Generator](https://www.nayuki.io/page/qr-code-generato
 
 **Entscheidungen des Autors (8. Nov. 2026):**
 1. **Lizenz:** GPL-3.0-or-later (`LICENSE`, SPDX-Zeile in jeder eigenen Quelldatei). Der ELF linkt gegen die GPLv3-Laufzeitbibliotheken des ps5-payload-sdk; die Fremdkomponenten (MIT, zlib, BSD-2, DejaVu) sind damit vereinbar (`THIRD_PARTY.md`).
-2. **Kein öffentliches Release:** Das Repository `strongt1me/ps5-medic-ui-tool` bleibt privat (ein privates Pre-Release `v0.4.0-dev.2` gibt es auf Marcs ausdrückliche Anweisung vom 13. Nov. 2026). `make dist` baut weiter ein Paket für einzelne Tester; wer es weitergibt, muss nach der GPL den Quelltext anbieten.
+2. **Öffentliches Release (geändert am 16. Nov. 2026):** Zuerst blieb das Repository `strongt1me/ps5-medic-ui-tool` privat (8. Nov., privates Pre-Release `v0.4.0-dev.2` am 13. Nov.). Marc hat am 16. Nov. 2026 entschieden, es öffentlich zu stellen und `v0.4.0` als Latest-Release zu veröffentlichen. `make dist` baut das Paket; wer es weitergibt, muss nach der GPL den Quelltext anbieten.
 3. Die Lizenztexte der Fremdkomponenten im Paket: `THIRD_PARTY.md` nennt sie mit Lizenz; `make dist` legt `LICENSE` bei.

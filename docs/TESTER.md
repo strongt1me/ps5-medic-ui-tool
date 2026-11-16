@@ -56,7 +56,7 @@ PS5 Medic lädt **nie von selbst** etwas aus dem Netz. Ein Regel-Update ist entw
 
 Die Prüfsumme schützt vor beschädigten oder abgeschnittenen Kopien. Sie schützt **nicht** vor einer absichtlich untergeschobenen Datei samt passender Prüfsumme; wer Dateien auf deine Konsole legen kann, kann ohnehin mehr. Nimm Regeldateien nur aus dem Release des Projekts.
 
-## Entwurf für einen Aufruf in Foren oder auf Discord (nicht veröffentlicht, bleibt Vorlage: das Repository ist privat)
+## Entwurf für einen Aufruf in Foren oder auf Discord (nicht veröffentlicht, bleibt Vorlage; Beiträge in Foren nur auf Marcs Anweisung)
 
 > **PS5 Medic sucht Tester (FW 4.00 bis 14.10)**
 >
@@ -64,7 +64,7 @@ Die Prüfsumme schützt vor beschädigten oder abgeschnittenen Kopien. Sie schü
 >
 > Gesucht: andere Firmwares und Setups. Du musst nichts reparieren: Check-up starten, □ drücken, den anonymisierten Bericht in ein Issue einfügen. Auch „keine Befunde" ist ein nützliches Ergebnis. PS5 Medic sendet nichts und lädt nur auf deinen Befehl Regeln (mit Signatur) von einer Adresse, die du selbst einträgst.
 >
-> Link zum Release und zur Issue-Vorlage: *(hier einsetzen, sobald das Release veröffentlicht ist)*
+> Link zum Release und zur Issue-Vorlage: https://github.com/strongt1me/ps5-medic-ui-tool/releases/latest und https://github.com/strongt1me/ps5-medic-ui-tool/issues/new/choose
 
 ## English summary
 

@@ -6,13 +6,15 @@
 
 **Check-up, plain-language diagnosis and safe repair for jailbroken PS5 consoles, as a full-screen app for the TV with DualSense.**
 
-![Version](https://img.shields.io/badge/Version-0.4.0--dev-1f6feb)
+![Version](https://img.shields.io/badge/Version-0.4.0-1f6feb)
 ![Firmware](https://img.shields.io/badge/FW-4.00%20to%2014.10-2ea44f)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-blue)
 ![Platform](https://img.shields.io/badge/Platform-PS5%20Payload-003791)
 ![Languages](https://img.shields.io/badge/Languages-DE%20%C2%B7%20EN%20%C2%B7%20FR%20%C2%B7%20IT%20%C2%B7%20ES-lightgrey)
 
 [Deutsch](README.md) · **English** · [Français](README.fr.md) · [Italiano](README.it.md) · [Español](README.es.md)
+
+**[⬇ Download: latest release](https://github.com/strongt1me/ps5-medic-ui-tool/releases/latest)**
 
 <img src="docs/images/en/01_start.png" alt="Start screen" width="860">
 
@@ -28,7 +30,7 @@
   <tr>
     <td width="50%" valign="top">
       <h3>🩺 Check-up</h3>
-      Over 70 rules on the jailbreak chain and HEN, ShadowMount+, plugins, storage, game folders, databases, accounts, and start-up and error history. Every finding has a severity, a plain-language explanation, evidence (file/line/value), a source and a <b>reliability with a reason</b>. Whatever could not be read is shown as <i>not checked</i>, never as "OK".
+      Over 100 rules on the jailbreak chain and HEN, ShadowMount+, plugins, storage, game folders, databases, accounts, Kraken Mount, ampr-emu-ng, and the start-up and error history. Every finding has a severity, plain-language text, evidence (file/line/value), a source and a <b>reliability with a reason</b>. What could not be read is shown as <i>not checked</i>, never as “OK”. Warnings and notices you cannot fix yourself can be hidden with <b>Options</b> (never critical ones; they come back if the severity rises).
     </td>
     <td width="50%" valign="top">
       <h3>🎮 Per game</h3>
@@ -38,7 +40,7 @@
   <tr>
     <td valign="top">
       <h3>🛠 Repair with undo</h3>
-      Twelve reversible fixes (rename an image, set the ShadowMount+ key, carry v1 lines over into the v2 sections, take BackPork out of autoload, move duplicates, autoload wait time, duplicate or missing autoload entries, switch autoload on, set a broken ELF file or an empty image aside, file name with wrong capitalisation) and a guide for nested images. The preview shows exactly what changes; nothing happens without ✕. Every change is recorded in the journal and can be reverted. <b>Never deletes</b>, only moves or renames.
+      Fourteen reversible fixes (rename an image, set the ShadowMount+ key, carry v1 lines over into the v2 sections, take BackPork out of autoload, move duplicates, autoload delay, duplicate or missing autoload entries, switch autoload on, set aside a broken ELF file or an empty image, a file name with the wrong case, leftovers of aborted transfers and incomplete pack folders) and a guide for nested images. The preview shows exactly what changes <b>and what is backed up</b> (copy with size, move without copy); nothing happens without ✕. Every change is in the journal and can be undone. <b>Never delete</b>, only move or rename.
     </td>
     <td valign="top">
       <h3>🧪 Self-test</h3>
@@ -52,13 +54,13 @@
     </td>
     <td valign="top">
       <h3>🕑 History and comparison</h3>
-      Every check-up is saved individually. The latest is shown at the top, earlier ones can be expanded. Old states can be viewed and compared with each other: new, fixed, unchanged.
+      Every check-up is stored on its own. The newest is at the top, earlier ones can be unfolded. The comparison shows new, resolved (with “by repair: …” when Medic fixed it), severity changed, unchanged and the <b>changed setup</b> (firmware, rules version, ShadowMount+, kstuff and ampr-emu-ng versions, number of games).
     </td>
   </tr>
   <tr>
     <td valign="top">
       <h3>📄 Report and rule update</h3>
-      Markdown report with a QR code for your phone (IP/MAC, account IDs and serial numbers are removed). New rules and error codes by file or, only on confirmation, from your own address, <b>only with a valid Ed25519 signature</b>.
+      Markdown report with a QR code for your phone (IP/MAC, account IDs and serial numbers are removed). The <b>support package</b> (△ in the report) is a ZIP with reports, facts and comparison in which game and title names are also replaced by placeholders; only you keep the key. New rules and error codes by file or, only on confirmation, from your own address, <b>only with a valid Ed25519 signature</b>.
     </td>
     <td valign="top">
       <h3>🌍 Five languages</h3>
@@ -75,12 +77,16 @@
     <td width="50%"><img src="docs/images/en/04_detail_0.png" alt="Finding in detail"></td>
   </tr>
   <tr>
-    <td><img src="docs/images/en/22_game_detail.png" alt="Per game view"></td>
-    <td><img src="docs/images/en/17_selftest_list.png" alt="Self-test"></td>
+    <td width="50%"><img src="docs/images/en/05_fix_preview.png" alt="Repair preview with backup"></td>
+    <td width="50%"><img src="docs/images/en/06d_compare.png" alt="Comparison of two check-ups"></td>
   </tr>
   <tr>
-    <td><img src="docs/images/en/10_error_codes.png" alt="Error codes"></td>
-    <td><img src="docs/images/en/30b_check_list_open.png" alt="Check-up history"></td>
+    <td width="50%"><img src="docs/images/en/22_game_detail.png" alt="Per-game view"></td>
+    <td width="50%"><img src="docs/images/en/17_selftest_list.png" alt="Self-test"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/en/10_error_codes.png" alt="Error codes"></td>
+    <td width="50%"><img src="docs/images/en/03b_report.png" alt="Report with QR code and support package"></td>
   </tr>
 </table>
 
@@ -95,6 +101,7 @@
 ## Requirements
 
 - An already jailbroken PS5 with an ELF loader (port 9021) and FTP (port 2121 here).
+- **ShadowMount+ must be running**: it creates the tile and gives the app access to `/data`. If it is stopped, the app reports “Service file not readable”.
 - The interface has two parts: the **tile** (a native app that only displays and reads the DualSense, so the PS button simply returns to the home screen) and the **service** `ps5medicservice.elf`, which reads the console and draws the picture. The app sends the service to the ELF loader (port 9021) itself on start; **neither websrv nor a Homebrew loader is needed**. Without the tile, only the diagnostic payload (`ps5medic.elf`) runs.
 
 ## Installation
@@ -112,6 +119,7 @@ The `FAKE42007` tile replaces the earlier ways (launcher, websrv, tiles `FAKE420
 |---|---|
 | Start | ↑↓ select · ✕ open · ◯ quit |
 | Findings list | ↑↓ select · L1/R1 page · ✕ details · △ repair/guide · □ report · ◯ back |
+| Findings list (more) | Options hide · ← compare with the last check-up · → hidden findings · in the report △ support package |
 | Detail | ←→ previous/next finding · △ repair · □ error code · ◯ back |
 | Repair preview | ✕ confirm (writes) · ◯ cancel |
 | Games | ↑↓ select · ✕ open · L1/R1 other game · ◯ back |
@@ -182,6 +190,6 @@ A new rule needs: an entry in `knowledge/rules.json` with a source, a positive a
 
 PS5 Medic is licensed under the **GNU General Public License, version 3 or (at your option) any later version** (GPL-3.0-or-later). The license text is in [LICENSE](LICENSE), and every original source file carries an SPDX line. This also applies to the rule database `knowledge/rules.json`. Reason: the finished ELF links against the GPLv3 runtime libraries of the ps5-payload-sdk. The third-party components (MIT, zlib, BSD-2-Clause, DejaVu, stb_image) are compatible with the GPL-3.0 and are listed with their licenses in [THIRD_PARTY.md](THIRD_PARTY.md).
 
-The repository is **private**, there is no public release (decision of the author, 8 Nov 2026). Anyone who passes on a package from `make dist` must, under the GPL, also offer the corresponding source code.
+The repository is **public**; ready-made packages are under [Releases](https://github.com/strongt1me/ps5-medic-ui-tool/releases). Anyone who passes on a package must, under the GPL, also offer the matching source code.
 
 PS5 Medic is a community project and is not affiliated with Sony. Use is at your own risk.

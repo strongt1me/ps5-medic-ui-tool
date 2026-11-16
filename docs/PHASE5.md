@@ -1,6 +1,6 @@
 # Phase 5 – Community
 
-Stand 8. Nov. 2026. Regel-Update (Datei und signierter Download), unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung stehen. **Entschieden:** Das Repository bleibt privat, es gibt kein GitHub-Release und keine Foren-Beiträge (siehe `docs/PHASE4.md`).
+Stand 8. Nov. 2026. Regel-Update (Datei und signierter Download), unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung stehen. **Entschieden (8. Nov.):** privat, kein GitHub-Release, keine Foren-Beiträge; **geändert am 16. Nov. 2026:** Das Repository wird öffentlich, `v0.4.0` ist das Latest-Release (siehe `docs/PHASE4.md`).
 
 ## 1. Regel-Update (Datei oder signierter Download)
 
@@ -69,6 +69,6 @@ Zeilen, die schon als Evidenz eines Befunds im Bericht stehen, fallen weg. Gleic
 
 ## Offen
 
-- **Beiträge** auf GBAtemp/Discord: entfallen vorerst, das Projekt bleibt privat (Entscheidung vom 8. Nov. 2026). Der Entwurf in `docs/TESTER.md` bleibt als Vorlage.
-- **GitHub-Release:** entfällt, Repository privat. Lizenz: GPL-3.0-or-later (siehe `docs/PHASE4.md`). Die Issue-Vorlage hat nur in einem Repository mit Issues einen Sinn.
+- **Beiträge** auf GBAtemp/Discord: entfallen vorerst (Entscheidung vom 8. Nov. 2026; das Repository ist seit dem 16. Nov. 2026 öffentlich, Beiträge in Foren nur auf Marcs Anweisung). Der Entwurf in `docs/TESTER.md` bleibt als Vorlage.
+- **GitHub-Release:** seit 16. Nov. 2026 `v0.4.0` (Repository öffentlich). Lizenz: GPL-3.0-or-later (siehe `docs/PHASE4.md`). Die Issue-Vorlage hat nur in einem Repository mit Issues einen Sinn.
 - **Tester-Fixtures** entstehen erst, wenn es Berichte gibt.

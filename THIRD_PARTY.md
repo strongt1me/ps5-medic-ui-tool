@@ -12,7 +12,9 @@ Wissensbasis: [PS5-Jailbreak-Doctor](https://github.com/asomimlrxd/PS5-Jailbreak
 
 Nicht im Repo, nur zum Bauen benötigt: [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) (GPLv3, John Törnblom) für `make ps5`. Der gebaute ELF linkt gegen dessen Laufzeit-Bibliotheken; deshalb steht PS5 Medic selbst unter GPL-3.0-or-later (siehe `LICENSE`). Die oben genannten Komponenten (MIT, zlib, BSD-2-Clause, DejaVu) sind damit vereinbar.
 
-Kachel-Starter (`title/`): `title/title.ld` und `title/symbols.map` stammen aus [ps5-native-app-boilerplate](https://github.com/blackbearreloaded/ps5-native-app-boilerplate) (GPL-3.0-or-later, BlackBearReloaded; der Kopf der Datei nennt das). `make title` nutzt dessen Werkzeug `ps5-native-tool` und kopiert den signierten Laufzeit-Shim `libc.prx` aus einem lokalen Checkout; beides liegt nicht im Repo, und der Titel ist nicht Teil von `make dist` (siehe `docs/TITLE.md`).
+Kachel-Starter (`title/`): `title/title.ld` und `title/symbols.map` stammen aus [ps5-native-app-boilerplate](https://github.com/drakmor/ps5-native-app-boilerplate) (GPL-3.0-or-later, BlackBearReloaded; der Kopf der Datei nennt das). `make title` nutzt dessen Werkzeug `ps5-native-tool` und kopiert den signierten Laufzeit-Shim `libc.prx` aus einem lokalen Checkout; beides liegt nicht im Repo, und der Titel ist nicht Teil von `make dist` (siehe `docs/TITLE.md`).
+
+Im Release (`FAKE42007/sce_module/libc.prx`, Quelle der Kachel `make native-ui`): der signierte Laufzeit-Shim der nativen App, erzeugt mit [ps5-native-app-boilerplate](https://github.com/drakmor/ps5-native-app-boilerplate) (GPL-3.0-or-later, ursprünglich von BlackBearReloaded; das Repository nennt `libc_builder.cpp` und die Manifeste unter `tooling/native/runtime/` als unabhängig geschrieben und die erzeugte `libc.prx` als frei von Sony-Laufzeitcode). Die Datei liegt nicht im Repo, nur im Release-Zip; den Quelltext dazu bietet das Boilerplate-Repository an (GPL). Der Ordner heißt nach der Titel-ID `FAKE42007`, wie bei anderen Homebrew-Ordner-Apps.
 
 Im Repo (`third_party/libdeflate/`): libdeflate 1.26 (MIT, Eric Biggers, Lizenztext in `COPYING`), unverändert, nur die zlib-Entpackung für x86-64 (`README.PS5MEDIC`); entpackt die PFSC-Blöcke der `.ffpfsc`-Images. `libmedic/src/imgread.c` und `libmedic/include/medic/imgread.h` stammen aus PS5 Cooling & System Center (derselbe Autor, GPL-3.0-or-later).
 
@@ -22,7 +24,7 @@ Im Repo (`ps5/native_tilemap.inc`): die Kachelung des Bildspeichers, aus dem Vid
 
 Übersetzungen: Die französischen, italienischen und spanischen Texte in `ui/i18n/` und `knowledge/l10n/` sind eigene Übersetzungen der deutschen und englischen Texte dieses Projekts (GPL-3.0-or-later).
 
-Startbild: `ui/assets/splash.jpg` ist ein vom Autor bereitgestelltes Bild für die App.
+Startbild: `ui/assets/splash.jpg` ist ein vom Autor bereitgestelltes Bild für die App. Hintergrund: `ui/assets/background.jpg` ist ein vom Autor selbst erstelltes Bild (Angabe von Marc, 16. Nov. 2026).
 
 Im Repo (`third_party/websrv-hbldr/`): `hbldr.c/.h`, `elfldr.c/.h` und `pt.c/.h` aus [ps5-payload-dev/websrv](https://github.com/ps5-payload-dev/websrv), `src/ps5/` (Copyright John Törnblom, GPL-3.0-or-later, Lizenztext im Ordner; Stand der Quelle: Commit b9c9f88, 10. Okt. 2026). Das ist der Big-App-Lader, mit dem `ps5medic-launcher.elf` die UI mit App-Kontext startet (eine System-App wird per ptrace gegen die ELF getauscht). **Geändert** (nur `hbldr.c`): die Include-Zeilen und ein Zeitlimit von 20 s für `kevent()`, die Änderungen stehen im Kopf der Datei; `compat.h` ist eine eigene Hilfsdatei. Der Launcher selbst (`ps5/launcher_main.cpp`) ist eigener Code nach dem Muster von websrvs `src/ps5/sys.c` (Kachel per `sceAppInstUtilAppInstallTitleDir`). websrv selbst ist nicht mehr nötig; der Launcher-Eintrag `ps5/homebrew/homebrew.js` ist eine eigene, kleine Datei für Nutzer, die websrv ohnehin haben.
 

@@ -6,13 +6,15 @@
 
 **Chequeo, diagnóstico en lenguaje claro y reparación segura para consolas PS5 con jailbreak, como aplicación a pantalla completa para el televisor con DualSense.**
 
-![Versión](https://img.shields.io/badge/Versión-0.4.0--dev-1f6feb)
+![Versión](https://img.shields.io/badge/Versión-0.4.0-1f6feb)
 ![Firmware](https://img.shields.io/badge/FW-4.00%20a%2014.10-2ea44f)
 ![Licencia](https://img.shields.io/badge/Licencia-GPL--3.0--or--later-blue)
 ![Plataforma](https://img.shields.io/badge/Plataforma-PS5%20Payload-003791)
 ![Idiomas](https://img.shields.io/badge/Idiomas-DE%20%C2%B7%20EN%20%C2%B7%20FR%20%C2%B7%20IT%20%C2%B7%20ES-lightgrey)
 
 [Deutsch](README.md) · [English](README.en.md) · [Français](README.fr.md) · [Italiano](README.it.md) · **Español**
+
+**[⬇ Descargar: última versión](https://github.com/strongt1me/ps5-medic-ui-tool/releases/latest)**
 
 <img src="docs/images/es/01_start.png" alt="Pantalla de inicio" width="860">
 
@@ -28,7 +30,7 @@
   <tr>
     <td width="50%" valign="top">
       <h3>🩺 Chequeo</h3>
-      Más de 70 reglas sobre la cadena de jailbreak y HEN, ShadowMount+, plugins, almacenamiento, carpetas de juegos, bases de datos, cuentas y el historial de arranques y errores. Cada hallazgo tiene gravedad, explicación en lenguaje claro, prueba (archivo/línea/valor), fuente y una <b>fiabilidad con su motivo</b>. Lo que no se pudo leer figura como <i>sin revisar</i>, nunca como «en orden».
+      Más de 100 reglas sobre la cadena de jailbreak y HEN, ShadowMount+, plugins, almacenamiento, carpetas de juegos, bases de datos, cuentas, Kraken Mount, ampr-emu-ng e historial de inicio y de errores. Cada hallazgo tiene gravedad, texto claro, prueba (archivo/línea/valor), fuente y una <b>fiabilidad con motivo</b>. Lo que no se pudo leer aparece como <i>no comprobado</i>, nunca como «correcto». Las advertencias y avisos que no puedes resolver tú mismo se ocultan con <b>Options</b> (nunca los críticos; reaparecen si sube la gravedad).
     </td>
     <td width="50%" valign="top">
       <h3>🎮 Por juego</h3>
@@ -38,7 +40,7 @@
   <tr>
     <td valign="top">
       <h3>🛠 Reparar con deshacer</h3>
-      Doce reparaciones reversibles (renombrar una imagen, fijar una clave de ShadowMount+, pasar líneas v1 a las secciones v2, quitar BackPork de la autocarga, mover duplicados, pausa de espera de la autocarga, entradas de autocarga duplicadas o ausentes, activar la autocarga, apartar un archivo ELF defectuoso o una imagen vacía, nombre de archivo con mayúsculas erróneas) y una guía para imágenes anidadas. La vista previa muestra exactamente qué cambia; no ocurre nada sin ✕. Cada cambio queda en el diario y se puede revertir. <b>Nunca se borra</b>, solo se mueve o se renombra.
+      Catorce reparaciones reversibles (renombrar una imagen, fijar una clave de ShadowMount+, pasar líneas v1 a las secciones v2, quitar BackPork del autoload, mover duplicados, espera del autoload, entradas de autoload duplicadas o ausentes, activar el autoload, apartar un archivo ELF defectuoso o una imagen vacía, nombre de archivo con mayúsculas incorrectas, restos de transferencias interrumpidas y carpetas de paquete incompletas) y una guía para imágenes anidadas. La vista previa muestra exactamente qué cambia <b>y qué se guarda</b> (copia con tamaño, mover sin copia); sin ✕ no pasa nada. Cada cambio queda en el diario y se puede deshacer. <b>Nunca borrar</b>, solo mover o renombrar.
     </td>
     <td valign="top">
       <h3>🧪 Autotest</h3>
@@ -52,13 +54,13 @@
     </td>
     <td valign="top">
       <h3>🕑 Historial y comparación</h3>
-      Cada chequeo se guarda por separado. El más reciente aparece arriba y los anteriores se pueden desplegar. Los estados antiguos se pueden consultar y comparar entre sí: nuevo, resuelto, sin cambios.
+      Cada chequeo se guarda por separado. El más reciente está arriba, los anteriores se pueden desplegar. La comparación muestra nuevo, resuelto (con «con la reparación: …» si Medic lo resolvió), gravedad cambiada, sin cambios y la <b>configuración cambiada</b> (firmware, versión de las reglas, versiones de ShadowMount+, kstuff y ampr-emu-ng, número de juegos).
     </td>
   </tr>
   <tr>
     <td valign="top">
       <h3>📄 Informe y actualización de reglas</h3>
-      Informe en Markdown con código QR para el móvil (se eliminan IP/MAC, IDs de cuenta y números de serie). Reglas y códigos de error nuevos por archivo o, solo tras confirmación, desde la dirección propia, <b>solo con una firma Ed25519 válida</b>.
+      Informe Markdown con código QR para el móvil (se eliminan direcciones IP/MAC, ID de cuenta y números de serie). El <b>paquete de soporte</b> (△ en el informe) es un ZIP con informes, datos y comparación en el que además los nombres de juegos y títulos se sustituyen por marcadores; la clave solo la guardas tú. Nuevas reglas y códigos de error por archivo o, solo con confirmación, desde tu propia dirección, <b>solo con firma Ed25519 válida</b>.
     </td>
     <td valign="top">
       <h3>🌍 Cinco idiomas</h3>
@@ -75,12 +77,16 @@
     <td width="50%"><img src="docs/images/es/04_detail_0.png" alt="Hallazgo en detalle"></td>
   </tr>
   <tr>
-    <td><img src="docs/images/es/22_game_detail.png" alt="Vista Por juego"></td>
-    <td><img src="docs/images/es/17_selftest_list.png" alt="Autotest"></td>
+    <td width="50%"><img src="docs/images/es/05_fix_preview.png" alt="Vista previa de la reparación con copia"></td>
+    <td width="50%"><img src="docs/images/es/06d_compare.png" alt="Comparación de dos chequeos"></td>
   </tr>
   <tr>
-    <td><img src="docs/images/es/10_error_codes.png" alt="Códigos de error"></td>
-    <td><img src="docs/images/es/30b_check_list_open.png" alt="Historial de chequeos"></td>
+    <td width="50%"><img src="docs/images/es/22_game_detail.png" alt="Vista por juego"></td>
+    <td width="50%"><img src="docs/images/es/17_selftest_list.png" alt="Autotest"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/es/10_error_codes.png" alt="Códigos de error"></td>
+    <td width="50%"><img src="docs/images/es/03b_report.png" alt="Informe con código QR y paquete de soporte"></td>
   </tr>
 </table>
 
@@ -95,6 +101,7 @@
 ## Requisitos
 
 - Una PS5 que ya tenga jailbreak, con cargador de ELF (puerto 9021) y FTP (aquí puerto 2121).
+- **ShadowMount+ debe estar en marcha**: crea el mosaico y da a la app acceso a `/data`. Si está detenido, la app avisa «No se puede leer el archivo del servicio».
 - La interfaz consta de dos partes: el **mosaico** (una aplicación nativa que solo muestra y lee el DualSense, por lo que el botón PS vuelve con normalidad a la pantalla de inicio) y el **servicio** `ps5medicservice.elf`, que lee la consola y dibuja la imagen. La aplicación envía ella misma el servicio al cargador de ELF (puerto 9021) al arrancar; **no hace falta ni websrv ni un cargador de Homebrew**. Sin mosaico solo funciona el payload de diagnóstico (`ps5medic.elf`).
 
 ## Instalación
@@ -112,6 +119,7 @@ El mosaico `FAKE42007` sustituye a las vías anteriores (launcher, websrv, mosai
 |---|---|
 | Inicio | ↑↓ elegir · ✕ abrir · ◯ salir |
 | Lista de hallazgos | ↑↓ elegir · L1/R1 página · ✕ detalles · △ reparar/guía · □ informe · ◯ atrás |
+| Lista de hallazgos (más) | Options ocultar · ← comparar con el último chequeo · → hallazgos ocultos · en el informe △ paquete de soporte |
 | Detalle | ←→ hallazgo anterior/siguiente · △ reparar · □ código de error · ◯ atrás |
 | Vista previa de reparación | ✕ confirmar (escribe) · ◯ cancelar |
 | Juegos | ↑↓ elegir · ✕ abrir · L1/R1 otro juego · ◯ atrás |
@@ -182,6 +190,6 @@ Una regla nueva necesita: una entrada en `knowledge/rules.json` con fuente, un f
 
 PS5 Medic se publica bajo la **GNU General Public License, versión 3 o (a elección) cualquier versión posterior** (GPL-3.0-or-later). El texto de la licencia está en [LICENSE](LICENSE) y cada archivo fuente propio lleva una línea SPDX. Esto vale también para la base de datos de reglas `knowledge/rules.json`. Motivo: el ELF final se enlaza con las bibliotecas de ejecución GPLv3 del ps5-payload-sdk. Los componentes de terceros (MIT, zlib, BSD-2-Clause, DejaVu, stb_image) son compatibles con la GPL-3.0 y figuran con sus licencias en [THIRD_PARTY.md](THIRD_PARTY.md).
 
-El repositorio es **privado**, no hay versión pública (decisión del autor, 8 de nov. de 2026). Quien distribuya un paquete de `make dist` debe ofrecer también, según la GPL, el código fuente correspondiente.
+El repositorio es **público**; los paquetes listos están en [Releases](https://github.com/strongt1me/ps5-medic-ui-tool/releases). Quien distribuya un paquete debe, según la GPL, ofrecer también el código fuente correspondiente.
 
 PS5 Medic es un proyecto de la comunidad y no está vinculado a Sony. El uso es bajo la propia responsabilidad.

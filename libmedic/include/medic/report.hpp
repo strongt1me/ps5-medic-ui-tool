@@ -16,7 +16,7 @@
 
 namespace medic {
 
-constexpr const char* kMedicVersion = "0.4.0-dev";
+constexpr const char* kMedicVersion = "0.4.0";
 constexpr const char* kReportDir = "/data/ps5medic/reports";
 
 enum class ReportLang { De, En };
