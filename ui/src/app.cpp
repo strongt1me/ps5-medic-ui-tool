@@ -228,6 +228,11 @@ void build_background(Canvas& bg, const Canvas* image) {
                     const float e = std::sqrt(ex * ex + ey * ey);
                     if (e < 1.0f) mix *= std::clamp((e - 0.75f) / 0.25f, 0.0f, 1.0f);  // innen kein Bild, am Rand weich zurueck; ausserhalb der Ellipse ist e >= 1
                 }
+                {  // der Ladering unten links (gehoert zum Startbild-Entwurf) liegt sonst als stoerender Kreis hinter Kacheln und Hinweisleiste
+                    const float rx = (static_cast<float>(x) - 160.0f) / 135.0f, ry = (static_cast<float>(y) - 942.0f) / 105.0f;
+                    const float r = std::sqrt(rx * rx + ry * ry);
+                    if (r < 1.0f) mix *= std::clamp((r - 0.70f) / 0.30f, 0.0f, 1.0f);
+                }
                 const float dim = 0.60f;
                 col[0] += (ix * dim - col[0]) * mix;
                 col[1] += (iy * dim - col[1]) * mix;
