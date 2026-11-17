@@ -4,6 +4,7 @@
 // Begruendung: docs/PHASE3.md, Abschnitt "Korrektur"). Zeichnet medic::ui::App per SDL2 (ps5-payload-dev/SDL,
 // siehe docs/PHASE3.md fuer den Build) in den Bildschirm und liest den DualSense als SDL_GameController.
 // Reparaturen laufen ueber LocalService -> medic::apply_plan, also mit Backup/Journal/Undo wie am PC.
+#include "ps5_http.hpp"
 #include "ps5_platform.hpp"
 
 #include "medic/error_codes.hpp"
@@ -231,7 +232,7 @@ int main() {
     medic::ui::LocalService service(*platform, std::move(rules));
     service.set_error_codes(load_error_codes());
     // Der Regel-Download ist die einzige Netzfunktion: Abruf nur nach Bestaetigung im Bildschirm Regel-Update, nur zur Adresse aus config.ini.
-    const auto http = medic::make_posix_http_client();
+    const auto http = medic::make_ps5_http_client();
     service.set_http_client(http.get());
     App app(service);
     {  // Hintergrundbild fuer alle Bildschirme (ui/assets/background.jpg, eingebettet)

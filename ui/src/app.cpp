@@ -222,10 +222,11 @@ void build_background(Canvas& bg, const Canvas* image) {
                 mix *= 1.0f - 0.45f * std::clamp(1.0f - fx * 2.2f, 0.0f, 1.0f);        // links (Konsole) zurueckhaltender
                 mix *= 1.0f - 0.60f * std::clamp(1.0f - static_cast<float>(y) / 300.0f, 0.0f, 1.0f);  // oben (Titelzeile, Kopf der Listen)
                 mix *= 1.0f - 0.35f * std::clamp((static_cast<float>(y) - static_cast<float>(h - 140)) / 140.0f, 0.0f, 1.0f);  // unten (Hinweisleiste)
-                {  // das Wappen mit dem Kreuz (oben in der Mitte) liegt sonst hinter Titelzeilen und Listenkoepfen
-                    const float ex = (static_cast<float>(x) - 962.0f) / 360.0f, ey = (static_cast<float>(y) - 215.0f) / 250.0f;
-                    const float e2 = ex * ex + ey * ey;
-                    if (e2 < 1.0f) mix *= 1.0f - 0.80f * (1.0f - std::sqrt(e2));  // ausserhalb der Ellipse ist t = 0
+                {  // das Wappen des Bildes (Sechseck, Herzschlaglinie, Werkzeuge, Ring; oben in der Mitte) wird ganz ausgeblendet: Das Startbild zeichnet sein
+                   // eigenes Emblem, und beide lagen versetzt uebereinander (doppelte Linien); auf den Listen laege es hinter Titelzeilen und Koepfen.
+                    const float ex = (static_cast<float>(x) - 962.0f) / 470.0f, ey = (static_cast<float>(y) - 250.0f) / 290.0f;
+                    const float e = std::sqrt(ex * ex + ey * ey);
+                    if (e < 1.0f) mix *= std::clamp((e - 0.75f) / 0.25f, 0.0f, 1.0f);  // innen kein Bild, am Rand weich zurueck; ausserhalb der Ellipse ist e >= 1
                 }
                 const float dim = 0.60f;
                 col[0] += (ix * dim - col[0]) * mix;
@@ -886,8 +887,10 @@ void App::begin_fix(int index, Screen origin) {
 void App::handle(Button b) {
     const Screen before = screen_;
     handle_impl(b);
-    // Ein aus der Wartung geoeffneter Bildschirm fuehrt mit Kreis zurueck dorthin, nicht ins Startbild
-    if (maint_origin_ && before != screen_ && (screen_ == Screen::Start || (screen_ == Screen::Settings && before == Screen::RulesUpdate))) {  // das Regel-Update kennt sonst nur die Einstellungen als Ziel
+    if (before == Screen::Settings && screen_ == Screen::RulesUpdate) rules_via_settings_ = true;       // das Regel-Update wurde aus den Einstellungen geoeffnet: Kreis geht dorthin zurueck
+    else if (before == Screen::Maintenance && screen_ == Screen::RulesUpdate) rules_via_settings_ = false;
+    // Ein aus "Mehr" geoeffneter Bildschirm fuehrt mit Kreis zurueck dorthin, nicht ins Startbild
+    if (maint_origin_ && before != screen_ && (screen_ == Screen::Start || (screen_ == Screen::Settings && before == Screen::RulesUpdate && !rules_via_settings_))) {  // das Regel-Update kennt sonst nur die Einstellungen als Ziel
         maint_origin_ = false;
         screen_ = Screen::Maintenance;
     }
@@ -900,33 +903,36 @@ void App::handle_impl(Button b) {
     }
     switch (screen_) {
         case Screen::Start:
-            // Die grosse Kachel (0) liegt ueber den fuenf kleinen (1..5), die nebeneinander liegen: Hoch von jeder kleinen Kachel fuehrt
-            // gleich zur grossen, Runter von der grossen wieder zu der kleinen Kachel, von der man gekommen ist (start_small_).
+            // Das Statusfeld (0) liegt ueber den drei Kacheln (1 Spiele, 2 Verlauf, 3 Mehr), die nebeneinander liegen: Hoch von einer Kachel fuehrt
+            // zum Statusfeld, Runter vom Statusfeld wieder zu der Kachel, von der man gekommen ist (start_small_).
             if (b == Button::Up) {
                 if (start_sel_ >= 1) start_small_ = start_sel_;
                 start_sel_ = 0;
             } else if (b == Button::L1) start_sel_ = std::max(start_sel_ - 1, 0);
-            else if (b == Button::Down && start_sel_ == 0) start_sel_ = std::clamp(start_small_, 1, 7);
+            else if (b == Button::Down && start_sel_ == 0) start_sel_ = std::clamp(start_small_, 1, 3);
             else if (b == Button::Down || b == Button::R1) {
-                start_sel_ = std::min(start_sel_ + 1, 7);
+                start_sel_ = std::min(start_sel_ + 1, 3);
             } else if (b == Button::Left && start_sel_ >= 2) --start_sel_;
-            else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < 7) ++start_sel_;
-            else if (b == Button::Cross) {
+            else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < 3) ++start_sel_;
+            else if (b == Button::Square) {  // jederzeit neu pruefen
+                start_small_ = 1;
+                start_check();
+            } else if (b == Button::Cross) {
                 if (start_sel_ == 0) {
-                    start_small_ = 1;  // wer den Check-up startet, beginnt beim naechsten Mal wieder bei der ersten kleinen Kachel
-                    start_check();
-                }
-                else if (start_sel_ == 1) open_checks();
-                else if (start_sel_ == 2) screen_ = Screen::Settings;
-                else if (start_sel_ == 3) open_error_codes();
-                else if (start_sel_ == 4) open_selftest();
-                else if (start_sel_ == 6) open_repairs();
-                else if (start_sel_ == 7) open_maintenance();
-                else if (has_result_) open_games();
-                else {  // ohne Check-up gibt es nichts zu zeigen: erst pruefen, dann die Liste
-                    after_check_games_ = true;
-                    start_check();
-                }
+                    if (has_result_ && !result_.findings.empty()) {
+                        screen_ = Screen::Findings;  // der naechste Schritt: die Befunde ansehen (und dort reparieren)
+                    } else {
+                        start_small_ = 1;  // sonst (noch nichts geprueft oder alles in Ordnung): pruefen
+                        start_check();
+                    }
+                } else if (start_sel_ == 1) {
+                    if (has_result_) open_games();
+                    else {  // ohne Check-up gibt es nichts zu zeigen: erst pruefen, dann die Liste
+                        after_check_games_ = true;
+                        start_check();
+                    }
+                } else if (start_sel_ == 2) open_checks();
+                else open_maintenance();
             } else if (b == Button::Circle) quit_ = true;
             break;
         case Screen::Repairs: {
@@ -949,10 +955,13 @@ void App::handle_impl(Button b) {
             else if (b == Button::Down) maint_sel_ = std::min(maint_sel_ + 1, kMaintItems - 1);
             else if (b == Button::Cross) {
                 maint_origin_ = true;
-                if (maint_sel_ == 0) open_selftest();
-                else if (maint_sel_ == 1) open_rules_update();
-                else if (maint_sel_ == 2) open_history();
-                else open_report();
+                if (maint_sel_ == 0) open_repairs();
+                else if (maint_sel_ == 1) open_selftest();
+                else if (maint_sel_ == 2) open_rules_update();
+                else if (maint_sel_ == 3) open_history();
+                else if (maint_sel_ == 4) open_report();
+                else if (maint_sel_ == 5) open_error_codes();
+                else screen_ = Screen::Settings;
             } else if (b == Button::Circle) screen_ = Screen::Start;
             break;
         case Screen::Running:
@@ -1754,8 +1763,12 @@ static void stroke_hex(Canvas& c, int cx, int cy, int r, float width, Color col)
 static void draw_emblem(Canvas& c, int cx, int cy, int r) {
     c.glow(cx, cy, r * 3, rgb(40, 120, 255), 110);
     const Color line = rgba(90, 190, 255, 150);
-    c.stroke_polyline(ecg_points(static_cast<float>(cx - 560), 470.0f, static_cast<float>(cy), 46.0f, 420.0f, 120.0f), 4, line);
-    c.stroke_polyline(ecg_points(static_cast<float>(cx + 90), 470.0f, static_cast<float>(cy), 46.0f, 420.0f, 0.0f), 4, line);
+    // rechts die Welle, links ihr Spiegelbild (vorher war die linke Welle verschoben: Spitzen in 457 und 312 Pixel Abstand)
+    auto right = ecg_points(static_cast<float>(cx + 90), 470.0f, static_cast<float>(cy), 46.0f, 420.0f, 0.0f);
+    auto left = right;
+    for (auto& p : left) p.first = 2.0f * static_cast<float>(cx) - p.first;
+    c.stroke_polyline(left, 4, line);
+    c.stroke_polyline(right, 4, line);
     stroke_hex(c, cx, cy, r + 16, 2, rgba(90, 190, 255, 70));
     fill_hex(c, cx, cy, r, rgb(44, 160, 255));
     fill_hex(c, cx, cy, r - 9, rgb(9, 22, 50));
@@ -1781,95 +1794,97 @@ void App::draw_start(Canvas& c) const {
         small().draw(c, cx - small().width(sub) / 2, ty + title().line_height() + 2, sub, kDim);
     }
 
-    // Check-up starten: breite Glasflaeche mit Herzschlaglinie
-    const bool sel0 = start_sel_ == 0;
+    // Statusfeld: sagt in einem Satz, wie es um die Konsole steht, und bietet den naechsten Schritt an ("Was jetzt?"). Die Ueberschrift folgt dem schlimmsten Befund.
+    const int hw = 1340, hx = cx - hw / 2, hy = 470, hh = 220;
     {
-        const int bw = 1100, bh = 104, bx = cx - bw / 2, by = 468;
-        if (sel0) c.glow(cx, by + bh / 2, 520, rgb(60, 140, 255), 60);
-        c.fill_round_rect_vgradient(bx, by, bw, bh, 26, sel0 ? rgb(88, 170, 255) : rgb(50, 96, 168), sel0 ? rgb(38, 92, 210) : rgb(26, 54, 108));
-        c.stroke_polyline(ecg_points(static_cast<float>(bx + bw - 210), 180.0f, static_cast<float>(by + bh / 2), 30.0f, 290.0f, 0.0f), 5, sel0 ? rgb(190, 222, 255) : rgb(100, 140, 200));
-        if (sel0) c.stroke_round_rect(bx, by, bw, bh, 26, 4, rgb(210, 232, 255));
-        c.fill_round_rect(bx + 22, by + 14, 76, 76, 22, rgba(255, 255, 255, sel0 ? 46 : 30));
-        draw_icon(c, Icon::Stethoscope, bx + 60, by + 52, 56, rgb(255, 255, 255), rgb(190, 224, 255));
-        title().draw(c, bx + 122, by + 8, S("start.check"), rgb(255, 255, 255));
-        small().draw(c, bx + 122, by + 8 + title().line_height() + 2, elide(small(), S("start.check_sub"), bw - 122 - 230), rgb(224, 236, 255));
+        const bool sel0 = start_sel_ == 0;
+        int crit = 0, warn = 0, info = 0, fixable = 0;
+        for (const auto& f : result_.findings) {
+            if (f.severity == medic::Severity::Critical) ++crit;
+            else if (f.severity == medic::Severity::Warning) ++warn;
+            else ++info;
+            if (!f.fix.empty() && !is_hint_fix(f.fix)) ++fixable;
+        }
+        const int untested = has_result_ ? static_cast<int>(std::count_if(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; })) : 0;
+        Icon icon = Icon::Stethoscope;
+        Color tint = kTintBlue, subcol = kDim;
+        std::string head, sub, sub2, button;
+        Color sub2col = kDim;
+        if (!has_result_) {
+            head = S("start.h_none");
+            sub = S("start.check_sub");
+            button = S("start.check");
+        } else if (result_.findings.empty()) {
+            const bool partial = result_.incomplete || untested > 0;  // nicht alles gelesen: nie "in Ordnung" in Gruen
+            icon = partial ? Icon::Info : Icon::Ok;
+            tint = partial ? kTintBlue : kTintGreen;
+            head = S(result_.incomplete ? "start.h_incomplete" : untested ? "start.h_clean_partial" : "start.h_ok");
+            sub = S(result_.incomplete ? "start.last_incomplete" : untested ? "start.last_clean_partial" : "start.last_clean");
+            button = S("start.rerun");
+        } else {
+            const medic::Severity worst = crit ? medic::Severity::Critical : warn ? medic::Severity::Warning : medic::Severity::Info;
+            icon = sev_icon(worst);
+            tint = sev_color(worst);
+            head = S(crit ? "start.h_crit" : warn ? "start.h_warn" : "start.h_info");
+            sub = S.fmt("start.last_summary", {{"n", std::to_string(result_.findings.size())}, {"crit", std::to_string(crit)}, {"warn", std::to_string(warn)}, {"info", std::to_string(info)}});
+            if (fixable > 0) {
+                sub2 = S.fmt("start.fixable", {{"n", std::to_string(fixable)}});
+                sub2col = kOk;
+            }
+            button = S("start.view");
+        }
+        if (has_result_ && untested > 0 && sub2.empty()) sub2 = S.fmt("start.not_tested", {{"n", std::to_string(untested)}});
+        if (has_result_ && !result_.history_saved) {  // der seltene Fehlerfall hat Vorrang vor allen anderen Zeilen
+            sub2 = S("start.history_failed");
+            sub2col = kWarn;
+        }
+
+        card(c, hx, hy, hw, hh, sel0);
+        c.glow(hx + 100, hy + hh / 2, 90, tint, sel0 ? 90 : 55);
+        draw_icon_badge(c, icon, hx + 40, hy + (hh - 120) / 2, 120, tint);
+        const int tx = hx + 200, bw = 400, bh = 88, bx = hx + hw - 40 - bw, by = hy + (hh - bh) / 2, tw = bx - 30 - tx;
+        title().draw(c, tx, hy + 32, elide(title(), head, tw), icon == Icon::Ok ? kOk : kText);
+        int ty = hy + 32 + title().line_height() + 6;
+        for (const auto& l : wrap_text(body(), sub, tw, sub2.empty() ? 3 : 2)) {
+            body().draw(c, tx, ty, l, subcol);
+            ty += body().line_height() + 2;
+        }
+        if (!sub2.empty()) small().draw(c, tx, ty + 4, elide(small(), sub2, tw), sub2col);
+
+        // Hauptknopf: der naechste Schritt, mit dem Tastensymbol, das ihn ausloest
+        if (sel0) c.glow(bx + bw / 2, by + bh / 2, 260, rgb(60, 140, 255), 60);
+        c.fill_round_rect_vgradient(bx, by, bw, bh, 24, sel0 ? rgb(88, 170, 255) : rgb(50, 96, 168), sel0 ? rgb(38, 92, 210) : rgb(26, 54, 108));
+        if (sel0) c.stroke_round_rect(bx, by, bw, bh, 24, 3, rgb(210, 232, 255));
+        c.draw_pad_glyph(PadGlyph::Cross, bx + 46, by + bh / 2, 44, rgb(255, 255, 255));
+        const int lw2 = bw - 90 - 20;
+        const std::string label = elide(body(), button, lw2);
+        body().draw(c, bx + 90 + (lw2 - body().width(label)) / 2, by + (bh - body().line_height()) / 2, label, rgb(255, 255, 255));
     }
 
-    // Fuenf Kacheln (Verlauf, Einstellungen, Fehlercodes, Selbsttest, Spiele): Symbol oben, Name und Kurztext zentriert; die gewaehlte leuchtet und waechst
-    const int gap = 14, cw = (W - 2 * M - 6 * gap) / 7, ty0 = 594, th = 202;
-    const char* keys[7][2] = {{"start.history", "start.history_sub"}, {"start.settings", "start.settings_sub"}, {"start.errors", "start.errors_sub"}, {"start.selftest", "start.selftest_sub"},
-                              {"start.games", "start.games_sub"}, {"start.repairs", "start.repairs_sub"}, {"start.maint", "start.maint_sub"}};
-    const Icon icons[7] = {Icon::History, Icon::Gear, Icon::Book, Icon::Checklist, Icon::Gamepad, Icon::Wrench, Icon::Shield};
-    const Color tints[7] = {kTintViolet, kTintSlate, kTintOrange, kTintTeal, kTintPink, kTintGreen, kTintBlue};
-    for (int i = 0; i < 7; ++i) {
+    // Drei Kacheln: Spiele, Verlauf und "Mehr" (alles andere: Reparaturen, Selbsttest, Regeln, Backups, Fehlercodes, Einstellungen)
+    const int gap = 25, cw = (hw - 2 * gap) / 3, ty0 = 730, th = 176;
+    const char* keys[3][2] = {{"start.games", "start.games_sub"}, {"start.history", "start.history_sub"}, {"start.more", "start.more_sub"}};
+    const Icon icons[3] = {Icon::Gamepad, Icon::History, Icon::Gear};
+    const Color tints[3] = {kTintPink, kTintViolet, kTintSlate};
+    for (int i = 0; i < 3; ++i) {
         const bool sel = start_sel_ == i + 1;
-        const int grow = sel ? 6 : 0, x = M + i * (cw + gap) - grow, y = ty0 - grow, w = cw + 2 * grow, h = th + 2 * grow;
-        if (sel) c.glow(x + w / 2, y + h / 2, w * 3 / 4, kAccent, 70);
-        card(c, x, y, w, h, sel);
-        c.glow(x + w / 2, y + 44, 64, tints[i], sel ? 90 : 55);
-        draw_icon_badge(c, icons[i], x + w / 2 - 28, y + 16, 56, tints[i]);
-        const std::string name = S(keys[i][0]);
-        body().draw(c, x + (w - std::min(body().width(name), w - 24)) / 2, y + 82, name, kText, w - 24);
-        int ty = y + 82 + body().line_height() + 2;
-        for (const auto& l : wrap_text(small(), S(keys[i][1]), w - 20, 3)) {
-            small().draw(c, x + (w - small().width(l)) / 2, ty, l, kDim);
+        const int x = hx + i * (cw + gap);
+        card(c, x, ty0, cw, th, sel);
+        c.glow(x + 66, ty0 + th / 2, 56, tints[i], sel ? 90 : 55);
+        draw_icon_badge(c, icons[i], x + 28, ty0 + (th - 76) / 2, 76, tints[i]);
+        const int tx = x + 128, tw = cw - 128 - 22;
+        body().draw(c, tx, ty0 + 24, elide(body(), S(keys[i][0]), tw), kText);
+        int ty = ty0 + 24 + body().line_height() + 4;
+        for (const auto& l : wrap_text(small(), S(keys[i][1]), tw, 3)) {
+            small().draw(c, tx, ty, l, kDim);
             ty += small().line_height() + 2;
         }
     }
 
-    // Unten links: letztes Ergebnis (Statussymbol und Text), rechts: Systemstatus (Diagnose, Regeln, Rueckgaengig)
-    const int py = 806, ph = 144, lw = 1090;
-    glass_panel(c, M, py, lw, ph, 22);
-    Icon st_icon = Icon::Info;
-    Color st_col = kDim;
-    if (has_result_ && result_.findings.empty()) {
-        const bool partial = result_.incomplete || std::any_of(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; });
-        st_icon = partial ? Icon::Info : Icon::Ok;  // nicht alles gelesen: nie "in Ordnung" in Gruen
-        st_col = partial ? kInfo : kOk;
-    } else if (has_result_) {
-        medic::Severity worst = medic::Severity::Info;
-        for (auto& f : result_.findings)
-            if (f.severity == medic::Severity::Critical || (f.severity == medic::Severity::Warning && worst == medic::Severity::Info)) worst = f.severity;
-        st_icon = sev_icon(worst);
-        st_col = sev_color(worst);
-    }
-    draw_icon_badge(c, st_icon, M + 26, py + 27, 96, st_col);
-    const int tx = M + 150, tw = lw - 150 - 24;
-    small().draw(c, tx, py + 16, S("start.last"), kDim);
-    const int untested = has_result_ ? static_cast<int>(std::count_if(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; })) : 0;
-    if (!has_result_) {
-        body().draw(c, tx, py + 52, elide(body(), S("start.last_none"), tw), kText);
-    } else if (result_.findings.empty()) {
-        body().draw(c, tx, py + 52, elide(body(), S(result_.incomplete ? "start.last_incomplete" : untested ? "start.last_clean_partial" : "start.last_clean"), tw), (untested || result_.incomplete) ? kText : kOk);
-    } else {
-        int crit = 0, warn = 0, info = 0;
-        for (auto& f : result_.findings) {
-            if (f.severity == medic::Severity::Critical) ++crit;
-            else if (f.severity == medic::Severity::Warning) ++warn;
-            else ++info;
-        }
-        body().draw(c, tx, py + 52,
-                    elide(body(), S.fmt("start.last_summary", {{"n", std::to_string(result_.findings.size())}, {"crit", std::to_string(crit)}, {"warn", std::to_string(warn)}, {"info", std::to_string(info)}}), tw), kText);
-    }
-    if (has_result_ && untested) small().draw(c, tx, py + 52 + body().line_height() + 8, elide(small(), S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), tw), kDim);
-    if (has_result_ && !result_.history_saved) small().draw(c, tx, py + ph - small().line_height() - 14, elide(small(), S("start.history_failed"), tw), kWarn);  // der seltene Fehlerfall ersetzt die Regelversion
-    else if (has_result_ && !result_.rules_version.empty()) small().draw(c, tx, py + ph - small().line_height() - 14, S.fmt("start.rules", {{"v", result_.rules_version}}), kDim);
-
-    const int sx = M + lw + 24, sw = W - 2 * M - lw - 24;
-    glass_panel(c, sx, py, sw, ph, 22);
-    small().draw(c, sx + 24, py + 6, S("start.status"), kText);
-    const std::string rules_val = has_result_ && !result_.rules_version.empty() ? result_.rules_version : S("start.ready");
-    const std::pair<std::string, std::string> rows[4] = {{S("start.st_engine"), S("start.ready")}, {S("start.st_rules"), rules_val}, {S("start.st_undo"), S("start.ready")}, {S("start.st_maint"), S("start.ready")}};
-    for (int i = 0; i < 4; ++i) {
-        const int ry = py + 36 + i * 26;
-        small().draw(c, sx + 24, ry, rows[i].first, kDim);
-        const int vw = small().width(rows[i].second);
-        const Color rc = rgb(96, 196, 255);  // blau, nicht gruen: "bereit" heisst nicht "alles in Ordnung"
-        small().draw(c, sx + sw - 24 - vw, ry, rows[i].second, rc);
-        draw_icon(c, Icon::Ok, sx + sw - 24 - vw - 20, ry + small().line_height() / 2, 22, rc, rc);
-    }
-
-    draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}, {PadGlyph::Circle, S("common.quit")}});
+    std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}};
+    if (has_result_) hints.emplace_back(PadGlyph::Square, S("start.recheck"));
+    hints.emplace_back(PadGlyph::Circle, S("common.quit"));
+    draw_hints(c, hints);
 }
 
 // Befunde, die Medic selbst reparieren kann (oder zu denen es eine Anleitung gibt): Indizes in result_.findings
@@ -1893,6 +1908,7 @@ void App::open_repairs() {
 
 void App::open_maintenance() {
     maint_origin_ = false;
+    maint_sel_ = 0;
     screen_ = Screen::Maintenance;
 }
 
@@ -1951,19 +1967,21 @@ void App::draw_maintenance(Canvas& c) const {
         Icon icon;
         Color tint;
     };
-    const Item items[kMaintItems] = {{"maint.selftest", "maint.selftest_sub", Icon::Checklist, kTintTeal},
+    const Item items[kMaintItems] = {{"start.repairs", "start.repairs_sub", Icon::Wrench, kTintGreen},
+                                     {"maint.selftest", "maint.selftest_sub", Icon::Checklist, kTintTeal},
                                      {"maint.rules", "maint.rules_sub", Icon::Download, kTintBlue},
                                      {"maint.undo", "maint.undo_sub", Icon::Undo, kTintViolet},
-                                     {"maint.report", "maint.report_sub", Icon::Report, kTintOrange}};
-    const int cw = W - 2 * M, ch = 150, gap = 18;
+                                     {"maint.report", "maint.report_sub", Icon::Report, kTintOrange},
+                                     {"start.errors", "start.errors_sub", Icon::Book, kTintOrange},
+                                     {"start.settings", "start.settings_sub", Icon::Gear, kTintSlate}};
+    const int cw = W - 2 * M, ch = 92, gap = 10;
     for (int i = 0; i < kMaintItems; ++i) {
-        const int y = 214 + i * (ch + gap);
+        const int y = 206 + i * (ch + gap);
         const bool sel = i == maint_sel_;
         card(c, M, y, cw, ch, sel);
-        c.glow(M + 80, y + ch / 2, 110, items[i].tint, sel ? 80 : 45);
-        draw_icon_badge(c, items[i].icon, M + 36, y + (ch - 88) / 2, 88, items[i].tint);
-        body().draw(c, M + 160, y + 34, S(items[i].name), kText);
-        small().draw(c, M + 160, y + 34 + body().line_height() + 10, elide(small(), S(items[i].sub), cw - 160 - 48), kDim);
+        draw_icon_badge(c, items[i].icon, M + 28, y + (ch - 60) / 2, 60, items[i].tint);
+        body().draw(c, M + 120, y + 12, S(items[i].name), kText);
+        small().draw(c, M + 120, y + 12 + body().line_height() + 4, elide(small(), S(items[i].sub), cw - 120 - 40), kDim);
     }
     draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}, {PadGlyph::Circle, S("common.back")}});
 }
@@ -3063,6 +3081,7 @@ void App::draw_rules_update(Canvas& c) const {
             if (download_result_.error == "http_status")
                 paragraph(small(), S.fmt("update.error.http_status", {{"file", download_result_.file}, {"status", std::to_string(download_result_.http_status)}}), kDim, 3);
             else paragraph(small(), reason_text(download_result_.error), kDim, 4);
+            if (!download_result_.detail.empty()) paragraph(small(), S.fmt("update.error.detail", {{"d", download_result_.detail}}), kDim, 2);
             hints = {{PadGlyph::Cross, S("common.back")}};
             break;
         case UpdateStage::ConfirmRollback:

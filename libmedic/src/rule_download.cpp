@@ -49,6 +49,11 @@ std::string configured_value(const IFileSystem& fs, const std::string& key) {
 
 std::string configured_update_url(const IFileSystem& fs) { return configured_value(fs, "update_url"); }
 
+std::string effective_update_url(const IFileSystem& fs) {
+    const std::string url = configured_update_url(fs);
+    return url.empty() ? std::string(kDefaultUpdateUrl) : url;
+}
+
 bool set_config_value(Platform& p, const std::string& key, const std::string& value) {
     IFileSystemRW* rw = p.fs_rw();
     if (!rw || key.empty() || key.find_first_of("=\r\n") != std::string::npos || value.find_first_of("\r\n") != std::string::npos) return false;
@@ -79,7 +84,7 @@ RuleDownloadResult download_rule_update(Platform& p, IHttpClient& http, const st
         return r;
     }
     HttpUrl parsed;
-    if (!parse_http_url(base_url, parsed, r.error)) return r;  // bad_url oder https_unsupported
+    if (!parse_http_url(base_url, parsed, r.error)) return r;  // bad_url
     if (!p.fs_rw()) {
         r.error = "no_write";
         return r;
@@ -105,6 +110,7 @@ RuleDownloadResult download_rule_update(Platform& p, IHttpClient& http, const st
         r.file = it.name;
         if (!resp.error.empty()) {
             r.error = "net_" + resp.error;
+            r.detail = resp.detail;
             return r;
         }
         r.http_status = resp.status;

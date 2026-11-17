@@ -5,6 +5,7 @@
 //
 // Lebensdauer: Der Dienst wartet auf die App (Port 9060), bedient eine Verbindung nach der anderen und endet, wenn die Oberflaeche beendet wird
 // (Kreis auf dem Startbildschirm), die App 120 s nach dem Verbindungsabbruch nicht wiederkommt oder eine neuere Instanz ihn per 'X' bittet.
+#include "ps5_http.hpp"
 #include "ps5_platform.hpp"
 #include "service_protocol.hpp"
 
@@ -427,7 +428,7 @@ int main() {
     trace("Dienst wartet auf 127.0.0.1:" + std::to_string(proto::kPort));
 
     auto platform = medic::make_ps5_platform(/*writable=*/true);
-    const auto http = std::shared_ptr<medic::IHttpClient>(medic::make_posix_http_client().release());
+    const auto http = std::shared_ptr<medic::IHttpClient>(medic::make_ps5_http_client().release());
 
     std::uint32_t last_client = now_ms();
     for (;;) {

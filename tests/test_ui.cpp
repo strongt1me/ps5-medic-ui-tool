@@ -207,10 +207,23 @@ void press(App& a, std::initializer_list<Button> bs) {
     for (auto b : bs) a.handle(b);
 }
 
+// Absolute Wege vom Startbild (unabhaengig von der bisherigen Auswahl): L1 bis ganz oben, R1 bis zur Kachel, Kreuz.
+// Kacheln: 1 Spiele, 2 Verlauf, 3 Mehr. Mehr: 0 Reparaturen, 1 Selbsttest, 2 Regeln, 3 Backups/Rueckgaengig, 4 Bericht, 5 Fehlercodes, 6 Einstellungen.
+void start_open(App& a, int tile) {
+    press(a, {Button::L1, Button::L1, Button::L1, Button::L1});
+    for (int i = 0; i < tile; ++i) a.handle(Button::R1);
+    a.handle(Button::Cross);
+}
+void more_open(App& a, int item) {
+    start_open(a, 3);
+    for (int i = 0; i < item; ++i) a.handle(Button::Down);
+    a.handle(Button::Cross);
+}
+
 // Prueft den Bildschirm "Pruefe..." sichtbar, fuehrt dann den Check aus.
 void run_check_via_ui(App& a, Canvas& cv) {
-    a.handle(Button::Cross);
-    CHECK(a.screen() == App::Screen::Running, "Start: Kreuz startet den Check-up");
+    a.handle(a.screen() == App::Screen::Start ? Button::Square : Button::Cross);  // Start: Quadrat prueft jederzeit (Kreuz oeffnet bei Befunden die Liste)
+    CHECK(a.screen() == App::Screen::Running, "Start: der Check-up startet");
     a.update();
     CHECK(a.screen() == App::Screen::Running, "Check laeuft erst, nachdem 'Pruefe...' gezeichnet wurde");
     a.render(cv);
@@ -463,8 +476,7 @@ void game_detail_rich_tests() {
             app.handle(Button::Circle);
         }
         app.handle(Button::Circle);  // Befundliste -> Start
-        for (int i = 0; i < 5; ++i) app.handle(Button::Down);
-        app.handle(Button::Cross);  // Spiele
+        start_open(app, 1);  // Spiele
         app.handle(Button::Cross);  // Einzelansicht
         CHECK(app.screen() == App::Screen::GameDetail, "Spiel-Detail (viele Angaben): Einzelansicht offen");
         app.render(cv);
@@ -625,7 +637,8 @@ void screen_flow_tests() {
     svc.plan = mk_plan();
 
     // Verlauf und Rueckgaengig
-    press(app, {Button::Down, Button::Cross, Button::Square});
+    start_open(app, 2);
+    press(app, {Button::Square});
     CHECK(app.screen() == App::Screen::History, "Flow: Verlauf oeffnen");
     app.render(cv);
     press(app, {Button::Down, Button::Cross});  // 'undone' ist nicht rueckgaengig machbar
@@ -644,7 +657,8 @@ void screen_flow_tests() {
 
     // Einstellungen und Sprache
     Canvas de(App::kWidth, App::kHeight), en(App::kWidth, App::kHeight);
-    press(app, {Button::Circle, Button::Down, Button::Cross});  // aus dem Verlauf zurueck (Kreis: Verlauf, Check-ups, Start)
+    press(app, {Button::Circle});  // aus dem Verlauf zurueck (Kreis: Verlauf, Check-ups, Start)
+    more_open(app, 6);  // Einstellungen liegen unter Mehr
     CHECK(app.screen() == App::Screen::Settings && app.lang() == Lang::De, "Flow: Einstellungen, Deutsch");
     app.render(de);
     press(app, {Button::Right});
@@ -659,8 +673,10 @@ void screen_flow_tests() {
             }
     CHECK(differ, "Flow: Sprachwechsel aendert die Darstellung");
     press(app, {Button::Circle});
-    CHECK(app.screen() == App::Screen::Start, "Flow: Einstellungen schliessen");
+    CHECK(app.screen() == App::Screen::Maintenance, "Flow: Einstellungen schliessen (zurueck zu Mehr)");
     CHECK(!app.quit_requested(), "Flow: Zurueck aus Einstellungen beendet die App nicht");
+    press(app, {Button::Circle});
+    CHECK(app.screen() == App::Screen::Start && !app.quit_requested(), "Flow: Kreis in Mehr fuehrt ins Startbild");
     press(app, {Button::Circle});
     CHECK(app.quit_requested() && app.screen() == App::Screen::Start, "Flow: Kreis auf dem Start beendet die App");
 
@@ -711,7 +727,9 @@ void edge_tests() {
     CHECK(a.screen() == App::Screen::Running, "Edge: Kreuz prueft erneut");
     a.render(cv);
     a.update();
-    press(a, {Button::Circle, Button::Down, Button::Cross, Button::Square});
+    press(a, {Button::Circle});
+    start_open(a, 2);
+    press(a, {Button::Square});
     CHECK(a.screen() == App::Screen::History, "Edge: Verlauf ohne Eintraege");
     a.render(cv);
     press(a, {Button::Cross, Button::Down, Button::Up});
@@ -814,7 +832,9 @@ void edge_tests() {
     press(b, {Button::Triangle});
     CHECK(b.screen() == App::Screen::FixPreview, "Edge: Vorschau mit vielen langen Aenderungen");
     b.render(cv);
-    press(b, {Button::Circle, Button::Circle, Button::Circle, Button::Down, Button::Cross, Button::Square});
+    press(b, {Button::Circle, Button::Circle, Button::Circle});
+    start_open(b, 2);
+    press(b, {Button::Square});
     for (int i = 0; i < 40; ++i) b.handle(Button::Down);
     b.render(cv);
     CHECK(b.screen() == App::Screen::History, "Edge: langer Verlauf");
@@ -838,7 +858,8 @@ void undo_in_new_session_tests() {
     // zweite Sitzung: neuer Dienst, kein Check-up
     LocalService s2(*platform, rules, [] { return std::string("20261108T130000Z"); });
     App app2(s2);
-    press(app2, {Button::Down, Button::Cross, Button::Square});
+    start_open(app2, 2);
+    press(app2, {Button::Square});
     CHECK(app2.screen() == App::Screen::History, "Neue Sitzung: Verlauf ohne Check-up");
     app2.render(cv);
     press(app2, {Button::Cross});
@@ -869,7 +890,9 @@ void end_to_end_tests() {
     app.render(cv);
     CHECK(tree(t.dir) != before, "E2E: die Reparatur hat Dateien verschoben");
 
-    press(app, {Button::Circle, Button::Down, Button::Cross, Button::Square});
+    press(app, {Button::Circle});
+    start_open(app, 2);
+    press(app, {Button::Square});
     CHECK(app.screen() == App::Screen::History, "E2E: Verlauf");
     app.render(cv);
     press(app, {Button::Cross});
@@ -907,7 +930,8 @@ void rules_update_flow_tests() {
         svc.offer.old_rule_count = 22;
         App app(svc, l);
         run_check_via_ui(app, cv);
-        press(app, {Button::Circle, Button::Down, Button::Down, Button::Cross});  // Start: Einstellungen ist der dritte Eintrag
+        press(app, {Button::Circle});
+        more_open(app, 6);  // Einstellungen liegen unter Mehr
         CHECK(app.screen() == App::Screen::Settings, "Update-Flow: Einstellungen");
         app.render(cv);
         press(app, {Button::Down});
@@ -961,7 +985,9 @@ void rules_update_flow_tests() {
         fail.install_result = {false, "write_failed", "", ""};
         App app2(fail, l);
         run_check_via_ui(app2, cv);
-        press(app2, {Button::Circle, Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross, Button::Cross});
+        press(app2, {Button::Circle});
+        more_open(app2, 6);
+        press(app2, {Button::Down, Button::Cross, Button::Cross});
         CHECK(fail.installs == 1 && app2.screen() == App::Screen::RulesUpdate, "Update-Flow: Fehlschlag wird angezeigt");
         app2.render(cv);
         press(app2, {Button::Cross});
@@ -1025,7 +1051,8 @@ void rules_update_service_tests() {
 
         App app(svc);
         Canvas cv(App::kWidth, App::kHeight);
-        press(app, {Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross});
+        more_open(app, 6);
+        press(app, {Button::Down, Button::Cross});
         CHECK(app.screen() == App::Screen::RulesUpdate, "Update-E2E: Einstellungen -> Regel-Update");
         app.render(cv);
         press(app, {Button::Cross});
@@ -1074,7 +1101,8 @@ void rules_download_flow_tests() {
         svc.offer.old_version = "2026.11.08";
         svc.offer.old_rule_count = 22;
         App app(svc, l);
-        press(app, {Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross});  // Start -> Einstellungen -> Regel-Update
+        more_open(app, 6);  // Start -> Mehr -> Einstellungen
+        press(app, {Button::Down, Button::Cross});  // -> Regel-Update
         CHECK(app.screen() == App::Screen::RulesUpdate && svc.downloads == 0, "Download-Flow: Regel-Update offen, noch nichts geholt");
         app.render(cv);
 
@@ -1137,7 +1165,7 @@ void rules_download_flow_tests() {
 
         // Jede Fehlerkennung hat einen Text
         for (const char* code : {"no_url", "bad_url", "https_unsupported", "no_write", "write_failed", "bad_timestamp", "no_network", "http_status", "net_resolve", "net_connect", "net_timeout",
-                                 "net_network", "net_redirect", "net_too_large", "net_bad_response"}) {
+                                 "net_network", "net_tls", "net_redirect", "net_too_large", "net_bad_response"}) {
             svc.download_result.error = code;
             press(app, {Button::Square, Button::Cross});
             app.render(cv);
@@ -1161,7 +1189,7 @@ void rules_download_flow_tests() {
     }
     CHECK(Strings::missing().empty(), "Download-Flow: kein Text fehlt (" + (Strings::missing().empty() ? std::string() : *Strings::missing().begin()) + ")");
     for (const char* key : {"update.error.no_url", "update.error.bad_url", "update.error.https_unsupported", "update.error.no_network", "update.error.net_connect", "update.error.net_timeout",
-                            "update.error.net_resolve", "update.error.net_network", "update.error.net_redirect", "update.error.net_too_large", "update.error.net_bad_response",
+                            "update.error.net_resolve", "update.error.net_network", "update.error.net_tls", "update.error.detail", "update.error.net_redirect", "update.error.net_too_large", "update.error.net_bad_response",
                             "update.error.http_status", "update.rejected.sig_malformed", "update.rejected.sig_unknown_key", "update.rejected.sig_invalid", "update.auth_sig",
                             "update.confirm_download", "update.no_url", "update.downloading", "update.download_failed", "update.downloaded_from", "update.download"})
         CHECK(Strings::get(Lang::De).has(key) && Strings::get(Lang::En).has(key), std::string("Download-Flow: Text in beiden Sprachen: ") + key);
@@ -1197,7 +1225,10 @@ void rules_download_service_tests() {
         std::ofstream(p, std::ios::binary | std::ios::trunc) << t;
     };
     auto clock = [] { return std::string("20261109T140000Z"); };
-    auto go_to_update = [](App& app) { press(app, {Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross}); };
+    auto go_to_update = [](App& app) {
+        more_open(app, 6);
+        press(app, {Button::Down, Button::Cross});
+    };
 
     {  // gueltig signiert: angeboten und installiert
         TempCopy t("b2_pos");
@@ -1256,7 +1287,7 @@ void rules_download_service_tests() {
         TempCopy t("b2_pos");
         auto platform = make_snapshot_platform(t.dir.string(), /*writable=*/true);
         LocalService svc(*platform, rules, clock);
-        CHECK(svc.rule_update_url().empty() && svc.download_rule_update().error == "no_network", "Download-E2E: ohne Adresse und ohne Netz-Client");
+        CHECK(svc.rule_update_url() == medic::kDefaultUpdateUrl && svc.download_rule_update().error == "no_network", "Download-E2E: ohne Adresse gilt die Standardadresse, ohne Netz-Client kein Abruf");
         spit(t.dir / "fs/data/ps5medic/config.ini", "update_url=" + base + "\n");
         CHECK(svc.rule_update_url() == base && svc.download_rule_update().error == "no_network", "Download-E2E: ohne Netz-Client kein Abruf, Kennung no_network");
     }
@@ -1456,22 +1487,36 @@ void shoulder_and_stick_flow_tests() {
     Canvas cv(App::kWidth, App::kHeight);
     Strings::missing().clear();
 
-    {  // Start: L1/R1 wie Hoch/Runter, Links/Rechts zwischen den beiden kleinen Knoepfen
+    {  // Start: L1/R1 wie Hoch/Runter, Links/Rechts zwischen den drei Kacheln
         App a(svc);
-        press(a, {Button::R1, Button::Cross, Button::Square});
-        CHECK(a.screen() == App::Screen::History, "Start: R1 waehlt den naechsten Eintrag (Verlauf)");
-        press(a, {Button::Circle, Button::Circle, Button::R1, Button::Cross});
-        CHECK(a.screen() == App::Screen::Settings, "Start: R1 noch einmal waehlt die Einstellungen");
-        press(a, {Button::Circle, Button::Left, Button::Cross, Button::Square});
-        CHECK(a.screen() == App::Screen::History, "Start: Links springt von Einstellungen zu Verlauf");
+        press(a, {Button::R1, Button::Cross});
+        CHECK(a.screen() == App::Screen::Running, "Start: R1 waehlt die erste Kachel (Spiele); ohne Check-up wird erst geprueft");
+        a.render(cv);
+        a.update();
+        CHECK(a.screen() == App::Screen::GameList, "Start: Spiele zeigt nach dem Check-up die Liste");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Start, "Start: Kreis aus den Spielen");
+        press(a, {Button::L1, Button::L1, Button::R1, Button::R1, Button::Cross, Button::Square});
+        CHECK(a.screen() == App::Screen::History, "Start: R1 zweimal waehlt Verlauf (Quadrat dort: Journal)");
         press(a, {Button::Circle, Button::Circle, Button::Right, Button::Cross});
-        CHECK(a.screen() == App::Screen::Settings, "Start: Rechts springt von Verlauf zu Einstellungen");
-        press(a, {Button::Circle, Button::L1, Button::L1, Button::Left, Button::Right, Button::Cross});
-        CHECK(a.screen() == App::Screen::Running, "Start: L1 geht hoch; oben bleiben Links/Rechts wirkungslos, Kreuz startet den Check");
+        CHECK(a.screen() == App::Screen::Maintenance, "Start: Rechts springt von Verlauf zu Mehr");
+        press(a, {Button::Circle, Button::Left, Button::Cross});
+        CHECK(a.screen() == App::Screen::CheckList, "Start: Links springt von Mehr zu Verlauf");
+        press(a, {Button::Circle, Button::L1, Button::L1, Button::L1, Button::Left, Button::Right, Button::Cross});
+        CHECK(a.screen() == App::Screen::Findings, "Start: oben (Statusfeld) bleiben Links/Rechts wirkungslos; Kreuz oeffnet die Befunde");
+    }
+    {  // Einstellungen: ueber Mehr
+        App a(svc);
+        more_open(a, 6);
+        CHECK(a.screen() == App::Screen::Settings, "Einstellungen offen (unter Mehr)");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Maintenance, "Einstellungen: Kreis fuehrt zurueck zu Mehr");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Start && !a.quit_requested(), "Mehr: Kreis fuehrt ins Startbild");
     }
     {  // Einstellungen: L1/R1 wie Hoch/Runter
         App a(svc);
-        press(a, {Button::Down, Button::Down, Button::Cross});
+        more_open(a, 6);
         CHECK(a.screen() == App::Screen::Settings, "Einstellungen offen");
         press(a, {Button::R1, Button::Cross});
         CHECK(a.screen() == App::Screen::RulesUpdate, "Einstellungen: R1 waehlt Regel-Update");
@@ -1504,24 +1549,22 @@ void shoulder_and_stick_flow_tests() {
         FakeService svc2;
         svc2.result.findings = {mk_finding("rule.a", Severity::Warning, false), mk_finding("rule.b", Severity::Warning, true)};
         App a(svc2);
-        press(a, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Down});  // Kachel 7: Wartung
-        press(a, {Button::Cross});
+        start_open(a, 3);  // Kachel 3: Mehr
         CHECK(a.screen() == App::Screen::Maintenance, "Wartung: Kachel oeffnet den Bereich");
         a.render(cv);
-        press(a, {Button::Down, Button::Cross});  // Regeln aktualisieren
-        CHECK(a.screen() == App::Screen::RulesUpdate, "Wartung: zweiter Eintrag oeffnet das Regel-Update");
+        press(a, {Button::Down, Button::Down, Button::Cross});  // Regeln aktualisieren (dritter Eintrag)
+        CHECK(a.screen() == App::Screen::RulesUpdate, "Wartung: dritter Eintrag oeffnet das Regel-Update");
         press(a, {Button::Circle});
         CHECK(a.screen() == App::Screen::Maintenance, "Wartung: Kreis fuehrt aus dem Unterbildschirm zurueck in die Wartung");
-        press(a, {Button::Up, Button::Cross});  // Selbsttest
-        CHECK(a.screen() == App::Screen::SelfTest, "Wartung: erster Eintrag oeffnet den Selbsttest");
+        press(a, {Button::Up, Button::Cross});  // Selbsttest (zweiter Eintrag)
+        CHECK(a.screen() == App::Screen::SelfTest, "Wartung: zweiter Eintrag oeffnet den Selbsttest");
         press(a, {Button::Circle});
         CHECK(a.screen() == App::Screen::Maintenance, "Wartung: aus dem Selbsttest zurueck in die Wartung");
         press(a, {Button::Circle});
         CHECK(a.screen() == App::Screen::Start, "Wartung: Kreis fuehrt ins Startbild");
 
         // Reparaturen: ohne Check-up erst pruefen, dann die Liste; nur der Befund mit Fix steht darin
-        press(a, {Button::Left});  // von Kachel 7 (Wartung) zu Kachel 6: Reparaturen
-        press(a, {Button::Cross});
+        more_open(a, 0);  // Mehr: erster Eintrag, Reparaturen
         CHECK(a.screen() == App::Screen::Running, "Reparaturen: ohne Check-up wird erst geprueft");
         a.render(cv);
         a.update();
@@ -1533,7 +1576,7 @@ void shoulder_and_stick_flow_tests() {
         press(a, {Button::Circle});
         CHECK(a.screen() == App::Screen::Repairs, "Reparaturen: Abbrechen fuehrt zurueck in die Liste");
         press(a, {Button::Circle});
-        CHECK(a.screen() == App::Screen::Start, "Reparaturen: Kreis fuehrt ins Startbild");
+        CHECK(a.screen() == App::Screen::Maintenance, "Reparaturen: Kreis fuehrt zurueck zu Mehr");
     }
     {  // Befundliste: seitenweise
         FakeService big;
@@ -1576,7 +1619,8 @@ void shoulder_and_stick_flow_tests() {
             h.hist.push_back(t);
         }
         App a(h);
-        press(a, {Button::Down, Button::Cross, Button::Square});
+        start_open(a, 2);
+        press(a, {Button::Square});
         CHECK(a.screen() == App::Screen::History, "Verlauf offen");
         press(a, {Button::R1, Button::Cross});
         CHECK(a.screen() == App::Screen::UndoConfirm, "Verlauf: R1 blaettert eine Seite (6 Zeilen) auf die 'applied'-Zeile");
@@ -1593,7 +1637,8 @@ void shoulder_and_stick_flow_tests() {
             a.render(cv);
             press(a, {Button::Cross});
             a.render(cv);
-            press(a, {Button::Circle, Button::Circle, Button::Down, Button::Cross});
+            press(a, {Button::Circle, Button::Circle});
+            start_open(a, 2);
             a.render(cv);
         }
         CHECK(Strings::missing().empty(), "Hinweise: 'Seite' und 'Blaettern' gibt es in beiden Sprachen");
@@ -1673,7 +1718,7 @@ int scroll_to_end(App& a) {
     return a.error_scroll();
 }
 
-void open_error_codes_via_ui(App& a) { press(a, {Button::Down, Button::Down, Button::Down, Button::Cross}); }
+void open_error_codes_via_ui(App& a) { more_open(a, 5); }
 
 void error_codes_flow_tests() {
     FakeService svc;
@@ -1684,17 +1729,11 @@ void error_codes_flow_tests() {
     {  // vom Start erreichbar: Runter, Rechts, L1/R1; an den Raendern bleibt die Auswahl stehen
         App a(svc);
         open_error_codes_via_ui(a);
-        CHECK(a.screen() == App::Screen::ErrorCodes && svc.error_loads >= 1, "Fehlercodes: Start, dreimal Runter, Kreuz oeffnet die Liste");
+        CHECK(a.screen() == App::Screen::ErrorCodes && svc.error_loads >= 1, "Fehlercodes: Mehr, sechster Eintrag oeffnet die Liste");
         press(a, {Button::Circle});
-        CHECK(a.screen() == App::Screen::Start, "Fehlercodes: Kreis zurueck zum Start");
-        press(a, {Button::Left, Button::Right, Button::Cross});  // von Fehlercodes (3) links zu den Einstellungen (2), Rechts zurueck
-        CHECK(a.screen() == App::Screen::ErrorCodes, "Fehlercodes: Rechts von den Einstellungen waehlt Fehlercodes");
-        press(a, {Button::Circle, Button::Left, Button::Cross});
-        CHECK(a.screen() == App::Screen::Settings, "Fehlercodes: Links geht zurueck zu den Einstellungen");
-        press(a, {Button::Circle, Button::Down, Button::Down, Button::Cross});
-        CHECK(a.screen() == App::Screen::SelfTest, "Selbsttest: von den Einstellungen zweimal Runter und Kreuz oeffnet den Selbsttest");
-        press(a, {Button::Circle, Button::Up, Button::Up, Button::Up, Button::Up, Button::Up, Button::Cross});
-        CHECK(a.screen() == App::Screen::Running, "Fehlercodes: Hoch bis oben, dort startet Kreuz den Check-up");
+        CHECK(a.screen() == App::Screen::Maintenance, "Fehlercodes: Kreis zurueck zu Mehr");
+        press(a, {Button::Circle, Button::Up, Button::Cross});
+        CHECK(a.screen() == App::Screen::Running, "Fehlercodes: Hoch bis zum Statusfeld, dort startet Kreuz den Check-up");
     }
     {  // Liste: Auswahl, Blaettern, Details, zurueck
         App a(svc);
@@ -1732,7 +1771,7 @@ void error_codes_flow_tests() {
         CHECK(a.screen() == App::Screen::ErrorCodes && a.error_selected() == 4, "Fehlercodes: die Liste behaelt die beim Blaettern erreichte Auswahl");
         a.render(cv);
         press(a, {Button::Circle});
-        CHECK(a.screen() == App::Screen::Start && !a.quit_requested(), "Fehlercodes: Kreis in der Liste geht zum Start");
+        CHECK(a.screen() == App::Screen::Maintenance && !a.quit_requested(), "Fehlercodes: Kreis in der Liste geht zurueck zu Mehr");
     }
     {  // Scrollen in den Details: nur wenn der Text nicht passt, stoppt am Ende, springt beim Blaettern zurueck
         App a(svc);
@@ -1799,7 +1838,7 @@ void error_codes_flow_tests() {
         CHECK(a.screen() == App::Screen::ErrorCodes && a.error_selected() == 0, "Leer: Kreuz und Blaettern tun nichts");
         a.render(cv);
         press(a, {Button::Circle});
-        CHECK(a.screen() == App::Screen::Start, "Leer: Kreis zurueck");
+        CHECK(a.screen() == App::Screen::Maintenance, "Leer: Kreis zurueck zu Mehr");
     }
     {  // beide Sprachen: andere Anzeige, keine fehlenden Texte
         App de(svc, Lang::De), en(svc, Lang::En);
@@ -1937,7 +1976,7 @@ void error_search_tests() {
         press(a, {Button::Square});
         CHECK(!a.error_input_active(), "Code-Eingabe: bei leerer Liste bleibt sie zu");
         press(a, {Button::Circle});
-        CHECK(a.screen() == App::Screen::Start, "Code-Eingabe: bei leerer Liste geht der erste Kreis zurueck");
+        CHECK(a.screen() == App::Screen::Maintenance, "Code-Eingabe: bei leerer Liste geht der erste Kreis zurueck (zu Mehr)");
     }
     CHECK(Strings::missing().empty(), "Code-Eingabe: keine fehlenden Texte in fuenf Sprachen");
     Strings::missing().clear();
@@ -1990,7 +2029,7 @@ void error_codes_real_data_tests() {
         }
         CHECK(a.error_selected() == static_cast<int>(codes.codes.size()) - 1, "Fehlercodes (Datei): Rechts bleibt beim letzten Code stehen");
         press(a, {Button::Circle, Button::Circle});
-        CHECK(a.screen() == App::Screen::Start, "Fehlercodes (Datei): zurueck zum Start");
+        CHECK(a.screen() == App::Screen::Maintenance, "Fehlercodes (Datei): zurueck zu Mehr");
     }
     CHECK(scrolling_codes.count("CE-108262-9") && !scrolling_codes.count("CE-100028-1"), "Fehlercodes (Datei): der laengste Eintrag (Safe Mode) scrollt, ein kurzer nicht");
     CHECK(Strings::missing().empty(), "Fehlercodes (Datei): keine fehlenden Texte in beiden Sprachen");
@@ -2070,7 +2109,9 @@ void error_link_tests() {
         }
 
         // Aus der Liste geoeffnete Eintraege blaettern wieder, auch nach einem Verweis
-        press(a, {Button::Circle, Button::Down, Button::Down, Button::Down, Button::Cross, Button::Cross});
+        press(a, {Button::Circle});
+        open_error_codes_via_ui(a);
+        press(a, {Button::Cross});
         CHECK(a.screen() == App::Screen::ErrorCodeDetail && a.error_selected() == 0, "Verweis: Eintrag aus der Liste offen");
         press(a, {Button::Right});
         CHECK(a.error_selected() == 1, "Verweis: aus der Liste geoeffnete Eintraege blaettern weiter");
@@ -2089,8 +2130,8 @@ void error_link_tests() {
         App a(s2);
         run_check_via_ui(a, cv);
         press(a, {Button::Circle});
-        for (int i = 0; i < 5; ++i) a.handle(Button::Down);
-        press(a, {Button::Cross, Button::Cross});
+        start_open(a, 1);
+        press(a, {Button::Cross});
         CHECK(a.screen() == App::Screen::GameDetail, "Spiel-Verweis: Einzelansicht offen");
         a.render(cv);
         press(a, {Button::Square});
@@ -2263,7 +2304,7 @@ void error_report_mark_tests() {
     CHECK(svc.reports == 0, "Bericht: Vermerken schreibt keinen Bericht");
 
     // Berichtsbildschirm nennt den Code
-    press(a, {Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
+    press(a, {Button::Circle, Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
     run_check_via_ui(a, cv);
     press(a, {Button::Square});
     CHECK(a.screen() == App::Screen::Report, "Bericht: Bericht geoeffnet");
@@ -2281,7 +2322,7 @@ void error_report_mark_tests() {
         open_error_codes_via_ui(c);
         press(c, {Button::Cross, Button::Triangle});
         c.render(cv);
-        press(c, {Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
+        press(c, {Button::Circle, Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
         run_check_via_ui(c, cv);
         press(c, {Button::Square});
         c.render(cv);
@@ -2304,7 +2345,7 @@ void error_report_service_tests() {
     for (int i = 0; i < 80 && app.selected_error_id() != "CE-100028-1"; ++i) press(app, {Button::Down});
     press(app, {Button::Cross, Button::Triangle});
     CHECK(app.reported_error() == "CE-100028-1", "Bericht (Dienst): CE-100028-1 vermerkt");
-    press(app, {Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
+    press(app, {Button::Circle, Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
     run_check_via_ui(app, cv);
     press(app, {Button::Square});
     CHECK(app.screen() == App::Screen::Report, "Bericht (Dienst): Bericht erstellt");
@@ -2424,7 +2465,7 @@ void error_context_tests() {
         for (int i = 0; i < 40; ++i) a.handle(Button::Down);
         a.render(cv);
         const std::uint64_t without = canvas_hash(cv);
-        press(a, {Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
+        press(a, {Button::Circle, Button::Circle, Button::Circle, Button::Up, Button::Up, Button::Up});
         run_check_via_ui(a, cv);
         press(a, {Button::Circle});  // Findings -> Start
         open_error_codes_via_ui(a);
@@ -2500,7 +2541,10 @@ void error_scroll_accel_tests() {
 void codes_update_flow_tests() {
     Canvas cv(App::kWidth, App::kHeight);
     Strings::missing().clear();
-    auto go_to_update = [](App& a) { press(a, {Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross}); };
+    auto go_to_update = [](App& a) {
+        more_open(a, 6);
+        press(a, {Button::Down, Button::Cross});
+    };
     auto ready = [](const std::string& v, std::size_t n) {
         RuleUpdateOffer o;
         o.state = RuleUpdateOffer::State::Ready;
@@ -2530,7 +2574,7 @@ void codes_update_flow_tests() {
         a.render(cv);
         press(a, {Button::Cross});
         CHECK(a.screen() == App::Screen::Settings, "Codes-Flow: Kreuz kommt zurueck");
-        press(a, {Button::Circle});
+        press(a, {Button::Circle, Button::Circle});
         CHECK(a.screen() == App::Screen::Start && a.finding_count() == 1, "Codes-Flow: Fehlercodes aendern die Befunde nicht");
         open_error_codes_via_ui(a);
         CHECK(a.selected_error_id() == svc.errors_after_codes_install.codes[0].id && a.error_selected() == 0, "Codes-Flow: die neue Liste gilt sofort");
@@ -2672,7 +2716,10 @@ void codes_update_service_tests() {
         std::ofstream(p, std::ios::binary | std::ios::trunc) << t;
     };
     auto clock = [] { return std::string("20261109T170000Z"); };
-    auto go_to_update = [](App& a) { press(a, {Button::Down, Button::Down, Button::Cross, Button::Down, Button::Cross}); };
+    auto go_to_update = [](App& a) {
+        more_open(a, 6);
+        press(a, {Button::Down, Button::Cross});
+    };
     Canvas cv(App::kWidth, App::kHeight);
     Strings::missing().clear();
 
@@ -2986,7 +3033,7 @@ void history_ui_tests() {
 // Nutzer-Tests in der UI: Pad-Tasten und Anzeige-Muster; Ergebnisse gehen an den Dienst, nie ohne Zutun als "bestanden".
 void usertest_ui_tests() {
     Canvas cv(App::kWidth, App::kHeight);
-    auto open_list = [&](App& a) { press(a, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross}); };
+    auto open_list = [&](App& a) { more_open(a, 1); };
     {   // alle elf Tasten = bestanden
         FakeService svc;
         App a(svc);
@@ -3072,8 +3119,8 @@ void selftest_ui_tests() {
     FakeService svc;
     Canvas cv(App::kWidth, App::kHeight);
     App a(svc);
-    press(a, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross});
-    CHECK(a.screen() == App::Screen::SelfTest, "Selbsttest-UI: vierter Knopf oeffnet den Selbsttest");
+    more_open(a, 1);
+    CHECK(a.screen() == App::Screen::SelfTest, "Selbsttest-UI: Mehr, zweiter Eintrag oeffnet den Selbsttest");
     a.render(cv);
     press(a, {Button::Cross});  // Hinweis vor dem Lauf
     a.render(cv);
@@ -3090,12 +3137,13 @@ void selftest_ui_tests() {
     CHECK(svc.selftest_begins == 1 && svc.selftest_runs == static_cast<int>(quick) && svc.selftest_ends == 1 && !svc.last_cancelled, "Selbsttest-UI: Marker einmal, nur die Schnelltests laufen, Ende gemeldet");
     for (const auto& r : svc.last_results) CHECK(r.status != TestStatus::Passed || r.id.rfind("hw.storage.read", 0) != 0, "Selbsttest-UI: der Lesetest lief bei 'nur Schnelltests' nicht");
     press(a, {Button::Circle});
-    CHECK(a.screen() == App::Screen::Start, "Selbsttest-UI: Kreis zurueck zum Start");
+    CHECK(a.screen() == App::Screen::Maintenance, "Selbsttest-UI: Kreis zurueck zu Mehr");
 
     // Alle Tests, Abbruch nach dem ersten
     FakeService svc2;
     App b(svc2);
-    press(b, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross, Button::Cross, Button::Cross});  // oeffnen, Hinweis, starten
+    more_open(b, 1);
+    press(b, {Button::Cross, Button::Cross});  // oeffnen, Hinweis, starten
     b.render(cv);
     b.update();  // Marker
     b.render(cv);
@@ -3115,7 +3163,8 @@ void selftest_ui_tests() {
     // Gruendlich: nur ueber Dreieck und Bestaetigung; Standard laesst Last und Schreiben aus
     FakeService svc3;
     App c(svc3);
-    press(c, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross, Button::Cross, Button::Cross});  // Standard: Hinweis, starten
+    more_open(c, 1);
+    press(c, {Button::Cross, Button::Cross});  // Standard: Hinweis, starten
     for (int i = 0; i < 40; ++i) {
         c.render(cv);
         c.update();
@@ -3130,7 +3179,8 @@ void selftest_ui_tests() {
     CHECK(svc3.selftest_runs == standard && thorough > 0, "Selbsttest-UI: Standard startet keine Last- und Schreibtests");
     FakeService svc4;
     App d4(svc4);
-    press(d4, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross, Button::Triangle});  // Gruendlich: Hinweis, noch nichts gestartet
+    more_open(d4, 1);
+    press(d4, {Button::Triangle});  // Gruendlich: Hinweis, noch nichts gestartet
     d4.render(cv);
     CHECK(svc4.selftest_begins == 0 && svc4.selftest_runs == 0, "Selbsttest-UI: Gruendlich zeigt zuerst den Hinweis, es laeuft nichts");
     press(d4, {Button::Circle});
@@ -3146,7 +3196,8 @@ void selftest_ui_tests() {
     svc5.begin_ok = false;
     svc5.end_ok = false;
     App d5(svc5);
-    press(d5, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross, Button::Triangle});
+    more_open(d5, 1);
+    press(d5, {Button::Triangle});
     press(d5, {Button::Circle});
     press(d5, {Button::Triangle, Button::Cross});
     for (int i = 0; i < 80; ++i) {
@@ -3301,7 +3352,8 @@ void checks_archive_tests() {
             CHECK(!s2.set_hidden("r.crit", Severity::Critical, true) && s2.ignored().size() == 1, "Ausblenden: der Dienst lehnt kritische Befunde ab");
             CHECK(s2.set_hidden("r.test", Severity::Warning, false) && !s2.ignored().empty() && !s2.ignored()[0].active, "Ausblenden: Wieder anzeigen macht den Eintrag inaktiv");
         }
-        press(app, {Button::Circle, Button::Down, Button::Cross});
+        press(app, {Button::Circle});
+        start_open(app, 2);
         CHECK(app.screen() == App::Screen::CheckList, "Check-up-Verlauf: Start -> Verlauf zeigt die Check-ups");
         app.render(cv);
         // Nur der aktuellste Check-up ist sichtbar; darunter die Zeile "Fruehere Check-ups". Weiter als bis dorthin geht es zugeklappt nicht;
@@ -3343,7 +3395,7 @@ void checks_archive_tests() {
         FakeService fk;
         App app(fk);
         Canvas cv(App::kWidth, App::kHeight);
-        press(app, {Button::Down, Button::Cross});
+        start_open(app, 2);
         app.render(cv);
         press(app, {Button::Cross, Button::Triangle, Button::Down, Button::Up, Button::R1, Button::L1});
         CHECK(app.screen() == App::Screen::CheckList, "Check-up-Verlauf: leere Liste, Tasten tun nichts");
@@ -3444,7 +3496,7 @@ void games_tests() {
         CHECK(svc.games().empty(), "Spiele: vor dem Check-up nichts");
         App app(svc);
         Canvas cv(App::kWidth, App::kHeight);
-        press(app, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross});  // Kachel 5: Spiele (danach folgen Reparaturen und Wartung)
+        start_open(app, 1);  // Kachel 1: Spiele
         CHECK(app.screen() == App::Screen::Running, "Spiele: ohne Check-up wird erst geprueft");
         app.render(cv);
         app.update();
@@ -3473,8 +3525,8 @@ void games_tests() {
         CHECK(app.screen() == App::Screen::Start, "Spiele: Kreis zurueck zum Start");
         press(app, {Button::Cross});  // Start-Auswahl steht noch auf Spiele: jetzt ohne neuen Check-up
         CHECK(app.screen() == App::Screen::GameList, "Spiele: mit vorhandenem Check-up gleich die Liste");
-        press(app, {Button::Circle, Button::Up, Button::Up, Button::Up, Button::Up, Button::Up, Button::Cross});
-        CHECK(app.screen() == App::Screen::Running, "Spiele: Start-Auswahl 0 ist weiter der Check-up");
+        press(app, {Button::Circle, Button::Up, Button::Square});
+        CHECK(app.screen() == App::Screen::Running, "Spiele: Quadrat im Startbild prueft weiter");
     }
     // Ausblenden und Spiele: die Indizes der Spiele gehoeren zur sichtbaren Befundliste (sonst zeigte "Betrifft" den falschen Befund)
     {
@@ -3515,7 +3567,7 @@ void games_tests() {
         FakeService fk;
         App app(fk);
         Canvas cv(App::kWidth, App::kHeight);
-        press(app, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross});
+        start_open(app, 1);
         app.render(cv);
         app.update();
         CHECK(app.screen() == App::Screen::GameList, "Spiele: leere Liste wird gezeigt");
@@ -3526,30 +3578,30 @@ void games_tests() {
 }
 
 void start_nav_tests() {
-    // Steuerkreuz auf dem Startbildschirm: Hoch von jeder kleinen Kachel fuehrt gleich zur grossen (Check-up), Runter zur ersten kleinen Kachel
+    // Steuerkreuz auf dem Startbildschirm: Hoch von jeder Kachel fuehrt gleich zum Statusfeld, Runter zur Kachel, von der man kam
     {
         FakeService fk;
         App app(fk);
-        press(app, {Button::Down, Button::Down, Button::Down, Button::Up, Button::Cross});  // Kachel 3 (Fehlercodes), dann hoch, Kreuz
-        CHECK(app.screen() == App::Screen::Running, "Start: Hoch von einer kleinen Kachel erreicht den Check-up");
+        press(app, {Button::Down, Button::Down, Button::Down, Button::Up, Button::Cross});  // Kachel 3 (Mehr), dann hoch, Kreuz
+        CHECK(app.screen() == App::Screen::Running, "Start: Hoch von einer Kachel erreicht das Statusfeld (ohne Ergebnis: Check-up)");
     }
     {
         FakeService fk;
         App app(fk);
         press(app, {Button::Down, Button::Down, Button::Down, Button::Up, Button::Down, Button::Cross});
-        CHECK(app.screen() == App::Screen::ErrorCodes, "Start: Runter aus dem Check-up geht zur kleinen Kachel zurueck, von der man kam (Fehlercodes)");
+        CHECK(app.screen() == App::Screen::Maintenance, "Start: Runter aus dem Statusfeld geht zur Kachel zurueck, von der man kam (Mehr)");
     }
     {
         FakeService fk;
         App app(fk);
-        press(app, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Up, Button::Down, Button::Cross});  // von Spiele (5) hoch und wieder runter
-        CHECK(app.screen() == App::Screen::Running || app.screen() == App::Screen::GameList, "Start: Runter aus dem Check-up geht zu Spiele zurueck");
+        press(app, {Button::Down, Button::Cross});  // erste Kachel nach Runter: Spiele
+        CHECK(app.screen() != App::Screen::Maintenance && app.screen() != App::Screen::CheckList, "Start: Runter aus dem Statusfeld waehlt die erste Kachel");
     }
-    {
+    {  // Quadrat prueft jederzeit neu
         FakeService fk;
         App app(fk);
-        press(app, {Button::Down, Button::Cross});  // erste Kachel nach Runter: Verlauf
-        CHECK(app.screen() != App::Screen::Running, "Start: Runter aus dem Check-up waehlt eine kleine Kachel");
+        press(app, {Button::Square});
+        CHECK(app.screen() == App::Screen::Running, "Start: Quadrat startet den Check-up");
     }
 }
 

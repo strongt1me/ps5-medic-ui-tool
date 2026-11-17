@@ -27,7 +27,7 @@ public:
     enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, CheckList, CheckCompare, GameList, GameDetail, Hidden, Repairs, Maintenance, Splash };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
-    static constexpr int kMaintItems = 4;  // Selbsttest, Regeln, Backups/Rueckgaengig, Bericht
+    static constexpr int kMaintItems = 7;  // Reparaturen, Selbsttest, Regeln, Backups/Rueckgaengig, Bericht, Fehlercodes, Einstellungen
 
     explicit App(IMedicService& svc, Lang lang = Lang::De);
 
@@ -173,7 +173,7 @@ private:
     double check_progress_ = 0;  // 0 bis 1 waehrend des Check-ups
 
     int start_sel_ = 0;
-    int start_small_ = 1;  // kleine Kachel (1..5), von der man zur grossen hochgegangen ist: Ziel von Runter
+    int start_small_ = 1;  // kleine Kachel (1..3), von der man zur grossen hochgegangen ist: Ziel von Runter
 
     bool has_result_ = false;
     CheckResult result_;
@@ -225,6 +225,7 @@ private:
     bool detail_from_game_ = false;
     int rep_sel_ = 0, rep_top_ = 0;     // Reparaturen: Auswahl in der Liste der reparierbaren Befunde
     int maint_sel_ = 0;                  // Wartung: gewaehlter Eintrag
+    bool rules_via_settings_ = false;    // das Regel-Update wurde aus den Einstellungen (nicht aus "Mehr") geoeffnet
     bool maint_origin_ = false;          // ein Unterbildschirm wurde aus der Wartung geoeffnet: Kreis fuehrt dorthin zurueck
     bool after_check_repairs_ = false;   // Reparaturen ohne Check-up gewaehlt: nach dem Check-up direkt die Liste zeigen
     bool after_check_games_ = false;  // Spiele ohne Check-up gewaehlt: nach dem Check-up direkt die Liste zeigen

@@ -334,10 +334,12 @@ static void download_tests() {
         Sandbox sb;
         auto p = make_snapshot_platform(sb.dir.string());
         CHECK(configured_update_url(p->fs()).empty(), "Download: ohne config.ini keine Adresse");
+        CHECK(effective_update_url(p->fs()) == kDefaultUpdateUrl && std::string(kDefaultUpdateUrl).rfind("https://raw.githubusercontent.com/", 0) == 0 && std::string(kDefaultUpdateUrl).back() == '/',
+              "Download: ohne update_url gilt die Standardadresse (GitHub, https, endet mit /)");
         spit(sb.real(kConfigPath), "# Kommentar\nlang=de\n  update_url =  http://10.0.0.5:8000/regeln/  \n; noch einer\n");
         CHECK(configured_update_url(p->fs()) == "http://10.0.0.5:8000/regeln/", "Download: update_url aus config.ini, Leerraum und Kommentare ignoriert");
         spit(sb.real(kConfigPath), "update_url=http://a/\nupdate_url=http://b/\n");
-        CHECK(configured_update_url(p->fs()) == "http://b/", "Download: die letzte update_url-Zeile gilt");
+        CHECK(configured_update_url(p->fs()) == "http://b/" && effective_update_url(p->fs()) == "http://b/", "Download: die letzte update_url-Zeile gilt, auch vor der Standardadresse");
     }
     {  // Erfolg: beide Dateien, danach prueft check_rule_update und nimmt sie an
         Sandbox sb;
@@ -396,7 +398,7 @@ static void download_tests() {
     server_error.status = 500;
     const Fail fails[] = {
         {"keine Adresse", "", {}, "no_url", ""},
-        {"https", "https://example.org/r", {}, "https_unsupported", ""},
+        {"https ohne Antwort", "https://example.org/r", {{"https://example.org/r/rules.json", refused}}, "net_connect", "rules.json"},
         {"kaputte Adresse", "ftp://host/", {}, "bad_url", ""},
         {"Regeldatei nicht gefunden", base, {{base + "/rules.json", not_found}}, "http_status", "rules.json"},
         {"Signatur nicht gefunden", base, {{base + "/rules.json", reply200(text)}, {base + "/rules.json.sig", not_found}}, "http_status", "rules.json.sig"},
@@ -413,6 +415,16 @@ static void download_tests() {
         const auto before = sb.tree();
         const auto r = download_rule_update(*p, http, f.base, ts);
         CHECK(!r.ok && r.error == f.error && r.file == f.file && sb.tree() == before, std::string("Download: ") + f.name + " -> " + f.error + ", Dateibaum unveraendert (war: " + r.error + ")");
+    }
+    {  // https-Adresse (Standardadresse auf GitHub): derselbe Ablauf, die Adresse geht unveraendert an den Client (TLS uebernimmt der Client der Konsole)
+        Sandbox sb;
+        auto p = make_snapshot_platform(sb.dir.string(), true);
+        FakeHttp http;
+        const std::string hbase = kDefaultUpdateUrl;
+        http.answers[hbase + "rules.json"] = reply200(text);
+        http.answers[hbase + "rules.json.sig"] = reply200(sigtext);
+        const auto r = download_rule_update(*p, http, hbase, ts);
+        CHECK(r.ok && http.asked.size() >= 2 && http.asked[0] == hbase + "rules.json" && http.asked[1] == hbase + "rules.json.sig", "Download: https-Standardadresse, beide Abrufe an die richtigen Adressen");
     }
     {  // ohne Schreibzugriff und mit ungueltigem Zeitstempel: vorher nichts geholt
         Sandbox sb;
@@ -444,7 +456,9 @@ static void http_client_tests() {
     CHECK(parse_http_url("http://192.168.1.5:8000/a/b.json", u, err) && u.host == "192.168.1.5" && u.port == 8000 && u.path == "/a/b.json", "URL: Host, Port, Pfad");
     CHECK(parse_http_url("http://example.org", u, err) && u.host == "example.org" && u.port == 80 && u.path == "/", "URL: ohne Port und Pfad");
     CHECK(parse_http_url("HTTP://Host/x#frag", u, err) && u.path == "/x", "URL: Grossschreibung des Schemas, Fragment entfaellt");
-    CHECK(!parse_http_url("https://example.org/", u, err) && err == "https_unsupported", "URL: https wird mit eigener Kennung abgelehnt");
+    CHECK(parse_http_url("https://example.org/a.json", u, err) && u.tls && u.port == 443 && u.host == "example.org" && u.path == "/a.json", "URL: https, Port 443, tls gesetzt");
+    CHECK(parse_http_url("HTTPS://h:8443/x", u, err) && u.tls && u.port == 8443 && parse_http_url("http://h/", u, err) && !u.tls, "URL: https mit Port; http ohne tls");
+    CHECK(parse_http_url(kDefaultUpdateUrl, u, err) && u.tls && u.host == "raw.githubusercontent.com", "URL: die Standardadresse ist gueltig");
     for (const char* bad : {"", "example.org", "ftp://h/", "http://", "http:///x", "http://h:/x", "http://h:0/x", "http://h:99999/x", "http://h:80a/x", "http://-h/x", "http://h h/x", "http://h/a b", "http://h/a\r\nHost: x", "http://us@er/x"})
         CHECK(!parse_http_url(bad, u, err) && err == "bad_url", std::string("URL: abgelehnt: '") + bad + "'");
     CHECK(join_url("http://h/a", "r.json") == "http://h/a/r.json" && join_url("http://h/a/", "r.json") == "http://h/a/r.json", "URL: Namen anhaengen");
@@ -521,7 +535,20 @@ static void http_client_tests() {
         const auto r = client->get("http://127.0.0.1:" + std::to_string(port) + "/", 1000, 2000);
         CHECK(r.error == "connect" && r.status == 0, "HTTP: nichts hoert zu -> connect");
     }
+    // der Socket-Client kann kein TLS (das kann nur der Client der Konsole): https wird mit eigener Kennung gemeldet
     CHECK(client->get("https://127.0.0.1/", 10, 100).error == "https_unsupported" && client->get("gibt-es-nicht", 10, 100).error == "bad_url", "HTTP: Adressfehler ohne Netzzugriff");
+}
+
+// Die veroeffentlichten Dateien (rules-update/, Standardquelle des Downloads auf GitHub) muessen mit dem eingebauten Schluessel gueltig signiert sein
+// und duerfen nicht neuer sein als die Regeln im Repository; sonst waere der Download fuer alle Nutzer wirkungslos oder wuerde abgelehnt.
+static void published_rules_tests() {
+    const std::filesystem::path dir = std::filesystem::path(std::string(kShipped)).parent_path().parent_path() / "rules-update";
+    const std::string rules = slurp(dir / "rules.json"), sig = slurp(dir / "rules.json.sig");
+    CHECK(!rules.empty() && !sig.empty(), "Veroeffentlicht: rules-update/rules.json und .sig vorhanden (make publish-rules)");
+    CHECK(verify_rules_signature(rules, sig, trusted_rule_keys()).result == SigResult::Valid, "Veroeffentlicht: rules.json ist mit dem eingebauten Schluessel gueltig signiert");
+    CHECK(load_rules_from_string(rules).db_version <= load_rules_from_string(slurp(kShipped)).db_version, "Veroeffentlicht: nicht neuer als knowledge/rules.json");
+    const std::string codes = slurp(dir / "error_codes.json"), csig = slurp(dir / "error_codes.json.sig");
+    CHECK(!codes.empty() && verify_rules_signature(codes, csig, trusted_rule_keys()).result == SigResult::Valid, "Veroeffentlicht: error_codes.json ist gueltig signiert");
 }
 
 void sign_tests() {
@@ -530,4 +557,5 @@ void sign_tests() {
     signed_update_tests();
     download_tests();
     http_client_tests();
+    published_rules_tests();
 }

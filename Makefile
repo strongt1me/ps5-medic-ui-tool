@@ -13,6 +13,7 @@
 #   make dist      Release-Ordner und Zip unter dist/ bauen (nur lokal, es wird nichts veroeffentlicht)
 #   make sign-rules   knowledge/rules.json und error_codes.json nach dist/rules/ kopieren und mit dem Signierschluessel signieren (SIGN_KEY=...)
 #   make check-sources  knowledge/error_codes.json gegen die Sony-Seiten und weiteren Quellen pruefen (Netz noetig; --update: python3 tools/check_error_sources.py --update)
+#   make publish-rules  wie sign-rules, aber nach rules-update/ (Standardquelle des Regel-Downloads auf GitHub; danach committen und pushen)
 #   make serve-rules  dist/rules/ per HTTP im LAN anbieten (RULES_PORT, RULES_BIND); die Konsole holt sie unter Regel-Update
 #   make set-update-url  update_url in /data/ps5medic/config.ini der Konsole setzen (PS5_HOST=<ip> UPDATE_URL=http://...)
 #   make title     Starter-Titel (nativer Titel mit eboot.bin) fuer die Kachel unter "Medien" bauen: build-title/FAKE42007 (docs/TITLE.md)
@@ -43,7 +44,7 @@ PS5_UI_SRCS := ui/src/canvas.cpp ui/src/font.cpp ui/src/font_data.cpp ui/src/i18
                ui/src/icons.cpp ui/src/png.cpp ui/src/shot_hook.cpp ui/src/splash.cpp ui/src/app.cpp ui/src/local_service.cpp
 
 PS5_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) ps5/main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
-PS5_UI_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) $(PS5_UI_SRCS) ps5/ui_main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
+PS5_UI_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) $(PS5_UI_SRCS) ps5/ps5_http.cpp ps5/ui_main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
 PS5_ELF := $(PS5_BUILD)/ps5medic.elf
 # Einmalige Sensor-Erkundung (docs/DIAGNOSE.md, Batch 5): eigenes ELF, kein Teil des Produkts. Senden: nc <ip> 9021 < build-ps5/ps5medic-probe.elf
 PS5_PROBE_ELF := $(PS5_BUILD)/ps5medic-probe.elf
@@ -53,7 +54,7 @@ PS5_SELFTEST_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) ps5/self
 PS5_UI_ELF := $(PS5_BUILD)/ps5medicui.elf
 # Dienst fuer die native UI-App (docs/NATIVE.md): zeichnet die UI, liest die Konsole, die App zeigt nur an (Port 9060)
 PS5_SERVICE_ELF := $(PS5_BUILD)/ps5medicservice.elf
-PS5_SERVICE_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) $(PS5_UI_SRCS) ps5/service_main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
+PS5_SERVICE_OBJS := $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS) $(PS5_UI_SRCS) ps5/ps5_http.cpp ps5/service_main.cpp) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
 # Launcher ohne websrv und ohne Homebrew-Lader (docs/TITLE.md). Der Lader (hbldr/elfldr/pt) stammt aus websrv, siehe third_party/websrv-hbldr/.
 #   ps5medic-start.elf     startet nur die UI; steckt im Starter der Kachel (title/starter.c)
 #   ps5medic-launcher.elf  der Installer zum Senden (ps5/installer_main.cpp): schreibt die native App FAKE42007 (build-native/FAKE42007) und den Dienst
@@ -65,10 +66,12 @@ PS5_LAUNCHER_C_OBJS := $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_LAUNCHER_C_SRCS))
 PS5_START_OBJS := $(PS5_BUILD)/ps5/launcher_main.o $(PS5_LAUNCHER_C_OBJS)
 PS5_LAUNCHER_OBJS := $(PS5_BUILD)/ps5/installer_main.o
 TILE_DIR := build-title/FAKE42007
+# TLS fuer den Regel-Download (https://) kommt vom System der Konsole (ps5/ps5_http.cpp)
+PS5_HTTP_LIBS := -lSceNet -lSceSsl -lSceHttp2
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
 
-.PHONY: native-ui deploy-native ps5-service host test clean ps5-image-probe ps5-update-probe ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules serve-rules set-update-url check-sources
+.PHONY: native-ui deploy-native ps5-service host test clean ps5-image-probe ps5-update-probe ps5-launch-title ps5 ps5-probe ps5-selftest ps5-ui ps5-start ps5-launcher send-launcher deploy deploy-ui launch-ui preview dist title deploy-title sign-rules publish-rules serve-rules set-update-url check-sources
 
 # UI-Vorschau am PC: make preview SNAP=<snapshot-ordner> [OUT=build/preview] [PREVIEW_ARGS="--lang en --scale 2"]
 SNAP ?=
@@ -124,11 +127,11 @@ $(PS5_PROBE_ELF): $(PS5_BUILD)/ps5/probe_sensors.o
 
 $(PS5_UI_ELF): $(PS5_UI_OBJS)
 	@test -d $(PS5_HOMEBREW)/lib || { echo "SDL2 fuer die PS5 fehlt in $(PS5_HOMEBREW) (ps5-payload-sdl2 + ps5-payload-libsamplerate, siehe docs/PHASE3.md)"; exit 1; }
-	$(PS5_CXX) $^ -L$(PS5_HOMEBREW)/lib $(PS5_UI_LIBS) -lkernel_sys -o $@
+	$(PS5_CXX) $^ -L$(PS5_HOMEBREW)/lib $(PS5_UI_LIBS) $(PS5_HTTP_LIBS) -lkernel_sys -o $@
 
 $(PS5_SERVICE_ELF): $(PS5_SERVICE_OBJS)
 	@mkdir -p $(dir $@)
-	$(PS5_CXX) $^ -lkernel_sys -lSceSystemService -o $@
+	$(PS5_CXX) $^ -lkernel_sys -lSceSystemService $(PS5_HTTP_LIBS) -o $@
 
 # Build-Kennung von App und Dienst (ps5/service_protocol.hpp): Hash der Quellen (tools/build_id.sh), dieselbe Regel wie in title/build_native_ui.sh.
 MEDIC_BUILD_ID := $(shell bash tools/build_id.sh 2>/dev/null || echo dev)
@@ -168,8 +171,8 @@ $(PS5_IMAGEPROBE_ELF): $(PS5_BUILD)/ps5/image_probe.o $(PS5_BUILD)/ps5/ps5_platf
 # Entwicklungswerkzeug: Regel-Update-Ablauf ohne Bildschirm (ps5/update_probe.cpp), Ergebnis /data/ps5medic/update_probe.log
 PS5_UPDATEPROBE_ELF := $(PS5_BUILD)/ps5medic-update-probe.elf
 ps5-update-probe: $(PS5_UPDATEPROBE_ELF)
-$(PS5_UPDATEPROBE_ELF): $(PS5_BUILD)/ps5/update_probe.o $(PS5_BUILD)/ps5/ps5_platform.o $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS)) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
-	$(PS5_CXX) $^ -lkernel_sys -o $@
+$(PS5_UPDATEPROBE_ELF): $(PS5_BUILD)/ps5/update_probe.o $(PS5_BUILD)/ps5/ps5_platform.o $(PS5_BUILD)/ps5/ps5_http.o $(patsubst %.cpp,$(PS5_BUILD)/%.o,$(PS5_CORE_SRCS)) $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_C_SRCS))
+	$(PS5_CXX) $^ -lkernel_sys $(PS5_HTTP_LIBS) -o $@
 
 # Entwicklungswerkzeug: startet einen Titel wie ein Druck auf die Kachel (ps5/launch_title.cpp), siehe docs/TITLE.md
 PS5_LAUNCHTITLE_ELF := $(PS5_BUILD)/ps5medic-launch-title.elf
@@ -276,6 +279,11 @@ sign-rules: host
 	$(BUILD)/medic-sign sign "$(SIGN_KEY)" $(RULES_OUT)/error_codes.json
 	$(BUILD)/medic-sign verify $(RULES_OUT)/error_codes.json $(RULES_OUT)/error_codes.json.sig
 	@echo "Fertig: $(RULES_OUT)/rules.json und error_codes.json samt .sig. Anbieten: make serve-rules"
+
+# Veroeffentlichen: signiert nach rules-update/ (im Repository), von dort holt die Konsole standardmaessig (kDefaultUpdateUrl, raw.githubusercontent.com).
+# Danach committen und pushen; erst dann ist der Stand auf GitHub abrufbar. Immer db_version hochzaehlen, sonst nimmt die Konsole die Datei nicht an.
+publish-rules:
+	$(MAKE) sign-rules RULES_OUT=rules-update
 
 # Fehlercodes gegen ihre Quellen pruefen (braucht Netz; nicht Teil von make test). Danach ggf. die Eintraege neu lesen und --update.
 check-sources:

@@ -13,14 +13,15 @@
 #include "medic/rule_download.hpp"
 #include "medic/rule_update.hpp"
 #include "medic/rules.hpp"
+#include "ps5_http.hpp"
 #include "ps5_platform.hpp"
 
 int main() {
     std::FILE* log = std::fopen("/data/ps5medic/update_probe.log", "w");
     if (!log) return 1;
     auto platform = medic::make_ps5_platform(/*writable=*/true);
-    auto http = medic::make_posix_http_client();
-    const std::string url = medic::configured_update_url(platform->fs());
+    auto http = medic::make_ps5_http_client();
+    const std::string url = medic::effective_update_url(platform->fs());
     std::fprintf(log, "update_url: %s\n", url.c_str());
 
     std::string current = "?";

@@ -119,6 +119,10 @@ public:
         HttpResponse r;
         HttpUrl u;
         if (!parse_http_url(url, u, r.error)) return r;
+        if (u.tls) {  // TLS gibt es nur ueber das System der Konsole (ps5/ps5_http.cpp), nicht ueber BSD-Sockets
+            r.error = "https_unsupported";
+            return r;
+        }
         const auto deadline = Clock::now() + std::chrono::milliseconds(timeout_ms);
 
         struct sockaddr_in sa;

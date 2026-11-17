@@ -106,9 +106,11 @@ int main(int argc, char** argv) {
             app.handle(Button::Circle);
             app.handle(Button::Down);
         }
-        app.handle(Button::Circle);  // Start
+        app.handle(Button::Circle);  // Start: das Statusfeld zeigt jetzt das Ergebnis
+        shot("01b_start_result");
         app.handle(Button::Down);
-        app.handle(Button::Cross);  // Check-up-Verlauf
+        app.handle(Button::Down);
+        app.handle(Button::Cross);  // Check-up-Verlauf (Kachel 2)
         shot("06a_checklist");
         app.handle(Button::Cross);  // den neuesten gespeicherten Check-up ansehen (die Liste ist zugeklappt, die erste Zeile ist ausgewaehlt)
         shot("06c_stored_check");
@@ -121,18 +123,20 @@ int main(int argc, char** argv) {
         app.handle(Button::Circle);  // zurueck zur Liste
         app.handle(Button::Circle);
         app.handle(Button::Down);
-        app.handle(Button::Cross);  // Einstellungen
+        app.handle(Button::Cross);  // Mehr (Kachel 3)
+        for (int i = 0; i < 6; ++i) app.handle(Button::Down);
+        app.handle(Button::Cross);  // Einstellungen (siebter Eintrag)
         shot("07_settings");
         app.handle(Button::Down);
         shot("07b_settings_rules_update");
         app.handle(Button::Cross);  // Regel-Update (zeigt das Angebot, installiert nichts)
         shot("08_rules_update");
         app.handle(Button::Circle);  // Einstellungen
+        app.handle(Button::Circle);  // Mehr
         app.handle(Button::Circle);  // Start
-        app.handle(Button::Down);
-        app.handle(Button::Down);
-        app.handle(Button::Down);
-        shot("09_start_error_codes");
+        app.handle(Button::Cross);   // Mehr (die Auswahl steht noch auf Kachel 3)
+        for (int i = 0; i < 5; ++i) app.handle(Button::Down);
+        shot("09_more_error_codes");
         app.handle(Button::Cross);  // Fehlercodes (nur Text zum Lesen)
         shot("10_error_codes");
         app.handle(Button::Down);
@@ -167,8 +171,10 @@ int main(int argc, char** argv) {
                 if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
                 ++shots;
             };
-            for (int i = 0; i < 4; ++i) st.handle(Button::Down);
-            st.handle(Button::Cross);
+            for (int i = 0; i < 3; ++i) st.handle(Button::Down);
+            st.handle(Button::Cross);  // Mehr
+            st.handle(Button::Down);
+            st.handle(Button::Cross);  // Selbsttest (zweiter Eintrag)
             png("17_selftest_list.png");
             st.handle(Button::Cross);
             png("18_selftest_confirm.png");
@@ -191,7 +197,7 @@ int main(int argc, char** argv) {
                 if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
                 ++shots;
             };
-            for (int i = 0; i < 5; ++i) ga.handle(Button::Down);
+            ga.handle(Button::Down);  // Kachel 1: Spiele
             png("20_start_games.png");
             ga.handle(Button::Cross);  // ohne Check-up: erst pruefen
             ga.render(canvas);
@@ -216,14 +222,13 @@ int main(int argc, char** argv) {
                 if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
                 ++shots;
             };
-            for (int i = 0; i < 6; ++i) ra.handle(Button::Down);
-            ra.handle(Button::Cross);  // ohne Check-up: erst pruefen, dann die Liste
+            for (int i = 0; i < 3; ++i) ra.handle(Button::Down);
+            ra.handle(Button::Cross);  // Mehr
+            ra.handle(Button::Cross);  // Reparaturen (erster Eintrag): ohne Check-up erst pruefen, dann die Liste
             ra.render(canvas);
             ra.update();
             png("24_repairs.png");
-            ra.handle(Button::Circle);
-            ra.handle(Button::Down);
-            ra.handle(Button::Cross);
+            ra.handle(Button::Circle);  // zurueck zu Mehr
             png("25_maintenance.png");
         }
         {  // Startbild
@@ -268,7 +273,8 @@ int main(int argc, char** argv) {
                     ++shots;
                 };
                 wa.handle(Button::Down);
-                wa.handle(Button::Cross);
+                wa.handle(Button::Down);
+                wa.handle(Button::Cross);  // Verlauf (Kachel 2)
                 png("30_check_list.png");
                 wa.handle(Button::Down);  // Zeile "Fruehere Check-ups" -> aufklappen
                 wa.handle(Button::Cross);

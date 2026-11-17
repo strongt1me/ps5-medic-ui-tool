@@ -360,7 +360,7 @@ medic::RuleUpdateResult LocalService::rollback_codes_update() {
     return r;
 }
 
-std::string LocalService::rule_update_url() { return medic::configured_update_url(p_.fs()); }
+std::string LocalService::rule_update_url() { return medic::effective_update_url(p_.fs()); }
 
 std::string LocalService::language() { return medic::configured_value(p_.fs(), "language"); }
 
