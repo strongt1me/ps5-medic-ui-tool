@@ -24,9 +24,10 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, CheckList, CheckCompare, GameList, GameDetail, Hidden, Splash };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, CheckList, CheckCompare, GameList, GameDetail, Hidden, Repairs, Maintenance, Splash };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
+    static constexpr int kMaintItems = 4;  // Selbsttest, Regeln, Backups/Rueckgaengig, Bericht
 
     explicit App(IMedicService& svc, Lang lang = Lang::De);
 
@@ -77,6 +78,12 @@ private:
     void hide_current(bool from_detail);
     void restore_hidden(int index);
     void draw_hidden(Canvas& c) const;
+    void handle_impl(Button b);
+    std::vector<int> repair_indices() const;
+    void open_repairs();
+    void open_maintenance();
+    void draw_repairs(Canvas& c) const;
+    void draw_maintenance(Canvas& c) const;
     void move_selection(int& sel, int& top, int count, int visible, int delta);
     void page_selection(int& sel, int& top, int count, int visible, int dir);
     void open_history();
@@ -216,6 +223,10 @@ private:
     std::vector<medic::GameInfo> games_;
     int game_sel_ = 0, game_top_ = 0, gd_sel_ = 0, gd_top_ = 0;
     bool detail_from_game_ = false;
+    int rep_sel_ = 0, rep_top_ = 0;     // Reparaturen: Auswahl in der Liste der reparierbaren Befunde
+    int maint_sel_ = 0;                  // Wartung: gewaehlter Eintrag
+    bool maint_origin_ = false;          // ein Unterbildschirm wurde aus der Wartung geoeffnet: Kreis fuehrt dorthin zurueck
+    bool after_check_repairs_ = false;   // Reparaturen ohne Check-up gewaehlt: nach dem Check-up direkt die Liste zeigen
     bool after_check_games_ = false;  // Spiele ohne Check-up gewaehlt: nach dem Check-up direkt die Liste zeigen
 
     // Selbsttest: List (letzte Ergebnisse), Confirm (Hinweis vor dem Lauf), Running (ein Test je update()), Done

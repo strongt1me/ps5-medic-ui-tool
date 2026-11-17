@@ -57,7 +57,7 @@ open(os.path.join(demo, 'fs', 'data', 'ps5medic', 'journal.jsonl'), 'w').write('
 PY
 
 # 3. Vorschau je Sprache, die ausgewaehlten Bilder nach docs/images/<sprache>/
-PICK="01_start 03_findings 04_detail_0 03b_report 06d_compare 07_settings 10_error_codes 17_selftest_list 21_game_list 22_game_detail 30b_check_list_open"
+PICK="01_start 03_findings 04_detail_0 03b_report 06d_compare 07_settings 10_error_codes 17_selftest_list 21_game_list 22_game_detail 24_repairs 25_maintenance 30b_check_list_open"
 for lang in de en fr it es; do
     "$PREVIEW" "$DEMO" "$SHOTS/$lang" --lang "$lang" --scale "${SCALE:-2}" > /dev/null
     mkdir -p "docs/images/$lang"

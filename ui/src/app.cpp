@@ -39,7 +39,7 @@ std::string backup_line(const Strings& S, const medic::BackupInfo& b) {
 
 
 constexpr int W = App::kWidth, H = App::kHeight, M = 96;
-constexpr int kListVisible = 4, kHidVisible = 6, kHistVisible = 6, kErrVisible = 8, kChkRows = 7, kChkBigH = 124, kChkToggleH = 64, kChkRowH = 76, kCmpVisible = 13, kGameVisible = 8, kGdVisible = 5;
+constexpr int kRepVisible = 5, kListVisible = 6, kHidVisible = 6, kHistVisible = 6, kErrVisible = 8, kChkRows = 7, kChkBigH = 124, kChkToggleH = 64, kChkRowH = 76, kCmpVisible = 13, kGameVisible = 8, kGdVisible = 5;
 
 const Color kBg = rgb(14, 18, 24), kPanel = rgb(23, 29, 38), kPanelHi = rgb(33, 42, 56), kLine = rgb(42, 52, 66);
 const Color kText = rgb(232, 237, 242), kDim = rgb(141, 153, 168), kAccent = rgb(76, 154, 255);
@@ -107,9 +107,21 @@ constexpr int kErrGroupCount = 7;
 bool is_hex_id(const std::string& id) { return id.size() > 2 && id[0] == '0' && id[1] == 'x'; }
 std::string error_key(const std::string& id) { return is_hex_id(id) ? id.substr(2) : (id.size() >= 9 ? id.substr(3, 6) : std::string()); }
 
+Color rgba(unsigned r, unsigned g, unsigned b, unsigned a);
+
+// Glasfeld ohne Auswahl: fuer Statusfelder und Flaechen
+void glass_panel(Canvas& c, int x, int y, int w, int h, int r) {
+    c.fill_glass(x, y, w, h, r, rgba(60, 90, 140, 90), rgba(10, 18, 34, 195));
+    c.fill_rect(x + r, y + 1, std::max(w - 2 * r, 0), 1, rgba(255, 255, 255, 50));
+    c.stroke_round_rect(x, y, w, h, r, 2, rgba(130, 180, 255, 70));
+}
+
 void card(Canvas& c, int x, int y, int w, int h, bool selected) {
-    c.fill_round_rect(x, y, w, h, 16, selected ? kPanelHi : kPanel);
-    if (selected) c.stroke_round_rect(x, y, w, h, 16, 3, kAccent);
+    if (selected) c.glow(x + w / 2, y + h / 2, std::max(w, h) * 2 / 3, kAccent, 36);  // weicher Schein um die gewaehlte Karte
+    // Glas: durchscheinender Verlauf (oben heller), feine Lichtkante oben, helle Umrandung; die gewaehlte Karte ist blauer und leuchtet
+    c.fill_glass(x, y, w, h, 16, selected ? rgba(70, 120, 210, 150) : rgba(60, 90, 140, 105), selected ? rgba(18, 36, 84, 205) : rgba(10, 18, 34, 195));
+    c.fill_rect(x + 18, y + 1, std::max(w - 36, 0), 1, rgba(255, 255, 255, selected ? 90 : 55));
+    c.stroke_round_rect(x, y, w, h, 16, selected ? 3 : 2, selected ? rgba(150, 205, 255, 235) : rgba(130, 180, 255, 70));
 }
 
 Color rgba(unsigned r, unsigned g, unsigned b, unsigned a) { return (a << 24) | (r << 16) | (g << 8) | b; }
@@ -872,6 +884,16 @@ void App::begin_fix(int index, Screen origin) {
 }
 
 void App::handle(Button b) {
+    const Screen before = screen_;
+    handle_impl(b);
+    // Ein aus der Wartung geoeffneter Bildschirm fuehrt mit Kreis zurueck dorthin, nicht ins Startbild
+    if (maint_origin_ && before != screen_ && (screen_ == Screen::Start || (screen_ == Screen::Settings && before == Screen::RulesUpdate))) {  // das Regel-Update kennt sonst nur die Einstellungen als Ziel
+        maint_origin_ = false;
+        screen_ = Screen::Maintenance;
+    }
+}
+
+void App::handle_impl(Button b) {
     if (screen_ == Screen::Splash) {  // jede Taste ueberspringt das Startbild
         screen_ = Screen::Start;
         return;
@@ -884,11 +906,11 @@ void App::handle(Button b) {
                 if (start_sel_ >= 1) start_small_ = start_sel_;
                 start_sel_ = 0;
             } else if (b == Button::L1) start_sel_ = std::max(start_sel_ - 1, 0);
-            else if (b == Button::Down && start_sel_ == 0) start_sel_ = std::clamp(start_small_, 1, 5);
+            else if (b == Button::Down && start_sel_ == 0) start_sel_ = std::clamp(start_small_, 1, 7);
             else if (b == Button::Down || b == Button::R1) {
-                start_sel_ = std::min(start_sel_ + 1, 5);
+                start_sel_ = std::min(start_sel_ + 1, 7);
             } else if (b == Button::Left && start_sel_ >= 2) --start_sel_;
-            else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < 5) ++start_sel_;
+            else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < 7) ++start_sel_;
             else if (b == Button::Cross) {
                 if (start_sel_ == 0) {
                     start_small_ = 1;  // wer den Check-up startet, beginnt beim naechsten Mal wieder bei der ersten kleinen Kachel
@@ -898,12 +920,40 @@ void App::handle(Button b) {
                 else if (start_sel_ == 2) screen_ = Screen::Settings;
                 else if (start_sel_ == 3) open_error_codes();
                 else if (start_sel_ == 4) open_selftest();
+                else if (start_sel_ == 6) open_repairs();
+                else if (start_sel_ == 7) open_maintenance();
                 else if (has_result_) open_games();
                 else {  // ohne Check-up gibt es nichts zu zeigen: erst pruefen, dann die Liste
                     after_check_games_ = true;
                     start_check();
                 }
             } else if (b == Button::Circle) quit_ = true;
+            break;
+        case Screen::Repairs: {
+            const std::vector<int> idx = repair_indices();
+            const int n = static_cast<int>(idx.size());
+            if (b == Button::Up) move_selection(rep_sel_, rep_top_, n, kRepVisible, -1);
+            else if (b == Button::Down) move_selection(rep_sel_, rep_top_, n, kRepVisible, 1);
+            else if (b == Button::L1) page_selection(rep_sel_, rep_top_, n, kRepVisible, -1);
+            else if (b == Button::R1) page_selection(rep_sel_, rep_top_, n, kRepVisible, 1);
+            else if (b == Button::Cross) {
+                if (rep_sel_ >= 0 && rep_sel_ < n) {
+                    sel_ = idx[static_cast<std::size_t>(rep_sel_)];
+                    begin_fix(sel_, Screen::Repairs);
+                }
+            } else if (b == Button::Circle) screen_ = Screen::Start;
+            break;
+        }
+        case Screen::Maintenance:
+            if (b == Button::Up) maint_sel_ = std::max(maint_sel_ - 1, 0);
+            else if (b == Button::Down) maint_sel_ = std::min(maint_sel_ + 1, kMaintItems - 1);
+            else if (b == Button::Cross) {
+                maint_origin_ = true;
+                if (maint_sel_ == 0) open_selftest();
+                else if (maint_sel_ == 1) open_rules_update();
+                else if (maint_sel_ == 2) open_history();
+                else open_report();
+            } else if (b == Button::Circle) screen_ = Screen::Start;
             break;
         case Screen::Running:
             break;  // nicht unterbrechbar (dauert Sekunden)
@@ -1072,7 +1122,10 @@ void App::handle(Button b) {
                     undo_target_ = hist_[static_cast<std::size_t>(hist_sel_)];
                     screen_ = Screen::UndoConfirm;
                 }
-            } else if (b == Button::Circle) open_checks();
+            } else if (b == Button::Circle) {
+                if (maint_origin_) screen_ = Screen::Start;
+                else open_checks();
+            }
             break;
         case Screen::UndoConfirm:
             if (b == Button::Cross) {
@@ -1265,6 +1318,10 @@ void App::update() {
             after_check_games_ = false;
             open_games();
         }
+        if (after_check_repairs_) {
+            after_check_repairs_ = false;
+            open_repairs();
+        }
     }
     if (screen_ == Screen::SelfTest && st_state_ == StState::Running && st_rendered_) step_selftest();
     if (verify_ == Verify::Pending && verify_rendered_ && screen_ == Screen::FixDone) {  // Re-Detect nach der Reparatur
@@ -1318,6 +1375,8 @@ void App::render(Canvas& c) const {
         case Screen::CheckList: draw_checklist(c); break;
         case Screen::CheckCompare: draw_compare(c); break;
         case Screen::Hidden: draw_hidden(c); break;
+        case Screen::Repairs: draw_repairs(c); break;
+        case Screen::Maintenance: draw_maintenance(c); break;
         case Screen::GameList: draw_gamelist(c); break;
         case Screen::GameDetail: draw_gamedetail(c); break;
         case Screen::Splash: break;  // unten: das Bild ersetzt alles
@@ -1429,7 +1488,7 @@ void App::draw_selftest(Canvas& c) const {
             total += d.est_seconds;
             reads = reads || d.risk == "read";
         }
-        c.fill_round_rect(M, 230, W - 2 * M, 460, 24, kPanel);
+        glass_panel(c, M, 230, W - 2 * M, 460, 24);
         draw_icon_badge(c, st_tier_ >= 2 ? Icon::Flame : Icon::Checklist, M + 48, 254, 72, st_tier_ >= 2 ? kTintOrange : kTintTeal);
         body().draw(c, M + 144, 254 + (72 - body().line_height()) / 2, S(st_tier_ >= 2 ? "selftest.confirm_title_thorough" : "selftest.confirm_title"), st_tier_ >= 2 ? kWarn : kText);
         int y = 346;
@@ -1443,7 +1502,7 @@ void App::draw_selftest(Canvas& c) const {
 
     if (st_state_ == StState::Running) {
         const std::size_t n = st_run_.size();
-        c.fill_round_rect(M, 230, W - 2 * M, 330, 24, kPanel);
+        glass_panel(c, M, 230, W - 2 * M, 330, 24);
         const std::size_t shown = std::min(st_next_, n ? n - 1 : 0);
         const std::string name = n ? pick_text(lang_, st_defs_[st_ids_[shown]].name_de, st_defs_[st_ids_[shown]].name_en, "selftests", st_defs_[st_ids_[shown]].id, "name") : std::string();
         {
@@ -1473,7 +1532,7 @@ void App::draw_selftest(Canvas& c) const {
         else if (st == medic::TestStatus::Warn) ++warn;
         else if (st == medic::TestStatus::Failed || st == medic::TestStatus::Error) ++failed;
         else if (st == medic::TestStatus::Skipped) ++skipped;
-        c.fill_round_rect(M, y, W - 2 * M, 58, 14, kPanel);
+        glass_panel(c, M, y, W - 2 * M, 58, 14);
         {
             const auto look = test_look(d.id);
             draw_icon_badge(c, look.first, M + 12, y + 5, 48, look.second);
@@ -1596,7 +1655,7 @@ void App::draw_usertest(Canvas& c) const {
         draw_hints(c, {{PadGlyph::Circle, S("usertest.pad_exit")}});
         return;
     }
-    c.fill_round_rect(M, 230, W - 2 * M, 330, 24, kPanel);
+    glass_panel(c, M, 230, W - 2 * M, 330, 24);
     int y = 270;
     for (auto& l : wrap_text(body(), S("usertest.display_question"), W - 2 * M - 96, 6)) {
         body().draw(c, M + 48, y, l, kText);
@@ -1607,9 +1666,11 @@ void App::draw_usertest(Canvas& c) const {
 
 void App::draw_chrome(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    draw_icon_badge(c, Icon::Medic, M, 24, 66, kTintBlue);
-    title().draw(c, M + 90, 28, S("app.title"), kText);
-    small().draw(c, M + 90 + title().width(S("app.title")) + 18, 50, std::string("v") + medic::kMedicVersion, kDim);  // Versionsangabe der App neben dem Titel
+    if (screen_ != Screen::Start) {  // das Startbild zeigt Emblem und Name gross in der Mitte
+        draw_icon_badge(c, Icon::Medic, M, 24, 66, kTintBlue);
+        title().draw(c, M + 90, 28, S("app.title"), kText);
+        small().draw(c, M + 90 + title().width(S("app.title")) + 18, 50, std::string("v") + medic::kMedicVersion, kDim);  // Versionsangabe der App neben dem Titel
+    }
     std::string sys = has_result_ && !result_.fw.empty() ? S.fmt("header.system", {{"fw", result_.fw}, {"model", result_.model}})
                                                           : (has_result_ ? S("header.unknown") : std::string());
     if (result_.model.empty()) {  // ohne Modell bliebe "Firmware 12.00 · " mit haengendem Trenner stehen
@@ -1632,8 +1693,10 @@ void App::draw_chrome(Canvas& c) const {
         draw_icon(c, Icon::History, right - w + 28, 58, 26, kWarn, kWarn);
         small().draw(c, right - w + 50, 44, t, kWarn);
     }
-    c.fill_rect(M, 112, W - 2 * M, 2, kLine);
-    c.fill_rect(M, 112, 160, 2, kAccent);
+    if (screen_ != Screen::Start) {
+        c.fill_rect(M, 112, W - 2 * M, 2, kLine);
+        c.fill_rect(M, 112, 160, 2, kAccent);
+    }
 }
 
 void App::draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::string>>& hints) const {
@@ -1667,43 +1730,96 @@ void App::draw_hints(Canvas& c, const std::vector<std::pair<PadGlyph, std::strin
     }
 }
 
+// Sechseck (Spitze oben) mit Mittelpunkt (cx, cy) und Umkreisradius r: Zeilenfuellung, die Kante wird mit einer Linie nachgezeichnet
+static void fill_hex(Canvas& c, int cx, int cy, int r, Color col) {
+    const float k = 1.7320508f;  // sqrt(3)
+    for (int dy = -r; dy <= r; ++dy) {
+        const int ady = dy < 0 ? -dy : dy;
+        const float half = ady * 2 <= r ? k * static_cast<float>(r) / 2.0f : (static_cast<float>(r) - static_cast<float>(ady)) * k;
+        const int hw = static_cast<int>(half);
+        if (hw > 0) c.fill_rect(cx - hw, cy + dy, 2 * hw, 1, col);
+    }
+}
+
+static void stroke_hex(Canvas& c, int cx, int cy, int r, float width, Color col) {
+    std::vector<std::pair<float, float>> pts;
+    for (int i = 0; i <= 6; ++i) {
+        const float a = (-90.0f + 60.0f * static_cast<float>(i)) * 3.14159265f / 180.0f;
+        pts.emplace_back(static_cast<float>(cx) + static_cast<float>(r) * std::cos(a), static_cast<float>(cy) + static_cast<float>(r) * std::sin(a));
+    }
+    c.stroke_polyline(pts, width, col);
+}
+
+// Emblem wie im Startbild: Leuchtfleck, Herzschlaglinie links und rechts, Sechseck mit Kreuz
+static void draw_emblem(Canvas& c, int cx, int cy, int r) {
+    c.glow(cx, cy, r * 3, rgb(40, 120, 255), 110);
+    const Color line = rgba(90, 190, 255, 150);
+    c.stroke_polyline(ecg_points(static_cast<float>(cx - 560), 470.0f, static_cast<float>(cy), 46.0f, 420.0f, 120.0f), 4, line);
+    c.stroke_polyline(ecg_points(static_cast<float>(cx + 90), 470.0f, static_cast<float>(cy), 46.0f, 420.0f, 0.0f), 4, line);
+    stroke_hex(c, cx, cy, r + 16, 2, rgba(90, 190, 255, 70));
+    fill_hex(c, cx, cy, r, rgb(44, 160, 255));
+    fill_hex(c, cx, cy, r - 9, rgb(9, 22, 50));
+    stroke_hex(c, cx, cy, r - 9, 3, rgba(120, 210, 255, 160));
+    const int a = r * 2 / 5, t = r / 3;  // Kreuz: Armlaenge und -dicke
+    c.glow(cx, cy, r, rgb(70, 190, 255), 70);
+    c.fill_round_rect(cx - t / 2, cy - a, t, 2 * a, t / 3, rgb(86, 196, 255));
+    c.fill_round_rect(cx - a, cy - t / 2, 2 * a, t, t / 3, rgb(86, 196, 255));
+}
+
 void App::draw_start(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    // Grosse Kachel: Check-up starten (Verlauf, Herzschlaglinie als Bild, Stethoskop)
-    const bool sel0 = start_sel_ == 0;
-    c.fill_round_rect_vgradient(M, 160, W - 2 * M, 190, 28, sel0 ? rgb(88, 170, 255) : rgb(56, 104, 176), sel0 ? rgb(38, 92, 210) : rgb(28, 58, 112));
-    c.stroke_polyline(ecg_points(M + 1020, W - 2 * M - 1080, 262, 58, 400, 0), 6, sel0 ? rgb(176, 214, 255) : rgb(96, 136, 196));
-    if (sel0) c.stroke_round_rect(M, 160, W - 2 * M, 190, 28, 4, rgb(200, 226, 255));
-    c.fill_round_rect(M + 36, 188, 134, 134, 38, rgba(255, 255, 255, sel0 ? 46 : 30));
-    draw_icon(c, Icon::Stethoscope, M + 103, 255, 98, rgb(255, 255, 255), rgb(190, 224, 255));
-    title().draw(c, M + 204, 186, S("start.check"), rgb(255, 255, 255));
+    const int cx = W / 2;
+
+    // Kopf: Emblem, Name mit farbigem "Medic", Leitsatz und Version
+    draw_emblem(c, cx, 232, 96);
     {
-        int ty = 252;
-        for (const auto& l : wrap_text(body(), S("start.check_sub"), 780, 2)) {
-            body().draw(c, M + 204, ty, l, rgb(224, 236, 255));
-            ty += body().line_height() + 2;
-        }
+        const std::string a = "PS5 ", b = "Medic";
+        const int tw = title().width(a) + title().width(b), tx = cx - tw / 2, ty = 346;
+        title().draw(c, tx, ty, a, rgb(255, 255, 255));
+        title().draw(c, tx + title().width(a), ty, b, rgb(64, 176, 255));
+        const std::string sub = S("start.tagline") + "   v" + medic::kMedicVersion;
+        small().draw(c, cx - small().width(sub) / 2, ty + title().line_height() + 2, sub, kDim);
     }
 
-    // Fuenf kleine Kacheln mit Symbolfeld (Verlauf, Einstellungen, Fehlercodes, Selbsttest, Spiele)
-    const int gap = 18, cw = (W - 2 * M - 4 * gap) / 5;
-    const char* keys[5][2] = {{"start.history", "start.history_sub"}, {"start.settings", "start.settings_sub"}, {"start.errors", "start.errors_sub"}, {"start.selftest", "start.selftest_sub"}, {"start.games", "start.games_sub"}};
-    const Icon icons[5] = {Icon::History, Icon::Gear, Icon::Book, Icon::Checklist, Icon::Gamepad};
-    const Color tints[5] = {kTintViolet, kTintSlate, kTintOrange, kTintTeal, kTintPink};
-    for (int i = 0; i < 5; ++i) {
-        const int x = M + i * (cw + gap);
-        card(c, x, 380, cw, 190, start_sel_ == i + 1);
-        draw_icon_badge(c, icons[i], x + 22, 404, 64, tints[i]);
-        body().draw(c, x + 98, 404 + (64 - body().line_height()) / 2, S(keys[i][0]), kText, cw - 112);
-        int ty = 488;
-        for (const auto& l : wrap_text(small(), S(keys[i][1]), cw - 44, 2)) {
-            small().draw(c, x + 22, ty, l, kDim);
+    // Check-up starten: breite Glasflaeche mit Herzschlaglinie
+    const bool sel0 = start_sel_ == 0;
+    {
+        const int bw = 1100, bh = 104, bx = cx - bw / 2, by = 468;
+        if (sel0) c.glow(cx, by + bh / 2, 520, rgb(60, 140, 255), 60);
+        c.fill_round_rect_vgradient(bx, by, bw, bh, 26, sel0 ? rgb(88, 170, 255) : rgb(50, 96, 168), sel0 ? rgb(38, 92, 210) : rgb(26, 54, 108));
+        c.stroke_polyline(ecg_points(static_cast<float>(bx + bw - 210), 180.0f, static_cast<float>(by + bh / 2), 30.0f, 290.0f, 0.0f), 5, sel0 ? rgb(190, 222, 255) : rgb(100, 140, 200));
+        if (sel0) c.stroke_round_rect(bx, by, bw, bh, 26, 4, rgb(210, 232, 255));
+        c.fill_round_rect(bx + 22, by + 14, 76, 76, 22, rgba(255, 255, 255, sel0 ? 46 : 30));
+        draw_icon(c, Icon::Stethoscope, bx + 60, by + 52, 56, rgb(255, 255, 255), rgb(190, 224, 255));
+        title().draw(c, bx + 122, by + 8, S("start.check"), rgb(255, 255, 255));
+        small().draw(c, bx + 122, by + 8 + title().line_height() + 2, elide(small(), S("start.check_sub"), bw - 122 - 230), rgb(224, 236, 255));
+    }
+
+    // Fuenf Kacheln (Verlauf, Einstellungen, Fehlercodes, Selbsttest, Spiele): Symbol oben, Name und Kurztext zentriert; die gewaehlte leuchtet und waechst
+    const int gap = 14, cw = (W - 2 * M - 6 * gap) / 7, ty0 = 594, th = 202;
+    const char* keys[7][2] = {{"start.history", "start.history_sub"}, {"start.settings", "start.settings_sub"}, {"start.errors", "start.errors_sub"}, {"start.selftest", "start.selftest_sub"},
+                              {"start.games", "start.games_sub"}, {"start.repairs", "start.repairs_sub"}, {"start.maint", "start.maint_sub"}};
+    const Icon icons[7] = {Icon::History, Icon::Gear, Icon::Book, Icon::Checklist, Icon::Gamepad, Icon::Wrench, Icon::Shield};
+    const Color tints[7] = {kTintViolet, kTintSlate, kTintOrange, kTintTeal, kTintPink, kTintGreen, kTintBlue};
+    for (int i = 0; i < 7; ++i) {
+        const bool sel = start_sel_ == i + 1;
+        const int grow = sel ? 6 : 0, x = M + i * (cw + gap) - grow, y = ty0 - grow, w = cw + 2 * grow, h = th + 2 * grow;
+        if (sel) c.glow(x + w / 2, y + h / 2, w * 3 / 4, kAccent, 70);
+        card(c, x, y, w, h, sel);
+        c.glow(x + w / 2, y + 44, 64, tints[i], sel ? 90 : 55);
+        draw_icon_badge(c, icons[i], x + w / 2 - 28, y + 16, 56, tints[i]);
+        const std::string name = S(keys[i][0]);
+        body().draw(c, x + (w - std::min(body().width(name), w - 24)) / 2, y + 82, name, kText, w - 24);
+        int ty = y + 82 + body().line_height() + 2;
+        for (const auto& l : wrap_text(small(), S(keys[i][1]), w - 20, 3)) {
+            small().draw(c, x + (w - small().width(l)) / 2, ty, l, kDim);
             ty += small().line_height() + 2;
         }
     }
 
-    // Letztes Ergebnis: grosses Statussymbol links, Text rechts davon
-    c.fill_round_rect(M, 600, W - 2 * M, 236, 22, kPanel);
+    // Unten links: letztes Ergebnis (Statussymbol und Text), rechts: Systemstatus (Diagnose, Regeln, Rueckgaengig)
+    const int py = 806, ph = 144, lw = 1090;
+    glass_panel(c, M, py, lw, ph, 22);
     Icon st_icon = Icon::Info;
     Color st_col = kDim;
     if (has_result_ && result_.findings.empty()) {
@@ -1717,15 +1833,14 @@ void App::draw_start(Canvas& c) const {
         st_icon = sev_icon(worst);
         st_col = sev_color(worst);
     }
-    draw_icon_badge(c, st_icon, M + 36, 650, 136, st_col);
-    const int tx = M + 204, tw = W - 2 * M - 204 - 40;
-    small().draw(c, tx, 624, S("start.last"), kDim);
+    draw_icon_badge(c, st_icon, M + 26, py + 27, 96, st_col);
+    const int tx = M + 150, tw = lw - 150 - 24;
+    small().draw(c, tx, py + 16, S("start.last"), kDim);
+    const int untested = has_result_ ? static_cast<int>(std::count_if(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; })) : 0;
     if (!has_result_) {
-        body().draw(c, tx, 676, S("start.last_none"), kText);
+        body().draw(c, tx, py + 52, elide(body(), S("start.last_none"), tw), kText);
     } else if (result_.findings.empty()) {
-        const int untested = static_cast<int>(std::count_if(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; }));
-        body().draw(c, tx, 676, S(result_.incomplete ? "start.last_incomplete" : untested ? "start.last_clean_partial" : "start.last_clean"), (untested || result_.incomplete) ? kText : kOk, tw);
-        if (untested) small().draw(c, tx, 740, S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), kDim);
+        body().draw(c, tx, py + 52, elide(body(), S(result_.incomplete ? "start.last_incomplete" : untested ? "start.last_clean_partial" : "start.last_clean"), tw), (untested || result_.incomplete) ? kText : kOk);
     } else {
         int crit = 0, warn = 0, info = 0;
         for (auto& f : result_.findings) {
@@ -1733,21 +1848,129 @@ void App::draw_start(Canvas& c) const {
             else if (f.severity == medic::Severity::Warning) ++warn;
             else ++info;
         }
-        body().draw(c, tx, 676,
-                    S.fmt("start.last_summary", {{"n", std::to_string(result_.findings.size())}, {"crit", std::to_string(crit)}, {"warn", std::to_string(warn)}, {"info", std::to_string(info)}}),
-                    kText, tw);
-        if (const int untested = static_cast<int>(std::count_if(result_.coverage.begin(), result_.coverage.end(), [](const medic::CoverageResult& r) { return !r.tested; })))
-            small().draw(c, tx, 740, S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), kDim);
+        body().draw(c, tx, py + 52,
+                    elide(body(), S.fmt("start.last_summary", {{"n", std::to_string(result_.findings.size())}, {"crit", std::to_string(crit)}, {"warn", std::to_string(warn)}, {"info", std::to_string(info)}}), tw), kText);
     }
-    if (has_result_ && !result_.history_saved) small().draw(c, tx, 784, S("start.history_failed"), kWarn, tw);  // der seltene Fehlerfall ersetzt die Regelversion
-    else if (has_result_ && !result_.rules_version.empty()) small().draw(c, tx, 784, S.fmt("start.rules", {{"v", result_.rules_version}}), kDim);
+    if (has_result_ && untested) small().draw(c, tx, py + 52 + body().line_height() + 8, elide(small(), S.fmt("start.not_tested", {{"n", std::to_string(untested)}}), tw), kDim);
+    if (has_result_ && !result_.history_saved) small().draw(c, tx, py + ph - small().line_height() - 14, elide(small(), S("start.history_failed"), tw), kWarn);  // der seltene Fehlerfall ersetzt die Regelversion
+    else if (has_result_ && !result_.rules_version.empty()) small().draw(c, tx, py + ph - small().line_height() - 14, S.fmt("start.rules", {{"v", result_.rules_version}}), kDim);
+
+    const int sx = M + lw + 24, sw = W - 2 * M - lw - 24;
+    glass_panel(c, sx, py, sw, ph, 22);
+    small().draw(c, sx + 24, py + 6, S("start.status"), kText);
+    const std::string rules_val = has_result_ && !result_.rules_version.empty() ? result_.rules_version : S("start.ready");
+    const std::pair<std::string, std::string> rows[4] = {{S("start.st_engine"), S("start.ready")}, {S("start.st_rules"), rules_val}, {S("start.st_undo"), S("start.ready")}, {S("start.st_maint"), S("start.ready")}};
+    for (int i = 0; i < 4; ++i) {
+        const int ry = py + 36 + i * 26;
+        small().draw(c, sx + 24, ry, rows[i].first, kDim);
+        const int vw = small().width(rows[i].second);
+        const Color rc = rgb(96, 196, 255);  // blau, nicht gruen: "bereit" heisst nicht "alles in Ordnung"
+        small().draw(c, sx + sw - 24 - vw, ry, rows[i].second, rc);
+        draw_icon(c, Icon::Ok, sx + sw - 24 - vw - 20, ry + small().line_height() / 2, 22, rc, rc);
+    }
 
     draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}, {PadGlyph::Circle, S("common.quit")}});
 }
 
+// Befunde, die Medic selbst reparieren kann (oder zu denen es eine Anleitung gibt): Indizes in result_.findings
+std::vector<int> App::repair_indices() const {
+    std::vector<int> v;
+    if (viewing_old_) return v;
+    for (std::size_t i = 0; i < result_.findings.size(); ++i)
+        if (!result_.findings[i].fix.empty()) v.push_back(static_cast<int>(i));
+    return v;
+}
+
+void App::open_repairs() {
+    if (!has_result_) {  // erst pruefen: ohne Check-up gibt es nichts zu reparieren
+        after_check_repairs_ = true;
+        start_check();
+        return;
+    }
+    rep_sel_ = rep_top_ = 0;
+    screen_ = Screen::Repairs;
+}
+
+void App::open_maintenance() {
+    maint_origin_ = false;
+    screen_ = Screen::Maintenance;
+}
+
+void App::draw_repairs(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    title_icon(c, Icon::Wrench, kTintGreen, S("repairs.title"));
+    const std::vector<int> idx = repair_indices();
+    const int n = static_cast<int>(idx.size());
+    const int cw = W - 2 * M, ch = 112, gap = 12, top_y = 214;
+    if (n == 0) {
+        glass_panel(c, M, 260, cw, 300, 24);
+        draw_icon_badge(c, Icon::Ok, M + 48, 300, 120, kTintSlate);
+        title().draw(c, M + 204, 310, S("repairs.none"), kText);
+        int ty = 396;
+        for (const auto& l : wrap_text(body(), S("repairs.none_sub"), cw - 204 - 48, 4)) {
+            body().draw(c, M + 204, ty, l, kDim);
+            ty += body().line_height() + 6;
+        }
+    } else {
+        text_right(c, small(), W - M, 148, S.fmt("repairs.count", {{"n", std::to_string(n)}}), kDim);
+        const int last = std::min(n, rep_top_ + kRepVisible);
+        int y = top_y;
+        for (int k = rep_top_; k < last; ++k, y += ch + gap) {
+            const auto& f = result_.findings[static_cast<std::size_t>(idx[static_cast<std::size_t>(k)])];
+            const bool hint = is_hint_fix(f.fix), sel = k == rep_sel_;
+            card(c, M, y, cw - 28, ch, sel);
+            c.fill_round_rect(M, y + 14, 9, ch - 28, 4, sev_color(f.severity));
+            draw_icon_badge(c, hint ? Icon::Lightbulb : Icon::Wrench, M + 28, y + (ch - 64) / 2, 64, hint ? kTintSlate : kTintGreen);
+            const int tx = M + 112, tw = cw - 28 - 112 - 24;
+            body().draw(c, tx, y + 16, elide(body(), finding_title(f), tw), kText);
+            small().draw(c, tx, y + 16 + body().line_height() + 10, elide(small(), S(hint ? "findings.hintable" : "findings.fixable") + "  ·  " + fix_name(f.fix), tw), hint ? kDim : kOk);
+        }
+        if (n > kRepVisible) {
+            const int track_h = kRepVisible * (ch + gap) - gap, thumb_h = std::max(40, track_h * kRepVisible / n);
+            c.fill_round_rect(W - M - 10, top_y, 8, track_h, 4, kPanel);
+            c.fill_round_rect(W - M - 10, top_y + (track_h - thumb_h) * rep_top_ / std::max(n - kRepVisible, 1), 8, thumb_h, 4, kDim);
+        }
+    }
+    small().draw(c, M, 902, elide(small(), S("repairs.safe"), cw), kDim);
+    std::vector<std::pair<PadGlyph, std::string>> hints;
+    if (n > 0) {
+        hints.emplace_back(PadGlyph::UpDown, S("common.select"));
+        if (n > kRepVisible) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
+        hints.emplace_back(PadGlyph::Cross, S("repairs.preview"));
+    }
+    hints.emplace_back(PadGlyph::Circle, S("common.back"));
+    draw_hints(c, hints);
+}
+
+void App::draw_maintenance(Canvas& c) const {
+    const auto& S = Strings::get(lang_);
+    title_icon(c, Icon::Gear, kTintSlate, S("maint.title"));
+    struct Item {
+        const char* name;
+        const char* sub;
+        Icon icon;
+        Color tint;
+    };
+    const Item items[kMaintItems] = {{"maint.selftest", "maint.selftest_sub", Icon::Checklist, kTintTeal},
+                                     {"maint.rules", "maint.rules_sub", Icon::Download, kTintBlue},
+                                     {"maint.undo", "maint.undo_sub", Icon::Undo, kTintViolet},
+                                     {"maint.report", "maint.report_sub", Icon::Report, kTintOrange}};
+    const int cw = W - 2 * M, ch = 150, gap = 18;
+    for (int i = 0; i < kMaintItems; ++i) {
+        const int y = 214 + i * (ch + gap);
+        const bool sel = i == maint_sel_;
+        card(c, M, y, cw, ch, sel);
+        c.glow(M + 80, y + ch / 2, 110, items[i].tint, sel ? 80 : 45);
+        draw_icon_badge(c, items[i].icon, M + 36, y + (ch - 88) / 2, 88, items[i].tint);
+        body().draw(c, M + 160, y + 34, S(items[i].name), kText);
+        small().draw(c, M + 160, y + 34 + body().line_height() + 10, elide(small(), S(items[i].sub), cw - 160 - 48), kDim);
+    }
+    draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}, {PadGlyph::Circle, S("common.back")}});
+}
+
 void App::draw_running(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    c.fill_round_rect(M, 300, W - 2 * M, 330, 24, kPanel);
+    glass_panel(c, M, 300, W - 2 * M, 330, 24);
     c.fill_round_rect(M + 48, 336, 150, 150, 44, rgba(76, 154, 255, 40));
     draw_icon(c, Icon::Stethoscope, M + 123, 411, 108, kText, kAccent);
     std::string dots(static_cast<std::size_t>(tick_ % 4), '.');
@@ -1772,7 +1995,7 @@ void App::draw_findings(Canvas& c) const {
     const auto& fs = result_.findings;
     const int n = static_cast<int>(fs.size());
     if (n == 0) {
-        c.fill_round_rect(M, 300, W - 2 * M, 320, 24, kPanel);
+        glass_panel(c, M, 300, W - 2 * M, 320, 24);
         std::string untested_names;
         for (const auto& r : result_.coverage)
             if (!r.tested) untested_names += (untested_names.empty() ? "" : ", ") + pick_text(lang_, r.text_de, r.text_en, "coverage", r.id, "text");
@@ -1829,37 +2052,92 @@ void App::draw_findings(Canvas& c) const {
     if (n > kListVisible)
         text_right(c, small(), W - M, 148, S.fmt("findings.range", {{"from", std::to_string(top_ + 1)}, {"to", std::to_string(last)}, {"n", std::to_string(n)}}), kDim);
 
-    const int cw = W - 2 * M, ch = 148, gap = 14;
-    int y = 200;
+    // Links die kompakte Liste, rechts die Flaeche des gewaehlten Befunds (so ist der Text lesbar, ohne erst zu oeffnen)
+    const int lw = 880, ch = 112, gap = 12, top_y = 200;
+    int y = top_y;
     for (int i = top_; i < last; ++i, y += ch + gap) {
         const auto& f = fs[static_cast<std::size_t>(i)];
         const Color sc = sev_color(f.severity);
-        card(c, M, y, cw, ch, i == sel_);
-        c.fill_round_rect(M, y + 16, 10, ch - 32, 5, sc);
-        draw_icon_badge(c, sev_icon(f.severity), M + 34, y + (ch - 76) / 2, 76, sc);
-        const int tx = M + 134;
-        // Kopfzeile: Schweregrad-Marke und Kurztitel (gross); darunter die Erklaerung klein; rechts, ob sich etwas reparieren laesst
-        const int bw = draw_badge(c, tx, y + 14, S(sev_key(f.severity)), sc);
-        int fixw = 0;
+        const bool sel = i == sel_;
+        if (sel) c.glow(M + lw / 2, y + ch / 2, lw / 2, kAccent, 40);
+        card(c, M, y, lw, ch, sel);
+        c.fill_round_rect(M, y + 14, 9, ch - 28, 4, sc);
+        draw_icon_badge(c, sev_icon(f.severity), M + 28, y + (ch - 64) / 2, 64, sc);
+        const int tx = M + 112, tw = lw - 112 - 24;
+        body().draw(c, tx, y + 16, elide(body(), finding_title(f), tw), kText);
+        // zweite Zeile: Reparatur moeglich (gruen), sonst der betroffene Titel oder die Regel-ID
+        const std::string affects = affected_text(static_cast<std::size_t>(i));
+        int ly = y + 16 + body().line_height() + 10;
         if (!f.fix.empty() && !viewing_old_) {
             const std::string label = S(is_hint_fix(f.fix) ? "findings.hintable" : "findings.fixable");
-            const int lw = text_right(c, small(), M + cw - 32, y + 18, label, kOk);
-            draw_icon(c, is_hint_fix(f.fix) ? Icon::Lightbulb : Icon::Wrench, M + cw - 32 - lw - 22, y + 31, 28, kOk, kOk);
-            fixw = lw + 22 + 28 + 24;
+            draw_icon(c, is_hint_fix(f.fix) ? Icon::Lightbulb : Icon::Wrench, tx + 13, ly + small().line_height() / 2, 26, kOk, kOk);
+            small().draw(c, tx + 34, ly, label, kOk);
+            if (!affects.empty()) small().draw(c, tx + 34 + small().width(label) + 28, ly, elide(small(), affects, tw - 34 - small().width(label) - 28), kDim);
+        } else {
+            small().draw(c, tx, ly, elide(small(), affects.empty() ? f.rule_id : affects, tw), kDim);
         }
-        body().draw(c, tx + bw + 16, y + 12, elide(body(), finding_title(f), cw - 134 - bw - 16 - 32 - fixw), kText);
-        const std::string affects = affected_text(static_cast<std::size_t>(i));
-        const auto lines = wrap_text(small(), finding_desc(f), cw - 134 - 36, affects.empty() ? 2 : 1);
-        for (std::size_t k = 0; k < lines.size(); ++k)
-            small().draw(c, tx, y + 64 + static_cast<int>(k) * (small().line_height() + 4), lines[k], kDim);
-        if (!affects.empty()) small().draw(c, tx, y + 64 + static_cast<int>(lines.size()) * (small().line_height() + 4), elide(small(), affects, cw - 134 - 36), kText);
     }
-    if (n > kListVisible) {  // Scrollleiste
+    if (n > kListVisible) {  // Scrollleiste zwischen Liste und Flaeche
         const int track_h = kListVisible * (ch + gap) - gap;
         const int thumb_h = std::max(40, track_h * kListVisible / n);
-        const int thumb_y = 200 + (track_h - thumb_h) * top_ / std::max(n - kListVisible, 1);
-        c.fill_round_rect(W - 64, 200, 8, track_h, 4, kPanel);
-        c.fill_round_rect(W - 64, thumb_y, 8, thumb_h, 4, kDim);
+        const int thumb_y = top_y + (track_h - thumb_h) * top_ / std::max(n - kListVisible, 1);
+        c.fill_round_rect(M + lw + 8, top_y, 8, track_h, 4, kPanel);
+        c.fill_round_rect(M + lw + 8, thumb_y, 8, thumb_h, 4, kDim);
+    }
+
+    // Flaeche rechts: Schweregrad, Titel, Erklaerung, Verlaesslichkeit und Dringlichkeit, Reparaturhinweis
+    if (const auto* cur = current_finding()) {
+        const int px = M + lw + 32, pw = W - M - px, py = top_y, ph = kListVisible * (ch + gap) - gap;
+        glass_panel(c, px, py, pw, ph, 24);
+        const Color sc = sev_color(cur->severity);
+        const int ix = px + 32;
+        int ty = py + 26;
+        draw_icon(c, sev_icon(cur->severity), ix + 17, ty + 17, 34, sc, sc);
+        const int bw = draw_badge(c, ix + 46, ty, S(sev_key(cur->severity)), sc);
+        small().draw(c, ix + 46 + bw + 18, ty + 4, elide(small(), cur->rule_id, pw - 64 - 46 - bw - 18), kDim);
+        ty += 52;
+        for (const auto& l : wrap_text(body(), finding_title(*cur), pw - 64, 2)) {
+            body().draw(c, ix, ty, l, kText);
+            ty += body().line_height() + 4;
+        }
+        ty += 8;
+        c.fill_rect(ix, ty, pw - 64, 2, kLine);
+        ty += 16;
+        const medic::Confidence conf = medic::effective_confidence(*cur);
+        const std::string lvl_key = "confidence." + conf.level, basis_key = "basis." + conf.basis;
+        const std::string conf_line = S.fmt("confidence.line", {{"level", S.has(lvl_key) ? S(lvl_key) : conf.level}, {"basis", S.has(basis_key) ? S(basis_key) : conf.basis}});
+        const std::string urg = medic::urgency_of(*cur);
+        const std::string urg_line = S.fmt("detail.urgency", {{"u", S("urgency." + urg)}});
+        int cxp = ix;
+        for (const auto& [txt, col] : {std::pair<std::string, Color>{conf_line, conf.level == "high" ? kOk : (conf.level == "low" ? kWarn : kText)}, std::pair<std::string, Color>{urg_line, urg == "high" ? kWarn : kText}}) {
+            const int w = small().width(txt) + 28;
+            if (cxp + w > px + pw - 32) break;
+            c.fill_round_rect(cxp, ty, w, 34, 17, rgba(255, 255, 255, 14));
+            small().draw(c, cxp + 14, ty + 4, txt, col);
+            cxp += w + 12;
+        }
+        ty += 34 + 16;
+        // Fuss der Flaeche: Reparaturhinweis und "mehr"; dazwischen die Erklaerung (so viele Zeilen, wie passen)
+        const int foot_h = small().line_height() * 2 + 24;
+        const int lh = small().line_height() + 8, avail = py + ph - 28 - foot_h - ty;
+        const int max_lines = std::max(3, avail / lh);
+        for (const auto& l : wrap_text(small(), finding_text(*cur), pw - 64, max_lines)) {
+            small().draw(c, ix, ty, l, rgb(214, 222, 234));
+            ty += lh;
+        }
+        if (!cur->evidence.empty() && ty + small().line_height() * 2 + 40 < py + ph - 28 - foot_h) {  // erster Beleg als Code-Feld, wenn Platz bleibt
+            const int ey = py + ph - 28 - foot_h - small().line_height() - 36;
+            c.fill_round_rect(ix, ey, pw - 64, small().line_height() + 24, 12, rgba(0, 0, 0, 70));
+            small().draw(c, ix + 16, ey + 12, elide(small(), cur->evidence.front(), pw - 64 - 32), rgb(150, 200, 255));
+        }
+        int fy = py + ph - 28 - foot_h + 8;
+        if (!cur->fix.empty() && !viewing_old_) {
+            draw_icon(c, is_hint_fix(cur->fix) ? Icon::Lightbulb : Icon::Wrench, ix + 14, fy + small().line_height() / 2, 28, kOk, kOk);
+            small().draw(c, ix + 38, fy, S(is_hint_fix(cur->fix) ? "findings.panel_hint" : "findings.panel_fix"), kOk);
+        } else {
+            small().draw(c, ix, fy, S("findings.panel_none"), kDim);
+        }
+        small().draw(c, ix, fy + small().line_height() + 8, S("findings.more_hint"), kDim);
     }
 
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
@@ -1881,7 +2159,7 @@ void App::draw_report(Canvas& c) const {
 
     // Links: Status und Hinweise
     const int px0 = M, py0 = 230, pw = 880, pad = 36, tw = pw - 2 * pad;
-    c.fill_round_rect(px0, py0, pw, 700, 20, kPanel);
+    glass_panel(c, px0, py0, pw, 700, 20);
     int y = py0 + 30;
     auto paragraph = [&](const Font& f, const std::string& text, Color col, int max_lines) {
         const auto lines = wrap_text(f, text, tw, max_lines);
@@ -1905,7 +2183,7 @@ void App::draw_report(Canvas& c) const {
     // Rechts: QR-Code
     const int ax = 1036, ay = 150, aw = 788, ah = 800;
     if (!qr_ok_) {
-        c.fill_round_rect(ax, ay + 80, aw, 240, 20, kPanel);
+        glass_panel(c, ax, ay + 80, aw, 240, 20);
         body().draw(c, ax + pad, ay + 140, S("report.qr_failed"), kWarn, aw - 2 * pad);
     } else {
         draw_qr_code(c, qr_, ax, ay, aw, ah);
@@ -1982,7 +2260,7 @@ void App::draw_detail(Canvas& c) const {
         const std::size_t max_l = std::max<std::size_t>(font == &body() ? 6 : 8, static_cast<std::size_t>(avail / lh));
         if (lines.size() > max_l) lines = wrap_text(*font, text, cw - 72, static_cast<int>(max_l));
         const int ph = 22 + small().line_height() + 10 + static_cast<int>(lines.size()) * lh + 22;
-        c.fill_round_rect(M, y, cw, ph, 18, kPanel);
+        glass_panel(c, M, y, cw, ph, 18);
         small().draw(c, M + 36, y + 20, S("detail.explanation"), kDim);
         if (const std::string affects = affected_text(static_cast<std::size_t>(sel_)); !affects.empty()) {
             const int lw = small().width(S("detail.explanation")) + 36 + 40;
@@ -2001,7 +2279,7 @@ void App::draw_detail(Canvas& c) const {
         const int lh = small().line_height() + 6;
         const int rows = f->evidence.empty() ? 1 : static_cast<int>(std::min(f->evidence.size(), kMaxEvidence)) + (f->evidence.size() > kMaxEvidence ? 1 : 0);
         const int ph = 22 + small().line_height() + 10 + rows * lh + 18;
-        c.fill_round_rect(M, y, cw, ph, 18, kPanel);
+        glass_panel(c, M, y, cw, ph, 18);
         small().draw(c, M + 36, y + 20, S("detail.evidence"), kDim);
         int ty = y + 20 + small().line_height() + 10;
         if (f->evidence.empty()) {
@@ -2065,7 +2343,7 @@ void App::draw_fix_preview(Canvas& c) const {
     const int y_limit = std::min(H - 210, H - 162 - note_rows * note_lh - 2 * (small().line_height() + 4));
     int shown = 0;
     if (plan_.empty()) {
-        c.fill_round_rect(M, y, cw, 110, 18, kPanel);
+        glass_panel(c, M, y, cw, 110, 18);
         body().draw(c, M + 36, y + 34, S("fixprev.nothing"), kText);
         y += 126;
     }
@@ -2088,7 +2366,7 @@ void App::draw_fix_preview(Canvas& c) const {
         }
         ++shown;
         last_shown = i + 1;
-        c.fill_round_rect(M, y, cw, ph, 18, kPanel);
+        glass_panel(c, M, y, cw, ph, 18);
         draw_badge(c, M + 30, y + 18, S(rename ? "fixprev.rename" : (ch.kind == medic::Change::Kind::Chmod ? "fixprev.chmod" : "fixprev.write")), kAccent);
         int ty = y + 18 + 34 + 10;
         for (auto& l : path_lines) {
@@ -2157,10 +2435,14 @@ void App::draw_fix_done(Canvas& c) const {
     if (done_ok_) sub = fix ? S.fmt("fixdone.ok_sub", {{"txn", done_text_}}) : S.fmt("undo.ok_sub", {{"txn", done_text_}});
     else sub = S.fmt("fixdone.fail_sub", {{"error", done_text_}});
 
-    c.fill_round_rect(M, 260, W - 2 * M, 400, 24, kPanel);
-    {
+    glass_panel(c, M, 260, W - 2 * M, 400, 24);
+    {  // Ergebnis als Sechseck-Karte: Schein und Rand in der Farbe des Ergebnisses (gruen: geklappt, rot: Fehler)
         const Color rc = done_ok_ ? kOk : kCrit;
-        draw_icon_badge(c, done_ok_ ? Icon::Ok : Icon::Critical, M + 60, 290, 104, rc);
+        c.stroke_round_rect(M, 260, W - 2 * M, 400, 24, 2, rgba((rc >> 16) & 255, (rc >> 8) & 255, rc & 255, 110));
+        c.glow(M + 112, 342, 150, rc, 60);
+        fill_hex(c, M + 112, 342, 68, rc);
+        fill_hex(c, M + 112, 342, 60, rgb(14, 20, 30));
+        draw_icon(c, done_ok_ ? Icon::Ok : Icon::Critical, M + 112, 342, 64, rc, rc);
     }
     title().draw(c, M + 196, 320, S(head), done_ok_ ? kOk : kCrit);
     int y = 410;
@@ -2192,7 +2474,7 @@ void App::draw_history(Canvas& c) const {
     title_icon(c, Icon::History, kTintViolet, S("history.title"));
     const int n = static_cast<int>(hist_.size());
     if (n == 0) {
-        c.fill_round_rect(M, 260, W - 2 * M, 160, 20, kPanel);
+        glass_panel(c, M, 260, W - 2 * M, 160, 20);
         body().draw(c, M + 40, 320, S("history.empty"), kDim);
         draw_hints(c, {{PadGlyph::Circle, S("common.back")}});
         return;
@@ -2228,7 +2510,7 @@ void App::draw_checklist(Canvas& c) const {
     title_icon(c, Icon::History, kTintViolet, S("checks.title"));
     const int n = static_cast<int>(chk_.size());
     if (n == 0) {
-        c.fill_round_rect(M, 260, W - 2 * M, 180, 20, kPanel);
+        glass_panel(c, M, 260, W - 2 * M, 180, 20);
         body().draw(c, M + 40, 320, S("checks.empty"), kDim, W - 2 * M - 80);
         draw_hints(c, {{PadGlyph::Square, S("checks.repairs")}, {PadGlyph::Circle, S("common.back")}});
         return;
@@ -2330,7 +2612,7 @@ void App::draw_gamelist(Canvas& c) const {
     title_icon(c, Icon::Gamepad, kTintPink, S("games.title"));
     const int n = static_cast<int>(games_.size());
     if (n == 0) {
-        c.fill_round_rect(M, 260, W - 2 * M, 200, 20, kPanel);
+        glass_panel(c, M, 260, W - 2 * M, 200, 20);
         int ty = 300;
         for (const auto& l : wrap_text(body(), S("games.empty"), W - 2 * M - 80, 3)) {
             body().draw(c, M + 40, ty, l, kDim);
@@ -2414,7 +2696,7 @@ void App::draw_gamedetail(Canvas& c) const {
 
     // Links: der Zustand des Spiels als Liste mit Statussymbol. Gruen = in Ordnung, Orange/Rot = Problem, Grau = nicht bekannt.
     const int px = M, py = 232, pw = 780, ph = 716, pad = 28;
-    c.fill_round_rect(px, py, pw, ph, 20, kPanel);
+    glass_panel(c, px, py, pw, ph, 20);
     int y = py + 10;
     enum class St { Ok, Warn, Crit, Info, Unknown };
     int reserve = 0;  // Platz fuer die noch folgenden Zeilen (Fehler, Spielstaende), damit eine lange Zeile sie nicht verdraengt
@@ -2521,7 +2803,7 @@ void App::draw_gamedetail(Canvas& c) const {
     const int n = static_cast<int>(g.findings.size());
     small().draw(c, rx + 4, py - 2, S("games.d.reasons") + (n > 0 ? "  (" + std::to_string(n) + ")" : std::string()), kDim);
     if (n == 0) {
-        c.fill_round_rect(rx, py + 36, rw, 250, 20, kPanel);
+        glass_panel(c, rx, py + 36, rw, 250, 20);
         int ty = py + 64;
         for (const auto& l : wrap_text(body(), S("games.d.reasons_none"), rw - 64, 6)) {
             body().draw(c, rx + 32, ty, l, kDim);
@@ -2631,7 +2913,7 @@ void App::draw_compare(Canvas& c) const {
         }
     }
     const int total = static_cast<int>(rows.size());
-    c.fill_round_rect(M, 232, W - 2 * M, 700, 20, kPanel);
+    glass_panel(c, M, 232, W - 2 * M, 700, 20);
     int y = 244;
     for (int i = cmp_top_; i < std::min(total, cmp_top_ + kCmpVisible); ++i) {
         const Row& r = rows[static_cast<std::size_t>(i)];
@@ -2660,7 +2942,7 @@ void App::draw_compare(Canvas& c) const {
 
 void App::draw_undo_confirm(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    c.fill_round_rect(M, 260, W - 2 * M, 380, 24, kPanel);
+    glass_panel(c, M, 260, W - 2 * M, 380, 24);
     c.fill_round_rect(M + 60, 286, 104, 104, 32, rgba(255, 179, 71, 40));
     draw_icon(c, Icon::Undo, M + 112, 338, 72, kWarn, kWarn);
     title().draw(c, M + 196, 312, S("undo.title"), kWarn);
@@ -2703,7 +2985,7 @@ void App::draw_rules_update(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     title_icon(c, Icon::Download, kTintTeal, S("update.title"));
     const int pad = 40, pw = W - 2 * M, tw = pw - 2 * pad;
-    c.fill_round_rect(M, 230, pw, 590, 20, kPanel);
+    glass_panel(c, M, 230, pw, 590, 20);
     int y = 262;
     auto paragraph = [&](const Font& f, const std::string& text, Color col, int max_lines) {
         for (const auto& l : wrap_text(f, text, tw, max_lines)) {
@@ -2828,7 +3110,7 @@ void App::draw_error_codes(Canvas& c) const {
     title_icon(c, Icon::Book, kTintOrange, S("errors.title"));
     const int n = static_cast<int>(errors_.codes.size());
     if (n == 0) {
-        c.fill_round_rect(M, 260, W - 2 * M, 300, 20, kPanel);
+        glass_panel(c, M, 260, W - 2 * M, 300, 20);
         body().draw(c, M + 40, 300, S("errors.empty"), kWarn, W - 2 * M - 80);
         int y = 360;
         for (const auto& l : wrap_text(small(), S("errors.empty_sub"), W - 2 * M - 80, 6)) {
@@ -2881,7 +3163,7 @@ void App::draw_error_codes(Canvas& c) const {
 void App::draw_error_input(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     const int cw = W - 2 * M, py = H - 194, ph = 76;
-    c.fill_round_rect(M, py, cw, ph, 20, kPanel);
+    glass_panel(c, M, py, cw, ph, 20);
     c.stroke_round_rect(M, py, cw, ph, 20, 2, kAccent);
     const int fy = py + 12, fh = 52;
     const std::string g = err_group_ == 0 ? S("errors.search.group.all") : std::string(kErrGroups[err_group_]);
@@ -2926,7 +3208,7 @@ void App::draw_error_detail(Canvas& c) const {
     body().draw(c, M + 80, 196, elide(body(), pick_text(lang_, e->title_de, e->title_en, "error_codes", e->id, "title"), std::min(cw - 300, cw - 80 - pos_w - 32)), kDim);
 
     // Text: Zeilen ab err_scroll_, soweit sie in das Panel passen
-    c.fill_round_rect(M, kErrPanelY, cw, kErrPanelH, 20, kPanel);
+    glass_panel(c, M, kErrPanelY, cw, kErrPanelH, 20);
     const auto rows = error_rows(*e, lang_, err_ctx_);
     const int max_first = max_first_row(rows);
     const int first = std::clamp(err_scroll_, 0, max_first);
@@ -2971,7 +3253,7 @@ void App::draw_error_source(Canvas& c) const {
     small().draw(c, M + 4, 192, e->id, kDim);
 
     const int px0 = M, py0 = 230, pw = 880, pad = 36, tw = pw - 2 * pad;
-    c.fill_round_rect(px0, py0, pw, 700, 20, kPanel);
+    glass_panel(c, px0, py0, pw, 700, 20);
     int y = py0 + 30;
     small().draw(c, px0 + pad, y, S.fmt("errors.source_of", {{"i", std::to_string(idx + 1)}, {"n", std::to_string(sources.size())}}), kDim);
     y += small().line_height() + 14;
@@ -2987,7 +3269,7 @@ void App::draw_error_source(Canvas& c) const {
 
     const int ax = 1036, ay = 150, aw = 788, ah = 800;
     if (!src_qr_ok_) {
-        c.fill_round_rect(ax, ay + 80, aw, 240, 20, kPanel);
+        glass_panel(c, ax, ay + 80, aw, 240, 20);
         body().draw(c, ax + pad, ay + 140, S("errors.source_qr_failed"), kWarn, aw - 2 * pad);
     } else {
         draw_qr_code(c, src_qr_, ax, ay, aw, ah);

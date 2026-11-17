@@ -33,6 +33,8 @@ public:
     // Verlaeufe und Zeichenhilfen fuer die Gestaltung (alles kantengeglaettet).
     void fill_vgradient(int x, int y, int w, int h, Color top, Color bottom);
     void fill_round_rect_vgradient(int x, int y, int w, int h, int radius, Color top, Color bottom);
+    // Glasflaeche: senkrechter Verlauf zwischen zwei Farben MIT Alpha (der Hintergrund scheint durch)
+    void fill_glass(int x, int y, int w, int h, int radius, Color top, Color bottom);
     void fill_disc(float cx, float cy, float r, Color c);
     void glow(int cx, int cy, int radius, Color c, unsigned max_alpha);  // weicher Lichtfleck, nach aussen ausklingend
     void copy_from(const Canvas& other);  // gleiche Groesse, sonst nichts

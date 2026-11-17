@@ -108,6 +108,24 @@ void Canvas::fill_round_rect_vgradient(int x, int y, int w, int h, int radius, C
     }
 }
 
+void Canvas::fill_glass(int x, int y, int w, int h, int radius, Color top, Color bottom) {
+    if (w <= 0 || h <= 0) return;
+    const float r = static_cast<float>(std::min(radius, std::min(w, h) / 2));
+    const float cx = x + w / 2.0f, cy = y + h / 2.0f, hw = w / 2.0f, hh = h / 2.0f;
+    for (int py = std::max(y, 0); py < std::min(y + h, h_); ++py) {
+        const unsigned t = static_cast<unsigned>(255 * (py - y) / std::max(h - 1, 1));
+        auto mix = [&](unsigned shift) {
+            const unsigned a = (top >> shift) & 255u, b = (bottom >> shift) & 255u;
+            return (a * (255u - t) + b * t) / 255u;
+        };
+        const Color row = (mix(24) << 24) | (mix(16) << 16) | (mix(8) << 8) | mix(0);
+        for (int px = std::max(x, 0); px < std::min(x + w, w_); ++px) {
+            const float sd = sdf_round_box(px + 0.5f, py + 0.5f, cx, cy, hw, hh, r);
+            put(px, py, row, static_cast<unsigned>(clamp01(0.5f - sd) * 255.0f));
+        }
+    }
+}
+
 void Canvas::fill_disc(float cx, float cy, float r, Color c) {
     for (int py = std::max(static_cast<int>(cy - r) - 1, 0); py <= std::min(static_cast<int>(cy + r) + 1, h_ - 1); ++py)
         for (int px = std::max(static_cast<int>(cx - r) - 1, 0); px <= std::min(static_cast<int>(cx + r) + 1, w_ - 1); ++px)

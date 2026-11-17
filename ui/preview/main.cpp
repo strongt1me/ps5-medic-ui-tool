@@ -208,6 +208,24 @@ int main(int argc, char** argv) {
             ga.handle(Button::Cross);
             png("23_game_finding.png");
         }
+        {  // Reparaturen und Wartung
+            App ra(svc, lang);
+            if (has_backdrop) ra.set_background(backdrop);
+            auto png = [&](const char* name) {
+                ra.render(canvas);
+                if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
+                ++shots;
+            };
+            for (int i = 0; i < 6; ++i) ra.handle(Button::Down);
+            ra.handle(Button::Cross);  // ohne Check-up: erst pruefen, dann die Liste
+            ra.render(canvas);
+            ra.update();
+            png("24_repairs.png");
+            ra.handle(Button::Circle);
+            ra.handle(Button::Down);
+            ra.handle(Button::Cross);
+            png("25_maintenance.png");
+        }
         {  // Startbild
             App sp(svc, lang);
             if (has_backdrop) sp.set_background(backdrop);

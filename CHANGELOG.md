@@ -1,5 +1,12 @@
 # Changelog
 
+## Unveröffentlicht / Unreleased
+
+- **Deutsch:** Neues Design im Stil des Startbilds: Hex-Emblem, Systemstatus und Glow auf dem Startbild, Befundliste mit Detailfläche, Hex-Ergebniskarte nach einer Reparatur. Neu sind der Bereich **Reparaturen** (alle reparierbaren Befunde mit Vorschau und Backup) und der Bereich **Wartung** (Selbsttest, Regel-Update, Backups und Rückgängig, Bericht und Support-Paket).
+- **English:** New design in the style of the splash screen: hex emblem, system status and glow on the start screen, findings list with a detail panel, hex result card after a repair. New are the **Repairs** area (all repairable findings with preview and backup) and the **Maintenance** area (self-test, rules update, backups and undo, report and support package).
+- **Deutsch:** Die Reparatur-Vorschau (Notizen, Hinweise, Warnungen, Fehlermeldungen) und der Bericht (Markdown und QR-Kurzfassung) gibt es jetzt auch auf Französisch, Italienisch und Spanisch; vorher zeigten diese Sprachen dort Englisch. `medic-cli` am PC kennt weiterhin nur Deutsch und Englisch. Der Backup-Pfad in der Vorschau zeigt den Zeit-Platzhalter in der Sprache der Oberfläche, und vier Belegtexte sind sprachneutral.
+- **English:** The repair preview (notes, hints, warnings, error messages) and the report (Markdown and QR short form) are now also available in French, Italian and Spanish; before, these languages showed English there. `medic-cli` on the PC still knows only German and English. The backup path in the preview shows the time placeholder in the interface language, and four evidence texts are language-neutral.
+
 ## 0.4.0 (2026-11-16): erste öffentliche Version / first public release
 
 ### Deutsch

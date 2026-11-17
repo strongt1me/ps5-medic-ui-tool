@@ -1500,6 +1500,41 @@ void shoulder_and_stick_flow_tests() {
         press(a, {Button::Circle, Button::Circle});
         CHECK(a.screen() == App::Screen::Findings && a.selected() == 2, "Details: die Liste steht danach beim zuletzt gezeigten Befund");
     }
+    {  // Wartung und Reparaturen: neue Kacheln im Startbild
+        FakeService svc2;
+        svc2.result.findings = {mk_finding("rule.a", Severity::Warning, false), mk_finding("rule.b", Severity::Warning, true)};
+        App a(svc2);
+        press(a, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Down});  // Kachel 7: Wartung
+        press(a, {Button::Cross});
+        CHECK(a.screen() == App::Screen::Maintenance, "Wartung: Kachel oeffnet den Bereich");
+        a.render(cv);
+        press(a, {Button::Down, Button::Cross});  // Regeln aktualisieren
+        CHECK(a.screen() == App::Screen::RulesUpdate, "Wartung: zweiter Eintrag oeffnet das Regel-Update");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Maintenance, "Wartung: Kreis fuehrt aus dem Unterbildschirm zurueck in die Wartung");
+        press(a, {Button::Up, Button::Cross});  // Selbsttest
+        CHECK(a.screen() == App::Screen::SelfTest, "Wartung: erster Eintrag oeffnet den Selbsttest");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Maintenance, "Wartung: aus dem Selbsttest zurueck in die Wartung");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Start, "Wartung: Kreis fuehrt ins Startbild");
+
+        // Reparaturen: ohne Check-up erst pruefen, dann die Liste; nur der Befund mit Fix steht darin
+        press(a, {Button::Left});  // von Kachel 7 (Wartung) zu Kachel 6: Reparaturen
+        press(a, {Button::Cross});
+        CHECK(a.screen() == App::Screen::Running, "Reparaturen: ohne Check-up wird erst geprueft");
+        a.render(cv);
+        a.update();
+        CHECK(a.screen() == App::Screen::Repairs, "Reparaturen: nach dem Check-up die Liste");
+        a.render(cv);
+        const int plans = svc2.plans;
+        press(a, {Button::Cross});
+        CHECK(a.screen() == App::Screen::FixPreview && svc2.plans == plans + 1, "Reparaturen: Kreuz zeigt die Vorschau des gewaehlten Befunds");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Repairs, "Reparaturen: Abbrechen fuehrt zurueck in die Liste");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Start, "Reparaturen: Kreis fuehrt ins Startbild");
+    }
     {  // Befundliste: seitenweise
         FakeService big;
         for (int i = 0; i < 25; ++i) big.result.findings.push_back(mk_finding("rule." + std::to_string(i), Severity::Warning, false));
@@ -1508,16 +1543,16 @@ void shoulder_and_stick_flow_tests() {
         press(a, {Button::L1});
         CHECK(a.selected() == 0, "Liste: L1 auf der ersten Seite bleibt oben");
         press(a, {Button::R1});
-        CHECK(a.selected() == 4, "Liste: R1 blaettert eine Seite (4 Zeilen)");
+        CHECK(a.selected() == 6, "Liste: R1 blaettert eine Seite (6 Zeilen)");
         a.render(cv);
         press(a, {Button::Down});
         press(a, {Button::R1});
-        CHECK(a.selected() == 9, "Liste: R1 behaelt die Zeile auf der Seite bei");
+        CHECK(a.selected() == 13, "Liste: R1 behaelt die Zeile auf der Seite bei");
         for (int i = 0; i < 10; ++i) a.handle(Button::R1);
         CHECK(a.selected() == 24, "Liste: R1 endet beim letzten Befund");
         a.render(cv);
         press(a, {Button::L1});
-        CHECK(a.selected() == 20, "Liste: L1 geht eine Seite zurueck");
+        CHECK(a.selected() == 18, "Liste: L1 geht eine Seite zurueck");
         for (int i = 0; i < 10; ++i) a.handle(Button::L1);
         CHECK(a.selected() == 0, "Liste: L1 endet beim ersten Befund");
         a.render(cv);
@@ -3409,7 +3444,7 @@ void games_tests() {
         CHECK(svc.games().empty(), "Spiele: vor dem Check-up nichts");
         App app(svc);
         Canvas cv(App::kWidth, App::kHeight);
-        press(app, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross});  // letzter Knopf: Spiele (zu weit unten bleibt dort)
+        press(app, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Down, Button::Cross});  // Kachel 5: Spiele (danach folgen Reparaturen und Wartung)
         CHECK(app.screen() == App::Screen::Running, "Spiele: ohne Check-up wird erst geprueft");
         app.render(cv);
         app.update();
