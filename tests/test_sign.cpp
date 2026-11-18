@@ -535,8 +535,16 @@ static void http_client_tests() {
         const auto r = client->get("http://127.0.0.1:" + std::to_string(port) + "/", 1000, 2000);
         CHECK(r.error == "connect" && r.status == 0, "HTTP: nichts hoert zu -> connect");
     }
-    // der Socket-Client kann kein TLS (das kann nur der Client der Konsole): https wird mit eigener Kennung gemeldet
-    CHECK(client->get("https://127.0.0.1/", 10, 100).error == "https_unsupported" && client->get("gibt-es-nicht", 10, 100).error == "bad_url", "HTTP: Adressfehler ohne Netzzugriff");
+    // https auf einen Port, an dem nichts hoert: scheitert wie http beim Verbinden
+    {
+        int port = 0;
+        {
+            TestServer tmp({});
+            port = tmp.port;
+        }
+        CHECK(client->get("https://127.0.0.1:" + std::to_string(port) + "/", 1000, 2000).error == "connect", "HTTP: https ohne Gegenstelle -> connect");
+    }
+    CHECK(client->get("gibt-es-nicht", 10, 100).error == "bad_url", "HTTP: Adressfehler ohne Netzzugriff");
 }
 
 // Die veroeffentlichten Dateien (rules-update/, Standardquelle des Downloads auf GitHub) muessen mit dem eingebauten Schluessel gueltig signiert sein

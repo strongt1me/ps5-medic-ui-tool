@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// HTTP-Client der Konsole: http:// laeuft wie bisher ueber BSD-Sockets (make_posix_http_client), https:// ueber das TLS des Systems
-// (libSceHttp2 + libSceSsl, wie das Beispiel http2_get im ps5-payload-sdk). So braucht PS5 Medic keine eigene TLS-Bibliothek; die
-// Zertifikate prueft das System. Die Echtheit der Regeln sichert unabhaengig davon die Ed25519-Signatur der Datei.
+// HTTP-Client der Konsole: derselbe Client wie am PC (make_posix_http_client): http:// und https:// ueber BSD-Sockets, TLS mit BearSSL
+// (third_party/bearssl) und eingebauten Wurzelzertifikaten (libmedic/src/tls_roots.c). Frueher lief https:// ueber das TLS des Systems
+// (libSceHttp2); die Konsole lehnte dort die Kette von GitHub ab (0x8095f00c), und die Systembibliothek liess sich ohne Header nicht
+// einstellen. Die Echtheit der Regeln sichert unabhaengig vom Kanal die Ed25519-Signatur der Datei.
 //
-// Wie der POSIX-Client: nur GET mit der Kennung "PS5-Medic", keine Weiterleitungen (Status 3xx -> error "redirect"), keine Cookies,
-// keine Zugangsdaten, harte Grenzen fuer Groesse und Zeit. Zusaetzliche Fehlerkennung: "tls" (Zertifikat oder Handshake abgelehnt).
-// Fehler aus dem System stehen mit Aufrufname und Code in HttpResponse::detail ("sceHttp2SendRequest 0x80...").
+// Nur GET mit der Kennung "PS5-Medic", keine Weiterleitungen (Status 3xx -> error "redirect"), keine Cookies, keine Zugangsdaten,
+// harte Grenzen fuer Groesse und Zeit. Fehlerkennung "tls" bei abgelehntem Zertifikat oder Handshake (Einzelheit in HttpResponse::detail).
 #pragma once
 #include "medic/http.hpp"
 

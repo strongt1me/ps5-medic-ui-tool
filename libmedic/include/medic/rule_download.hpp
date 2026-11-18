@@ -34,7 +34,7 @@ bool set_config_value(Platform& p, const std::string& key, const std::string& va
 
 struct RuleDownloadResult {
     bool ok = false;
-    // Kennung: no_url | bad_url | https_unsupported | no_write | bad_timestamp | write_failed
+    // Kennung: no_url | bad_url | no_write | bad_timestamp | write_failed
     //          | http_status (Server antwortete nicht mit 200; siehe http_status und file)
     //          | net_<fehler> mit den Fehlern aus HttpResponse::error (net_connect, net_timeout, net_too_large, ...)
     std::string error;

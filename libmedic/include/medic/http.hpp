@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Minimaler HTTP-Abruf (GET) fuer den Regel-Download. Bewusst klein:
-//  * http:// ueber BSD-Sockets (PC und Konsole) und https:// nur auf der Konsole ueber das TLS des Systems (libSceHttp2, ps5/ps5_http.cpp;
-//    der Client auf BSD-Sockets meldet fuer https "https_unsupported"). Die Echtheit der Regeln sichert in jedem Fall die Signatur der
-//    heruntergeladenen Datei (siehe signature.hpp), nicht der Kanal.
+//  * http:// und https:// ueber BSD-Sockets (PC und Konsole); TLS mit BearSSL (third_party/bearssl) und eingebauten Wurzelzertifikaten
+//    (libmedic/src/tls_roots.c). Die Echtheit der Regeln sichert in jedem Fall die Signatur der heruntergeladenen Datei (siehe
+//    signature.hpp), nicht der Kanal.
 //  * keine Weiterleitungen, kein Cookie, keine Zugangsdaten; gesendet wird nur eine GET-Anfrage mit Host und "PS5-Medic" als Kennung
 //  * harte Grenzen fuer Groesse und Zeit
 #pragma once
@@ -16,9 +16,9 @@ struct HttpResponse {
     int status = 0;     // 0 = keine Antwort
     std::string body;
     // Leer bei einer vollstaendigen HTTP-Antwort (auch bei Status 404). Sonst eine Kennung:
-    // bad_url | https_unsupported | resolve | connect | timeout | network | tls | redirect | too_large | bad_response
+    // bad_url | resolve | connect | timeout | network | tls | redirect | too_large | bad_response
     std::string error;
-    std::string detail;  // technische Angabe zum Fehler (z. B. "sceHttp2SendRequest 0x80..."), nur zur Anzeige; leer, wenn es keine gibt
+    std::string detail;  // technische Angabe zum Fehler (z. B. "BearSSL 62 (...)"), nur zur Anzeige; leer, wenn es keine gibt
 };
 
 class IHttpClient {
@@ -46,7 +46,7 @@ bool parse_http_url(const std::string& url, HttpUrl& out, std::string& error);
 // Haengt einen Dateinamen an eine Basisadresse an: ("http://h:8000/regeln", "rules.json") -> ".../regeln/rules.json".
 std::string join_url(const std::string& base, const std::string& name);
 
-// Echter Client auf BSD-Sockets (PC und Konsole), nur http://. Nicht thread-sicher gedacht, aber ohne gemeinsamen Zustand.
+// Echter Client auf BSD-Sockets (PC und Konsole), http:// und https://. Nicht thread-sicher gedacht, aber ohne gemeinsamen Zustand.
 std::unique_ptr<IHttpClient> make_posix_http_client();
 
 }  // namespace medic

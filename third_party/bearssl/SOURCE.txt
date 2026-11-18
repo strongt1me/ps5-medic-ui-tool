@@ -1,0 +1,12 @@
+BearSSL 0.6 (Thomas Pornin)
+Lizenz: MIT (LICENSE.txt)
+
+Quelle:
+  https://bearssl.org/bearssl-0.6.tar.gz  (765094 Bytes, geladen am 18. Nov. 2026)
+
+SHA-256 des Archivs:
+  6705bba1714961b41a728dfc5debbe348d2966c117649392f8c8139efc83ff14  bearssl-0.6.tar.gz
+
+Uebernommen sind die Ordner src/ und inc/ unveraendert samt LICENSE.txt. Gebaut wird alles ausser src/rand/sysrng.c
+(den Zufallsleser ersetzt br_prng_seeder_system in libmedic/src/posix_http.cpp). Benutzt wird nur der TLS-1.2-Client
+(br_ssl_client_init_full, br_x509_minimal) fuer https:// beim Regel-Download. Die Wurzelzertifikate stehen in libmedic/src/tls_roots.c.

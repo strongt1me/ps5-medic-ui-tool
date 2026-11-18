@@ -59,6 +59,12 @@ target_include_directories(medic PUBLIC libmedic/include third_party)
 find_package(Threads REQUIRED)
 target_link_libraries(medic PUBLIC Threads::Threads)
 target_compile_options(medic PRIVATE -Wall -Wextra)
+# BearSSL (TLS fuer https://, siehe libmedic/src/posix_http.cpp): alle Quellen ausser dem Zufallsleser sysrng.c (Zufall holt posix_http.cpp selbst)
+file(GLOB BEARSSL_SRCS third_party/bearssl/src/*.c third_party/bearssl/src/*/*.c)
+list(FILTER BEARSSL_SRCS EXCLUDE REGEX "rand/sysrng[.]c$")
+target_sources(medic PRIVATE ${BEARSSL_SRCS} libmedic/src/tls_roots.c)
+target_include_directories(medic PRIVATE third_party/bearssl/inc third_party/bearssl/src)
+set_source_files_properties(${BEARSSL_SRCS} PROPERTIES COMPILE_OPTIONS "-w")  # Fremdcode unveraendert lassen
 set_source_files_properties(third_party/qrcodegen/qrcodegen.cpp third_party/tweetnacl/tweetnacl.c third_party/libdeflate/lib/adler32.c third_party/libdeflate/lib/deflate_decompress.c third_party/libdeflate/lib/zlib_decompress.c third_party/libdeflate/lib/utils.c third_party/libdeflate/lib/x86/cpu_features.c PROPERTIES COMPILE_OPTIONS "-w")  # Fremdcode unveraendert lassen
 # SQLite ohne Dateizugriff (nur Speicher-Datenbanken, siehe libmedic/src/sqlite_check.cpp)
 set_source_files_properties(third_party/sqlite3/sqlite3.c PROPERTIES COMPILE_OPTIONS "-w;-O1"

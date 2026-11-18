@@ -36,7 +36,9 @@ PS5_CXX := $(PS5_PAYLOAD_SDK)/bin/prospero-clang++
 PS5_CXXFLAGS := -std=c++20 -O2 -Wall -Wextra -Ilibmedic/include -Ithird_party -Ips5 -Iui/include -Iui/src -I$(PS5_HOMEBREW)/include
 
 PS5_CORE_SRCS := $(wildcard libmedic/src/*.cpp) third_party/qrcodegen/qrcodegen.cpp ps5/ps5_platform.cpp
-PS5_C_SRCS := third_party/tweetnacl/tweetnacl.c third_party/sqlite3/sqlite3.c libmedic/src/imgread.c \
+# BearSSL (TLS fuer https://): alle Quellen ausser dem Zufallsleser sysrng.c (Zufall holt libmedic/src/posix_http.cpp selbst)
+BEARSSL_SRCS := $(filter-out third_party/bearssl/src/rand/sysrng.c,$(wildcard third_party/bearssl/src/*.c third_party/bearssl/src/*/*.c))
+PS5_C_SRCS := third_party/tweetnacl/tweetnacl.c third_party/sqlite3/sqlite3.c libmedic/src/imgread.c libmedic/src/tls_roots.c $(BEARSSL_SRCS) \
               third_party/libdeflate/lib/adler32.c third_party/libdeflate/lib/deflate_decompress.c third_party/libdeflate/lib/zlib_decompress.c \
               third_party/libdeflate/lib/utils.c third_party/libdeflate/lib/x86/cpu_features.c
 # png.cpp und shot_hook.cpp: PNG-Schreiber fuer den Screenshot-Hook der UI (Entwicklung, siehe shot_hook.hpp).
@@ -66,8 +68,8 @@ PS5_LAUNCHER_C_OBJS := $(patsubst %.c,$(PS5_BUILD)/%.o,$(PS5_LAUNCHER_C_SRCS))
 PS5_START_OBJS := $(PS5_BUILD)/ps5/launcher_main.o $(PS5_LAUNCHER_C_OBJS)
 PS5_LAUNCHER_OBJS := $(PS5_BUILD)/ps5/installer_main.o
 TILE_DIR := build-title/FAKE42007
-# TLS fuer den Regel-Download (https://) kommt vom System der Konsole (ps5/ps5_http.cpp)
-PS5_HTTP_LIBS := -lSceNet -lSceSsl -lSceHttp2
+# TLS fuer den Regel-Download (https://) kommt von BearSSL (third_party/bearssl) ueber normale Sockets; keine Systembibliothek noetig
+PS5_HTTP_LIBS :=
 PS5_UI_LIBS := -lSDL2 -lSceSystemService -lSceUserService -lScePad -lSceAudioOut -lsamplerate -lSceVideoOut \
                -lSceKeyboard -lSceImeDialog
 
@@ -111,7 +113,7 @@ $(PS5_BUILD)/%.o: %.cpp
 $(PS5_BUILD)/%.o: %.c
 	@test -x $(PS5_CXX) || { echo "ps5-payload-sdk nicht gefunden: $(PS5_PAYLOAD_SDK) (PS5_PAYLOAD_SDK=... setzen)"; exit 1; }
 	@mkdir -p $(dir $@)
-	$(PS5_CXX) -x c -std=gnu11 -O2 -w -Ilibmedic/include -Ithird_party $(PS5_C_EXTRA) -MMD -MP -c $< -o $@
+	$(PS5_CXX) -x c -std=gnu11 -O2 -w -Ilibmedic/include -Ithird_party -Ithird_party/bearssl/inc -Ithird_party/bearssl/src $(PS5_C_EXTRA) -MMD -MP -c $< -o $@
 
 # SQLite ohne Dateizugriff (nur Speicher-Datenbanken, siehe libmedic/src/sqlite_check.cpp)
 $(PS5_BUILD)/third_party/sqlite3/sqlite3.o: PS5_C_EXTRA := -DSQLITE_OS_OTHER=1 -DSQLITE_THREADSAFE=0 -DSQLITE_TEMP_STORE=3 -DSQLITE_OMIT_LOAD_EXTENSION=1 -DSQLITE_OMIT_SHARED_CACHE=1 -DSQLITE_OMIT_DEPRECATED=1 -DSQLITE_OMIT_LOCALTIME=1 -DSQLITE_OMIT_PROGRESS_CALLBACK=1 -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_MAX_MMAP_SIZE=0

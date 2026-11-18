@@ -39,7 +39,8 @@ int main() {
     std::strftime(ts, sizeof ts, "%Y%m%dT%H%M%SZ", &tm);
 
     const medic::RuleDownloadResult d = medic::download_rule_update(*platform, *http, url, ts);
-    std::fprintf(log, "Download: ok=%d Fehler='%s' Datei='%s' Status=%d\n", d.ok ? 1 : 0, d.error.c_str(), d.file.c_str(), d.http_status);
+    std::fprintf(log, "Download: ok=%d Fehler='%s' Detail='%s' Datei='%s' Status=%d\n", d.ok ? 1 : 0, d.error.c_str(), d.detail.c_str(), d.file.c_str(),
+                 d.http_status);
     std::fflush(log);
 
     const medic::RuleUpdateOffer o = medic::check_rule_update(platform->fs(), current);

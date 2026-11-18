@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// HTTP-GET ueber BSD-Sockets (Linux/WSL und PS5). Siehe medic/http.hpp fuer die Grenzen.
+// HTTP-GET ueber BSD-Sockets (Linux/WSL und PS5), https:// mit BearSSL (third_party/bearssl) und eingebauten Wurzelzertifikaten
+// (tls_roots.c). Siehe medic/http.hpp fuer die Grenzen.
 #include "medic/http.hpp"
 
 #include <sys/socket.h>
@@ -16,8 +17,52 @@
 #include <cctype>
 #include <cerrno>
 #include <chrono>
+#include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
+#include <memory>
+
+#include "bearssl/inc/bearssl.h"
+
+extern "C" const br_x509_trust_anchor* medic_tls_anchors(size_t* count);  // tls_roots.c
+
+// Zufall fuer TLS: Linux getentropy, FreeBSD (auch PS5) arc4random_buf, sonst /dev/urandom. false, wenn nichts davon geht
+// (dann wird nicht verbunden: lieber kein TLS als schwaches).
+static bool fill_random(unsigned char* buf, std::size_t n) {
+#if defined(__linux__)
+    std::size_t done = 0;
+    while (done < n) {
+        const std::size_t part = std::min<std::size_t>(n - done, 256);
+        if (getentropy(buf + done, part) != 0) break;
+        done += part;
+    }
+    if (done == n) return true;
+#elif defined(__FreeBSD__)
+    arc4random_buf(buf, n);
+    return true;
+#endif
+    if (std::FILE* f = std::fopen("/dev/urandom", "rb")) {
+        const std::size_t got = std::fread(buf, 1, n, f);
+        std::fclose(f);
+        return got == n;
+    }
+    return false;
+}
+
+// BearSSL ruft diese Funktion, wenn seine Zufallsquelle noch keinen Anfangswert hat (Ersatz fuer rand/sysrng.c, das nicht gebaut wird).
+static int medic_seed_prng(const br_prng_class** ctx) {
+    unsigned char b[48];
+    if (!fill_random(b, sizeof b)) return 0;
+    (*ctx)->update(ctx, b, sizeof b);
+    return 1;
+}
+
+extern "C" br_prng_seeder br_prng_seeder_system(const char** name) {
+    if (name) *name = "medic";
+    return &medic_seed_prng;
+}
 
 namespace medic {
 
@@ -113,16 +158,102 @@ bool dechunk(const std::string& in, std::size_t max_body, std::string& out, bool
     }
 }
 
+// Die Steckdose fuer BearSSL: nicht blockierend mit poll() und dem gemeinsamen Zeitlimit.
+struct SockCtx {
+    int fd = -1;
+    Clock::time_point deadline;
+    bool timeout = false;  // Zeit abgelaufen
+    bool failed = false;   // Socket-Fehler
+    bool eof = false;      // Gegenstelle hat die Verbindung geschlossen
+};
+
+int sock_read(void* c, unsigned char* buf, std::size_t len) {
+    auto* s = static_cast<SockCtx*>(c);
+    for (;;) {
+        const int w = wait_fd(s->fd, POLLIN, s->deadline);
+        if (w == 0) {
+            s->timeout = true;
+            return -1;
+        }
+        if (w < 0) {
+            s->failed = true;
+            return -1;
+        }
+        const ssize_t n = recv(s->fd, buf, len, 0);
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) continue;
+            s->failed = true;
+            return -1;
+        }
+        if (n == 0) {
+            s->eof = true;
+            return -1;  // BearSSL erlaubt keine 0
+        }
+        return static_cast<int>(n);
+    }
+}
+
+int sock_write(void* c, const unsigned char* buf, std::size_t len) {
+    auto* s = static_cast<SockCtx*>(c);
+    for (;;) {
+        const int w = wait_fd(s->fd, POLLOUT, s->deadline);
+        if (w == 0) {
+            s->timeout = true;
+            return -1;
+        }
+        if (w < 0) {
+            s->failed = true;
+            return -1;
+        }
+        int flags = 0;
+#ifdef MSG_NOSIGNAL
+        flags = MSG_NOSIGNAL;
+#endif
+        const ssize_t n = send(s->fd, buf, len, flags);
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) continue;
+            s->failed = true;
+            return -1;
+        }
+        return static_cast<int>(n);
+    }
+}
+
+// Kurzname eines BearSSL-Fehlers fuer die Anzeige ("BearSSL 62 (nicht vertrauenswuerdig)").
+std::string tls_error_text(int err) {
+    const char* name = nullptr;
+    switch (err) {
+        case BR_ERR_X509_NOT_TRUSTED: name = "Zertifikat nicht vertrauenswuerdig"; break;
+        case BR_ERR_X509_EXPIRED: name = "Zertifikat abgelaufen oder noch nicht gueltig (Uhrzeit der Konsole?)"; break;
+        case BR_ERR_X509_BAD_SERVER_NAME: name = "Zertifikat gehoert nicht zum Servernamen"; break;
+        case BR_ERR_X509_TIME_UNKNOWN: name = "Uhrzeit unbekannt"; break;
+        case BR_ERR_X509_EMPTY_CHAIN: name = "keine Zertifikatskette"; break;
+        case BR_ERR_X509_UNSUPPORTED: name = "nicht unterstuetzter Zertifikatstyp"; break;
+        case BR_ERR_UNSUPPORTED_VERSION: name = "TLS-Version nicht unterstuetzt"; break;
+        case BR_ERR_BAD_PARAM: name = "Parameter"; break;
+        case BR_ERR_IO: name = "Verbindung"; break;
+        default: break;
+    }
+    char buf[128];
+    if (name) std::snprintf(buf, sizeof buf, "BearSSL %d (%s)", err, name);
+    else std::snprintf(buf, sizeof buf, "BearSSL %d", err);
+    return buf;
+}
+
+// Eine TLS-Sitzung auf einem verbundenen Socket (Heap: der Puffer ist gut 30 KB gross).
+struct TlsSession {
+    br_ssl_client_context sc;
+    br_x509_minimal_context xc;
+    unsigned char iobuf[BR_SSL_BUFSIZE_BIDI];
+    br_sslio_context ioc;
+};
+
 class PosixHttpClient : public IHttpClient {
 public:
     HttpResponse get(const std::string& url, std::size_t max_body, int timeout_ms) override {
         HttpResponse r;
         HttpUrl u;
         if (!parse_http_url(url, u, r.error)) return r;
-        if (u.tls) {  // TLS gibt es nur ueber das System der Konsole (ps5/ps5_http.cpp), nicht ueber BSD-Sockets
-            r.error = "https_unsupported";
-            return r;
-        }
         const auto deadline = Clock::now() + std::chrono::milliseconds(timeout_ms);
 
         struct sockaddr_in sa;
@@ -156,30 +287,62 @@ public:
         }
 
         // Anfrage: nur GET, Host und eine feste Kennung. Nichts ueber den Nutzer oder die Konsole.
-        const std::string host_header = u.port == 80 ? u.host : u.host + ":" + std::to_string(u.port);
+        const bool default_port = u.port == (u.tls ? 443 : 80);
+        const std::string host_header = default_port ? u.host : u.host + ":" + std::to_string(u.port);
         const std::string req = "GET " + u.path + " HTTP/1.1\r\nHost: " + host_header + "\r\nUser-Agent: PS5-Medic\r\nAccept: */*\r\nConnection: close\r\n\r\n";
-        std::size_t sent = 0;
-        while (sent < req.size()) {
-            const int w = wait_fd(s.fd, POLLOUT, deadline);
-            if (w == 0) {
-                r.error = "timeout";
+
+        SockCtx sock;
+        sock.fd = s.fd;
+        sock.deadline = deadline;
+        std::unique_ptr<TlsSession> tls;
+        if (u.tls) {
+            tls = std::make_unique<TlsSession>();
+            size_t n_anchors = 0;
+            const br_x509_trust_anchor* anchors = medic_tls_anchors(&n_anchors);
+            br_ssl_client_init_full(&tls->sc, &tls->xc, anchors, n_anchors);
+            br_ssl_engine_set_versions(&tls->sc.eng, BR_TLS12, BR_TLS12);
+            br_ssl_engine_set_buffer(&tls->sc.eng, tls->iobuf, sizeof tls->iobuf, 1);
+            unsigned char seed[48];
+            if (!fill_random(seed, sizeof seed)) {
+                r.error = "tls";
+                r.detail = "kein Zufall verfuegbar";
                 return r;
             }
-            if (w < 0) {
-                r.error = "network";
+            br_ssl_engine_inject_entropy(&tls->sc.eng, seed, sizeof seed);
+            // Die Pruefung der Gueltigkeitsdauer nimmt die Uhr der Konsole: Tage seit 0000-01-01 und Sekunden des Tages.
+            const std::time_t now = std::time(nullptr);
+            br_x509_minimal_set_time(&tls->xc, static_cast<uint32_t>(now / 86400 + 719528), static_cast<uint32_t>(now % 86400));
+            br_ssl_client_reset(&tls->sc, u.host.c_str(), 0);
+            br_sslio_init(&tls->ioc, &tls->sc.eng, sock_read, &sock, sock_write, &sock);
+        }
+
+        // Nach einem Fehler: Zeit, Socket oder TLS?
+        const auto fail_io = [&]() {
+            if (sock.timeout) r.error = "timeout";
+            else if (tls && !sock.failed && !sock.eof) {
+                r.error = "tls";
+                r.detail = tls_error_text(br_ssl_engine_last_error(&tls->sc.eng));
+            } else if (tls && sock.eof) {
+                r.error = "tls";
+                r.detail = "Verbindung vom Server beendet (Handshake)";
+            } else r.error = "network";
+        };
+
+        if (tls) {
+            if (br_sslio_write_all(&tls->ioc, req.data(), req.size()) < 0 || br_sslio_flush(&tls->ioc) < 0) {
+                fail_io();
                 return r;
             }
-            int flags = 0;
-#ifdef MSG_NOSIGNAL
-            flags = MSG_NOSIGNAL;
-#endif
-            const ssize_t n = send(s.fd, req.data() + sent, req.size() - sent, flags);
-            if (n < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) continue;
-                r.error = "network";
-                return r;
+        } else {
+            std::size_t sent = 0;
+            while (sent < req.size()) {
+                const int n = sock_write(&sock, reinterpret_cast<const unsigned char*>(req.data()) + sent, req.size() - sent);
+                if (n < 0) {
+                    fail_io();
+                    return r;
+                }
+                sent += static_cast<std::size_t>(n);
             }
-            sent += static_cast<std::size_t>(n);
         }
 
         // Antwort lesen: bis Verbindungsende oder bis der Koerper laut Content-Length komplett ist.
@@ -190,22 +353,25 @@ public:
         bool chunked = false;
         char buf[8192];
         for (;;) {
-            const int w = wait_fd(s.fd, POLLIN, deadline);
-            if (w == 0) {
-                r.error = "timeout";
-                return r;
+            int n;
+            if (tls) {
+                n = br_sslio_read(&tls->ioc, buf, sizeof buf);
+                if (n < 0) {
+                    // Sauberes Ende (close_notify) oder Abbruch der Verbindung nach dem Handshake zaehlt als Ende der Daten; ob die Antwort
+                    // vollstaendig ist, entscheidet die Laenge weiter unten.
+                    const int err = br_ssl_engine_last_error(&tls->sc.eng);
+                    if (err == BR_ERR_OK || (err == BR_ERR_IO && sock.eof)) break;
+                    fail_io();
+                    return r;
+                }
+            } else {
+                n = sock_read(&sock, reinterpret_cast<unsigned char*>(buf), sizeof buf);
+                if (n < 0) {
+                    if (sock.eof) break;
+                    fail_io();
+                    return r;
+                }
             }
-            if (w < 0) {
-                r.error = "network";
-                return r;
-            }
-            const ssize_t n = recv(s.fd, buf, sizeof buf, 0);
-            if (n < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) continue;
-                r.error = "network";
-                return r;
-            }
-            if (n == 0) break;
             raw.append(buf, static_cast<std::size_t>(n));
             if (raw.size() > raw_cap) {
                 r.error = "too_large";
