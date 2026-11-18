@@ -203,6 +203,7 @@
   "undo.body": "Die Reparatur „{fix}“ vom {ts} wird zurückgenommen. Gesicherte Dateien kommen an ihren Platz zurück.",
   "undo.ok": "Reparatur rückgängig gemacht",
   "undo.ok_sub": "Die Transaktion {txn} wurde zurückgenommen.",
+  "fixdone.restart_hint": "Die Änderung wirkt oft erst nach einem Neustart: ShadowMount+ und der Payload Manager lesen ihre Einstellungen und Ordner nur beim Start. Starte die Konsole neu und mache danach einen neuen Check-up.",
   "undo.fail": "Rückgängig machen fehlgeschlagen",
   "common.report": "Bericht",
   "common.page": "Seite",

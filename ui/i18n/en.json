@@ -203,6 +203,7 @@
   "undo.body": "The repair “{fix}” from {ts} will be reverted. Backed-up files go back to their place.",
   "undo.ok": "Repair undone",
   "undo.ok_sub": "Transaction {txn} was reverted.",
+  "fixdone.restart_hint": "The change often only takes effect after a restart: ShadowMount+ and the Payload Manager read their settings and folders only at start. Restart the console and then run a new check-up.",
   "undo.fail": "Undo failed",
   "common.report": "Report",
   "common.page": "Page",

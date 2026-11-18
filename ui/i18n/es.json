@@ -203,6 +203,7 @@
   "undo.body": "Se revertirá la reparación «{fix}» del {ts}. Los archivos con copia de seguridad vuelven a su sitio.",
   "undo.ok": "Deshecha",
   "undo.ok_sub": "Se revirtió la transacción {txn}.",
+  "fixdone.restart_hint": "El cambio a menudo solo surte efecto tras reiniciar: ShadowMount+ y el Payload Manager leen sus ajustes y carpetas solo al arrancar. Reinicia la consola y luego haz un nuevo check-up.",
   "undo.fail": "Error al deshacer",
   "common.report": "Informe",
   "common.page": "Página",

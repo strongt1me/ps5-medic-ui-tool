@@ -2507,10 +2507,27 @@ void App::draw_fix_done(Canvas& c) const {
     if (done_ok_) sub = fix ? S.fmt("fixdone.ok_sub", {{"txn", done_text_}}) : S.fmt("undo.ok_sub", {{"txn", done_text_}});
     else sub = S.fmt("fixdone.fail_sub", {{"error", done_text_}});
 
-    glass_panel(c, M, 260, W - 2 * M, 400, 24);
+    // Zeilen vorab umbrechen, damit die Karte so hoch wird, wie der Text braucht (Pruefergebnis und Neustart-Hinweis kommen darunter)
+    const int tw = W - 2 * M - 120;
+    const auto sub_lines = wrap_text(body(), sub, tw, 5);
+    std::vector<std::string> ver_lines;
+    const bool pending = verify_ == Verify::Pending, fixed = verify_ == Verify::Fixed;
+    if (fix && done_ok_ && verify_ != Verify::None) {  // Ergebnis der erneuten Pruefung
+        const std::string text = pending ? S("fixdone.verifying") : S.fmt(fixed ? "fixdone.verified_fixed" : "fixdone.verified_persists", {{"rule", verify_rule_}});
+        ver_lines = wrap_text(body(), text, tw, 4);
+    }
+    std::vector<std::string> hint_lines;
+    if (done_ok_) hint_lines = wrap_text(small(), S("fixdone.restart_hint"), tw, 3);  // eine Aenderung an Einstellungen oder Ordnern gilt meist erst nach dem naechsten Laden (SM+ und Payload Manager lesen sie nur beim Start)
+    const int bl = body().line_height() + 6, sl = small().line_height() + 4;
+    int y_end = 410 + static_cast<int>(sub_lines.size()) * bl;
+    if (!ver_lines.empty()) y_end += 14 + static_cast<int>(ver_lines.size()) * bl;
+    const int hint_y = std::max(y_end + 12, 570);
+    const int ph = hint_lines.empty() ? 400 : std::max(400, hint_y + static_cast<int>(hint_lines.size()) * sl + 30 - 260);
+
+    glass_panel(c, M, 260, W - 2 * M, ph, 24);
     {  // Ergebnis als Sechseck-Karte: Schein und Rand in der Farbe des Ergebnisses (gruen: geklappt, rot: Fehler)
         const Color rc = done_ok_ ? kOk : kCrit;
-        c.stroke_round_rect(M, 260, W - 2 * M, 400, 24, 2, rgba((rc >> 16) & 255, (rc >> 8) & 255, rc & 255, 110));
+        c.stroke_round_rect(M, 260, W - 2 * M, ph, 24, 2, rgba((rc >> 16) & 255, (rc >> 8) & 255, rc & 255, 110));
         c.glow(M + 112, 342, 150, rc, 60);
         fill_hex(c, M + 112, 342, 68, rc);
         fill_hex(c, M + 112, 342, 60, rgb(14, 20, 30));
@@ -2518,18 +2535,21 @@ void App::draw_fix_done(Canvas& c) const {
     }
     title().draw(c, M + 196, 320, S(head), done_ok_ ? kOk : kCrit);
     int y = 410;
-    for (auto& l : wrap_text(body(), sub, W - 2 * M - 120, 5)) {
+    for (auto& l : sub_lines) {
         body().draw(c, M + 60, y, l, kText);
-        y += body().line_height() + 6;
+        y += bl;
     }
-    if (fix && done_ok_ && verify_ != Verify::None) {  // Ergebnis der erneuten Pruefung
+    if (!ver_lines.empty()) {
         y += 14;
-        const bool pending = verify_ == Verify::Pending, fixed = verify_ == Verify::Fixed;
-        const std::string text = pending ? S("fixdone.verifying") : S.fmt(fixed ? "fixdone.verified_fixed" : "fixdone.verified_persists", {{"rule", verify_rule_}});
-        for (auto& l : wrap_text(body(), text, W - 2 * M - 120, 4)) {
+        for (auto& l : ver_lines) {
             body().draw(c, M + 60, y, l, pending ? kDim : (fixed ? kOk : kWarn));
-            y += body().line_height() + 6;
+            y += bl;
         }
+    }
+    int hy = hint_y;
+    for (auto& l : hint_lines) {
+        small().draw(c, M + 60, hy, l, kDim);
+        hy += sl;
     }
     std::vector<std::pair<PadGlyph, std::string>> hints;
     if (fix) {

@@ -203,6 +203,7 @@
 "undo.body": "La riparazione «{fix}» del {ts} verrà ripristinata. I file salvati nel backup tornano al loro posto.",
 "undo.ok": "Riparazione annullata",
 "undo.ok_sub": "La transazione {txn} è stata ripristinata.",
+"fixdone.restart_hint": "La modifica spesso ha effetto solo dopo un riavvio: ShadowMount+ e il Payload Manager leggono impostazioni e cartelle solo all’avvio. Riavvia la console ed esegui un nuovo check-up.",
 "undo.fail": "Annullamento fallito",
 "common.report": "Rapporto",
 "common.page": "Pagina",

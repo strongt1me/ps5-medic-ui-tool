@@ -2,6 +2,8 @@
 
 ## Unveröffentlicht / Unreleased
 
+- **Deutsch:** Nach einer erfolgreichen Reparatur (und nach dem Rückgängigmachen) weist der Fertig-Bildschirm darauf hin, dass die Änderung oft erst nach einem Neustart wirkt, weil ShadowMount+ und der Payload Manager ihre Einstellungen und Ordner nur beim Start lesen; danach einen neuen Check-up machen. Die Karte wächst mit dem Text mit.
+- **English:** After a successful repair (and after an undo) the done screen now says the change often only takes effect after a restart, because ShadowMount+ and the Payload Manager read their settings and folders only at start; then run a new check-up. The card grows with the text.
 - **Deutsch:** Die Einstellungen zeigen nur noch die Sprache. Der doppelte Eintrag „Regel-Update“ ist entfernt, das Regel-Update öffnet man unter Mehr → „Regeln aktualisieren“ (derselbe Bildschirm); Kreis führt von dort zurück nach Mehr.
 - **English:** Settings now only show the language. The duplicate "Rule update" entry is removed; the rule update is opened from More → "Update rules" (same screen); Circle leads back to More.
 - **Deutsch:** Der Kopf der Oberfläche zeigt, **wann** der angezeigte Check-up lief („Geprüft 10:32:07 UTC · Nr. 3“; die Nummer zählt die Check-ups seit dem Start bzw. dem Zurücksetzen). Neu im Startbild: **△ Zurücksetzen** leert die Anzeige (Befunde, Spiele, Ergebnis); danach steht das Startbild wieder auf „Bereit für den Check-up“, und der nächste Check-up beginnt bei Null. Ein Check-up liest ohnehin jedes Mal neu von der Konsole und ersetzt das alte Ergebnis; Verlauf, gespeicherte Check-ups, Backups und ausgeblendete Befunde bleiben unberührt.

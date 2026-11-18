@@ -203,6 +203,7 @@
   "undo.body": "La réparation « {fix} » du {ts} sera annulée. Les fichiers sauvegardés retournent à leur place.",
   "undo.ok": "Réparation annulée",
   "undo.ok_sub": "La transaction {txn} a été annulée.",
+  "fixdone.restart_hint": "La modification ne prend souvent effet qu’après un redémarrage : ShadowMount+ et le Payload Manager ne lisent leurs réglages et leurs dossiers qu’au démarrage. Redémarre la console, puis lance un nouveau check-up.",
   "undo.fail": "Échec de l'annulation",
   "common.report": "Rapport",
   "common.page": "Page",

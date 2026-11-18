@@ -607,6 +607,7 @@ void screen_flow_tests() {
     press(app, {Button::Cross});
     CHECK(svc.applies == 1 && app.screen() == App::Screen::FixDone, "Flow: Kreuz fuehrt die Reparatur aus");
     app.render(cv);
+    CHECK(Strings::get(Lang::De).has("fixdone.restart_hint") && Strings::get(Lang::En).has("fixdone.restart_hint"), "Flow: Neustart-Hinweis nach der Reparatur existiert");
     press(app, {Button::Cross});  // erneut pruefen
     CHECK(app.screen() == App::Screen::Running, "Flow: nach der Reparatur erneut pruefen");
     app.render(cv);
