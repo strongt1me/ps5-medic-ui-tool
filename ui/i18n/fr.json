@@ -219,8 +219,6 @@
   "report.support_err.no_write": "Le paquet d'assistance n'a pas pu être enregistré (pas d'accès en écriture à /data/ps5medic).",
   "report.support_err.write_failed": "Le paquet d'assistance n'a pas pu être enregistré (il en existe déjà un à cette heure ou l'écriture a échoué).",
   "report.qr_failed": "La version courte est trop longue pour un QR code.",
-  "settings.rules_update": "Mise à jour des règles",
-  "settings.rules_update_sub": "Charger de nouvelles règles et codes d'erreur depuis des fichiers ou par téléchargement, vérifiés par signature ou SHA-256.",
   "update.title": "Mise à jour des règles",
   "update.current": "Règles actuelles : {v} ({n} règles)",
   "update.none": "Aucun fichier de mise à jour trouvé.",

@@ -918,10 +918,8 @@ void App::handle(Button b) {
     const Screen before = screen_;
     handle_impl(b);
     if (screen_ == Screen::Findings && before != Screen::Findings) maint_origin_ = false;  // wer in den Befunden landet, kommt nicht mehr aus "Mehr" (sonst fuehrt Kreis im Bericht dorthin statt zu den Befunden)
-    if (before == Screen::Settings && screen_ == Screen::RulesUpdate) rules_via_settings_ = true;       // das Regel-Update wurde aus den Einstellungen geoeffnet: Kreis geht dorthin zurueck
-    else if (before == Screen::Maintenance && screen_ == Screen::RulesUpdate) rules_via_settings_ = false;
     // Ein aus "Mehr" geoeffneter Bildschirm fuehrt mit Kreis zurueck dorthin, nicht ins Startbild
-    if (maint_origin_ && before != screen_ && (screen_ == Screen::Start || (screen_ == Screen::Settings && before == Screen::RulesUpdate && !rules_via_settings_))) {  // das Regel-Update kennt sonst nur die Einstellungen als Ziel
+    if (maint_origin_ && before != screen_ && screen_ == Screen::Start) {
         maint_origin_ = false;
         screen_ = Screen::Maintenance;
     }
@@ -1180,9 +1178,7 @@ void App::handle_impl(Button b) {
             } else if (b == Button::Circle) screen_ = Screen::History;
             break;
         case Screen::Settings:
-            if (b == Button::Up || b == Button::L1) settings_sel_ = 0;
-            else if (b == Button::Down || b == Button::R1) settings_sel_ = 1;
-            else if (settings_sel_ == 0 && (b == Button::Left || b == Button::Right || b == Button::Cross)) {
+            if (b == Button::Left || b == Button::Right || b == Button::Cross) {
                 const int n = static_cast<int>(sizeof kAllLangs / sizeof kAllLangs[0]);
                 int i = 0;
                 while (i < n && kAllLangs[i] != lang_) ++i;
@@ -1190,7 +1186,6 @@ void App::handle_impl(Button b) {
                 refresh_game_names();  // "Betrifft: ..." und Namen in der neuen Sprache
                 (void)svc_.set_language(lang_code(lang_));  // scheitert das Speichern, gilt die Sprache nur fuer diese Sitzung
             }
-            else if (settings_sel_ == 1 && b == Button::Cross) open_rules_update();
             else if (b == Button::Circle) screen_ = Screen::Start;
             break;
         case Screen::RulesUpdate:
@@ -1204,7 +1199,7 @@ void App::handle_impl(Button b) {
                         download_url_ = svc_.rule_update_url();
                         update_stage_ = UpdateStage::ConfirmDownload;
                     } else if (b == Button::Circle) {
-                        screen_ = Screen::Settings;
+                        screen_ = Screen::Start;  // aus "Mehr" geoeffnet: handle() fuehrt von dort zurueck nach "Mehr"
                     }
                     break;
                 case UpdateStage::ConfirmDownload:
@@ -1230,7 +1225,7 @@ void App::handle_impl(Button b) {
                     break;
                 case UpdateStage::DoneOk:
                 case UpdateStage::DoneFail:
-                    if (b == Button::Cross || b == Button::Circle) screen_ = Screen::Settings;
+                    if (b == Button::Cross || b == Button::Circle) screen_ = Screen::Start;
                     break;
             }
             break;
@@ -3034,7 +3029,7 @@ void App::draw_undo_confirm(Canvas& c) const {
 void App::draw_settings(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     title_icon(c, Icon::Gear, kTintSlate, S("settings.title"));
-    card(c, M, 230, W - 2 * M, 150, settings_sel_ == 0);
+    card(c, M, 230, W - 2 * M, 150, true);
     draw_icon_badge(c, Icon::Globe, M + 36, 266, 78, kTintViolet);
     body().draw(c, M + 144, 262, S("settings.language"), kText);
     small().draw(c, M + 144, 316, S("settings.note"), kDim);
@@ -3049,13 +3044,8 @@ void App::draw_settings(Canvas& c) const {
         body().draw(c, x + 24, 262 + (56 - body().line_height()) / 2, name, on ? rgb(255, 255, 255) : kDim);
         x -= 12;
     }
-    card(c, M, 410, W - 2 * M, 150, settings_sel_ == 1);
-    draw_icon_badge(c, Icon::Download, M + 36, 446, 78, kTintTeal);
-    body().draw(c, M + 144, 442, S("settings.rules_update"), kText);
-    small().draw(c, M + 144, 496, S("settings.rules_update_sub"), kDim);
-    if (has_result_ && !result_.rules_version.empty()) small().draw(c, M + 8, 590, S.fmt("settings.rules", {{"v", result_.rules_version}}), kDim);
-    if (settings_sel_ == 0) draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::LeftRight, S("common.toggle")}, {PadGlyph::Circle, S("common.back")}});
-    else draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}, {PadGlyph::Circle, S("common.back")}});
+    if (has_result_ && !result_.rules_version.empty()) small().draw(c, M + 8, 410, S.fmt("settings.rules", {{"v", result_.rules_version}}), kDim);
+    draw_hints(c, {{PadGlyph::LeftRight, S("common.toggle")}, {PadGlyph::Circle, S("common.back")}});
 }
 
 void App::draw_rules_update(Canvas& c) const {

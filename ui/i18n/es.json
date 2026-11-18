@@ -219,8 +219,6 @@
   "report.support_err.no_write": "No se pudo guardar el paquete de soporte (sin acceso de escritura a /data/ps5medic).",
   "report.support_err.write_failed": "No se pudo guardar el paquete de soporte (ya existe uno con esta hora o falló la escritura).",
   "report.qr_failed": "La versión corta es demasiado larga para un QR.",
-  "settings.rules_update": "Reglas nuevas",
-  "settings.rules_update_sub": "Carga reglas y códigos de error nuevos desde archivos o por descarga, verificados con firma o SHA-256.",
   "update.title": "Reglas nuevas",
   "update.current": "Reglas actuales: {v} ({n} reglas)",
   "update.none": "Sin archivo nuevo.",

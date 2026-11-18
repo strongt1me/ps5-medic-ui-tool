@@ -931,13 +931,8 @@ void rules_update_flow_tests() {
         App app(svc, l);
         run_check_via_ui(app, cv);
         press(app, {Button::Circle});
-        more_open(app, 6);  // Einstellungen liegen unter Mehr
-        CHECK(app.screen() == App::Screen::Settings, "Update-Flow: Einstellungen");
-        app.render(cv);
-        press(app, {Button::Down});
-        app.render(cv);
-        press(app, {Button::Cross});
-        CHECK(app.screen() == App::Screen::RulesUpdate && svc.update_checks == 1 && app.lang() == l, "Update-Flow: Kreuz auf Regel-Update oeffnet den Bildschirm (Sprache bleibt)");
+        more_open(app, 2);  // Mehr -> Regeln aktualisieren
+        CHECK(app.screen() == App::Screen::RulesUpdate && svc.update_checks == 1 && app.lang() == l, "Update-Flow: Kreuz auf Regeln aktualisieren oeffnet den Bildschirm (Sprache bleibt)");
 
         // keine Datei: nichts kann ausgeloest werden
         app.render(cv);
@@ -945,7 +940,7 @@ void rules_update_flow_tests() {
         app.handle(Button::Cross);
         CHECK(app.screen() == App::Screen::RulesUpdate && svc.installs == 0 && svc.rollbacks == 0, "Update-Flow: ohne Datei tut keine Taste etwas ausser Kreis");
         press(app, {Button::Circle});
-        CHECK(app.screen() == App::Screen::Settings, "Update-Flow: Kreis geht zu den Einstellungen");
+        CHECK(app.screen() == App::Screen::Maintenance, "Update-Flow: Kreis geht zurueck zu Mehr");
 
         // abgelehnt: jeder Grund wird dargestellt
         svc.offer.state = State::Rejected;
@@ -974,7 +969,7 @@ void rules_update_flow_tests() {
         CHECK(svc.installs == 1 && app.finding_count() == 0, "Update-Flow: Kreuz installiert, die alten Befunde gelten nicht mehr");
         app.render(cv);
         press(app, {Button::Cross});
-        CHECK(app.screen() == App::Screen::Settings, "Update-Flow: nach der Installation zurueck zu den Einstellungen");
+        CHECK(app.screen() == App::Screen::Maintenance, "Update-Flow: nach der Installation zurueck zu Mehr");
         press(app, {Button::Circle});
         app.render(cv);  // Start: kein Ergebnis mehr
 
@@ -986,12 +981,12 @@ void rules_update_flow_tests() {
         App app2(fail, l);
         run_check_via_ui(app2, cv);
         press(app2, {Button::Circle});
-        more_open(app2, 6);
-        press(app2, {Button::Down, Button::Cross, Button::Cross});
+        more_open(app2, 2);
+        press(app2, {Button::Cross});
         CHECK(fail.installs == 1 && app2.screen() == App::Screen::RulesUpdate, "Update-Flow: Fehlschlag wird angezeigt");
         app2.render(cv);
         press(app2, {Button::Cross});
-        CHECK(app2.screen() == App::Screen::Settings, "Update-Flow: nach dem Fehlschlag zurueck");
+        CHECK(app2.screen() == App::Screen::Maintenance, "Update-Flow: nach dem Fehlschlag zurueck");
         fail.install_result.error = "voellig_unbekannt";  // unbekannte Kennung: allgemeiner Text
         press(app2, {Button::Cross, Button::Cross});
         app2.render(cv);
@@ -1001,7 +996,7 @@ void rules_update_flow_tests() {
         svc.offer.old_version = "2026.12.01";
         svc.offer.can_rollback = true;
         svc.offer.installed_version = "2026.12.01";
-        press(app, {Button::Cross, Button::Cross});  // Start steht auf Einstellungen, dort auf Regel-Update
+        more_open(app, 2);  // Start -> Mehr -> Regeln aktualisieren
         app.render(cv);
         press(app, {Button::Triangle});
         CHECK(svc.rollbacks == 0, "Update-Flow: Dreieck fragt nur nach, setzt nichts zurueck");
@@ -1051,16 +1046,15 @@ void rules_update_service_tests() {
 
         App app(svc);
         Canvas cv(App::kWidth, App::kHeight);
-        more_open(app, 6);
-        press(app, {Button::Down, Button::Cross});
-        CHECK(app.screen() == App::Screen::RulesUpdate, "Update-E2E: Einstellungen -> Regel-Update");
+        more_open(app, 2);
+        CHECK(app.screen() == App::Screen::RulesUpdate, "Update-E2E: Mehr -> Regeln aktualisieren");
         app.render(cv);
         press(app, {Button::Cross});
         app.render(cv);
         CHECK(slurp(t.dir / "fs/data/ps5medic/knowledge/rules.json") == new_text, "Update-E2E: Kreuz installiert die neue Datei");
         CHECK(svc.run_check().rules_version == "2026.12.01", "Update-E2E: die neuen Regeln gelten sofort");
 
-        press(app, {Button::Cross, Button::Down, Button::Cross});  // zurueck, wieder oeffnen
+        press(app, {Button::Cross, Button::Cross});  // zurueck nach Mehr, wieder oeffnen
         CHECK(svc.check_rule_update().can_rollback, "Update-E2E: Rollback ist moeglich");
         press(app, {Button::Triangle, Button::Cross});
         CHECK(!fs::exists(t.dir / "fs/data/ps5medic/knowledge/rules.json"), "Update-E2E: Rollback legt die Datei beiseite");
@@ -1101,8 +1095,7 @@ void rules_download_flow_tests() {
         svc.offer.old_version = "2026.11.08";
         svc.offer.old_rule_count = 22;
         App app(svc, l);
-        more_open(app, 6);  // Start -> Mehr -> Einstellungen
-        press(app, {Button::Down, Button::Cross});  // -> Regel-Update
+        more_open(app, 2);  // Start -> Mehr -> Regeln aktualisieren
         CHECK(app.screen() == App::Screen::RulesUpdate && svc.downloads == 0, "Download-Flow: Regel-Update offen, noch nichts geholt");
         app.render(cv);
 
@@ -1143,7 +1136,7 @@ void rules_download_flow_tests() {
         app.render(cv);
         press(app, {Button::Cross});
         CHECK(svc.installs == 1, "Download-Flow: installiert wird erst mit dem Kreuz auf dem Angebot");
-        press(app, {Button::Cross});  // Fertig-Bildschirm -> Einstellungen
+        press(app, {Button::Cross});  // Fertig-Bildschirm -> Mehr
 
         // Fehlschlag: Meldung, nichts angeboten, Kreuz kehrt zurueck
         svc.download_result = {};
@@ -1151,7 +1144,7 @@ void rules_download_flow_tests() {
         svc.download_result.http_status = 404;
         svc.download_result.file = "rules.json";
         svc.offer = RuleUpdateOffer{};
-        press(app, {Button::Down, Button::Cross});  // Einstellungen: Regel-Update
+        press(app, {Button::Cross});  // Mehr: Regeln aktualisieren
         CHECK(app.screen() == App::Screen::RulesUpdate, "Download-Flow: wieder im Regel-Update");
         press(app, {Button::Square, Button::Cross});
         app.render(cv);
@@ -1226,8 +1219,7 @@ void rules_download_service_tests() {
     };
     auto clock = [] { return std::string("20261109T140000Z"); };
     auto go_to_update = [](App& app) {
-        more_open(app, 6);
-        press(app, {Button::Down, Button::Cross});
+        more_open(app, 2);
     };
 
     {  // gueltig signiert: angeboten und installiert
@@ -1514,14 +1506,14 @@ void shoulder_and_stick_flow_tests() {
         press(a, {Button::Circle});
         CHECK(a.screen() == App::Screen::Start && !a.quit_requested(), "Mehr: Kreis fuehrt ins Startbild");
     }
-    {  // Einstellungen: L1/R1 wie Hoch/Runter
+    {  // Einstellungen: nur die Sprache (das Regel-Update liegt unter Mehr, nicht doppelt hier)
         App a(svc);
         more_open(a, 6);
         CHECK(a.screen() == App::Screen::Settings, "Einstellungen offen");
-        press(a, {Button::R1, Button::Cross});
-        CHECK(a.screen() == App::Screen::RulesUpdate, "Einstellungen: R1 waehlt Regel-Update");
-        press(a, {Button::Circle, Button::L1, Button::Right});
-        CHECK(a.lang() == Lang::En, "Einstellungen: L1 waehlt die Sprache, Rechts wechselt sie");
+        press(a, {Button::Down, Button::R1});
+        CHECK(a.screen() == App::Screen::Settings, "Einstellungen: Runter/R1 oeffnen kein Regel-Update");
+        press(a, {Button::Right});
+        CHECK(a.lang() == Lang::En, "Einstellungen: Rechts wechselt die Sprache");
     }
     {  // Details: zwischen den Befunden blaettern
         App a(svc);
@@ -2542,8 +2534,7 @@ void codes_update_flow_tests() {
     Canvas cv(App::kWidth, App::kHeight);
     Strings::missing().clear();
     auto go_to_update = [](App& a) {
-        more_open(a, 6);
-        press(a, {Button::Down, Button::Cross});
+        more_open(a, 2);
     };
     auto ready = [](const std::string& v, std::size_t n) {
         RuleUpdateOffer o;
@@ -2573,8 +2564,8 @@ void codes_update_flow_tests() {
         CHECK(svc.codes_installs == 1 && svc.installs == 0, "Codes-Flow: Kreuz installiert nur die Fehlercodes");
         a.render(cv);
         press(a, {Button::Cross});
-        CHECK(a.screen() == App::Screen::Settings, "Codes-Flow: Kreuz kommt zurueck");
-        press(a, {Button::Circle, Button::Circle});
+        CHECK(a.screen() == App::Screen::Maintenance, "Codes-Flow: Kreuz kommt zurueck");
+        press(a, {Button::Circle});
         CHECK(a.screen() == App::Screen::Start && a.finding_count() == 1, "Codes-Flow: Fehlercodes aendern die Befunde nicht");
         open_error_codes_via_ui(a);
         CHECK(a.selected_error_id() == svc.errors_after_codes_install.codes[0].id && a.error_selected() == 0, "Codes-Flow: die neue Liste gilt sofort");
@@ -2606,7 +2597,7 @@ void codes_update_flow_tests() {
         a.render(cv);
         CHECK(svc.installs == 1 && svc.codes_installs == 1 && a.finding_count() == 0, "Codes-Flow: gescheiterte Fehlercodes machen die installierten Regeln nicht rueckgaengig");
         press(a, {Button::Cross});
-        CHECK(a.screen() == App::Screen::Settings, "Codes-Flow: Fehlerbildschirm schliesst mit Kreuz");
+        CHECK(a.screen() == App::Screen::Maintenance, "Codes-Flow: Fehlerbildschirm schliesst mit Kreuz");
     }
     {  // Regeln scheitern, Fehlercodes gehen
         FakeService svc = base;
@@ -2676,7 +2667,7 @@ void codes_update_flow_tests() {
         CHECK(a.screen() == App::Screen::RulesUpdate && svc.downloads == 1, "Codes-Flow: Download gelaufen");
         for (const char* err : {"net_timeout", "write_failed"}) {
             svc.download_result.codes_error = err;
-            press(a, {Button::Circle, Button::Down, Button::Cross, Button::Square, Button::Cross});
+            press(a, {Button::Circle, Button::Cross, Button::Square, Button::Cross});
             a.render(cv);
             a.update();
             a.render(cv);
@@ -2717,8 +2708,7 @@ void codes_update_service_tests() {
     };
     auto clock = [] { return std::string("20261109T170000Z"); };
     auto go_to_update = [](App& a) {
-        more_open(a, 6);
-        press(a, {Button::Down, Button::Cross});
+        more_open(a, 2);
     };
     Canvas cv(App::kWidth, App::kHeight);
     Strings::missing().clear();
@@ -2741,7 +2731,7 @@ void codes_update_service_tests() {
         a.render(cv);
         CHECK(slurp(t.dir / "fs/data/ps5medic/knowledge/error_codes.json") == new_text && svc.error_codes().db_version == "2026.12.31", "Codes-E2E: Kreuz installiert, die neuen Fehlercodes gelten sofort");
         CHECK(!fs::exists(t.dir / "fs/data/ps5medic/knowledge/rules.json"), "Codes-E2E: die Regeln bleiben unberuehrt");
-        press(a, {Button::Cross, Button::Down, Button::Cross});  // zurueck, wieder oeffnen
+        press(a, {Button::Cross, Button::Cross});  // zurueck nach Mehr, wieder oeffnen
         CHECK(svc.check_codes_update().can_rollback, "Codes-E2E: Rollback moeglich");
         a.render(cv);
         press(a, {Button::Triangle});

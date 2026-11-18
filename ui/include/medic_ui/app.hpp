@@ -205,7 +205,6 @@ private:
     int hist_sel_ = 0, hist_top_ = 0;
     medic::TxnInfo undo_target_;
 
-    int settings_sel_ = 0;  // 0 Sprache, 1 Regel-Update
 
     // Archiv der Check-ups: Liste, ein gespeicherter Check-up im Befund-Bildschirm ("viewing_old_": nur ansehen, nie reparieren) und Vergleich
     std::vector<medic::CheckSummary> chk_;
@@ -228,7 +227,6 @@ private:
     bool detail_from_game_ = false;
     int rep_sel_ = 0, rep_top_ = 0;     // Reparaturen: Auswahl in der Liste der reparierbaren Befunde
     int maint_sel_ = 0;                  // Wartung: gewaehlter Eintrag
-    bool rules_via_settings_ = false;    // das Regel-Update wurde aus den Einstellungen (nicht aus "Mehr") geoeffnet
     bool maint_origin_ = false;          // ein Unterbildschirm wurde aus der Wartung geoeffnet: Kreis fuehrt dorthin zurueck
     bool after_check_repairs_ = false;   // Reparaturen ohne Check-up gewaehlt: nach dem Check-up direkt die Liste zeigen
     bool after_check_report_ = false;  // Bericht ohne Check-up gewaehlt: nach dem Check-up direkt den Bericht zeigen

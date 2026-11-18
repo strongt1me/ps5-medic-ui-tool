@@ -219,8 +219,6 @@
   "report.support_err.no_write": "The support package could not be saved (no write access to /data/ps5medic).",
   "report.support_err.write_failed": "The support package could not be saved (one with this time already exists or writing failed).",
   "report.qr_failed": "The short version is too long for a QR code.",
-  "settings.rules_update": "Rule update",
-  "settings.rules_update_sub": "Load new rules and error codes from files or by download, verified with a signature or SHA-256.",
   "update.title": "Rule update",
   "update.current": "Current rules: {v} ({n} rules)",
   "update.none": "No update file found.",

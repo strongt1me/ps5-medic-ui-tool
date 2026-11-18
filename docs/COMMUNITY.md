@@ -4,7 +4,7 @@ Stand 12. Nov. 2026. So entstehen neue Regeln aus Fehlern, die bei anderen Nutze
 
 ```
 Nutzer: Bericht (□)  ->  Issue im Repository  ->  Bot sortiert vor  ->  Maintainer prüft  ->  Regel + Fixture + Test + Übersetzungen
-     ->  rules.json signieren (make sign-rules)  ->  Nutzer: Regel-Update (Einstellungen)
+     ->  rules.json signieren (make sign-rules)  ->  Nutzer: Regeln aktualisieren (Mehr)
 ```
 
 ## 1. Bericht einsenden

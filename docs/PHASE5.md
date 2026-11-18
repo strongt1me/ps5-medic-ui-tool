@@ -4,7 +4,7 @@ Stand 8. Nov. 2026. Regel-Update (Datei und signierter Download), unbekannte Feh
 
 ## 1. Regel-Update (Datei oder signierter Download)
 
-`libmedic/src/rule_update.cpp` (prüfen, installieren, zurücksetzen), `rule_download.cpp` und `http.cpp`/`posix_http.cpp` (Download), `signature.cpp`/`ed25519.cpp` (Signatur); in der UI unter Einstellungen → *Regel-Update*.
+`libmedic/src/rule_update.cpp` (prüfen, installieren, zurücksetzen), `rule_download.cpp` und `http.cpp`/`posix_http.cpp` (Download), `signature.cpp`/`ed25519.cpp` (Signatur); in der UI unter Mehr → *Regeln aktualisieren*.
 
 **Zwei Wege in denselben Ordner** `/data/ps5medic/knowledge/update/`:
 - **Datei-Update (ohne Netz):** Der Nutzer legt `rules.json` und `rules.json.sha256` selbst dorthin (FTP, USB-Kopie). Die Prüfsumme schützt vor beschädigten Kopien, nicht vor einer absichtlich untergeschobenen Datei samt Prüfsumme; wer Dateien auf die Konsole legen kann, kann ohnehin mehr.

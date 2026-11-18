@@ -219,8 +219,6 @@
 "report.support_err.no_write": "Impossibile salvare il pacchetto di assistenza (nessun accesso in scrittura a /data/ps5medic).",
 "report.support_err.write_failed": "Impossibile salvare il pacchetto di assistenza (ne esiste già uno con questa ora o la scrittura è fallita).",
 "report.qr_failed": "La versione breve è troppo lunga per un codice QR.",
-"settings.rules_update": "Aggiornamento regole",
-"settings.rules_update_sub": "Carica nuove regole e codici di errore da file o con download, verificati con firma o SHA-256.",
 "update.title": "Aggiornamento regole",
 "update.current": "Regole attuali: {v} ({n} regole)",
 "update.none": "Nessun file di aggiornamento trovato.",

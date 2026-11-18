@@ -219,8 +219,6 @@
   "report.support_err.no_write": "Das Support-Paket konnte nicht gespeichert werden (kein Schreibzugriff auf /data/ps5medic).",
   "report.support_err.write_failed": "Das Support-Paket konnte nicht gespeichert werden (es gibt schon eines mit dieser Zeit oder das Schreiben schlug fehl).",
   "report.qr_failed": "Die Kurzfassung ist zu lang für einen QR-Code.",
-  "settings.rules_update": "Regel-Update",
-  "settings.rules_update_sub": "Neue Regeln und Fehlercodes aus Dateien oder per Download laden, geprüft mit Signatur bzw. SHA-256.",
   "update.title": "Regel-Update",
   "update.current": "Aktuelle Regeln: {v} ({n} Regeln)",
   "update.none": "Keine Update-Datei gefunden.",
