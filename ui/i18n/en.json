@@ -607,6 +607,9 @@
   "start.view": "View findings",
   "start.rerun": "Check again",
   "start.recheck": "Check again",
+  "start.reset": "Reset",
+  "start.reset_done": "View reset. History, backups and hidden findings are kept.",
+  "header.checked": "Checked {time} UTC · No. {n}",
   "start.fixable": "{n} of them can be repaired automatically.",
   "start.more": "More",
   "start.more_sub": "Repairs, self-test, backups, settings"

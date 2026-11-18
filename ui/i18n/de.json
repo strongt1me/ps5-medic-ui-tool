@@ -607,6 +607,9 @@
   "start.view": "Befunde ansehen",
   "start.rerun": "Erneut prüfen",
   "start.recheck": "Neu prüfen",
+  "start.reset": "Zurücksetzen",
+  "start.reset_done": "Anzeige zurückgesetzt. Verlauf, Backups und ausgeblendete Befunde bleiben erhalten.",
+  "header.checked": "Geprüft {time} UTC · Nr. {n}",
   "start.fixable": "{n} davon lassen sich automatisch reparieren.",
   "start.more": "Mehr",
   "start.more_sub": "Reparaturen, Selbsttest, Backups, Einstellungen"

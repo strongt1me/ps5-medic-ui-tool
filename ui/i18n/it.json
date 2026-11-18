@@ -607,6 +607,9 @@
   "start.view": "Vedi i rilevamenti",
   "start.rerun": "Controlla di nuovo",
   "start.recheck": "Ricontrolla",
+  "start.reset": "Reimposta",
+  "start.reset_done": "Visualizzazione reimpostata. Cronologia, backup e rilevamenti nascosti restano.",
+  "header.checked": "Controllato alle {time} UTC · n. {n}",
   "start.fixable": "{n} di questi si possono riparare automaticamente.",
   "start.more": "Altro",
   "start.more_sub": "Riparazioni, autotest, backup, impostazioni"

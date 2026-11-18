@@ -607,6 +607,9 @@
   "start.view": "Voir les résultats",
   "start.rerun": "Vérifier à nouveau",
   "start.recheck": "Revérifier",
+  "start.reset": "Réinitialiser",
+  "start.reset_done": "Affichage réinitialisé. L’historique, les sauvegardes et les résultats masqués sont conservés.",
+  "header.checked": "Vérifié à {time} UTC · n° {n}",
   "start.fixable": "{n} d’entre eux peuvent être réparés automatiquement.",
   "start.more": "Plus",
   "start.more_sub": "Réparations, autotest, sauvegardes, paramètres"

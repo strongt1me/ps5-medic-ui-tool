@@ -136,6 +136,7 @@ CheckResult LocalService::run_check() {
         p_.fs_rw()->write_file("/data/ps5medic/last_facts.json", medic::dump_safe(out, 1) + "\n");
     }
     r.history_saved = saved;
+    r.ts = now;
     last_findings_ = r.findings;
     last_resolved_ = r.resolved;
     last_metrics_ = r.metrics;

@@ -517,6 +517,26 @@ void App::start_check() {
     check_progress_ = 0;
 }
 
+// Leert alles, was von einem Check-up im Speicher haengt, damit der naechste Check-up von Null beginnt und man sieht, was er neu findet.
+// Nichts auf der Konsole wird geaendert: Verlauf, gespeicherte Check-ups, Backups und die Liste der ausgeblendeten Befunde bleiben.
+void App::reset_view() {
+    has_result_ = false;
+    result_ = CheckResult{};
+    all_findings_.clear();
+    hidden_.clear();
+    games_.clear();
+    finding_games_.clear();
+    title_names_.clear();
+    sel_ = top_ = 0;
+    game_sel_ = game_top_ = gd_sel_ = gd_top_ = 0;
+    verify_ = Verify::None;
+    detail_from_game_ = false;
+    after_check_games_ = after_check_repairs_ = after_check_report_ = false;
+    check_runs_ = 0;
+    reset_notice_ = true;
+    start_sel_ = 0;
+}
+
 void App::move_selection(int& sel, int& top, int count, int visible, int delta) {
     if (count <= 0) {
         sel = top = 0;
@@ -925,7 +945,9 @@ void App::handle_impl(Button b) {
                 start_sel_ = std::min(start_sel_ + 1, 3);
             } else if (b == Button::Left && start_sel_ >= 2) --start_sel_;
             else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < 3) ++start_sel_;
-            else if (b == Button::Square) {  // jederzeit neu pruefen
+            else if (b == Button::Triangle) {  // Anzeige zuruecksetzen: der naechste Check-up beginnt bei Null
+                if (has_result_) reset_view();
+            } else if (b == Button::Square) {  // jederzeit neu pruefen
                 start_small_ = 1;
                 start_check();
             } else if (b == Button::Cross) {
@@ -1335,6 +1357,8 @@ void App::update() {
         pending_check_ = false;
         result_ = run_check_with_progress();
         has_result_ = true;
+        ++check_runs_;
+        reset_notice_ = false;
         adopt_findings();
         refresh_game_names();
         sel_ = top_ = 0;
@@ -1356,6 +1380,7 @@ void App::update() {
     if (verify_ == Verify::Pending && verify_rendered_ && screen_ == Screen::FixDone) {  // Re-Detect nach der Reparatur
         result_ = svc_.run_check();
         has_result_ = true;
+        ++check_runs_;
         const bool still = std::any_of(result_.findings.begin(), result_.findings.end(), [&](const medic::Finding& f) { return f.rule_id == verify_rule_; });  // vor dem Ausblenden: auch eine ausgeblendete Regel zaehlt
         adopt_findings();
         refresh_game_names();
@@ -1722,6 +1747,13 @@ void App::draw_chrome(Canvas& c) const {
         draw_icon(c, Icon::History, right - w + 28, 58, 26, kWarn, kWarn);
         small().draw(c, right - w + 50, 44, t, kWarn);
     }
+    if (!viewing_old_ && has_result_ && result_.ts.size() >= 15 && result_.ts[8] == 'T') {  // wann der angezeigte Check-up lief und der wievielte es ist
+        const std::string t = S.fmt("header.checked", {{"time", result_.ts.substr(9, 2) + ":" + result_.ts.substr(11, 2) + ":" + result_.ts.substr(13, 2)}, {"n", std::to_string(check_runs_)}});
+        const int w = small().width(t) + 64;
+        c.fill_round_rect(right - w, 36, w, 44, 22, rgba(255, 255, 255, 14));
+        draw_icon(c, Icon::Stethoscope, right - w + 28, 58, 26, kDim, kDim);
+        small().draw(c, right - w + 50, 44, t, kDim);
+    }
     if (screen_ != Screen::Start) {
         c.fill_rect(M, 112, W - 2 * M, 2, kLine);
         c.fill_rect(M, 112, 160, 2, kAccent);
@@ -1854,6 +1886,10 @@ void App::draw_start(Canvas& c) const {
             button = S("start.view");
         }
         if (has_result_ && untested > 0 && sub2.empty() && !(result_.incomplete && result_.findings.empty())) sub2 = S.fmt("start.not_tested", {{"n", std::to_string(untested)}});
+        if (!has_result_ && reset_notice_) {
+            sub2 = S("start.reset_done");
+            sub2col = kOk;
+        }
         if (has_result_ && !result_.history_saved) {  // der seltene Fehlerfall hat Vorrang vor allen anderen Zeilen
             sub2 = S("start.history_failed");
             sub2col = kWarn;
@@ -1902,7 +1938,10 @@ void App::draw_start(Canvas& c) const {
     }
 
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::Cross, S("common.open")}};
-    if (has_result_) hints.emplace_back(PadGlyph::Square, S("start.recheck"));
+    if (has_result_) {
+        hints.emplace_back(PadGlyph::Square, S("start.recheck"));
+        hints.emplace_back(PadGlyph::Triangle, S("start.reset"));
+    }
     hints.emplace_back(PadGlyph::Circle, S("common.quit"));
     draw_hints(c, hints);
 }

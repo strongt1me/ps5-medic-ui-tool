@@ -3603,6 +3603,31 @@ void start_nav_tests() {
         press(app, {Button::Square});
         CHECK(app.screen() == App::Screen::Running, "Start: Quadrat startet den Check-up");
     }
+    {  // Zuruecksetzen (Dreieck im Startbild): Anzeige leer, naechster Check-up beginnt bei Null; Zeitstempel und Laufnummer im Kopf
+        FakeService fk;
+        fk.result.ts = "20261118T103207Z";
+        fk.result.findings.push_back(mk_finding("a.rule", Severity::Warning, false));
+        App app(fk);
+        Canvas cv(App::kWidth, App::kHeight);
+        press(app, {Button::Square});
+        app.update();
+        app.render(cv);
+        app.update();
+        CHECK(app.screen() == App::Screen::Findings && app.finding_count() == 1, "Reset: nach dem Check-up stehen die Befunde da");
+        app.render(cv);
+        press(app, {Button::Circle});
+        CHECK(app.screen() == App::Screen::Start, "Reset: zurueck im Startbild");
+        press(app, {Button::Triangle});
+        app.render(cv);
+        CHECK(app.screen() == App::Screen::Start && app.finding_count() == 0 && fk.checks == 1, "Reset: Dreieck leert die Anzeige, ohne zu pruefen");
+        press(app, {Button::Cross});
+        CHECK(app.screen() == App::Screen::Running, "Reset: danach startet das Kreuz einen neuen Check-up");
+        app.update();
+        app.render(cv);
+        app.update();
+        CHECK(fk.checks == 2 && app.finding_count() == 1, "Reset: der neue Check-up liest neu (zweiter Lauf am Dienst)");
+        CHECK(Strings::missing().empty(), "Reset: kein Text fehlt");
+    }
     {  // Bericht aus "Mehr" ohne Check-up: erst pruefen, dann der Bericht; Kreis fuehrt zurueck nach "Mehr"
         FakeService fk;
         App app(fk);

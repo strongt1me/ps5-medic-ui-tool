@@ -607,6 +607,9 @@
   "start.view": "Ver hallazgos",
   "start.rerun": "Revisar de nuevo",
   "start.recheck": "Revisar",
+  "start.reset": "Restablecer",
+  "start.reset_done": "Vista restablecida. El historial, las copias y los hallazgos ocultos se conservan.",
+  "header.checked": "Comprobado a las {time} UTC · n.º {n}",
   "start.fixable": "{n} de ellos se pueden reparar automáticamente.",
   "start.more": "Más",
   "start.more_sub": "Reparaciones, autotest, copias, ajustes"

@@ -71,6 +71,7 @@ private:
     enum class DoneKind { Fix, Undo };
 
     void start_check();
+    void reset_view();  // Anzeige leeren: kein Ergebnis mehr im Speicher (Verlauf, Backups und ausgeblendete Befunde bleiben)
     void begin_fix(int index, Screen origin);
     // Befunde ausblenden: all_findings_ = alle Befunde des Check-ups, result_.findings = die sichtbaren, hidden_ = die ausgeblendeten (Reihenfolge wie im Check-up)
     void adopt_findings();         // nach einem Check-up: Liste der Ausblendungen laden und aufteilen
@@ -176,6 +177,8 @@ private:
     int start_small_ = 1;  // kleine Kachel (1..3), von der man zur grossen hochgegangen ist: Ziel von Runter
 
     bool has_result_ = false;
+    int check_runs_ = 0;           // Check-ups seit dem Start bzw. dem letzten Zuruecksetzen (zeigt, dass ein Check-up neu lief)
+    bool reset_notice_ = false;    // Startbild: Hinweis "Anzeige zurueckgesetzt" bis zum naechsten Check-up
     CheckResult result_;
     bool pending_check_ = false;
     mutable bool running_rendered_ = false;  // der Bildschirm "Pruefe..." muss mindestens einmal gezeichnet worden sein

@@ -33,6 +33,7 @@ struct CheckResult {
     bool incomplete = false;                      // keine Regeln geladen oder ein Collector ist ausgefallen: kein "keine Befunde" in Gruen
     std::vector<std::string> resolved;            // Regeln, die die letzte Pruefung noch meldete und die jetzt fehlen
     std::vector<medic::MetricChange> metrics;     // Messwerte mit Veraenderung seit der letzten Pruefung
+    std::string ts;                               // Zeitpunkt dieses Check-ups (UTC, JJJJMMTTThhmmssZ); leer: unbekannt
     bool history_saved = true;                    // Verlauf und Einzelpruefung konnten geschrieben werden (sonst fehlt diese Pruefung im Verlauf)
 };
 
