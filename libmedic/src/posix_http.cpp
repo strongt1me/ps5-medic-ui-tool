@@ -22,7 +22,10 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
+#include <thread>
 
 #include "bearssl/inc/bearssl.h"
 
@@ -93,7 +96,7 @@ int wait_fd(int fd, short events, Clock::time_point deadline) {
     }
 }
 
-bool resolve(const HttpUrl& u, struct sockaddr_in& out) {
+bool resolve_blocking(const HttpUrl& u, struct sockaddr_in& out) {
     std::memset(&out, 0, sizeof out);
     out.sin_family = AF_INET;
     out.sin_port = htons(static_cast<unsigned short>(u.port));
@@ -107,6 +110,39 @@ bool resolve(const HttpUrl& u, struct sockaddr_in& out) {
     out.sin_addr = reinterpret_cast<struct sockaddr_in*>(res->ai_addr)->sin_addr;
     freeaddrinfo(res);
     return true;
+}
+
+// Namensaufloesung mit dem gemeinsamen Zeitlimit: getaddrinfo selbst kennt keins und blockiert bei einem toten Resolver lange. Es laeuft in einem
+// eigenen Thread; laeuft die Zeit ab, wird er losgelassen (er endet allein, der Zustand gehoert ihm gemeinsam). 1 = ok, 0 = nicht aufloesbar, -1 = Zeit.
+int resolve(const HttpUrl& u, struct sockaddr_in& out, Clock::time_point deadline) {
+    struct in_addr literal;
+    if (inet_pton(AF_INET, u.host.c_str(), &literal) == 1) return resolve_blocking(u, out) ? 1 : 0;  // IP-Adresse: kein DNS noetig
+    struct Shared {
+        std::mutex m;
+        std::condition_variable cv;
+        bool done = false, ok = false;
+        struct sockaddr_in addr;
+    };
+    auto st = std::make_shared<Shared>();
+    std::memset(&st->addr, 0, sizeof st->addr);
+    try {
+        std::thread([st, u]() {
+            struct sockaddr_in a;
+            const bool ok = resolve_blocking(u, a);
+            std::lock_guard<std::mutex> lk(st->m);
+            st->ok = ok;
+            if (ok) st->addr = a;
+            st->done = true;
+            st->cv.notify_all();
+        }).detach();
+    } catch (...) {
+        return resolve_blocking(u, out) ? 1 : 0;  // kein Thread moeglich: wie bisher blockierend
+    }
+    std::unique_lock<std::mutex> lk(st->m);
+    if (!st->cv.wait_until(lk, deadline, [&] { return st->done; })) return -1;
+    if (!st->ok) return 0;
+    out = st->addr;
+    return 1;
 }
 
 std::string lower(std::string s) {
@@ -257,8 +293,8 @@ public:
         const auto deadline = Clock::now() + std::chrono::milliseconds(timeout_ms);
 
         struct sockaddr_in sa;
-        if (!resolve(u, sa)) {
-            r.error = "resolve";
+        if (const int rr = resolve(u, sa, deadline); rr != 1) {
+            r.error = rr < 0 ? "timeout" : "resolve";
             return r;
         }
         Fd s;
@@ -391,11 +427,23 @@ public:
                 if (!cl.empty() && std::all_of(cl.begin(), cl.end(), [](unsigned char c) { return std::isdigit(c) != 0; }) && cl.size() < 12) content_length = std::atol(cl.c_str());
                 chunked = lower(header_value(head, "transfer-encoding")).find("chunked") != std::string::npos;
                 if (!chunked && content_length > static_cast<long>(max_body)) {
-                    r.error = "too_large";
+                    // Eine grosse Fehlerseite (404/403 als HTML) ist ein Status, kein "zu gross": den Status melden, den Koerper verwerfen
+                    const int st = head.size() >= 12 ? std::atoi(head.substr(9, 3).c_str()) : 0;
+                    if (st >= 400 && head.compare(0, 5, "HTTP/") == 0) r.status = st;
+                    else r.error = "too_large";
                     return r;
                 }
             }
             if (!chunked && content_length >= 0 && raw.size() >= head_end + 4 + static_cast<std::size_t>(content_length)) break;
+            if (chunked) {
+                const std::size_t bs = head_end + 4;  // Beginn des Koerpers
+                const bool tail = raw.size() >= bs + 5 && raw.compare(raw.size() - 5, 5, "0\r\n\r\n") == 0 && (raw.size() == bs + 5 || raw.compare(raw.size() - 7, 2, "\r\n") == 0);
+                if (tail) {  // Schluss-Chunk gesehen: ist der Koerper vollstaendig, muss man nicht auf das Verbindungsende warten
+                    std::string tmp;
+                    bool tl = false;
+                    if (dechunk(raw.substr(bs), max_body, tmp, tl)) break;
+                }
+            }
         }
 
         if (head_end == std::string::npos) {

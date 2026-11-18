@@ -1164,7 +1164,7 @@ void rules_download_flow_tests() {
         CHECK(svc.update_checks == checks_before && svc.installs == 1 && app.screen() == App::Screen::RulesUpdate, "Download-Flow: nach einem Fehlschlag wird nichts geprueft oder installiert");
 
         // Jede Fehlerkennung hat einen Text
-        for (const char* code : {"no_url", "bad_url", "https_unsupported", "no_write", "write_failed", "bad_timestamp", "no_network", "http_status", "net_resolve", "net_connect", "net_timeout",
+        for (const char* code : {"no_url", "bad_url", "no_write", "write_failed", "bad_timestamp", "no_network", "http_status", "net_resolve", "net_connect", "net_timeout",
                                  "net_network", "net_tls", "net_redirect", "net_too_large", "net_bad_response"}) {
             svc.download_result.error = code;
             press(app, {Button::Square, Button::Cross});
@@ -1188,7 +1188,7 @@ void rules_download_flow_tests() {
         }
     }
     CHECK(Strings::missing().empty(), "Download-Flow: kein Text fehlt (" + (Strings::missing().empty() ? std::string() : *Strings::missing().begin()) + ")");
-    for (const char* key : {"update.error.no_url", "update.error.bad_url", "update.error.https_unsupported", "update.error.no_network", "update.error.net_connect", "update.error.net_timeout",
+    for (const char* key : {"update.error.no_url", "update.error.bad_url", "update.error.no_network", "update.error.net_connect", "update.error.net_timeout",
                             "update.error.net_resolve", "update.error.net_network", "update.error.net_tls", "update.error.detail", "update.error.net_redirect", "update.error.net_too_large", "update.error.net_bad_response",
                             "update.error.http_status", "update.rejected.sig_malformed", "update.rejected.sig_unknown_key", "update.rejected.sig_invalid", "update.auth_sig",
                             "update.confirm_download", "update.no_url", "update.downloading", "update.download_failed", "update.downloaded_from", "update.download"})
@@ -3602,6 +3602,21 @@ void start_nav_tests() {
         App app(fk);
         press(app, {Button::Square});
         CHECK(app.screen() == App::Screen::Running, "Start: Quadrat startet den Check-up");
+    }
+    {  // Bericht aus "Mehr" ohne Check-up: erst pruefen, dann der Bericht; Kreis fuehrt zurueck nach "Mehr"
+        FakeService fk;
+        App app(fk);
+        Canvas cv(App::kWidth, App::kHeight);
+        more_open(app, 4);
+        CHECK(app.screen() == App::Screen::Running, "Bericht ohne Check-up: es wird erst geprueft (kein gruenes 'in Ordnung' ohne Pruefung)");
+        app.update();
+        app.render(cv);
+        app.update();
+        CHECK(app.screen() == App::Screen::Report, "Bericht ohne Check-up: nach dem Check-up der Bericht");
+        press(app, {Button::Circle});
+        CHECK(app.screen() == App::Screen::Maintenance, "Bericht aus Mehr: Kreis fuehrt zurueck nach Mehr");
+        press(app, {Button::Circle});
+        CHECK(app.screen() == App::Screen::Start, "Mehr: Kreis fuehrt ins Startbild");
     }
 }
 

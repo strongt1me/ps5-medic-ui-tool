@@ -788,7 +788,9 @@ std::string build_report_compact(const ReportInput& in, ReportLang lang, std::si
     }
     std::string out = head + body + foot;
     if (out.size() > max_bytes) {  // Kopfzeilen allein zu lang (sehr lange Pfade): hart kuerzen
-        out.resize(max_bytes);
+        std::size_t cut = max_bytes;
+        while (cut > 0 && (static_cast<unsigned char>(out[cut]) & 0xC0) == 0x80) --cut;  // nicht mitten in ein UTF-8-Zeichen schneiden
+        out.resize(cut);
         if (truncated) *truncated = true;
     }
     return out;

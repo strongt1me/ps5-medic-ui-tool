@@ -209,6 +209,9 @@ const char* screen_name(App::Screen s) {
         case App::Screen::GameList: return "Spiele";
         case App::Screen::GameDetail: return "Spiel";
         case App::Screen::Splash: return "Startbild";
+        case App::Screen::Repairs: return "Reparaturen";
+        case App::Screen::Maintenance: return "Mehr";
+        case App::Screen::Hidden: return "Ausgeblendet";
     }
     return "?";
 }

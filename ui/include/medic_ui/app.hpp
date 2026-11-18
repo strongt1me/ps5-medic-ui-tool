@@ -228,6 +228,7 @@ private:
     bool rules_via_settings_ = false;    // das Regel-Update wurde aus den Einstellungen (nicht aus "Mehr") geoeffnet
     bool maint_origin_ = false;          // ein Unterbildschirm wurde aus der Wartung geoeffnet: Kreis fuehrt dorthin zurueck
     bool after_check_repairs_ = false;   // Reparaturen ohne Check-up gewaehlt: nach dem Check-up direkt die Liste zeigen
+    bool after_check_report_ = false;  // Bericht ohne Check-up gewaehlt: nach dem Check-up direkt den Bericht zeigen
     bool after_check_games_ = false;  // Spiele ohne Check-up gewaehlt: nach dem Check-up direkt die Liste zeigen
 
     // Selbsttest: List (letzte Ergebnisse), Confirm (Hinweis vor dem Lauf), Running (ein Test je update()), Done

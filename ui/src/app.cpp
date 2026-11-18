@@ -678,6 +678,11 @@ void App::open_games() {
 }
 
 void App::open_report() {
+    if (!has_result_) {  // ohne Check-up gibt es nichts zu berichten: erst pruefen, dann den Bericht zeigen
+        after_check_report_ = true;
+        start_check();
+        return;
+    }
     support_ = SupportResult{};
     support_done_ = false;
     report_ = svc_.make_report(medic::report_lang_from_code(lang_code(lang_)));
@@ -892,6 +897,7 @@ void App::begin_fix(int index, Screen origin) {
 void App::handle(Button b) {
     const Screen before = screen_;
     handle_impl(b);
+    if (screen_ == Screen::Findings && before != Screen::Findings) maint_origin_ = false;  // wer in den Befunden landet, kommt nicht mehr aus "Mehr" (sonst fuehrt Kreis im Bericht dorthin statt zu den Befunden)
     if (before == Screen::Settings && screen_ == Screen::RulesUpdate) rules_via_settings_ = true;       // das Regel-Update wurde aus den Einstellungen geoeffnet: Kreis geht dorthin zurueck
     else if (before == Screen::Maintenance && screen_ == Screen::RulesUpdate) rules_via_settings_ = false;
     // Ein aus "Mehr" geoeffneter Bildschirm fuehrt mit Kreis zurueck dorthin, nicht ins Startbild
@@ -1207,7 +1213,12 @@ void App::handle_impl(Button b) {
             }
             break;
         case Screen::Report:
-            if (b == Button::Circle) screen_ = Screen::Findings;
+            if (b == Button::Circle) {
+                if (maint_origin_) {  // aus "Mehr" geoeffnet: Kreis fuehrt dorthin zurueck
+                    maint_origin_ = false;
+                    screen_ = Screen::Maintenance;
+                } else screen_ = Screen::Findings;
+            }
             else if (b == Button::Triangle && !support_done_) {  // Support-Paket: schreibt nur neue Dateien im eigenen Ordner
                 support_ = svc_.make_support();
                 support_done_ = true;
@@ -1335,6 +1346,10 @@ void App::update() {
         if (after_check_repairs_) {
             after_check_repairs_ = false;
             open_repairs();
+        }
+        if (after_check_report_) {
+            after_check_report_ = false;
+            open_report();
         }
     }
     if (screen_ == Screen::SelfTest && st_state_ == StState::Running && st_rendered_) step_selftest();
@@ -1838,7 +1853,7 @@ void App::draw_start(Canvas& c) const {
             }
             button = S("start.view");
         }
-        if (has_result_ && untested > 0 && sub2.empty()) sub2 = S.fmt("start.not_tested", {{"n", std::to_string(untested)}});
+        if (has_result_ && untested > 0 && sub2.empty() && !(result_.incomplete && result_.findings.empty())) sub2 = S.fmt("start.not_tested", {{"n", std::to_string(untested)}});
         if (has_result_ && !result_.history_saved) {  // der seltene Fehlerfall hat Vorrang vor allen anderen Zeilen
             sub2 = S("start.history_failed");
             sub2col = kWarn;

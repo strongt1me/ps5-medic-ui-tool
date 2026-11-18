@@ -483,6 +483,22 @@ static void http_client_tests() {
         const auto r = client->get(srv.url(), 1000, 3000);
         CHECK(r.error.empty() && r.body == "abcde", "HTTP: chunked");
     }
+    {  // Schluss-Chunk da, Verbindung bleibt offen (Proxy): sofort fertig, nicht erst nach dem Zeitlimit
+        TestServer srv({{"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n2\r\nde\r\n0\r\n\r\n", 3000}});
+        const auto t0 = std::chrono::steady_clock::now();
+        const auto r = client->get(srv.url(), 1000, 6000);
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
+        CHECK(r.error.empty() && r.body == "abcde" && ms < 2000, "HTTP: chunked endet am Schluss-Chunk, auch wenn die Verbindung offen bleibt");
+    }
+    {  // grosse Fehlerseite: der Status (404) kommt an, nicht "too_large"
+        TestServer srv({{"HTTP/1.1 404 Not Found\r\nContent-Length: 9000\r\n\r\n" + std::string(9000, 'x')}});
+        const auto r = client->get(srv.url(), 4096, 3000);
+        CHECK(r.error.empty() && r.status == 404 && r.body.empty(), "HTTP: grosse 404-Seite wird als Status gemeldet");
+    }
+    {
+        TestServer srv({{"HTTP/1.1 200 OK\r\nContent-Length: 9000\r\n\r\n" + std::string(9000, 'x')}});
+        CHECK(client->get(srv.url(), 4096, 3000).error == "too_large", "HTTP: zu grosse 200-Antwort bleibt too_large");
+    }
     {
         TestServer srv({{"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"}});
         const auto r = client->get(srv.url(), 1000, 3000);
