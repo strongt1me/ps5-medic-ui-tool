@@ -2,6 +2,9 @@
 
 ## Unreleased / Unveröffentlicht
 
+- **English:** The stated firmware range is now 4.00 to 13.60 (README, badge, docs, `tools/fw_compat.py`); it was 4.00 to 14.10.
+- **Deutsch:** Der genannte Firmware-Bereich ist jetzt 4.00 bis 13.60 (README, Badge, Doku, `tools/fw_compat.py`); vorher 4.00 bis 14.10.
+
 ## 0.4.2 (2026-11-19)
 
 - **English:** GitHub is now English by default with a German option: `README.md` is English, `README.de.md` German, with a language bar in every README; the changelog lists English first; the issue template is English with a German variant ("Problem melden (Deutsch)"); the triage bot comments in English with the German text collapsed underneath. The release package now contains `README.md` (English), `README.de.md`, `TESTER.md` (English) and `TESTER.de.md`.

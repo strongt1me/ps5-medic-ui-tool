@@ -41,7 +41,7 @@ Jede Phase endet mit lauffähigem Stand + kurzem Status an Marc.
 > Stand: Regel-Update (Datei-Update und signierter Download), unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung sind fertig und getestet (siehe `docs/PHASE5.md`). Foren-Beiträge und GitHub-Release entfallen (Repository privat). Der signierte Regel-Download ist umgesetzt (Ed25519, siehe `docs/PHASE5.md`).
 1. Regel-Update (manuell, SHA-256) und signierter Download (Ed25519). – erledigt (Datei auf die Konsole legen oder mit □ von der eigenen Adresse laden; in PS5 Medic prüfen und installieren, Einzelheiten in `docs/PHASE5.md`).
 2. „Unbekannte Fehlerzeilen“ sammeln → Issue-Vorlage. – erledigt (Abschnitt im Bericht, `.github/ISSUE_TEMPLATE/problem.md`).
-3. Tester mit FW 4.00–14.10 suchen (GBAtemp, Discord), Fixtures einsammeln. – Anleitung und Entwurf des Aufrufs in `docs/TESTER.md`; Beiträge in Foren nur auf Marcs Anweisung; Tester melden sich über die Issues im öffentlichen Repository.
+3. Tester mit FW 4.00–13.60 suchen (GBAtemp, Discord), Fixtures einsammeln. – Anleitung und Entwurf des Aufrufs in `docs/TESTER.md`; Beiträge in Foren nur auf Marcs Anweisung; Tester melden sich über die Issues im öffentlichen Repository.
 
 ## Erster Prompt für Claude Code
 > Lies CLAUDE.md und docs/*. Starte mit Phase 0, Schritte 1–3. Lege für Regel B2 und B8 je ein Positiv- und Negativ-Fixture an und zeige mir danach die Ausgabe von `medic-cli check` für alle Fixtures.
