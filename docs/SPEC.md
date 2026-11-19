@@ -24,7 +24,7 @@ Ein Knopfdruck auf der PS5 → „Check-up“ → Liste der Befunde mit Ampel, K
 - Startbild beim Start (`ui/assets/splash.jpg`, in die Programmdatei eingebettet; jede Taste überspringt es), dann der Startbildschirm.
 - **Fünf Sprachen:** Deutsch, English, Français, Italiano, Español (Einstellungen; die Wahl steht in `/data/ps5medic/config.ini`, Schlüssel `language`). Ohne gespeicherte Wahl übernimmt die App beim Start die Systemsprache der Konsole (Deutsch, Englisch, Französisch, Italienisch, Spanisch); jede andere Systemsprache und jeder Lesefehler ergibt Englisch (Marc, 12. Nov. 2026). Wissenstexte (Regeln, Fehlercodes, Selbsttests) für fr/it/es liegen in `knowledge/l10n/`; Berichte und die dynamischen Texte der Reparatur-Vorschau (Hinweise, Notizen, Warnungen, Fehlermeldungen) gibt es in allen fünf Sprachen (Fragmenttabelle `libmedic/src/core_l10n.cpp`, Berichtsgerüst in `libmedic/src/report.cpp`); `medic-cli` am PC nur Deutsch und Englisch.
 - **Pro Spiel:** Titelliste mit Quellen, Systemdatenbank, verlangter Firmware, Backport (auch im Spiel eingebaut), Dateiprüfung, Fehlern der Konsole, Spielständen und möglichen Gründen.
-- Läuft auf den Firmwares 4.00 bis 13.60+ (soweit der Jailbreak dort läuft); getestet ist bisher nur FW 12.00.
+- Läuft auf den Firmwares 1.00 bis 14.22 (soweit der Jailbreak dort läuft); getestet ist bisher nur FW 12.00.
 
 ### 4.2 Reparieren (15 Fixes und 1 Hinweis)
 | Fix-ID | Aktion | Reversibel durch |

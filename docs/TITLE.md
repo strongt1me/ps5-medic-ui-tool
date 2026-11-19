@@ -21,7 +21,7 @@ Kachel  ->  Starter (eboot.bin, nativer Titel, sandboxed)  ->  sendet ps5medic-s
         ->  bleibt, bis die UI endet, und beendet sich dann
 ```
 
-1. **Starter** (`title/starter.c`): freestanding, nur `libkernel`/`libSceSystemService`, die Launcher-ELF steckt per `.incbin` in der `eboot.bin`. Er braucht den ELF-Lader des Jailbreaks (Port 9021), sonst zeigt er eine Meldung. Gebaut mit dem **ps5-payload-sdk 0.45** und `ps5-native-tool` (ps5-native-app-boilerplate), Ablauf in `title/build_title.sh`.
+1. **Starter** (`title/starter.c`): freestanding, nur `libkernel`/`libSceSystemService`, die Launcher-ELF steckt per `.incbin` in der `eboot.bin`. Er braucht den ELF-Lader des Jailbreaks (Port 9021), sonst zeigt er eine Meldung. Gebaut mit dem **ps5-payload-sdk 0.50** und `ps5-native-tool` (ps5-native-app-boilerplate), Ablauf in `title/build_title.sh`.
 2. **Launcher** (`ps5/launcher_main.cpp`): `ps5medic-start.elf` (steckt im Starter) startet nur die UI. Die frühere Fassung mit `-DMEDIC_TILE_INSTALL`, die den Kachel-Ordner schrieb, ist entfallen (12. Nov. 2026); diese Aufgabe hat der Installer `ps5/installer_main.cpp` für die native Kachel.
 3. **UI mit App-Kontext:** Der Start nutzt den Big-App-Lader aus websrv (`third_party/websrv-hbldr/`, GPL-3.0-or-later, nur der Code, **nicht** der Dienst): Die System-App `FAKE00000` wird per `sceSystemServiceLaunchApp` gestartet und per ptrace gegen `ps5medicui.elf` getauscht. Vorher setzt der Launcher wie websrv die System-`authid` und initialisiert den User-Dienst. Wird gerade eine App geschlossen, wartet er kurz und versucht den Start bis zu dreimal.
 4. **Kein Port, kein Netz:** Der Launcher lauscht auf nichts.
@@ -42,7 +42,7 @@ make ps5-start                 # ps5medic-start.elf (steckt im Starter)
 make deploy-ui deploy-title PS5_HOST=<ip>   # UI + Launcher nach PS5MEDIC, Ordner-App nach FAKE42007
 ```
 
-Voraussetzungen in WSL: **ps5-payload-sdk 0.45** (`PS5_PAYLOAD_SDK`, Standard `~/ps5-sdk-045/PS5_PAYLOAD_SDK`; `ps5-payload-sdk.zip` von github.com/ps5-payload-dev/sdk, SHA-256 `5fac64093d0e3e69f2584ce7935f24f703f622d9681f1495c85b9f00d1291a2c`, mit SDL2 unter `target/user/homebrew`), `ps5-native-tool` (`PS5_NATIVE_TOOL`, Standard `~/lmms-ps5/boilerplate/build/host/ps5-native-tool`), `libc.prx` des Boilerplates (`PS5_LIBC_PRX`, Standard `~/bfapp/dist/PPSA77505/sce_module/libc.prx`) und `clang-18`.
+Voraussetzungen in WSL: **ps5-payload-sdk 0.50** (`PS5_PAYLOAD_SDK`, Standard `~/ps5-sdk-050/PS5_PAYLOAD_SDK`; `ps5-payload-sdk.zip` von github.com/ps5-payload-dev/sdk, SHA-256 `2993a69e52fea04a32bf1753318fc60b3f918ab635bdf946870e7d1849557bb2`, mit SDL2 unter `target/user/homebrew`), `ps5-native-tool` (`PS5_NATIVE_TOOL`, Standard `~/lmms-ps5/boilerplate/build/host/ps5-native-tool`), `libc.prx` des Boilerplates (`PS5_LIBC_PRX`, Standard `~/bfapp/dist/PPSA77505/sce_module/libc.prx`) und `clang-18`.
 
 `make ps5-launch-title` baut ein reines Entwicklungswerkzeug (`ps5medic-launch-title.elf`): Es startet einen Titel wie ein Druck auf die Kachel (Titel-ID in `/data/ps5medic/launch_title.txt`, Ergebnis in `launch_title.log`), damit der ganze Weg ohne Fernseher prüfbar ist.
 

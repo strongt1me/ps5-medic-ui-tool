@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Baut den PS5-Medic-Starter als nativen PS5-Titel (Kachel unter "Medien"), in WSL oder Linux, mit dem ps5-payload-sdk 0.45.
+# Baut den PS5-Medic-Starter als nativen PS5-Titel (Kachel unter "Medien"), in WSL oder Linux, mit dem ps5-payload-sdk 0.50.
 # Gleiche Kette wie die Kacheln von PS5 Cooling & System Center und ps5-native-app-boilerplate/tools/build.sh:
 #   1. title/starter.c mit clang-18 und den Zielflags des SDK uebersetzen (der Starter-Launcher steckt als payload.elf darin)
 #   2. mit dem prospero-lld des SDK zu einem Zwischen-PIE linken (title/title.ld)
 #   3. ps5-native-tool: in einen PS5-Titel umwandeln (Prozessparameter) und signieren
 # Aufruf: bash title/build_title.sh [ps5medic-start.elf]   (Standard: build-ps5/ps5medic-start.elf, `make ps5-start`)
 # Braucht (Pfade per Umgebung aenderbar):
-#   PS5_PAYLOAD_SDK  Standard ~/ps5-sdk-045/PS5_PAYLOAD_SDK   das SDK 0.45 (ps5-payload-sdk.zip, SHA-256 5fac6409...)
+#   PS5_PAYLOAD_SDK  Standard ~/ps5-sdk-050/PS5_PAYLOAD_SDK   das SDK 0.50 (ps5-payload-sdk.zip, SHA-256 2993a69e...)
 #   PS5_NATIVE_TOOL  Standard ~/lmms-ps5/boilerplate/build/host/ps5-native-tool   aus ps5-native-app-boilerplate
 #   PS5_LIBC_PRX     Standard ~/bfapp/dist/PPSA77505/sce_module/libc.prx          signierter Laufzeit-Shim des Boilerplates
 #   clang-18
@@ -16,13 +16,13 @@
 set -euo pipefail
 
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-SDK=${PS5_PAYLOAD_SDK:-$HOME/ps5-sdk-045/PS5_PAYLOAD_SDK}
+SDK=${PS5_PAYLOAD_SDK:-$HOME/ps5-sdk-050/PS5_PAYLOAD_SDK}
 TOOL=${PS5_NATIVE_TOOL:-$HOME/lmms-ps5/boilerplate/build/host/ps5-native-tool}
 LIBC=${PS5_LIBC_PRX:-$HOME/bfapp/dist/PPSA77505/sce_module/libc.prx}
 START_ELF=${1:-$REPO/build-ps5/ps5medic-start.elf}
 CLANG=$(command -v clang-18 || true)
 [[ -x $TOOL ]] || { echo "ps5-native-tool fehlt: $TOOL (PS5_NATIVE_TOOL=<pfad> setzen)" >&2; exit 2; }
-[[ -x $SDK/bin/prospero-lld ]] || { echo "SDK 0.45 fehlt: $SDK (PS5_PAYLOAD_SDK=<pfad> setzen)" >&2; exit 2; }
+[[ -x $SDK/bin/prospero-lld ]] || { echo "SDK 0.50 fehlt: $SDK (PS5_PAYLOAD_SDK=<pfad> setzen)" >&2; exit 2; }
 [[ -x $CLANG ]] || { echo "clang-18 fehlt" >&2; exit 2; }
 [[ -f $LIBC ]] || { echo "Laufzeit-Shim fehlt: $LIBC (PS5_LIBC_PRX=<pfad> setzen)" >&2; exit 2; }
 [[ -f $START_ELF ]] || { echo "Starter-Launcher fehlt: $START_ELF (make ps5-start)" >&2; exit 2; }

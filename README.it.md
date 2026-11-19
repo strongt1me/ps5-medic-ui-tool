@@ -7,7 +7,7 @@
 **Check-up, diagnosi in linguaggio semplice e riparazione sicura per console PS5 con jailbreak, come app a schermo intero per il televisore con DualSense.**
 
 ![Versione](https://img.shields.io/badge/Versione-0.4.3-1f6feb)
-![Firmware](https://img.shields.io/badge/FW-da%204.00%20a%2013.60%2B-2ea44f)
+![Firmware](https://img.shields.io/badge/FW-da%201.00%20a%2014.22-2ea44f)
 ![Licenza](https://img.shields.io/badge/Licenza-GPL--3.0--or--later-blue)
 ![Piattaforma](https://img.shields.io/badge/Piattaforma-PS5%20Payload-003791)
 ![Lingue](https://img.shields.io/badge/Lingue-DE%20%C2%B7%20EN%20%C2%B7%20FR%20%C2%B7%20IT%20%C2%B7%20ES-lightgrey)
@@ -22,7 +22,7 @@
 
 **PS5 Medic** controlla su una PS5 con jailbreak lo **stato attuale** della configurazione Homebrew (firmware, catena del jailbreak, kstuff, ShadowMount+, payload, giochi, file, configurazione), spiega le cause note degli errori **in linguaggio semplice** e, dove è possibile farlo in modo sicuro, ripara **con backup e funzione di annullamento**. Un solo tasto: *Avvia check-up*.
 
-> **Firmware:** l'app funziona con i firmware da **4.00 a 13.60+** (se il jailbreak funziona su quella versione). Finora è stata provata su una PS5 Pro con firmware 12.00 e ShadowMount+ 1.7beta12. Gli altri firmware e le altre configurazioni non sono stati provati; per questo le regole sono formulate in base alla versione e contrassegnate singolarmente come *confermate* o *non ancora confermate*.
+> **Firmware:** l'app funziona con i firmware da **1.00 a 14.22** (se il jailbreak funziona su quella versione). Finora è stata provata su una PS5 Pro con firmware 12.00 e ShadowMount+ 1.7beta12. Gli altri firmware e le altre configurazioni non sono stati provati; per questo le regole sono formulate in base alla versione e contrassegnate singolarmente come *confermate* o *non ancora confermate*.
 
 ## Cosa sa fare
 
@@ -139,7 +139,7 @@ make host        # medic-cli e l'anteprima dell'interfaccia su PC
 make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # immagini dell'interfaccia su PC (de en fr it es)
 ```
 
-Per la console servono il [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versione 0.45** (`PS5_PAYLOAD_SDK`) e SDL2 per la PS5 (solo per l'interfaccia di riserva); le istruzioni di compilazione si trovano in [docs/PHASE3.md](docs/PHASE3.md), struttura e compilazione dell'app nativa in [docs/NATIVE.md](docs/NATIVE.md).
+Per la console servono il [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versione 0.50** (`PS5_PAYLOAD_SDK`) e SDL2 per la PS5 (solo per l'interfaccia di riserva); le istruzioni di compilazione si trovano in [docs/PHASE3.md](docs/PHASE3.md), struttura e compilazione dell'app nativa in [docs/NATIVE.md](docs/NATIVE.md).
 
 ```bash
 make native-ui                      # app nativa (build-native/FAKE42007)

@@ -19,12 +19,12 @@
 #   make title     Starter-Titel (nativer Titel mit eboot.bin) fuer die Kachel unter "Medien" bauen: build-title/FAKE42007 (docs/TITLE.md)
 #   make deploy-title Alter Weg, braucht ALLOW_OLD_STARTER=1 (gleiche Kennung wie die native App!): Ordner-App FAKE42007 per FTP nach /data/homebrew/FAKE42007/ legen; ShadowMount+ legt die Kachel an (PS5_HOST=<ip> noetig)
 #
-# SDK: PS5_PAYLOAD_SDK zeigt auf den Ordner mit bin/, target/, toolchain/ (Standard: ~/ps5-sdk-045/PS5_PAYLOAD_SDK, ps5-payload-sdk 0.45).
+# SDK: PS5_PAYLOAD_SDK zeigt auf den Ordner mit bin/, target/, toolchain/ (Standard: ~/ps5-sdk-050/PS5_PAYLOAD_SDK, ps5-payload-sdk 0.50).
 # SDL2 fuer ps5-ui liegt im selben SDK-Sysroot unter target/user/homebrew/ (dort von `make deps` o.ae. installiert,
 # siehe docs/PHASE3.md): nicht im Repo, kein Netzzugriff beim normalen Bauen noetig.
 BUILD ?= build
 PS5_BUILD ?= build-ps5
-PS5_PAYLOAD_SDK ?= $(HOME)/ps5-sdk-045/PS5_PAYLOAD_SDK
+PS5_PAYLOAD_SDK ?= $(HOME)/ps5-sdk-050/PS5_PAYLOAD_SDK
 PS5_HOMEBREW := $(PS5_PAYLOAD_SDK)/target/user/homebrew
 PS5_HOST ?=
 PS5_FTP_PORT ?= 2121

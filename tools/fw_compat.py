@@ -12,7 +12,7 @@ nachweislich laeuft (--baseline, Standard 12.00): Was dort nicht aus den Bibliot
 Aufruf (aus dem Projektordner):
   python3 tools/fw_compat.py --fw-root "C:/FW 1.00-12.70" --parser "C:/FW 1.00-12.70/build_import_export_db.py" \\
       --service build-ps5/ps5medicservice.elf --native-imports build-native/obj/imports.txt --native-libs libkernel libScePad libSceSystemService \\
-      libSceUserService libSceVideoOut libSceLibcInternal [--min 4.00] [--max 13.60]
+      libSceUserService libSceVideoOut libSceLibcInternal [--min 1.00] [--max 14.22]
 
 Rueckgabe: 0 = in jeder lesbaren Firmware (--min bis --max) ist alles vorhanden; 1 = es fehlt etwas; 2 = Eingabefehler.
 """
@@ -129,8 +129,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--native-imports", type=Path, help="Textdatei mit den Importnamen der nativen App (title/build_native_ui.sh schreibt sie nach build-native/obj/imports.txt)")
     ap.add_argument("--native-libs", nargs="+", default=[], help="Bibliotheken der nativen App (ohne Endung)")
     ap.add_argument("--baseline", default="12.00", help="Firmware, auf der die App laeuft (Standard 12.00)")
-    ap.add_argument("--min", dest="vmin", default="4.00", help="kleinste unterstuetzte Firmware (Standard 4.00)")
-    ap.add_argument("--max", dest="vmax", default="13.60", help="groesste unterstuetzte Firmware (Standard 13.60)")
+    ap.add_argument("--min", dest="vmin", default="1.00", help="kleinste unterstuetzte Firmware (Standard 1.00)")
+    ap.add_argument("--max", dest="vmax", default="14.22", help="groesste unterstuetzte Firmware (Standard 14.22)")
     args = ap.parse_args(argv)
 
     targets: list[tuple[str, list[str], set[str]]] = []

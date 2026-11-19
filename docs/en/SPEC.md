@@ -24,7 +24,7 @@ One button press on the PS5 → "Check-up" → list of findings with traffic lig
 - Splash screen at start (`ui/assets/splash.jpg`, embedded in the executable; any button skips it), then the start screen.
 - **Five languages:** Deutsch, English, Français, Italiano, Español (Settings; the choice is stored in `/data/ps5medic/config.ini`, key `language`). Without a saved choice the app takes over the console's system language at start (German, English, French, Italian, Spanish); any other system language and any read error results in English (Marc, 12 Nov 2026). Knowledge texts (rules, error codes, self-tests) for fr/it/es are in `knowledge/l10n/`; reports and the dynamic texts of the repair preview (hints, notes, warnings, error messages) exist in all five languages (fragment table `libmedic/src/core_l10n.cpp`, report skeleton in `libmedic/src/report.cpp`); `medic-cli` on the PC only German and English.
 - **Per game:** title list with sources, system database, required firmware, backport (also built into the game), file check, console errors, save data and possible reasons.
-- Runs on firmwares 4.00 to 13.60+ (as far as the jailbreak runs there); so far only FW 12.00 has been tested.
+- Runs on firmwares 1.00 to 14.22 (as far as the jailbreak runs there); so far only FW 12.00 has been tested.
 
 ### 4.2 Repair (15 fixes and 1 hint)
 | Fix ID | Action | Reversible by |

@@ -8,7 +8,7 @@ So far PS5 Medic has been tested on **one** console (PS5 Pro, FW 12.00). The rul
 
 | What | Why |
 |---|---|
-| **Firmware 4.00 to 13.60+** (the app is meant to run there), including those in between | Rules are tied to versions (e.g. A1 from 13.60, B3 only 13.60, B4 only 9.00); whether they fit other firmwares or fire wrongly, nobody knows yet. |
+| **Firmware 1.00 to 14.22** (the app is meant to run there), including those in between | Rules are tied to versions (e.g. A1 from 13.60, B3 only 13.60, B4 only 9.00); whether they fit other firmwares or fire wrongly, nobody knows yet. |
 | **Other jailbreak chains**: etaHEN, kstuff-lite, Payload Manager, BD-JB, WebKit autoloader | Process names and start times differ (rules A1–A4). |
 | **Different ShadowMount+ versions** | Config format and log lines change from version to version. |
 | **Consoles with real problems** | Every case PS5 Medic does not recognise is a possible new rule. Especially valuable: the "Unknown error lines" in the report. |
@@ -58,7 +58,7 @@ The checksum protects against damaged or truncated copies. It does **not** prote
 
 ## Draft for a call in forums or on Discord (not published, stays a template; forum posts only on Marc's instruction)
 
-> **PS5 Medic is looking for testers (FW 4.00 to 13.60+)**
+> **PS5 Medic is looking for testers (FW 1.00 to 14.22)**
 >
 > PS5 Medic is a full-screen app for jailbroken PS5 consoles that checks the homebrew setup (ShadowMount+, kstuff, payloads, file names, configuration), explains errors in plain language and repairs safe cases with backup and undo. So far tested only on a PS5 Pro with FW 12.00.
 >

@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Baut die Oberflaeche als native PS5-App (Ordner-App fuer /data/homebrew), in WSL oder Linux, mit dem ps5-payload-sdk 0.45.
+# Baut die Oberflaeche als native PS5-App (Ordner-App fuer /data/homebrew), in WSL oder Linux, mit dem ps5-payload-sdk 0.50.
 # Gleiche Kette wie title/build_title.sh, aber mit der ganzen UI (ps5/native_ui_main.cpp, ui/src/*) statt des Starters. Die kleine C++-Laufzeit
 # (app_crt.cpp, app_cpp_runtime.cpp), das Linkerskript und die Symbolliste stammen aus ps5-native-app-boilerplate (kein libc++-Laufzeitpaket,
 # keine Ausnahmen, kein RTTI).
 # Aufruf: bash title/build_native_ui.sh [TITEL-ID]     (Standard FAKE42007 = die Kachel "PS5 Medic"; andere IDs fuer Testkacheln)
-# Braucht: PS5_PAYLOAD_SDK (SDK 0.45), PS5_BOILERPLATE (Standard ~/lmms-ps5/boilerplate, gebaut: build/host/ps5-native-tool), PS5_LIBC_PRX, clang-18.
+# Braucht: PS5_PAYLOAD_SDK (SDK 0.50), PS5_BOILERPLATE (Standard ~/lmms-ps5/boilerplate, gebaut: build/host/ps5-native-tool), PS5_LIBC_PRX, clang-18.
 # Ergebnis: build-native/<TITEL-ID>/ -> `make deploy-native` (FTP nach /data/homebrew/<TITEL-ID>).
 set -euo pipefail
 
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 ID=${1:-FAKE42007}
-SDK=${PS5_PAYLOAD_SDK:-$HOME/ps5-sdk-045/PS5_PAYLOAD_SDK}
+SDK=${PS5_PAYLOAD_SDK:-$HOME/ps5-sdk-050/PS5_PAYLOAD_SDK}
 BOILER=${PS5_BOILERPLATE:-$HOME/lmms-ps5/boilerplate}
 TOOL=${PS5_NATIVE_TOOL:-$BOILER/build/host/ps5-native-tool}
 LIBC=${PS5_LIBC_PRX:-$HOME/bfapp/dist/PPSA77505/sce_module/libc.prx}
 CLANG=$(command -v clang-18 || true)
 [[ -x $TOOL ]] || { echo "ps5-native-tool fehlt: $TOOL" >&2; exit 2; }
-[[ -x $SDK/bin/prospero-lld ]] || { echo "SDK 0.45 fehlt: $SDK" >&2; exit 2; }
+[[ -x $SDK/bin/prospero-lld ]] || { echo "SDK 0.50 fehlt: $SDK" >&2; exit 2; }
 [[ -x $CLANG ]] || { echo "clang-18 fehlt" >&2; exit 2; }
 [[ -f $LIBC ]] || { echo "Laufzeit-Shim fehlt: $LIBC" >&2; exit 2; }
 NATIVE=$BOILER/tooling/native
