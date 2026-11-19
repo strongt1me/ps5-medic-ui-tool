@@ -6,7 +6,7 @@
       "name": "PS5 Medic",
       "filename": "ps5medicui.elf",
       "url": "https://raw.githubusercontent.com/strongt1me/ps5-medic-ui-tool/main/payload-manager/ps5medicui.elf",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "last_update": "2026-11-19",
       "category": "Utilities",
       "description": "Vollbild-App: prueft den Live-Zustand des Homebrew-Setups (Firmware, HEN, kstuff, ShadowMount+, Payloads, Dateien, Configs), erklaert Fehler in Klartext und repariert sicher mit Backup und Undo. Hinweis: Fuer den DualSense-Controller ueber websrv starten (Big-App-Lader); als reiner Payload laeuft die Bedienung nur ohne Pad.",
@@ -18,11 +18,11 @@
       "name": "PS5 Medic Diagnose",
       "filename": "ps5medic.elf",
       "url": "https://raw.githubusercontent.com/strongt1me/ps5-medic-ui-tool/main/payload-manager/ps5medic.elf",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "last_update": "2026-11-19",
       "category": "Utilities",
       "description": "Kleiner Diagnose-Payload ohne Oberflaeche: schreibt den Bericht nach /data/ps5medic/last_check.txt und legt einen Snapshot in /data/ps5medic/snapshots/ ab.",
-      "checksum": "c536e910f30e3d8735dba2b44e9546c82efe9aaaaa3cd840fef3734890f2ecb4",
+      "checksum": "0c41eebce835bfce51b7164b06ac982c11399c78259692eb530a43f4f2d1004d",
       "author": "strongt1me"
     }
   ]

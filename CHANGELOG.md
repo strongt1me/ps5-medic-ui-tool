@@ -2,8 +2,13 @@
 
 ## Unreleased / Unveröffentlicht
 
+## 0.4.2 (2026-11-19)
+
+- **English:** GitHub is now English by default with a German option: `README.md` is English, `README.de.md` German, with a language bar in every README; the changelog lists English first; the issue template is English with a German variant ("Problem melden (Deutsch)"); the triage bot comments in English with the German text collapsed underneath. The release package now contains `README.md` (English), `README.de.md`, `TESTER.md` (English) and `TESTER.de.md`.
+- **Deutsch:** GitHub ist jetzt standardmäßig Englisch mit deutscher Option: `README.md` englisch, `README.de.md` deutsch, in jeder README eine Sprachleiste; der Changelog nennt Englisch zuerst; die Issue-Vorlage ist englisch mit deutscher Variante („Problem melden (Deutsch)“); der Triage-Bot kommentiert englisch, der deutsche Text steht eingeklappt darunter. Das Release-Paket enthält jetzt `README.md` (englisch), `README.de.md`, `TESTER.md` (englisch) und `TESTER.de.md`.
 - **English:** The documentation in `docs/` is now also available in English (`docs/en/`, including the generated rule table `docs/en/RULE_TABLE.md`); every document has a language switch at the top, and the English README links to the English versions.
 - **Deutsch:** Die Dokumentation in `docs/` gibt es jetzt auch auf Englisch (`docs/en/`, auch die erzeugte Regeltabelle `docs/en/RULE_TABLE.md`); jedes Dokument hat oben einen Sprachumschalter, die englische README verweist auf die englischen Fassungen.
+
 ## 0.4.1 (2026-11-19)
 
 - **English:** The evidence lines of findings (e.g. error history "… 56x, 2026-11-17") now show the date in the language's notation as well, in the UI and in the report (core function `localize_dates`).

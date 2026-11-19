@@ -232,7 +232,9 @@ dist: ps5 ps5-service native-ui ps5-launcher
 	cp knowledge/error_codes.json $(DIST_DIR)/PS5MEDIC/error_codes.json
 	cp ps5/homebrew/sce_sys/icon0.png $(DIST_DIR)/PS5MEDIC/sce_sys/icon0.png
 	cp -r build-native/$(NATIVE_ID) $(DIST_DIR)/$(NATIVE_ID)
-	cp LICENSE README.md README.de.md README.fr.md README.it.md README.es.md THIRD_PARTY.md docs/TESTER.md $(DIST_DIR)/
+	cp LICENSE README.md README.de.md README.fr.md README.it.md README.es.md THIRD_PARTY.md $(DIST_DIR)/
+	cp docs/en/TESTER.md $(DIST_DIR)/TESTER.md
+	cp docs/TESTER.md $(DIST_DIR)/TESTER.de.md
 	cd $(DIST_DIR) && find . -type f ! -name SHA256SUMS.txt | sort | xargs sha256sum > SHA256SUMS.txt
 	cd dist && python3 -m zipfile -c $(DIST_ZIP) $(DIST_NAME)
 	cp $(PS5_LAUNCHER_ELF) dist/ps5medic-launcher.elf
