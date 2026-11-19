@@ -82,9 +82,16 @@ std::string game_label(const Str& S, const medic::GameInfo& g) {
     return S(pre == "PPSA" || pre == "CUSA" || pre == "FAKE" ? "title.unknown_game" : "title.system_app");
 }
 
-std::string pretty_ts(const std::string& ts) {
-    if (ts.size() >= 15 && ts[8] == 'T')
-        return ts.substr(0, 4) + "-" + ts.substr(4, 2) + "-" + ts.substr(6, 2) + " " + ts.substr(9, 2) + ":" + ts.substr(11, 2) + " UTC";
+// Tag "20261108" oder "2026-11-08" -> "08.11.2026" (Deutsch) bzw. "2026-11-08" (sonst).
+std::string pretty_day(const std::string& ts, Lang lang) {
+    const bool dashed = ts.size() >= 10 && ts[4] == '-' && ts[7] == '-';
+    if (!dashed && ts.size() < 8) return ts;
+    const std::string y = ts.substr(0, 4), m = dashed ? ts.substr(5, 2) : ts.substr(4, 2), d = dashed ? ts.substr(8, 2) : ts.substr(6, 2);
+    return lang == Lang::De ? d + "." + m + "." + y : y + "-" + m + "-" + d;
+}
+
+std::string pretty_ts(const std::string& ts, Lang lang) {
+    if (ts.size() >= 15 && ts[8] == 'T') return pretty_day(ts, lang) + " " + ts.substr(9, 2) + ":" + ts.substr(11, 2) + " UTC";
     return ts;
 }
 
@@ -1736,7 +1743,7 @@ void App::draw_chrome(Canvas& c) const {
         right = W - M - w - 64 - 16;
     }
     if (viewing_old_) {  // ein gespeicherter Check-up: gut sichtbar, damit man ihn nie fuer den aktuellen haelt
-        const std::string t = S.fmt("checks.old_banner", {{"ts", pretty_ts(view_ts_)}});
+        const std::string t = S.fmt("checks.old_banner", {{"ts", pretty_ts(view_ts_, lang_)}});
         const int w = small().width(t) + 64;
         c.fill_round_rect(right - w, 36, w, 44, 22, rgba(255, 179, 71, 40));
         draw_icon(c, Icon::History, right - w + 28, 58, 26, kWarn, kWarn);
@@ -2287,7 +2294,7 @@ void App::draw_detail(Canvas& c) const {
         std::string line = f->rule_id + "  ·  " + S.fmt("detail.urgency", {{"u", S("urgency." + urg)}});
         if (f->status == "new") line += "  ·  " + S("detail.history_new");
         else if (f->status == "recurring") {
-            const std::string day = f->first_seen.size() >= 8 ? f->first_seen.substr(0, 4) + "-" + f->first_seen.substr(4, 2) + "-" + f->first_seen.substr(6, 2) : f->first_seen;
+            const std::string day = pretty_day(f->first_seen, lang_);
             line += "  ·  " + S.fmt("detail.history_recurring", {{"since", day}, {"n", std::to_string(f->seen_runs)}});
         }
         if (medic::is_pending(*f)) line += "  ·  " + S.fmt("detail.pending", {{"k", std::to_string(f->seen_runs < 1 ? 1 : f->seen_runs)}, {"n", std::to_string(f->confirm_runs)}});
@@ -2582,7 +2589,7 @@ void App::draw_history(Canvas& c) const {
         // Was wurde gemacht (gross), wegen welches Problems und wann (klein); rechts der Zustand als Marke und die Zahl der Schritte
         const int rightw = 300;
         body().draw(c, M + 108, y + 12, elide(body(), fix_name(t.fix), cw - 108 - rightw - 32), kText);
-        small().draw(c, M + 108, y + 56, elide(small(), rule_title(t.rule, "") + "  ·  " + pretty_ts(t.ts.empty() ? t.txn : t.ts), cw - 108 - rightw - 32), kDim);
+        small().draw(c, M + 108, y + 56, elide(small(), rule_title(t.rule, "") + "  ·  " + pretty_ts(t.ts.empty() ? t.txn : t.ts, lang_), cw - 108 - rightw - 32), kDim);
         const std::string skey = "history.state." + t.state;
         const std::string st = S.has(skey) ? S(skey) : t.state;
         const int bw = small().width(st) + 24;
@@ -2634,8 +2641,8 @@ void App::draw_checklist(Canvas& c) const {
         const int tile = big ? 84 : 56, tx = M + (big ? 120 : 94);
         draw_icon_badge(c, ic, M + 18, y + (ch - tile) / 2, tile, col);
         const int ty = big ? y + 18 : y + 6;
-        (big ? title() : body()).draw(c, tx, ty, pretty_ts(e.ts), kText);
-        if (big) draw_badge(c, tx + title().width(pretty_ts(e.ts)) + 24, ty + 8, S("checks.latest"), kAccent);
+        (big ? title() : body()).draw(c, tx, ty, pretty_ts(e.ts, lang_), kText);
+        if (big) draw_badge(c, tx + title().width(pretty_ts(e.ts, lang_)) + 24, ty + 8, S("checks.latest"), kAccent);
         small().draw(c, tx, big ? y + 78 : y + 42, S.fmt("checks.line", {{"fw", e.fw.empty() ? "?" : e.fw}, {"rules", e.rules_version.empty() ? "?" : e.rules_version}}), kDim, cw - 900);
         // rechts oben: Marken je Schweregrad (Symbol und Zahl), sonst "keine Befunde"; darunter der Vergleich mit dem Check-up davor
         int x = M + cw - 28;
@@ -2869,7 +2876,7 @@ void App::draw_gamedetail(Canvas& c) const {
     } else {
         const auto& e = g.errors.front();
         std::vector<std::string> rest;
-        if (!e.last.empty()) rest.push_back(S.fmt("games.d.err_last_short", {{"day", e.last}}));
+        if (!e.last.empty()) rest.push_back(S.fmt("games.d.err_last_short", {{"day", pretty_day(e.last, lang_)}}));
         if (g.errors.size() > 1) rest.push_back(S.fmt("games.d.errors_more", {{"n", std::to_string(g.errors.size())}}));
         row(St::Warn, S("games.d.errors"), S.fmt("games.d.err_short", {{"code", e.code}, {"n", std::to_string(e.count)}}), rest);
     }
@@ -2969,7 +2976,7 @@ void App::draw_hidden(Canvas& c) const {
 void App::draw_compare(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     title_icon(c, Icon::Report, kTintBlue, S("compare.title"));
-    small().draw(c, M + 4, 196, S.fmt("compare.sub", {{"newer", pretty_ts(cmp_new_.ts)}, {"older", pretty_ts(cmp_old_.ts)}}), kDim);
+    small().draw(c, M + 4, 196, S.fmt("compare.sub", {{"newer", pretty_ts(cmp_new_.ts, lang_)}, {"older", pretty_ts(cmp_old_.ts, lang_)}}), kDim);
     // Zeilen: Abschnittskopf und je Befund eine Zeile
     struct Row {
         bool head;
@@ -3039,7 +3046,7 @@ void App::draw_undo_confirm(Canvas& c) const {
     draw_icon(c, Icon::Undo, M + 112, 338, 72, kWarn, kWarn);
     title().draw(c, M + 196, 312, S("undo.title"), kWarn);
     int y = 410;
-    for (auto& l : wrap_text(body(), S.fmt("undo.body", {{"fix", fix_name(undo_target_.fix)}, {"ts", pretty_ts(undo_target_.ts.empty() ? undo_target_.txn : undo_target_.ts)}}), W - 2 * M - 120, 5)) {
+    for (auto& l : wrap_text(body(), S.fmt("undo.body", {{"fix", fix_name(undo_target_.fix)}, {"ts", pretty_ts(undo_target_.ts.empty() ? undo_target_.txn : undo_target_.ts, lang_)}}), W - 2 * M - 120, 5)) {
         body().draw(c, M + 60, y, l, kText);
         y += body().line_height() + 6;
     }

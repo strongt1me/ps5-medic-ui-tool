@@ -2,6 +2,8 @@
 
 ## Unveröffentlicht / Unreleased
 
+- **Deutsch:** In der deutschen Oberfläche stehen Datumsangaben jetzt als TT.MM.JJJJ (z. B. „16.11.2026 18:00 UTC“) statt JJJJ-MM-TT: Verlauf, Vergleich, Rückgängig-Frage, Befund-Verlauf („seit …“) und Spiele-Fehler („zuletzt …“). Die anderen Sprachen behalten JJJJ-MM-TT.
+- **English:** Dates in the German interface now read DD.MM.YYYY (e.g. "16.11.2026 18:00 UTC") instead of YYYY-MM-DD: history, compare, undo prompt, finding history ("since …") and game errors ("last …"). The other languages keep YYYY-MM-DD.
 - **Deutsch:** Nach einer erfolgreichen Reparatur (und nach dem Rückgängigmachen) weist der Fertig-Bildschirm darauf hin, dass die Änderung oft erst nach einem Neustart wirkt, weil ShadowMount+ und der Payload Manager ihre Einstellungen und Ordner nur beim Start lesen; danach einen neuen Check-up machen. Die Karte wächst mit dem Text mit.
 - **English:** After a successful repair (and after an undo) the done screen now says the change often only takes effect after a restart, because ShadowMount+ and the Payload Manager read their settings and folders only at start; then run a new check-up. The card grows with the text.
 - **Deutsch:** Die Einstellungen zeigen nur noch die Sprache. Der doppelte Eintrag „Regel-Update“ ist entfernt, das Regel-Update öffnet man unter Mehr → „Regeln aktualisieren“ (derselbe Bildschirm); Kreis führt von dort zurück nach Mehr.
