@@ -111,7 +111,7 @@
 2. ShadowMount+ creates the **PS5 Medic** tile under "Media" within seconds.
 3. Pressing the tile starts the app (first the splash screen, then the start screen). On start it sends the service to the ELF loader (port 9021), which must be running; a restart of the console changes nothing, the tile remains. ◯ on the start screen ends the app and the service.
 
-The `FAKE42007` tile replaces the earlier ways (launcher, websrv, tiles `FAKE42008` and `FAKE42009`). If old tiles are still there, they can be removed in the PS5 storage settings. Details about the app: [docs/NATIVE.md](docs/NATIVE.md).
+The `FAKE42007` tile replaces the earlier ways (launcher, websrv, tiles `FAKE42008` and `FAKE42009`). If old tiles are still there, they can be removed in the PS5 storage settings. Details about the app: [docs/en/NATIVE.md](docs/en/NATIVE.md).
 
 ## Controls
 
@@ -139,7 +139,7 @@ make host        # medic-cli and the PC preview of the UI
 make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # UI images on the PC (de en fr it es)
 ```
 
-For the console you need the [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **version 0.45** (`PS5_PAYLOAD_SDK`) and SDL2 for the PS5 (only for the fallback UI); the build instructions for it are in [docs/PHASE3.md](docs/PHASE3.md), the structure and build of the native app in [docs/NATIVE.md](docs/NATIVE.md).
+For the console you need the [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **version 0.45** (`PS5_PAYLOAD_SDK`) and SDL2 for the PS5 (only for the fallback UI); the build instructions for it are in [docs/en/PHASE3.md](docs/en/PHASE3.md), the structure and build of the native app in [docs/en/NATIVE.md](docs/en/NATIVE.md).
 
 ```bash
 make native-ui                      # native app (build-native/FAKE42007)
@@ -165,25 +165,27 @@ The interface is in `ui/i18n/<language>.json`; the knowledge texts for French, I
 
 ## Contributing
 
-**Testers wanted** (other firmwares and setups): [docs/TESTER.md](docs/TESTER.md). Report problems with the issue template, pasting in the report (□).
+**Testers wanted** (other firmwares and setups): [docs/en/TESTER.md](docs/en/TESTER.md). Report problems with the issue template, pasting in the report (□).
 
 A new rule needs: an entry in `knowledge/rules.json` with a source, a positive and a negative fixture under `tests/fixtures/` and `expect.json`. The tests enforce both. Fixtures are **synthetic**: real file and game names do not belong in the repo.
 
 ## Documentation
 
+The documents are available in English (`docs/en/`) and German (`docs/`); each has a language switch at the top. `CLAUDE.md` stays German.
+
 | File | Content |
 |---|---|
 | `CLAUDE.md` | Entry point for Claude Code: goal, stack, limits, way of working |
-| `docs/SPEC.md` | Functions, operation, non-goals |
-| `docs/ARCHITECTURE.md` | Modules, data flow, rule format, security |
-| `docs/RULES.md` | Rule catalogue with sources, status and deviations |
-| `docs/DIAGNOSE.md` | Diagnostic expansion: checks built, decisions D1–D21, build plan |
-| `docs/ROADMAP.md` | Phases 0–5 |
-| `docs/PHASE2.md` to `PHASE5.md` | Console and snapshot, interface and app context, report and release, rule update and community |
-| `docs/TESTER.md` | Taking part as a tester |
-| `docs/COMMUNITY.md` | Sending reports, and how they become new rules and rule updates |
-| `docs/NATIVE.md` | The interface as a native app: tile, service, protocol, status |
-| `docs/TITLE.md` | Older way (starter, launcher, websrv), only kept as a fallback |
+| `docs/en/SPEC.md` | Functions, operation, non-goals |
+| `docs/en/ARCHITECTURE.md` | Modules, data flow, rule format, security |
+| `docs/en/RULES.md` | Rule catalogue with sources, status and deviations |
+| `docs/en/DIAGNOSE.md` | Diagnostic expansion: checks built, decisions D1–D21, build plan |
+| `docs/en/ROADMAP.md` | Phases 0–5 |
+| `docs/en/PHASE2.md` to `PHASE5.md` | Console and snapshot, interface and app context, report and release, rule update and community |
+| `docs/en/TESTER.md` | Taking part as a tester |
+| `docs/en/COMMUNITY.md` | Sending reports, and how they become new rules and rule updates |
+| `docs/en/NATIVE.md` | The interface as a native app: tile, service, protocol, status |
+| `docs/en/TITLE.md` | Older way (starter, launcher, websrv), only kept as a fallback |
 | `knowledge/` | Rules (`rules.json`), error codes (`error_codes.json`), translations (`l10n/`) and JSON schemas |
 
 ## License and acknowledgements

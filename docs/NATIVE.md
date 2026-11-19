@@ -1,6 +1,8 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Die Oberfläche als native App (Stand 12. Nov. 2026)
 
+**Deutsch** · [English](en/NATIVE.md)
+
 **Warum:** Die UI läuft bisher als geliehene Big App `FAKE00000` (der Lader von websrv steckt sie in die Hülle der PSNow-App). In dieser Hülle führt die PS-Taste nicht zum Homescreen (nur ein Ton, siehe `docs/AUDIT.md`). Eine native App mit eigenem Titel verhält sich wie jede andere App.
 
 ## Entwurf

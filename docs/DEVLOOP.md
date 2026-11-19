@@ -1,5 +1,7 @@
 # Medic-UI mit PS5 DevLoop prüfen (Entwicklung, 11. Nov. 2026)
 
+**Deutsch** · [English](en/DEVLOOP.md)
+
 [PS5 DevLoop](https://github.com/griches/PS5_DevLoop) (Gary Riches, GPL-3.0-or-later) ist ein Payload mit Python-Client: Es erzeugt ein virtuelles DualSense (Tasten drücken) und liefert Bilder vom laufenden Titel (`grab`) oder vom ganzen Bildschirm (`shot`). Damit lässt sich die Medic-UI **auf der Konsole** bedienen und ansehen, statt nur in der PC-Vorschau (`medic-ui-preview`). **Nur ein Entwicklungswerkzeug**: Medic selbst speist nie Eingaben ein, der Controller-Test (D14) braucht ein echtes Pad.
 
 ## Was im Repository ist

@@ -171,6 +171,8 @@ Eine neue Regel braucht: einen Eintrag in `knowledge/rules.json` mit Quelle, ein
 
 ## Dokumentation
 
+Die Dokumente gibt es auf Deutsch (`docs/`) und Englisch (`docs/en/`); oben steht jeweils ein Sprachumschalter.
+
 | Datei | Inhalt |
 |---|---|
 | `CLAUDE.md` | Einstieg für Claude Code: Ziel, Stack, Grenzen, Arbeitsweise |

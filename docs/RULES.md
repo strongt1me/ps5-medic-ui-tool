@@ -1,5 +1,7 @@
 # PS5 Medic – Startkatalog der Regeln
 
+**Deutsch** · [English](en/RULES.md)
+
 Recherche-Stand: 7./8. Nov. 2026. Jede Regel hat eine Quelle. `verified`:
 - **doc** = steht in der offiziellen Projekt-Doku/Release-Notes
 - **community** = Lösung aus Issue/Forum, von Nutzern bestätigt, nicht vom Entwickler

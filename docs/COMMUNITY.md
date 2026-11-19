@@ -1,5 +1,7 @@
 # Community: Berichte einsenden, neue Regeln, Regel-Updates
 
+**Deutsch** · [English](en/COMMUNITY.md)
+
 Stand 12. Nov. 2026. So entstehen neue Regeln aus Fehlern, die bei anderen Nutzern auftreten. **Nichts davon ändert die App ohne Prüfung**: Die Konsole sendet nur Rohmaterial, eine Regel schreibt, prüft und signiert der Maintainer (Marc).
 
 ```

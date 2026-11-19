@@ -2,6 +2,8 @@
 
 ## Unreleased / Unveröffentlicht
 
+- **English:** The documentation in `docs/` is now also available in English (`docs/en/`, including the generated rule table `docs/en/RULE_TABLE.md`); every document has a language switch at the top, and the English README links to the English versions.
+- **Deutsch:** Die Dokumentation in `docs/` gibt es jetzt auch auf Englisch (`docs/en/`, auch die erzeugte Regeltabelle `docs/en/RULE_TABLE.md`); jedes Dokument hat oben einen Sprachumschalter, die englische README verweist auf die englischen Fassungen.
 ## 0.4.1 (2026-11-19)
 
 - **English:** The evidence lines of findings (e.g. error history "… 56x, 2026-11-17") now show the date in the language's notation as well, in the UI and in the report (core function `localize_dates`).

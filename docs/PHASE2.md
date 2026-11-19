@@ -1,5 +1,7 @@
 # Phase 2 – Vorbereitung und erster Konsolenlauf
 
+**Deutsch** · [English](en/PHASE2.md)
+
 Stand 8. Nov. 2026. Der Diagnose-Payload ist am selben Tag zum ersten Mal auf einer Konsole gelaufen; die Ergebnisse stehen unten im Abschnitt „Ergebnis des ersten Laufs“. Die Tabelle „Offene Punkte“ beschreibt den Stand **vor** diesem Lauf.
 
 ## Was schon da ist

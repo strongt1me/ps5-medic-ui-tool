@@ -1,5 +1,7 @@
 # Phase 5 – Community
 
+**Deutsch** · [English](en/PHASE5.md)
+
 Stand 8. Nov. 2026. Regel-Update (Datei und signierter Download), unbekannte Fehlerzeilen, Issue-Vorlage und Tester-Anleitung stehen. **Entschieden (8. Nov.):** privat, kein GitHub-Release, keine Foren-Beiträge; **geändert am 16. Nov. 2026:** Das Repository wird öffentlich, `v0.4.0` ist das Latest-Release (siehe `docs/PHASE4.md`).
 
 ## 1. Regel-Update (Datei oder signierter Download)

@@ -1,5 +1,7 @@
 # Diagnose-Katalog und Bauplan (Stand 11. Nov. 2026)
 
+**Deutsch** · [English](en/DIAGNOSE.md)
+
 Ziel: PS5 Medic wird zum vollständigen System- und Spiele-Doktor, der Hardware- und Software-Probleme einer gejailbreakten Konsole findet, erklärt und, wo sicher möglich, reversibel behebt. Grundlage ist eine Recherche in zehn Teilthemen (Hardware, Systemsoftware, Profi-Methodik, Reverse-Engineering-Techniken, Konsolen-Dateisystem lesend per FTP, Homebrew-Stack, Console Service Tool, Tool-Katalog, zwei Quellcode-Analysen lizenzierter Tools). Der ausführliche Bericht liegt außerhalb des Repositorys; diese Datei hält fest, was daraus gebaut ist, was als Nächstes kommt und was nie gebaut wird.
 
 ## Leitregeln

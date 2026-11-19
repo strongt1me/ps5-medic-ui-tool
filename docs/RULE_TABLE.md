@@ -1,6 +1,8 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Regel-Uebersicht
 
+**Deutsch** · [English](en/RULE_TABLE.md)
+
 Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.55, 101 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |

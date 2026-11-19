@@ -1,6 +1,8 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Prüfbericht 12. Nov. 2026 (Stabilität, Sicherheit, Kompatibilität)
 
+**Deutsch** · [English](en/AUDIT.md)
+
 Werkzeuge: ASAN/UBSAN-Build des ganzen Projekts (`medic-tests`), Fuzzer `tests/fuzz_image.cpp` (`medic-fuzz-image <Läufe> <Startwert>`), vier lesende Prüfläufe (Sicherheit, Ausfallszenarien, stille Fehler, Firmware-Kompatibilität). Ohne Konsole nicht prüfbar ist alles, was nur auf der Hardware läuft; das steht unten als „offen“.
 
 ## Behoben und durch Tests gedeckt (Host)

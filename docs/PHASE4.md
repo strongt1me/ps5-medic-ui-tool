@@ -1,5 +1,7 @@
 # Phase 4 – Bericht und Release
 
+**Deutsch** · [English](en/PHASE4.md)
+
 Stand 8. Nov. 2026. Bericht, Anonymisierung, QR-Code, □-Taste, READMEs und `make dist` stehen und sind getestet. **Auf der Konsole noch nicht bestätigt:** ob der QR-Code vom Fernseher mit einem Handy lesbar ist. **Entschieden (8. Nov. 2026):** Lizenz GPL-3.0-or-later; das Repository bleibt privat, kein öffentliches Release.
 
 ## Bericht

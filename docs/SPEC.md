@@ -1,5 +1,7 @@
 # PS5 Medic – Spezifikation
 
+**Deutsch** · [English](en/SPEC.md)
+
 ## 1. Problem
 Jailbreak-Setups auf der PS5 bestehen aus vielen Teilen (Exploit-Kette, HEN/kstuff, ShadowMount+, Payload-Manager, Plugins), die versions- und firmwareabhängig zusammenspielen. Typische Fehler (Kernel-Panic, Spiel startet nicht, Image wird nicht gemountet) landen als immer gleiche Hilferufe in Foren und GitHub-Issues. Die Ursache steht oft in einer Config-Zeile, einem Dateinamen oder einer Versionskombination.
 

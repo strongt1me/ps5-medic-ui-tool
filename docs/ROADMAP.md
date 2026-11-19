@@ -1,5 +1,7 @@
 # PS5 Medic – Bauplan für Claude Code
 
+**Deutsch** · [English](en/ROADMAP.md)
+
 Jede Phase endet mit lauffähigem Stand + kurzem Status an Marc.
 
 ## Phase 0 – Host-Kern (nur PC/WSL, ohne Konsole)

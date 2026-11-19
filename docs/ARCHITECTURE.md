@@ -1,5 +1,7 @@
 # PS5 Medic – Architektur
 
+**Deutsch** · [English](en/ARCHITECTURE.md)
+
 ```
 ┌──────────────────────── PS5-App (Vollbild) ────────────────────────┐
 │  UI (eigener Software-Canvas)  ←→  App-Controller (Screens, Input)  │

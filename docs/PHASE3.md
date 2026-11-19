@@ -1,5 +1,7 @@
 # Phase 3 – Vollbild-UI
 
+**Deutsch** · [English](en/PHASE3.md)
+
 Stand 8. Nov. 2026. Der plattformunabhängige Teil steht und ist am PC getestet. `make ps5-ui` baut `build-ps5/ps5medicui.elf` (SDL2 + Pad-Anbindung, siehe unten). Auf der Konsole läuft die UI, wenn sie über websrvs Big-App-Lader gestartet wird (`make launch-ui`): laut `ui.log` kommen Bild und Controller (siehe „Erster Konsolenlauf"). Der ganze Ablauf ist am 8. Nov. auf der Test-Konsole durchgespielt (Check-up, Detail, Reparatur-Vorschau, Reparatur, Rückgängig, erneuter Check-up), belegt durch `ui.log` und das Journal; Phase 3 ist damit abgeschlossen.
 
 ## Was schon da ist (`ui/`)

@@ -1,5 +1,7 @@
 # Mitmachen als Tester
 
+**Deutsch** · [English](en/TESTER.md)
+
 *English summary at the end.*
 
 PS5 Medic ist bisher auf **einer** Konsole getestet (PS5 Pro, FW 12.00). Die Regeln stammen aus Issues, READMEs und Release-Notes und sind nur dort wirklich überprüft, wo es im Katalog `docs/RULES.md` steht. Was fehlt, sind andere Firmwares und Setups.
