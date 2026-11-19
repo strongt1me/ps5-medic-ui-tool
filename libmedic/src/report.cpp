@@ -507,6 +507,27 @@ std::string md_code(std::string s) {
 
 }  // namespace
 
+std::string localize_dates(const std::string& text, ReportLang lang) {
+    if (lang == ReportLang::En) return text;
+    const auto digit = [](char c) { return c >= '0' && c <= '9'; };
+    const auto word = [&](char c) { return digit(c) || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_'; };
+    const char sep = lang == ReportLang::De ? '.' : '/';
+    std::string out;
+    out.reserve(text.size());
+    for (std::size_t i = 0; i < text.size();) {
+        const bool fits = i + 10 <= text.size() && digit(text[i]) && digit(text[i + 1]) && digit(text[i + 2]) && digit(text[i + 3]) && text[i + 4] == '-' && digit(text[i + 5]) &&
+                          digit(text[i + 6]) && text[i + 7] == '-' && digit(text[i + 8]) && digit(text[i + 9]) && (i == 0 || !word(text[i - 1])) && (i + 10 == text.size() || !word(text[i + 10]));
+        if (fits) {
+            out += text.substr(i + 8, 2) + sep + text.substr(i + 5, 2) + sep + text.substr(i, 4);
+            i += 10;
+        } else {
+            out += text[i++];
+        }
+    }
+    return out;
+}
+
+
 std::string redact_credentials(const std::string& text) { return mask_credentials(text); }
 
 std::string redact_ipv6(const std::string& text) { return mask_ipv6(text); }
@@ -630,7 +651,7 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
         o << "### [" << label(x.severity, T) << "] " << x.rule_id << "\n\n" << pick(x.text_de, x.text_en, "rules", x.rule_id, "text") << "\n\n";
         const std::string label_text = evidence_label(x.evidence_path);
         for (const auto& e : x.evidence)
-            o << "- " << (T("Evidenz", "Evidence", "Preuve", "Prova", "Evidencia")) << (label_text.empty() ? "" : " (" + label_text + ")") << ": " << md_code(e) << "\n";
+            o << "- " << (T("Evidenz", "Evidence", "Preuve", "Prova", "Evidencia")) << (label_text.empty() ? "" : " (" + label_text + ")") << ": " << md_code(localize_dates(e, lang)) << "\n";
         if (!x.fix.empty()) o << "- " << (T("Reparatur: ", "Repair: ", "Réparation : ", "Riparazione: ", "Reparación: ")) << md_code(x.fix) << "\n";
         o << "- " << (T("Quelle: ", "Source: ", "Source : ", "Fonte: ", "Fuente: ")) << x.source << " (" << verified_text(x.verified, T) << ")\n";
         {
@@ -788,7 +809,7 @@ std::string build_report_compact(const ReportInput& in, ReportLang lang, std::si
         const std::string label_text = evidence_label(x.evidence_path);
         for (const auto& e : x.evidence) {
             if (n++ >= 3) break;
-            block += line(" > " + (label_text.empty() ? "" : label_text + ": ") + clip(anonymize(e), 90));
+            block += line(" > " + (label_text.empty() ? "" : label_text + ": ") + clip(anonymize(localize_dates(e, lang)), 90));
         }
         const std::string more = line(T("... weitere Befunde im Bericht", "... more findings in the report", "... autres résultats dans le rapport", "... altri rilevamenti nel rapporto", "... más hallazgos en el informe"));
         const bool last = shown + 1 == in.findings.size();

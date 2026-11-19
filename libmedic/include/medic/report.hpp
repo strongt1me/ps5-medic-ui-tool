@@ -26,6 +26,10 @@ enum class ReportLang { De, En, Fr, It, Es };
 const char* report_lang_code(ReportLang l);
 ReportLang report_lang_from_code(const std::string& code);
 
+// Ersetzt Tagesdaten der Form JJJJ-MM-TT im Text (z. B. in Belegen der Befunde) durch die Schreibweise der Sprache:
+// Deutsch TT.MM.JJJJ, Franzoesisch/Italienisch/Spanisch TT/MM/JJJJ, Englisch bleibt JJJJ-MM-TT. Andere Zeichenfolgen bleiben unveraendert.
+std::string localize_dates(const std::string& text, ReportLang lang);
+
 // Eine Gruppe gleichartiger Fehlerzeilen aus dem Log (Zahlen und Kennungen sind beim Gruppieren ausgeblendet).
 struct UnknownLine {
     std::string example;  // erste Zeile dieser Gruppe, unveraendert

@@ -106,6 +106,14 @@ void report_tests_content() {
     const ReportInput in = sample_input();
     const std::string de = build_report(in, ReportLang::De), en = build_report(in, ReportLang::En);
 
+    {
+        const std::string ev = "CE-105773-3 - NPXS40087 (Systemanwendung) - 56x, 2026-11-17";
+        CHECK(localize_dates(ev, ReportLang::De) == "CE-105773-3 - NPXS40087 (Systemanwendung) - 56x, 17.11.2026", "Datum in Belegen: Deutsch TT.MM.JJJJ");
+        CHECK(localize_dates(ev, ReportLang::Fr).find("17/11/2026") != std::string::npos && localize_dates(ev, ReportLang::Es).find("17/11/2026") != std::string::npos, "Datum in Belegen: fr/it/es TT/MM/JJJJ");
+        CHECK(localize_dates(ev, ReportLang::En) == ev, "Datum in Belegen: Englisch bleibt JJJJ-MM-TT");
+        CHECK(localize_dates("a2026-11-17 2026-11-177 12026-11-17x 2026-1-17", ReportLang::De) == "a2026-11-17 2026-11-177 12026-11-17x 2026-1-17", "Datum in Belegen: nur frei stehende Tagesdaten");
+        CHECK(localize_dates("2026-11-17", ReportLang::De) == "17.11.2026" && localize_dates("", ReportLang::De).empty(), "Datum in Belegen: Anfang/Ende und leer");
+    }
     CHECK(has(de, "# PS5 Medic – Bericht") && has(de, "Erstellt: 08.11.2026 19:05 UTC"), "Bericht DE: Kopf und Zeit");
     CHECK(has(de, "Regelbasis 2026.11.08 (22)"), "Bericht DE: Regelbasis");
     CHECK(has(de, "Firmware: 12.00") && has(de, "Modell: CFI-7021 B01Y"), "Bericht DE: Firmware und Modell");

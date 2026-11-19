@@ -2209,7 +2209,7 @@ void App::draw_findings(Canvas& c) const {
         if (!cur->evidence.empty() && ty + small().line_height() * 2 + 40 < py + ph - 28 - foot_h) {  // erster Beleg als Code-Feld, wenn Platz bleibt
             const int ey = py + ph - 28 - foot_h - small().line_height() - 36;
             c.fill_round_rect(ix, ey, pw - 64, small().line_height() + 24, 12, rgba(0, 0, 0, 70));
-            small().draw(c, ix + 16, ey + 12, elide(small(), cur->evidence.front(), pw - 64 - 32), rgb(150, 200, 255));
+            small().draw(c, ix + 16, ey + 12, elide(small(), medic::localize_dates(cur->evidence.front(), medic::report_lang_from_code(lang_code(lang_))), pw - 64 - 32), rgb(150, 200, 255));
         }
         int fy = py + ph - 28 - foot_h + 8;
         if (!cur->fix.empty() && !viewing_old_) {
@@ -2367,7 +2367,7 @@ void App::draw_detail(Canvas& c) const {
             small().draw(c, M + 36, ty, S("detail.evidence_none"), kDim);
         } else {
             for (std::size_t i = 0; i < std::min(f->evidence.size(), kMaxEvidence); ++i, ty += lh)
-                small().draw(c, M + 36, ty, elide(small(), annotate_titles(f->evidence[i]), cw - 72), kText);
+                small().draw(c, M + 36, ty, elide(small(), medic::localize_dates(annotate_titles(f->evidence[i]), medic::report_lang_from_code(lang_code(lang_))), cw - 72), kText);
             if (f->evidence.size() > kMaxEvidence)
                 small().draw(c, M + 36, ty, S.fmt("detail.evidence_more", {{"n", std::to_string(f->evidence.size() - kMaxEvidence)}}), kDim);
         }
