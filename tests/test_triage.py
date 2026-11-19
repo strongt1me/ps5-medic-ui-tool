@@ -39,7 +39,9 @@ class Triage(unittest.TestCase):
         self.assertNotIn("<script>", c)
         self.assertNotIn("@alle", c)  # Erwaehnungen sind entschaerft
         self.assertIn("triage:label=bericht,neue-zeilen", c)
-        self.assertIn("2 Hinweis" if False else "Befunde: 0 kritisch, 1 Warnung, 1 Hinweis", c)
+        self.assertIn("Befunde: 0 kritisch, 1 Warnung, 1 Hinweis", c)
+        self.assertIn("Findings: 0 critical, 1 warning, 1 info", c)
+        self.assertTrue(c.rstrip().endswith("-->") and "<details><summary>Deutsch</summary>" in c)
 
     def test_not_a_report(self):
         c = t.comment("Mein Spiel startet nicht, bitte helft mir")

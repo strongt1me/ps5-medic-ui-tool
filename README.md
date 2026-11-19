@@ -1,195 +1,195 @@
 <div align="center">
 
-<img src="docs/images/splash.jpg" alt="PS5 Medic: Systemdiagnose, Wiederherstellung, Wartung" width="860">
+<img src="docs/images/splash.jpg" alt="PS5 Medic: system diagnosis, recovery, maintenance" width="860">
 
 # PS5 Medic
 
-**Check-up, Klartext-Diagnose und sichere Reparatur für gejailbreakte PS5-Konsolen, als Vollbild-App für den Fernseher mit DualSense.**
+**Check-up, plain-language diagnosis and safe repair for jailbroken PS5 consoles, as a full-screen app for the TV with DualSense.**
 
 ![Version](https://img.shields.io/badge/Version-0.4.1-1f6feb)
-![Firmware](https://img.shields.io/badge/FW-4.00%20bis%2014.10-2ea44f)
-![Lizenz](https://img.shields.io/badge/Lizenz-GPL--3.0--or--later-blue)
-![Plattform](https://img.shields.io/badge/Plattform-PS5%20Payload-003791)
-![Sprachen](https://img.shields.io/badge/Sprachen-DE%20%C2%B7%20EN%20%C2%B7%20FR%20%C2%B7%20IT%20%C2%B7%20ES-lightgrey)
+![Firmware](https://img.shields.io/badge/FW-4.00%20to%2014.10-2ea44f)
+![License](https://img.shields.io/badge/License-GPL--3.0--or--later-blue)
+![Platform](https://img.shields.io/badge/Platform-PS5%20Payload-003791)
+![Languages](https://img.shields.io/badge/Languages-DE%20%C2%B7%20EN%20%C2%B7%20FR%20%C2%B7%20IT%20%C2%B7%20ES-lightgrey)
 
-**Deutsch** · [English](README.en.md) · [Français](README.fr.md) · [Italiano](README.it.md) · [Español](README.es.md)
+**English** · [Deutsch](README.de.md) · [Français](README.fr.md) · [Italiano](README.it.md) · [Español](README.es.md)
 
-**[⬇ Download: neuestes Release](https://github.com/strongt1me/ps5-medic-ui-tool/releases/latest)**
+**[⬇ Download: latest release](https://github.com/strongt1me/ps5-medic-ui-tool/releases/latest)**
 
-<img src="docs/images/de/01_start.png" alt="Startbildschirm" width="860">
+<img src="docs/images/en/01_start.png" alt="Start screen" width="860">
 
 </div>
 
-**PS5 Medic** prüft auf einer gejailbreakten PS5 den **Live-Zustand** des Homebrew-Setups (Firmware, Jailbreak-Kette, kstuff, ShadowMount+, Payloads, Spiele, Dateien, Konfiguration), erklärt bekannte Fehlerursachen **in Klartext** und repariert, wo das sicher möglich ist, **mit Backup und Rückgängig-Funktion**. Ein Knopfdruck: *Check-up starten*.
+**PS5 Medic** checks the **live state** of the Homebrew setup on a jailbroken PS5 (firmware, jailbreak chain, kstuff, ShadowMount+, payloads, games, files, configuration), explains known causes of errors **in plain language** and, where it is safe to do so, repairs them **with backup and an undo function**. One button press: *Start check-up*.
 
-> **Firmware:** Die App unterstützt die Firmwares **4.00 bis 14.10** (soweit der Jailbreak dort läuft). Getestet wurde sie bisher auf einer PS5 Pro mit Firmware 12.00 und ShadowMount+ 1.7beta12. Andere Firmwares und Setups sind nicht getestet; die Regeln sind deshalb versionsgebunden formuliert und einzeln als *bestätigt* oder *noch nicht bestätigt* gekennzeichnet.
+> **Firmware:** The app runs on firmwares **4.00 to 14.10** (as far as the jailbreak works there). So far it has been tested on a PS5 Pro with firmware 12.00 and ShadowMount+ 1.7beta12. Other firmwares and setups have not been tested; the rules are therefore worded per version and each one is marked as *confirmed* or *not yet confirmed*.
 
-## Was es kann
+## What it can do
 
 <table>
   <tr>
     <td width="50%" valign="top">
       <h3>🩺 Check-up</h3>
-      Über 100 Regeln zu Jailbreak-Kette und HEN, ShadowMount+, Plugins, Speicher, Spielordnern, Datenbanken, Konten, Kraken Mount, ampr-emu-ng sowie Start- und Fehlerverlauf. Jeder Befund hat Schweregrad, Klartext, Beleg (Datei/Zeile/Wert), Quelle und eine <b>Verlässlichkeit mit Grund</b>. Was nicht gelesen werden konnte, steht als <i>nicht geprüft</i>, nie als „in Ordnung“. Warnungen und Hinweise, die du nicht selbst beheben kannst, lassen sich mit <b>Options</b> ausblenden (nie kritische; steigt der Schweregrad, erscheinen sie wieder).
+      Over 100 rules on the jailbreak chain and HEN, ShadowMount+, plugins, storage, game folders, databases, accounts, Kraken Mount, ampr-emu-ng, and the start-up and error history. Every finding has a severity, plain-language text, evidence (file/line/value), a source and a <b>reliability with a reason</b>. What could not be read is shown as <i>not checked</i>, never as “OK”. Warnings and notices you cannot fix yourself can be hidden with <b>Options</b> (never critical ones; they come back if the severity rises).
     </td>
     <td width="50%" valign="top">
-      <h3>🎮 Pro Spiel</h3>
-      <b>Spiel startet nicht?</b> Die Ansicht „Spiele“ bündelt alles zu einem Titel: Quellen (Ordner/Image), Eintrag in der Systemdatenbank, verlangte Firmware und Backport, Dateiprüfung, Fehler der Konsole, Spielstände, ShadowMount+-Log und die möglichen Gründe. Ist der <b>Backport im Spiel selbst eingebaut</b> (SDK-Version der <code>eboot.bin</code> liegt nicht über der Firmware), wird das erkannt und nicht als Fehler gemeldet.
+      <h3>🎮 Per game</h3>
+      <b>Game won't start?</b> The "Games" view gathers everything about one title: sources (folder/image), entry in the system database, required firmware and backport, file check, console errors, save data, ShadowMount+ log and the possible reasons. If the <b>backport is built into the game itself</b> (the SDK version of the <code>eboot.bin</code> is not higher than the firmware), this is recognised and not reported as an error.
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <h3>🛠 Reparieren mit Undo</h3>
-      Vierzehn reversible Fixes (Image umbenennen, ShadowMount+-Schlüssel setzen, v1-Zeilen in die v2-Sektionen übertragen, BackPork aus dem Autoload nehmen, Duplikate verschieben, Autoload-Wartezeit, doppelte oder fehlende Autoload-Einträge, Autoload einschalten, defekte ELF-Datei oder leeres Image beiseitelegen, Dateiname mit falscher Schreibung, Reste abgebrochener Übertragungen und unvollständige Packordner beiseitelegen) und eine Anleitung für verschachtelte Images. Die Vorschau zeigt genau, was sich ändert <b>und was gesichert wird</b> (Kopie mit Größe, Verschieben ohne Kopie); nichts passiert ohne ✕. Jede Änderung steht im Journal und lässt sich zurücknehmen. <b>Nie löschen</b>, nur verschieben oder umbenennen.
+      <h3>🛠 Repair with undo</h3>
+      Fourteen reversible fixes (rename an image, set the ShadowMount+ key, carry v1 lines over into the v2 sections, take BackPork out of autoload, move duplicates, autoload delay, duplicate or missing autoload entries, switch autoload on, set aside a broken ELF file or an empty image, a file name with the wrong case, leftovers of aborted transfers and incomplete pack folders) and a guide for nested images. The preview shows exactly what changes <b>and what is backed up</b> (copy with size, move without copy); nothing happens without ✕. Every change is in the journal and can be undone. <b>Never delete</b>, only move or rename.
     </td>
     <td valign="top">
-      <h3>🧪 Selbsttest</h3>
-      Elf Tests der Konsole: Speicher, Temperaturen, Datenbanken, Payloads und Images, Lesetest, lokales Netz (nur Router), Wärmetest, Speichermuster, Schreibtest, Controller-Tasten und Anzeige-Muster. Jeder Test sagt, was er <i>nicht</i> beweist.
-    </td>
-  </tr>
-  <tr>
-    <td valign="top">
-      <h3>📚 Fehlercodes</h3>
-      Nachschlagewerk zu 150 Meldungen wie CE-108262-9: Erklärung, Schritte laut Sony, Quelle als Text und QR-Code. Nach einem Check-up zeigt der Eintrag, was Medic an der Konsole sieht.
-    </td>
-    <td valign="top">
-      <h3>🕑 Verlauf und Vergleich</h3>
-      Jeder Check-up wird einzeln gespeichert. Der aktuellste steht oben, frühere lassen sich aufklappen. Der Vergleich zeigt neu, behoben (mit „durch Reparatur: …“, wenn Medic es behoben hat), Schweregrad geändert, unverändert und die <b>geänderte Einrichtung</b> (Firmware, Regelstand, Versionen von ShadowMount+, kstuff und ampr-emu-ng, Zahl der Spiele).
+      <h3>🧪 Self-test</h3>
+      Eleven tests of the console: storage, temperatures, databases, payloads and images, read test, local network (router only), heat test, memory pattern, write test, controller buttons and display patterns. Each test says what it does <i>not</i> prove.
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <h3>📄 Bericht und Regel-Update</h3>
-      Markdown-Bericht mit QR-Code fürs Handy (IP/MAC, Konto-IDs, Seriennummern werden entfernt). Das <b>Support-Paket</b> (△ im Bericht) ist ein ZIP mit Berichten, Fakten und Vergleich, in dem zusätzlich Spiel- und Titelnamen durch Platzhalter ersetzt sind; den Schlüssel dazu behältst nur du. Neue Regeln und Fehlercodes per Datei oder, nur auf Bestätigung, von der eigenen Adresse, <b>nur mit gültiger Ed25519-Signatur</b>.
+      <h3>📚 Error codes</h3>
+      Reference for 150 messages such as CE-108262-9: explanation, steps according to Sony, source as text and QR code. After a check-up, the entry shows what Medic sees on the console.
     </td>
     <td valign="top">
-      <h3>🌍 Fünf Sprachen</h3>
-      Deutsch, English, Français, Italiano und Español (Einstellungen, die Wahl wird gespeichert). Bedienung mit dem DualSense.
+      <h3>🕑 History and comparison</h3>
+      Every check-up is stored on its own. The newest is at the top, earlier ones can be unfolded. The comparison shows new, resolved (with “by repair: …” when Medic fixed it), severity changed, unchanged and the <b>changed setup</b> (firmware, rules version, ShadowMount+, kstuff and ampr-emu-ng versions, number of games).
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>📄 Report and rule update</h3>
+      Markdown report with a QR code for your phone (IP/MAC, account IDs and serial numbers are removed). The <b>support package</b> (△ in the report) is a ZIP with reports, facts and comparison in which game and title names are also replaced by placeholders; only you keep the key. New rules and error codes by file or, only on confirmation, from your own address, <b>only with a valid Ed25519 signature</b>.
+    </td>
+    <td valign="top">
+      <h3>🌍 Five languages</h3>
+      Deutsch, English, Français, Italiano and Español (settings, the choice is saved). Operation with the DualSense.
     </td>
   </tr>
 </table>
 
-## Bilder
+## Images
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/de/03_findings.png" alt="Befunde"></td>
-    <td width="50%"><img src="docs/images/de/04_detail_0.png" alt="Befund im Detail"></td>
+    <td width="50%"><img src="docs/images/en/03_findings.png" alt="Findings"></td>
+    <td width="50%"><img src="docs/images/en/04_detail_0.png" alt="Finding in detail"></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/de/05_fix_preview.png" alt="Reparatur-Vorschau mit Sicherung"></td>
-    <td width="50%"><img src="docs/images/de/06d_compare.png" alt="Vergleich zweier Check-ups"></td>
+    <td width="50%"><img src="docs/images/en/05_fix_preview.png" alt="Repair preview with backup"></td>
+    <td width="50%"><img src="docs/images/en/06d_compare.png" alt="Comparison of two check-ups"></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/de/22_game_detail.png" alt="Ansicht Pro Spiel"></td>
-    <td width="50%"><img src="docs/images/de/17_selftest_list.png" alt="Selbsttest"></td>
+    <td width="50%"><img src="docs/images/en/22_game_detail.png" alt="Per-game view"></td>
+    <td width="50%"><img src="docs/images/en/17_selftest_list.png" alt="Self-test"></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/de/10_error_codes.png" alt="Fehlercodes"></td>
-    <td width="50%"><img src="docs/images/de/03b_report.png" alt="Bericht mit QR-Code und Support-Paket"></td>
+    <td width="50%"><img src="docs/images/en/10_error_codes.png" alt="Error codes"></td>
+    <td width="50%"><img src="docs/images/en/03b_report.png" alt="Report with QR code and support package"></td>
   </tr>
 </table>
 
-## Sicherheit
+## Safety
 
-- **Nie löschen**, nur verschieben oder umbenennen. Dateien, die geändert werden, werden vorher gesichert (`/data/ps5medic/backups/`), jede Änderung steht im Journal (`/data/ps5medic/journal.jsonl`).
-- **Kein Schreiben ohne ✕**: Reparatur und Rückgängig passieren erst nach ausdrücklicher Bestätigung auf der Vorschau. Weitere Schreibaktionen: der Bericht (□), das Regel-Update (✕ auf dem Angebot), die gewählte Sprache in `/data/ps5medic/config.ini`, die Ergebnisse jedes Check-ups (`/data/ps5medic/checks/`, für den Verlauf und den Vergleich), das Journal und die eine Testdatei des gründlichen Selbsttests in `/data/ps5medic` (wird überschrieben, nie gelöscht).
-- Reparaturen schreiben nur in einer Whitelist (ShadowMount+-Ordner, Autoload-Listen, die eigenen Scanpfade, `/data/ps5medic`). Nie unter `/system`, `/system_ex`, `/dev` oder im Flash. Die Kachel ist ein Ordner unter `/data/homebrew/`, den du selbst kopierst oder den der Installer `ps5medic-launcher.elf` anlegt; die Kachel selbst erzeugt ShadowMount+.
-- **Das Netz wird nur für den Regel-Download benutzt**, nur auf □ und Bestätigung, nur zur Adresse aus deiner `config.ini`, und es wird nichts gesendet außer einer GET-Anfrage. Daneben gibt es einen lokalen Netztest im Selbsttest: nur ein Verbindungsaufbau zum Router im privaten Adressbereich, ohne Daten, nie ins Internet.
-- Keine Exploits, keine Firmware-Änderungen, keine Funktionen zum Beschaffen, Entsperren oder Verteilen von Spielen, Keys oder Firmware. PS5 Medic repariert die **Umgebung**, nicht Inhalte. Es empfiehlt nie ein Update der Systemsoftware.
+- **Never deletes**, only moves or renames. Files that are changed are backed up beforehand (`/data/ps5medic/backups/`), and every change is recorded in the journal (`/data/ps5medic/journal.jsonl`).
+- **No writing without ✕**: repair and undo happen only after explicit confirmation on the preview. Other write actions: the report (□), the rule update (✕ on the offer), the selected language in `/data/ps5medic/config.ini`, the results of every check-up (`/data/ps5medic/checks/`, for the history and the comparison), the journal and the one test file of the thorough self-test in `/data/ps5medic` (overwritten, never deleted).
+- Repairs write only within a whitelist (ShadowMount+ folder, autoload lists, the app's own scan paths, `/data/ps5medic`). Never under `/system`, `/system_ex`, `/dev` or in flash. The tile is a folder under `/data/homebrew/` that you copy yourself or that the installer `ps5medic-launcher.elf` creates; ShadowMount+ creates the tile itself.
+- **The network is used only for the rule download**, only on □ and confirmation, only to the address from your `config.ini`, and nothing is sent except a GET request. In addition there is a local network test in the self-test: only a connection set-up to the router in the private address range, without data, never to the internet.
+- No exploits, no firmware changes, no functions for obtaining, unlocking or distributing games, keys or firmware. PS5 Medic repairs the **environment**, not content. It never recommends a system software update.
 
-## Voraussetzungen
+## Requirements
 
-- Eine bereits gejailbreakte PS5 mit ELF-Loader (Port 9021) und FTP (hier Port 2121).
-- **ShadowMount+ muss laufen**: Es legt die Kachel an und gibt der App Zugriff auf `/data`. Ist es angehalten, meldet die App „Dienstdatei nicht lesbar“.
-- Die Oberfläche besteht aus zwei Teilen: der **Kachel** (eine native App, die nur anzeigt und den DualSense liest, deshalb führt die PS-Taste ganz normal zum Homescreen) und dem **Dienst** `ps5medicservice.elf`, der die Konsole liest und das Bild zeichnet. Die App sendet den Dienst beim Start selbst an den ELF-Lader (Port 9021); **weder websrv noch ein Homebrew-Lader ist nötig**. Ohne Kachel läuft nur der Diagnose-Payload (`ps5medic.elf`).
+- An already jailbroken PS5 with an ELF loader (port 9021) and FTP (port 2121 here).
+- **ShadowMount+ must be running**: it creates the tile and gives the app access to `/data`. If it is stopped, the app reports “Service file not readable”.
+- The interface has two parts: the **tile** (a native app that only displays and reads the DualSense, so the PS button simply returns to the home screen) and the **service** `ps5medicservice.elf`, which reads the console and draws the picture. The app sends the service to the ELF loader (port 9021) itself on start; **neither websrv nor a Homebrew loader is needed**. Without the tile, only the diagnostic payload (`ps5medic.elf`) runs.
 
 ## Installation
 
-1. Die beiden Ordner aus dem Release per FTP nach `/data/homebrew/` kopieren: `PS5MEDIC` (Dienst `ps5medicservice.elf`, Diagnose-Payload `ps5medic.elf`, `rules.json`, `error_codes.json`, Icon) und `FAKE42007` (die native App).
-   Alternativ ohne FTP: `ps5medic-launcher.elf` (eigene Datei im Release, nicht im Zip) an den ELF-Lader (Port 9021) senden (Payload Manager oder `nc <ip> 9021 < ps5medic-launcher.elf`). Er schreibt beide Ordner selbst, startet nichts und löscht nichts; Protokoll: `/data/ps5medic/installer.log`.
-2. ShadowMount+ legt innerhalb von Sekunden die Kachel **PS5 Medic** unter „Medien“ an.
-3. Ein Druck auf die Kachel startet die App (erst das Startbild, dann der Startbildschirm). Beim Start sendet sie den Dienst an den ELF-Lader (Port 9021), der laufen muss; ein Neustart der Konsole ändert daran nichts, die Kachel bleibt. ◯ auf dem Startbildschirm beendet App und Dienst.
+1. Copy the two folders from the release to `/data/homebrew/` via FTP: `PS5MEDIC` (service `ps5medicservice.elf`, diagnostic payload `ps5medic.elf`, `rules.json`, `error_codes.json`, icon) and `FAKE42007` (the native app).
+   Alternative without FTP: send `ps5medic-launcher.elf` (a separate file in the release, not in the zip) to the ELF loader (port 9021) (Payload Manager or `nc <ip> 9021 < ps5medic-launcher.elf`). It writes both folders itself, starts nothing and deletes nothing; log: `/data/ps5medic/installer.log`.
+2. ShadowMount+ creates the **PS5 Medic** tile under "Media" within seconds.
+3. Pressing the tile starts the app (first the splash screen, then the start screen). On start it sends the service to the ELF loader (port 9021), which must be running; a restart of the console changes nothing, the tile remains. ◯ on the start screen ends the app and the service.
 
-Die Kachel `FAKE42007` ersetzt die früheren Wege (Launcher, websrv, Kacheln `FAKE42008` und `FAKE42009`). Stehen noch alte Kacheln da, lassen sie sich in den Speichereinstellungen der PS5 entfernen. Einzelheiten zur App: [docs/NATIVE.md](docs/NATIVE.md).
+The `FAKE42007` tile replaces the earlier ways (launcher, websrv, tiles `FAKE42008` and `FAKE42009`). If old tiles are still there, they can be removed in the PS5 storage settings. Details about the app: [docs/NATIVE.md](docs/NATIVE.md).
 
-## Bedienung
+## Controls
 
-| Bildschirm | Tasten |
+| Screen | Buttons |
 |---|---|
-| Start | ↑↓ wählen · ✕ öffnen · ◯ beenden |
-| Befundliste | ↑↓ wählen · L1/R1 Seite · ✕ Details · △ Reparieren/Anleitung · □ Bericht · ◯ zurück |
-| Befundliste (weiter) | Options ausblenden · ← Vergleich mit dem letzten Check-up · → ausgeblendete Befunde · im Bericht △ Support-Paket |
-| Detail | ←→ vorheriger/nächster Befund · △ Reparieren · □ Fehlercode · ◯ zurück |
-| Reparatur-Vorschau | ✕ bestätigen (schreibt) · ◯ abbrechen |
-| Spiele | ↑↓ wählen · ✕ öffnen · L1/R1 anderes Spiel · ◯ zurück |
-| Verlauf, Selbsttest, Fehlercodes | Hinweisleiste unten zeigt die Tasten |
+| Start | ↑↓ select · ✕ open · ◯ quit |
+| Findings list | ↑↓ select · L1/R1 page · ✕ details · △ repair/guide · □ report · ◯ back |
+| Findings list (more) | Options hide · ← compare with the last check-up · → hidden findings · in the report △ support package |
+| Detail | ←→ previous/next finding · △ repair · □ error code · ◯ back |
+| Repair preview | ✕ confirm (writes) · ◯ cancel |
+| Games | ↑↓ select · ✕ open · L1/R1 other game · ◯ back |
+| History, self-test, error codes | The hint bar at the bottom shows the buttons |
 
-## Diagnose-Payload
+## Diagnostic payload
 
-`ps5medic.elf` läuft ohne Oberfläche, **nur lesend**: Er schreibt `/data/ps5medic/last_check.txt` und exportiert den Zustand als Snapshot nach `/data/ps5medic/snapshots/`. Den Snapshot kann man am PC mit `medic-cli check` prüfen (Fixture-Ordner, siehe unten).
+`ps5medic.elf` runs without a UI, **read-only**: it writes `/data/ps5medic/last_check.txt` and exports the state as a snapshot to `/data/ps5medic/snapshots/`. The snapshot can be checked on the PC with `medic-cli check` (fixture folder, see below).
 
-## Aus dem Quelltext bauen
+## Building from source
 
-Linux oder WSL, CMake, ein C++20-Compiler. Der Kern und die Regeln laufen auch am PC gegen Fixture-Ordner.
+Linux or WSL, CMake, a C++20 compiler. The core and the rules also run on the PC against fixture folders.
 
 ```bash
-make test        # Unit-, Regel-, UI- und Berichts-Tests gegen alle Fixtures
-make host        # medic-cli und die PC-Vorschau der UI
-make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # Bilder der UI am PC (de en fr it es)
+make test        # Unit, rule, UI and report tests against all fixtures
+make host        # medic-cli and the PC preview of the UI
+make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # UI images on the PC (de en fr it es)
 ```
 
-Für die Konsole braucht man das [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **Version 0.45** (`PS5_PAYLOAD_SDK`) und SDL2 für die PS5 (nur für die PC-freie Ausweich-UI); die Bauanleitung dafür steht in [docs/PHASE3.md](docs/PHASE3.md), Aufbau und Bau der nativen App in [docs/NATIVE.md](docs/NATIVE.md).
+For the console you need the [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **version 0.45** (`PS5_PAYLOAD_SDK`) and SDL2 for the PS5 (only for the fallback UI); the build instructions for it are in [docs/PHASE3.md](docs/PHASE3.md), the structure and build of the native app in [docs/NATIVE.md](docs/NATIVE.md).
 
 ```bash
-make native-ui                      # native App (build-native/FAKE42007)
-make ps5-service                    # Dienst (ps5medicservice.elf)
-make ps5                            # Diagnose-Payload (ps5medic.elf)
-make deploy-native PS5_HOST=192.168.1.x # App und Dienst per FTP nach /data/homebrew (die App muss dafür ganz geschlossen sein)
-make send-launcher PS5_HOST=192.168.1.x # Installer an Port 9021 senden: schreibt App und Dienst selbst nach /data/homebrew (ohne FTP)
-make dist                           # Release-Ordner und Zip unter dist/ (nur lokal)
+make native-ui                      # native app (build-native/FAKE42007)
+make ps5-service                    # service (ps5medicservice.elf)
+make ps5                            # diagnostic payload (ps5medic.elf)
+make deploy-native PS5_HOST=192.168.1.x # app and service to /data/homebrew via FTP (the app must be fully closed)
+make send-launcher PS5_HOST=192.168.1.x # send the installer to port 9021: it writes app and service to /data/homebrew itself (no FTP)
+make dist                           # Release folder and zip under dist/ (local only)
 ```
 
-Werkzeuge am PC (`build/medic-cli`):
+Tools on the PC (`build/medic-cli`):
 
 ```bash
-medic-cli check   <snapshot-ordner>            # Befunde
-medic-cli report  <snapshot-ordner> [--qr]     # Bericht, optional QR-Code im Terminal
-medic-cli fix     <snapshot-ordner> <regel-id> # Plan ansehen (mit --apply --yes ausführen, nur an einer Kopie!)
+medic-cli check   <snapshot-ordner>            # Findings
+medic-cli report  <snapshot-ordner> [--qr]     # Report, optionally QR code in the terminal
+medic-cli fix     <snapshot-ordner> <regel-id> # View the plan (run with --apply --yes, on a copy only!)
 medic-cli history|undo|export ...
 ```
 
-## Übersetzungen
+## Translations
 
-Die Oberfläche steht in `ui/i18n/<sprache>.json`, die Wissenstexte für Französisch, Italienisch und Spanisch liegen als Ergänzung in `knowledge/l10n/` (Regeln, Fehlercodes, Selbsttests). Fehlt ein Eintrag, zeigt die App Englisch. Berichte und die dynamischen Texte der Reparatur-Vorschau (Hinweise, Notizen, Warnungen und Fehlermeldungen) gibt es in allen fünf Sprachen; das Kommandozeilenwerkzeug `medic-cli` am PC kennt nur Deutsch und Englisch. `tools/l10n_extract.py` zieht die Quelltexte für Übersetzer, `tools/l10n_check.py <sprache>` prüft eine Übersetzung (Schlüssel, Platzhalter, Zahlen, Codes, Pfade).
+The interface is in `ui/i18n/<language>.json`; the knowledge texts for French, Italian and Spanish are provided as a supplement in `knowledge/l10n/` (rules, error codes, self-tests). If an entry is missing, the app shows English. Reports and the dynamic texts of the repair preview (hints, notes, warnings and error messages) exist in all five languages; the command-line tool `medic-cli` on the PC knows only German and English. `tools/l10n_extract.py` pulls the source texts for translators, `tools/l10n_check.py <language>` checks a translation (keys, placeholders, numbers, codes, paths).
 
-## Mitmachen
+## Contributing
 
-**Tester gesucht** (andere Firmwares und Setups): [docs/TESTER.md](docs/TESTER.md). Probleme melden mit der Issue-Vorlage, den Bericht (□) einfügen.
+**Testers wanted** (other firmwares and setups): [docs/TESTER.md](docs/TESTER.md). Report problems with the issue template, pasting in the report (□).
 
-Eine neue Regel braucht: einen Eintrag in `knowledge/rules.json` mit Quelle, ein Positiv- und ein Negativ-Fixture unter `tests/fixtures/` und `expect.json`. Die Tests erzwingen beides. Fixtures sind **synthetisch**: echte Datei- und Spielnamen gehören nicht ins Repo.
+A new rule needs: an entry in `knowledge/rules.json` with a source, a positive and a negative fixture under `tests/fixtures/` and `expect.json`. The tests enforce both. Fixtures are **synthetic**: real file and game names do not belong in the repo.
 
-## Dokumentation
+## Documentation
 
-| Datei | Inhalt |
+| File | Content |
 |---|---|
-| `CLAUDE.md` | Einstieg für Claude Code: Ziel, Stack, Grenzen, Arbeitsweise |
-| `docs/SPEC.md` | Funktionen, Bedienung, Nicht-Ziele |
-| `docs/ARCHITECTURE.md` | Module, Datenfluss, Regel-Format, Sicherheit |
-| `docs/RULES.md` | Regelkatalog mit Quellen, Status und Abweichungen |
-| `docs/DIAGNOSE.md` | Diagnose-Ausbau: gebaute Prüfungen, Entscheidungen D1–D21, Bauplan |
-| `docs/ROADMAP.md` | Phasen 0–5 |
-| `docs/PHASE2.md` bis `PHASE5.md` | Konsole und Snapshot, Oberfläche und App-Kontext, Bericht und Release, Regel-Update und Community |
-| `docs/TESTER.md` | Mitmachen als Tester |
-| `docs/COMMUNITY.md` | Berichte einsenden, wie daraus neue Regeln und Regel-Updates werden |
-| `docs/NATIVE.md` | Die Oberfläche als native App: Kachel, Dienst, Protokoll, Stand |
-| `docs/TITLE.md` | Älterer Weg (Starter, Launcher, websrv), nur noch als Ausweichweg |
-| `knowledge/` | Regeln (`rules.json`), Fehlercodes (`error_codes.json`), Übersetzungen (`l10n/`) und JSON-Schemas |
+| `CLAUDE.md` | Entry point for Claude Code: goal, stack, limits, way of working |
+| `docs/SPEC.md` | Functions, operation, non-goals |
+| `docs/ARCHITECTURE.md` | Modules, data flow, rule format, security |
+| `docs/RULES.md` | Rule catalogue with sources, status and deviations |
+| `docs/DIAGNOSE.md` | Diagnostic expansion: checks built, decisions D1–D21, build plan |
+| `docs/ROADMAP.md` | Phases 0–5 |
+| `docs/PHASE2.md` to `PHASE5.md` | Console and snapshot, interface and app context, report and release, rule update and community |
+| `docs/TESTER.md` | Taking part as a tester |
+| `docs/COMMUNITY.md` | Sending reports, and how they become new rules and rule updates |
+| `docs/NATIVE.md` | The interface as a native app: tile, service, protocol, status |
+| `docs/TITLE.md` | Older way (starter, launcher, websrv), only kept as a fallback |
+| `knowledge/` | Rules (`rules.json`), error codes (`error_codes.json`), translations (`l10n/`) and JSON schemas |
 
-## Lizenz und Danksagung
+## License and acknowledgements
 
-PS5 Medic steht unter der **GNU General Public License, Version 3 oder (nach Wahl) jeder späteren** (GPL-3.0-or-later). Der Lizenztext liegt in [LICENSE](LICENSE), jede eigene Quelldatei trägt eine SPDX-Zeile. Das gilt auch für die Regeldatenbank `knowledge/rules.json`. Grund: Der fertige ELF linkt gegen die GPLv3-Laufzeitbibliotheken des ps5-payload-sdk. Die Fremdkomponenten (MIT, zlib, BSD-2-Clause, DejaVu, stb_image) sind mit der GPL-3.0 vereinbar und stehen mit ihren Lizenzen in [THIRD_PARTY.md](THIRD_PARTY.md).
+PS5 Medic is licensed under the **GNU General Public License, version 3 or (at your option) any later version** (GPL-3.0-or-later). The license text is in [LICENSE](LICENSE), and every original source file carries an SPDX line. This also applies to the rule database `knowledge/rules.json`. Reason: the finished ELF links against the GPLv3 runtime libraries of the ps5-payload-sdk. The third-party components (MIT, zlib, BSD-2-Clause, DejaVu, stb_image) are compatible with the GPL-3.0 and are listed with their licenses in [THIRD_PARTY.md](THIRD_PARTY.md).
 
-Das Repository ist **öffentlich**; fertige Pakete stehen unter [Releases](https://github.com/strongt1me/ps5-medic-ui-tool/releases). Wer ein Paket weitergibt, muss nach der GPL auch den Quelltext dazu anbieten.
+The repository is **public**; ready-made packages are under [Releases](https://github.com/strongt1me/ps5-medic-ui-tool/releases). Anyone who passes on a package must, under the GPL, also offer the matching source code.
 
-PS5 Medic ist ein Community-Projekt und nicht mit Sony verbunden. Die Nutzung geschieht auf eigene Verantwortung.
+PS5 Medic is a community project and is not affiliated with Sony. Use is at your own risk.

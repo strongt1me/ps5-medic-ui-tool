@@ -32,7 +32,7 @@ jobs:
           # Etiketten stehen in der letzten Zeile "<!-- triage:label=a,b -->"
           labels=$(grep -o 'triage:label=[a-z,-]*' comment.md | head -1 | cut -d= -f2)
           # ein frueherer Kommentar dieses Workflows wird ersetzt, damit Bearbeitungen keine Kommentarflut erzeugen
-          old=$(gh api "repos/$REPO/issues/$ISSUE/comments" --jq '[.[] | select(.user.login=="github-actions[bot]") | select(.body | contains("Automatische Vorsortierung")) | .id] | first // empty')
+          old=$(gh api "repos/$REPO/issues/$ISSUE/comments" --jq '[.[] | select(.user.login=="github-actions[bot]") | select(.body | (contains("Automatic triage") or contains("Automatische Vorsortierung"))) | .id] | first // empty')
           if [ -n "$old" ]; then
             gh api -X PATCH "repos/$REPO/issues/comments/$old" -F body=@comment.md > /dev/null
           else

@@ -106,38 +106,57 @@ def parse(text):
 
 
 def comment(text):
+    """Kommentar fuer das Issue: Englisch sichtbar, Deutsch eingeklappt (<details>); die Etiketten-Zeile steht ganz am Ende."""
     p = parse(text)
-    lines = ["**Automatische Vorsortierung** (nur Lesen, keine Regel entsteht ohne Prüfung durch den Maintainer)", ""]
+
+    def wrap(en, de, label):
+        return "\n".join(en + ["", "<details><summary>Deutsch</summary>", ""] + de + ["", "</details>", "", "<!-- triage:label=%s -->" % label])
+
+    head_en = "**Automatic triage** (read-only; no rule is created without review by the maintainer)"
+    head_de = "**Automatische Vorsortierung** (nur Lesen, keine Regel entsteht ohne Prüfung durch den Maintainer)"
     if not p["valid"]:
-        lines += ["Der Text sieht nicht nach einem PS5-Medic-Bericht aus (Kopfzeile \"PS5 Medic – Bericht\" fehlt). Bitte den Bericht (Taste □ in der Befundliste) direkt einfügen.", "",
-                  "<!-- triage:label=ohne-bericht -->"]
-        return "\n".join(lines)
-    lines.append("- Firmware: %s · Modell: %s · PS5 Medic %s, Regelbasis %s" % (clean(p["firmware"] or "?", 10), p["model"] or "?", clean(p["medic_version"], 20), clean(p["rules_version"], 20)))
+        return wrap([head_en, "", "The text does not look like a PS5 Medic report (the header \"PS5 Medic – Bericht\" / \"PS5 Medic – Report\" is missing). Please paste the report directly (button □ in the findings list)."],
+                    [head_de, "", "Der Text sieht nicht nach einem PS5-Medic-Bericht aus (Kopfzeile \"PS5 Medic – Bericht\" fehlt). Bitte den Bericht (Taste □ in der Befundliste) direkt einfügen."],
+                    "ohne-bericht")
+    en, de = [head_en, ""], [head_de, ""]
+    setup = "Firmware: %s · model: %s · PS5 Medic %s, rules %s" % (clean(p["firmware"] or "?", 10), p["model"] or "?", clean(p["medic_version"], 20), clean(p["rules_version"], 20))
+    en.append("- " + setup)
+    de.append("- Firmware: %s · Modell: %s · PS5 Medic %s, Regelbasis %s" % (clean(p["firmware"] or "?", 10), p["model"] or "?", clean(p["medic_version"], 20), clean(p["rules_version"], 20)))
     if p["components"]:
-        lines.append("- " + " · ".join("%s %s" % (k, v) for k, v in sorted(p["components"].items())))
+        comp = "- " + " · ".join("%s %s" % (k, v) for k, v in sorted(p["components"].items()))
+        en.append(comp)
+        de.append(comp)
     sev = {"critical": 0, "warning": 0, "info": 0}
     for f in p["findings"]:
         sev[f["severity"]] += 1
     ids = sorted({f["rule_id"] for f in p["findings"]})
-    lines.append("- Befunde: %d kritisch, %d Warnung, %d Hinweis%s" % (sev["critical"], sev["warning"], sev["info"], (" (" + ", ".join(clean(i, 60) for i in ids[:12]) + (" ..." if len(ids) > 12 else "") + ")") if ids else ""))
+    idtxt = (" (" + ", ".join(clean(i, 60) for i in ids[:12]) + (" ..." if len(ids) > 12 else "") + ")") if ids else ""
+    en.append("- Findings: %d critical, %d warning, %d info%s" % (sev["critical"], sev["warning"], sev["info"], idtxt))
+    de.append("- Befunde: %d kritisch, %d Warnung, %d Hinweis%s" % (sev["critical"], sev["warning"], sev["info"], idtxt))
     if p["error_code"]:
-        lines.append("- Gemeldeter Fehlercode: %s" % p["error_code"])
+        en.append("- Reported error code: %s" % p["error_code"])
+        de.append("- Gemeldeter Fehlercode: %s" % p["error_code"])
     if p["not_checked"]:
-        lines.append("- Nicht geprüft: %d Bereiche" % len(p["not_checked"]))
+        en.append("- Not checked: %d areas" % len(p["not_checked"]))
+        de.append("- Nicht geprüft: %d Bereiche" % len(p["not_checked"]))
     labels = ["bericht"]
     if p["unknown_lines"]:
         labels.append("neue-zeilen")
-        lines += ["", "**Unbekannte Fehlerzeilen** (passen zu keiner Regel; Fingerabdruck gleicht gleichartige Zeilen aus verschiedenen Berichten ab):", ""]
+        en += ["", "**Unknown error lines** (match no rule; the fingerprint matches similar lines across different reports):", ""]
+        de += ["", "**Unbekannte Fehlerzeilen** (passen zu keiner Regel; Fingerabdruck gleicht gleichartige Zeilen aus verschiedenen Berichten ab):", ""]
         for u in p["unknown_lines"][:10]:
-            lines.append("- `%s` %d× — `%s`" % (u["fingerprint"], u["count"], clean(u["example"])))
+            row = "- `%s` %d× — `%s`" % (u["fingerprint"], u["count"], clean(u["example"]))
+            en.append(row)
+            de.append(row)
         if len(p["unknown_lines"]) > 10:
-            lines.append("- ... und %d weitere" % (len(p["unknown_lines"]) - 10))
+            en.append("- ... and %d more" % (len(p["unknown_lines"]) - 10))
+            de.append("- ... und %d weitere" % (len(p["unknown_lines"]) - 10))
     else:
-        lines += ["", "Keine unbekannten Fehlerzeilen im Bericht."]
+        en += ["", "No unknown error lines in the report."]
+        de += ["", "Keine unbekannten Fehlerzeilen im Bericht."]
     if not p["findings"] and not p["unknown_lines"]:
         labels.append("sauber")
-    lines += ["", "<!-- triage:label=%s -->" % ",".join(labels)]
-    return "\n".join(lines)
+    return wrap(en, de, ",".join(labels))
 
 
 def load_issues(path):

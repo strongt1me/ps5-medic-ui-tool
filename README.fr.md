@@ -12,7 +12,7 @@
 ![Plateforme](https://img.shields.io/badge/Plateforme-PS5%20Payload-003791)
 ![Langues](https://img.shields.io/badge/Langues-DE%20%C2%B7%20EN%20%C2%B7%20FR%20%C2%B7%20IT%20%C2%B7%20ES-lightgrey)
 
-[Deutsch](README.md) · [English](README.en.md) · **Français** · [Italiano](README.it.md) · [Español](README.es.md)
+[English](README.md) · [Deutsch](README.de.md) · **Français** · [Italiano](README.it.md) · [Español](README.es.md)
 
 **[⬇ Télécharger : dernière version](https://github.com/strongt1me/ps5-medic-ui-tool/releases/latest)**
 
