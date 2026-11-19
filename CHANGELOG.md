@@ -2,6 +2,8 @@
 
 ## Unveröffentlicht / Unreleased
 
+## 0.4.1 (2026-11-19)
+
 - **Deutsch:** Auch die Belege der Befunde („Evidenz“, z. B. Fehlerverlauf „… 56x, 17.11.2026“) zeigen das Datum in der Schreibweise der Sprache, in der Oberfläche und im Bericht (Kern-Funktion `localize_dates`).
 - **English:** The evidence lines of findings (e.g. error history "… 56x, 2026-11-17") now show the date in the language's notation as well, in the UI and in the report (core function `localize_dates`).
 - **Deutsch:** Datumsformat auch im Bericht (Kopf, „Erstellt“, „seit …“, Selbsttest „Letzter Lauf“) und in den anderen Sprachen: Deutsch TT.MM.JJJJ, Französisch/Italienisch/Spanisch TT/MM/JJJJ, Englisch JJJJ-MM-TT; die Zeitstempel in den Verweisen auf Reparaturen bleiben unverändert.
