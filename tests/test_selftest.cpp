@@ -253,7 +253,7 @@ void selftest_tests() {
         in.selftests = {a, b, c};
         const std::string de = build_report(in, ReportLang::De), en = build_report(in, ReportLang::En);
         auto has = [](const std::string& x, const std::string& n) { return x.find(n) != std::string::npos; };
-        CHECK(has(de, "## Selbsttest") && has(de, "Letzter Lauf: 2026-11-11 11:55 UTC") && has(de, "Datenbanken der Systemsoftware (Kopf und Größe): bestanden, databases 15\n  Beweist nicht: Inhalt der Datenbanken"),
+        CHECK(has(de, "## Selbsttest") && has(de, "Letzter Lauf: 11.11.2026 11:55 UTC") && has(de, "Datenbanken der Systemsoftware (Kopf und Größe): bestanden, databases 15\n  Beweist nicht: Inhalt der Datenbanken"),
               "Selbsttest: Bericht DE (Status, Messwert, 'Beweist nicht')");
         CHECK(has(de, "Lesetest einer Image-Datei: fehlgeschlagen (read_error)") && has(de, "Temperatursensoren: übersprungen (sensors_unreadable)"), "Selbsttest: Bericht DE (fehlgeschlagen und uebersprungen)");
         CHECK(!has(de, "Lesetest einer Image-Datei: fehlgeschlagen (read_error)\n  Beweist nicht"), "Selbsttest: bei fehlgeschlagenen und uebersprungenen Tests kein 'Beweist nicht'");

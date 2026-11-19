@@ -2,6 +2,8 @@
 
 ## Unveröffentlicht / Unreleased
 
+- **Deutsch:** Datumsformat auch im Bericht (Kopf, „Erstellt“, „seit …“, Selbsttest „Letzter Lauf“) und in den anderen Sprachen: Deutsch TT.MM.JJJJ, Französisch/Italienisch/Spanisch TT/MM/JJJJ, Englisch JJJJ-MM-TT; die Zeitstempel in den Verweisen auf Reparaturen bleiben unverändert.
+- **English:** Date format now also in the report (header, "Created", "since …", self-test "Last run") and in the other languages: German DD.MM.YYYY, French/Italian/Spanish DD/MM/YYYY, English YYYY-MM-DD; the raw timestamps in the repair references are unchanged.
 - **Deutsch:** In der deutschen Oberfläche stehen Datumsangaben jetzt als TT.MM.JJJJ (z. B. „16.11.2026 18:00 UTC“) statt JJJJ-MM-TT: Verlauf, Vergleich, Rückgängig-Frage, Befund-Verlauf („seit …“) und Spiele-Fehler („zuletzt …“). Die anderen Sprachen behalten JJJJ-MM-TT.
 - **English:** Dates in the German interface now read DD.MM.YYYY (e.g. "16.11.2026 18:00 UTC") instead of YYYY-MM-DD: history, compare, undo prompt, finding history ("since …") and game errors ("last …"). The other languages keep YYYY-MM-DD.
 - **Deutsch:** Nach einer erfolgreichen Reparatur (und nach dem Rückgängigmachen) weist der Fertig-Bildschirm darauf hin, dass die Änderung oft erst nach einem Neustart wirkt, weil ShadowMount+ und der Payload Manager ihre Einstellungen und Ordner nur beim Start lesen; danach einen neuen Check-up machen. Die Karte wächst mit dem Text mit.

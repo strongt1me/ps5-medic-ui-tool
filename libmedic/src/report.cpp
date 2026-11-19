@@ -375,10 +375,24 @@ std::string state_text(const std::string& s, const Lx& T) {
     return T("unvollständig", "incomplete", "incomplète", "incompleta", "incompleta");
 }
 
-std::string time_text(const std::string& ts) {
-    // YYYYMMDDTHHMMSSZ -> "YYYY-MM-DD HH:MM UTC"
+// Tag aus "YYYYMMDD..." je Sprache: Deutsch TT.MM.JJJJ, Franzoesisch/Italienisch/Spanisch TT/MM/JJJJ, Englisch JJJJ-MM-TT.
+std::string day_text(const std::string& ts, ReportLang lang) {
+    if (ts.size() < 8) return ts;
+    const std::string y = ts.substr(0, 4), m = ts.substr(4, 2), d = ts.substr(6, 2);
+    switch (lang) {
+        case ReportLang::De: return d + "." + m + "." + y;
+        case ReportLang::En: break;
+        case ReportLang::Fr:
+        case ReportLang::It:
+        case ReportLang::Es: return d + "/" + m + "/" + y;
+    }
+    return y + "-" + m + "-" + d;
+}
+
+// YYYYMMDDTHHMMSSZ -> "TT.MM.JJJJ HH:MM UTC" (je Sprache wie day_text)
+std::string time_text(const std::string& ts, ReportLang lang) {
     if (ts.size() != 16 || ts[8] != 'T' || ts[15] != 'Z') return ts;
-    return ts.substr(0, 4) + "-" + ts.substr(4, 2) + "-" + ts.substr(6, 2) + " " + ts.substr(9, 2) + ":" + ts.substr(11, 2) + " UTC";
+    return day_text(ts, lang) + " " + ts.substr(9, 2) + ":" + ts.substr(11, 2) + " UTC";
 }
 
 std::string str_fact(const Facts& f, const char* key) {
@@ -580,7 +594,7 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
     std::ostringstream o;
 
     o << (T("# PS5 Medic – Bericht\n\n", "# PS5 Medic – Report\n\n", "# PS5 Medic – Rapport\n\n", "# PS5 Medic – Rapporto\n\n", "# PS5 Medic – Informe\n\n"));
-    o << "- " << (T("Erstellt: ", "Created: ", "Créé : ", "Creato: ", "Creado: ")) << time_text(in.created_utc) << "\n";
+    o << "- " << (T("Erstellt: ", "Created: ", "Créé : ", "Creato: ", "Creado: ")) << time_text(in.created_utc, lang) << "\n";
     o << "- PS5 Medic " << kMedicVersion << ", " << (T("Regelbasis ", "rules ", "règles ", "regole ", "reglas ")) << in.rules_version << " (" << in.rule_count << ")\n\n";
 
     o << (T("## Umgebung\n\n", "## Environment\n\n", "## Environnement\n\n", "## Ambiente\n\n", "## Entorno\n\n"));
@@ -631,7 +645,7 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
             o << "- " << (T("Dringlichkeit: ", "Urgency: ", "Urgence : ", "Urgenza: ", "Urgencia: ")) << (urgency == "high" ? (T("hoch", "high", "élevée", "alta", "alta")) : (urgency == "medium" ? (T("mittel", "medium", "moyenne", "media", "media")) : (T("niedrig", "low", "faible", "bassa", "baja"))));
             if (x.status == "new") o << (T(". Verlauf: neu seit der letzten Prüfung", ". History: new since the last check", ". Historique : nouveau depuis le dernier diagnostic", ". Cronologia: nuovo dall'ultimo check-up", ". Historial: nuevo desde el último chequeo"));
             else if (x.status == "recurring") {
-                const std::string day = x.first_seen.size() >= 8 ? x.first_seen.substr(0, 4) + "-" + x.first_seen.substr(4, 2) + "-" + x.first_seen.substr(6, 2) : x.first_seen;
+                const std::string day = day_text(x.first_seen, lang);
                 o << (T(". Verlauf: seit ", ". History: since ", ". Historique : depuis le ", ". Cronologia: dal ", ". Historial: desde el ")) << day << " (" << x.seen_runs << (T(" Prüfungen in Folge)", " checks in a row)", " diagnostics de suite)", " check-up di fila)", " chequeos seguidos)"));
             }
             if (is_pending(x)) o << (T(". Vorläufig: wird erst nach ", ". Provisional: confirmed only after ", ". Provisoire : confirmé seulement après ", ". Provvisorio: confermato solo dopo ", ". Provisional: se confirma solo tras ")) << x.confirm_runs << (T(" Prüfungen in Folge bestätigt", " checks in a row", " diagnostics de suite", " check-up di fila", " chequeos seguidos"));
@@ -662,7 +676,7 @@ std::string build_report(const ReportInput& in, ReportLang lang) {
     if (!in.selftests.empty()) {
         o << (T("## Selbsttest\n\n", "## Self-test\n\n", "## Autotest\n\n", "## Autotest\n\n", "## Autotest\n\n"));
         o << (T("Nur lesende Tests. „Bestanden“ heißt „nicht aufgefallen“, nie „gesund“; „übersprungen“ und „nicht gelaufen“ heißen nicht bestanden.\n\n", "Read-only tests. “Passed” means “nothing stood out”, never “healthy”; “skipped” and “not run” do not mean passed.\n\n", "Tests en lecture seule. « Réussi » signifie « rien de remarqué », jamais « sain » ; « ignoré » et « non exécuté » ne signifient pas réussi.\n\n", "Test di sola lettura. «Superato» significa «nulla di anomalo», mai «sano»; «saltato» e «non eseguito» non significano superato.\n\n", "Pruebas de solo lectura. «Superado» significa «nada llamó la atención», nunca «sano»; «omitido» y «no ejecutado» no significan superado.\n\n"));
-        if (!in.selftest_finished.empty()) o << (T("Letzter Lauf: ", "Last run: ", "Dernière exécution : ", "Ultima esecuzione: ", "Última ejecución: ")) << time_text(in.selftest_finished) << "\n\n";
+        if (!in.selftest_finished.empty()) o << (T("Letzter Lauf: ", "Last run: ", "Dernière exécution : ", "Ultima esecuzione: ", "Última ejecución: ")) << time_text(in.selftest_finished, lang) << "\n\n";
         auto status_name = [&](TestStatus st) -> std::string {
             switch (st) {
                 case TestStatus::Passed: return T("bestanden", "passed", "réussi", "superato", "superado");
@@ -742,7 +756,7 @@ std::string build_report_compact(const ReportInput& in, ReportLang lang, std::si
     if (truncated) *truncated = false;
 
     auto line = [](const std::string& s) { return anonymize(one_line(s)) + "\n"; };
-    std::string head = line(std::string("PS5 Medic ") + kMedicVersion + " " + time_text(in.created_utc));
+    std::string head = line(std::string("PS5 Medic ") + kMedicVersion + " " + time_text(in.created_utc, lang));
     const std::string fw = str_fact(f, "fw.version"), model = str_fact(f, "fw.model");
     head += line("FW " + (fw.empty() ? std::string("?") : fw) + (model.empty() ? "" : " " + model));
     std::string versions;

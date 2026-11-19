@@ -173,7 +173,7 @@ void history_tests() {
         in.resolved = {"c.gone"};
         const std::string de = build_report(in, ReportLang::De), en = build_report(in, ReportLang::En);
         auto has = [](const std::string& s, const std::string& n) { return s.find(n) != std::string::npos; };
-        CHECK(has(de, "- Dringlichkeit: hoch. Verlauf: seit 2026-11-05 (4 Prüfungen in Folge)\n") && has(de, "- Dringlichkeit: niedrig. Verlauf: neu seit der letzten Prüfung\n"), "Bericht DE: Dringlichkeit und Verlauf");
+        CHECK(has(de, "- Dringlichkeit: hoch. Verlauf: seit 05.11.2026 (4 Prüfungen in Folge)\n") && has(de, "- Dringlichkeit: niedrig. Verlauf: neu seit der letzten Prüfung\n"), "Bericht DE: Dringlichkeit und Verlauf");
         CHECK(has(de, "## Seit der letzten Prüfung behoben (1)\n\n- c.gone\n"), "Bericht DE: behobene Regeln");
         CHECK(has(en, "- Urgency: high. History: since 2026-11-05 (4 checks in a row)\n") && has(en, "## Resolved since the last check (1)\n\n- c.gone\n"), "Bericht EN");
         in.resolved.clear();

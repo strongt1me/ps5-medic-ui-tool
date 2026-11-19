@@ -2969,7 +2969,7 @@ void history_ui_tests() {
     CHECK(rep.saved, "Verlauf: Bericht gespeichert");
     std::string body;
     platform->fs().read_file(rep.path, body);
-    CHECK(body.find("Verlauf: seit 2026-11-11 (2 Prüfungen in Folge)") != std::string::npos, "Verlauf: der Bericht nennt die Folge");
+    CHECK(body.find("Verlauf: seit 11.11.2026 (2 Prüfungen in Folge)") != std::string::npos, "Verlauf: der Bericht nennt die Folge");
 
     auto differs = [](const Canvas& a, const Canvas& b) {
         for (int y = 0; y < a.height(); y += 2)

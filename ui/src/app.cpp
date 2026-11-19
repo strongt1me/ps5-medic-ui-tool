@@ -82,12 +82,14 @@ std::string game_label(const Str& S, const medic::GameInfo& g) {
     return S(pre == "PPSA" || pre == "CUSA" || pre == "FAKE" ? "title.unknown_game" : "title.system_app");
 }
 
-// Tag "20261108" oder "2026-11-08" -> "08.11.2026" (Deutsch) bzw. "2026-11-08" (sonst).
+// Tag "20261108" oder "2026-11-08" -> "08.11.2026" (Deutsch), "08/11/2026" (fr/it/es), "2026-11-08" (Englisch).
 std::string pretty_day(const std::string& ts, Lang lang) {
     const bool dashed = ts.size() >= 10 && ts[4] == '-' && ts[7] == '-';
     if (!dashed && ts.size() < 8) return ts;
     const std::string y = ts.substr(0, 4), m = dashed ? ts.substr(5, 2) : ts.substr(4, 2), d = dashed ? ts.substr(8, 2) : ts.substr(6, 2);
-    return lang == Lang::De ? d + "." + m + "." + y : y + "-" + m + "-" + d;
+    if (lang == Lang::De) return d + "." + m + "." + y;
+    if (lang == Lang::En) return y + "-" + m + "-" + d;
+    return d + "/" + m + "/" + y;
 }
 
 std::string pretty_ts(const std::string& ts, Lang lang) {

@@ -106,7 +106,7 @@ void report_tests_content() {
     const ReportInput in = sample_input();
     const std::string de = build_report(in, ReportLang::De), en = build_report(in, ReportLang::En);
 
-    CHECK(has(de, "# PS5 Medic – Bericht") && has(de, "Erstellt: 2026-11-08 19:05 UTC"), "Bericht DE: Kopf und Zeit");
+    CHECK(has(de, "# PS5 Medic – Bericht") && has(de, "Erstellt: 08.11.2026 19:05 UTC"), "Bericht DE: Kopf und Zeit");
     CHECK(has(de, "Regelbasis 2026.11.08 (22)"), "Bericht DE: Regelbasis");
     CHECK(has(de, "Firmware: 12.00") && has(de, "Modell: CFI-7021 B01Y"), "Bericht DE: Firmware und Modell");
     CHECK(has(de, "kstuff: 1.10 (drakmor)") && has(de, "ShadowMount+: 1.7beta11"), "Bericht DE: Versionen");
