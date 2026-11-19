@@ -6,8 +6,8 @@
 
 **Diagnostic, explications en clair et réparation sûre pour les consoles PS5 jailbreakées, sous forme d'application plein écran pour la télévision, avec la DualSense.**
 
-![Version](https://img.shields.io/badge/Version-0.4.2-1f6feb)
-![Firmware](https://img.shields.io/badge/FW-4.00%20%C3%A0%2013.60-2ea44f)
+![Version](https://img.shields.io/badge/Version-0.4.3-1f6feb)
+![Firmware](https://img.shields.io/badge/FW-4.00%20%C3%A0%2013.60%2B-2ea44f)
 ![Licence](https://img.shields.io/badge/Licence-GPL--3.0--or--later-blue)
 ![Plateforme](https://img.shields.io/badge/Plateforme-PS5%20Payload-003791)
 ![Langues](https://img.shields.io/badge/Langues-DE%20%C2%B7%20EN%20%C2%B7%20FR%20%C2%B7%20IT%20%C2%B7%20ES-lightgrey)
@@ -22,7 +22,7 @@
 
 **PS5 Medic** vérifie sur une PS5 jailbreakée l'**état en direct** de la configuration Homebrew (firmware, chaîne de jailbreak, kstuff, ShadowMount+, payloads, jeux, fichiers, configuration), explique **en clair** les causes d'erreur connues et, lorsque c'est possible en toute sécurité, répare **avec sauvegarde et fonction d'annulation**. Une seule commande : *Lancer le diagnostic*.
 
-> **Firmware :** l'application fonctionne sur les firmwares **4.00 à 13.60** (dans la mesure où le jailbreak y fonctionne). Elle n'a été testée jusqu'ici que sur une PS5 Pro avec le firmware 12.00 et ShadowMount+ 1.7beta12. Les autres firmwares et configurations n'ont pas été testés ; les règles sont donc formulées en fonction de la version et chacune est marquée individuellement comme *confirmée* ou *pas encore confirmée*.
+> **Firmware :** l'application fonctionne sur les firmwares **4.00 à 13.60+** (dans la mesure où le jailbreak y fonctionne). Elle n'a été testée jusqu'ici que sur une PS5 Pro avec le firmware 12.00 et ShadowMount+ 1.7beta12. Les autres firmwares et configurations n'ont pas été testés ; les règles sont donc formulées en fonction de la version et chacune est marquée individuellement comme *confirmée* ou *pas encore confirmée*.
 
 ## Fonctionnalités
 

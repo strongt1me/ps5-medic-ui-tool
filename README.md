@@ -6,8 +6,8 @@
 
 **Check-up, plain-language diagnosis and safe repair for jailbroken PS5 consoles, as a full-screen app for the TV with DualSense.**
 
-![Version](https://img.shields.io/badge/Version-0.4.2-1f6feb)
-![Firmware](https://img.shields.io/badge/FW-4.00%20to%2013.60-2ea44f)
+![Version](https://img.shields.io/badge/Version-0.4.3-1f6feb)
+![Firmware](https://img.shields.io/badge/FW-4.00%20to%2013.60%2B-2ea44f)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-blue)
 ![Platform](https://img.shields.io/badge/Platform-PS5%20Payload-003791)
 ![Languages](https://img.shields.io/badge/Languages-DE%20%C2%B7%20EN%20%C2%B7%20FR%20%C2%B7%20IT%20%C2%B7%20ES-lightgrey)
@@ -22,7 +22,7 @@
 
 **PS5 Medic** checks the **live state** of the Homebrew setup on a jailbroken PS5 (firmware, jailbreak chain, kstuff, ShadowMount+, payloads, games, files, configuration), explains known causes of errors **in plain language** and, where it is safe to do so, repairs them **with backup and an undo function**. One button press: *Start check-up*.
 
-> **Firmware:** The app runs on firmwares **4.00 to 13.60** (as far as the jailbreak works there). So far it has been tested on a PS5 Pro with firmware 12.00 and ShadowMount+ 1.7beta12. Other firmwares and setups have not been tested; the rules are therefore worded per version and each one is marked as *confirmed* or *not yet confirmed*.
+> **Firmware:** The app runs on firmwares **4.00 to 13.60+** (as far as the jailbreak works there). So far it has been tested on a PS5 Pro with firmware 12.00 and ShadowMount+ 1.7beta12. Other firmwares and setups have not been tested; the rules are therefore worded per version and each one is marked as *confirmed* or *not yet confirmed*.
 
 ## What it can do
 

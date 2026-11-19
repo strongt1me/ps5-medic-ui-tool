@@ -41,7 +41,7 @@ Each phase ends with a working state and a short status report to Marc.
 > Status: Rule update (file update and signed download), unknown error lines, issue template and tester guide are done and tested (see `docs/en/PHASE5.md`). Forum posts and GitHub release are dropped (repository private). The signed rule download is implemented (Ed25519, see `docs/en/PHASE5.md`).
 1. Rule update (manual, SHA-256) and signed download (Ed25519). – done (put the file on the console or load it with □ from your own address; check and install in PS5 Medic, details in `docs/en/PHASE5.md`).
 2. Collect "Unknown error lines" → issue template. – done (section in the report, `.github/ISSUE_TEMPLATE/problem.md`).
-3. Find testers with FW 4.00–13.60 (GBAtemp, Discord), collect fixtures. – Guide and draft of the call in `docs/en/TESTER.md`; forum posts only on Marc's instruction; testers report via the issues in the public repository.
+3. Find testers with FW 4.00–13.60+ (GBAtemp, Discord), collect fixtures. – Guide and draft of the call in `docs/en/TESTER.md`; forum posts only on Marc's instruction; testers report via the issues in the public repository.
 
 ## First prompt for Claude Code
 > Read CLAUDE.md and docs/*. Start with Phase 0, steps 1–3. Create one positive and one negative fixture each for rules B2 and B8, then show me the output of `medic-cli check` for all fixtures.

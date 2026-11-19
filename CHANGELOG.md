@@ -2,8 +2,10 @@
 
 ## Unreleased / Unveröffentlicht
 
-- **English:** The stated firmware range is now 4.00 to 13.60 (README, badge, docs, `tools/fw_compat.py`); it was 4.00 to 14.10.
-- **Deutsch:** Der genannte Firmware-Bereich ist jetzt 4.00 bis 13.60 (README, Badge, Doku, `tools/fw_compat.py`); vorher 4.00 bis 14.10.
+## 0.4.3 (2026-11-19)
+
+- **English:** The stated firmware range is now 4.00 to 13.60+ (README, badge, docs, `tools/fw_compat.py`); it was 4.00 to 14.10.
+- **Deutsch:** Der genannte Firmware-Bereich ist jetzt 4.00 bis 13.60+ (README, Badge, Doku, `tools/fw_compat.py`); vorher 4.00 bis 14.10.
 
 ## 0.4.2 (2026-11-19)
 
