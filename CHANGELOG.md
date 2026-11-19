@@ -2,6 +2,8 @@
 
 ## Unreleased / Unveröffentlicht
 
+## 0.4.4 (2026-11-20)
+
 - **English:** Built with ps5-payload-sdk 0.50, whose start code covers firmwares up to 14.22; the stated firmware range is now 1.00 to 14.22 (README, badge, docs, `tools/fw_compat.py`). Only FW 12.00 is tested.
 - **Deutsch:** Gebaut mit ps5-payload-sdk 0.50, dessen Startcode Firmwares bis 14.22 abdeckt; der genannte Firmware-Bereich ist jetzt 1.00 bis 14.22 (README, Badge, Doku, `tools/fw_compat.py`). Getestet ist nur FW 12.00.
 
