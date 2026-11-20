@@ -111,7 +111,7 @@
 2. ShadowMount+ crea en unos segundos el mosaico **PS5 Medic** en «Medios».
 3. Pulsar el mosaico arranca la aplicación (primero la pantalla de presentación, luego la pantalla de inicio). Al arrancar envía el servicio al cargador de ELF (puerto 9021), que debe estar activo; reiniciar la consola no cambia nada, el mosaico se conserva. ◯ en la pantalla de inicio cierra la aplicación y el servicio.
 
-El mosaico `FAKE42007` sustituye a las vías anteriores (launcher, websrv, mosaicos `FAKE42008` y `FAKE42009`). Si aún quedan mosaicos antiguos, se pueden eliminar en los ajustes de almacenamiento de la PS5. Detalles de la aplicación: [docs/NATIVE.md](docs/NATIVE.md).
+El mosaico `FAKE42007` sustituye a las vías anteriores (launcher, websrv, mosaicos `FAKE42008` y `FAKE42009`). Si aún quedan mosaicos antiguos, se pueden eliminar en los ajustes de almacenamiento de la PS5. Detalles de la aplicación: [docs/NATIVE.md](docs/en/NATIVE.md).
 
 ## Manejo
 
@@ -139,7 +139,7 @@ make host        # medic-cli y la vista previa de la interfaz en PC
 make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # imágenes de la interfaz en PC (de en fr it es)
 ```
 
-Para la consola se necesita el [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versión 0.50** (`PS5_PAYLOAD_SDK`) y SDL2 para la PS5 (solo para la interfaz de reserva); las instrucciones de compilación están en [docs/PHASE3.md](docs/PHASE3.md), y la estructura y compilación de la aplicación nativa en [docs/NATIVE.md](docs/NATIVE.md).
+Para la consola se necesita el [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versión 0.50** (`PS5_PAYLOAD_SDK`) y SDL2 para la PS5 (solo para la interfaz de reserva); las instrucciones de compilación están en [docs/PHASE3.md](docs/en/PHASE3.md), y la estructura y compilación de la aplicación nativa en [docs/NATIVE.md](docs/en/NATIVE.md).
 
 ```bash
 make native-ui                      # aplicación nativa (build-native/FAKE42007)
@@ -165,7 +165,7 @@ La interfaz está en `ui/i18n/<idioma>.json`; los textos de conocimiento para fr
 
 ## Colaborar
 
-**Se buscan probadores** (otros firmwares y configuraciones): [docs/TESTER.md](docs/TESTER.md). Para notificar problemas, usa la plantilla de issue e incluye el informe (□).
+**Se buscan probadores** (otros firmwares y configuraciones): [docs/TESTER.md](docs/en/TESTER.md). Para notificar problemas, usa la plantilla de issue e incluye el informe (□).
 
 Una regla nueva necesita: una entrada en `knowledge/rules.json` con fuente, un fixture positivo y uno negativo en `tests/fixtures/` y `expect.json`. Las pruebas exigen ambos. Los fixtures son **sintéticos**: los nombres reales de archivos y de juegos no van en el repositorio.
 
@@ -174,16 +174,16 @@ Una regla nueva necesita: una entrada en `knowledge/rules.json` con fuente, un f
 | Archivo | Contenido |
 |---|---|
 | `CLAUDE.md` | Punto de entrada para Claude Code: objetivo, stack, límites, forma de trabajar |
-| `docs/SPEC.md` | Funciones, manejo, no-objetivos |
-| `docs/ARCHITECTURE.md` | Módulos, flujo de datos, formato de reglas, seguridad |
-| `docs/RULES.md` | Catálogo de reglas con fuentes, estado y desviaciones |
-| `docs/DIAGNOSE.md` | Ampliación del diagnóstico: revisiones construidas, decisiones D1–D21, plan de construcción |
-| `docs/ROADMAP.md` | Fases 0–5 |
-| `docs/PHASE2.md` a `PHASE5.md` | Consola y snapshot, interfaz y contexto de aplicación, informe y versión, actualización de reglas y comunidad |
-| `docs/TESTER.md` | Colaborar como probador |
-| `docs/COMMUNITY.md` | Enviar informes; cómo se convierten en reglas nuevas y actualizaciones de reglas |
-| `docs/NATIVE.md` | La interfaz como aplicación nativa: mosaico, servicio, protocolo, estado |
-| `docs/TITLE.md` | Vía anterior (Starter, launcher, websrv), solo como solución de reserva |
+| `docs/en/SPEC.md` | Funciones, manejo, no-objetivos |
+| `docs/en/ARCHITECTURE.md` | Módulos, flujo de datos, formato de reglas, seguridad |
+| `docs/en/RULES.md` | Catálogo de reglas con fuentes, estado y desviaciones |
+| `docs/en/DIAGNOSE.md` | Ampliación del diagnóstico: revisiones construidas, decisiones D1–D21, plan de construcción |
+| `docs/en/ROADMAP.md` | Fases 0–5 |
+| `docs/en/PHASE2.md` a `PHASE5.md` | Consola y snapshot, interfaz y contexto de aplicación, informe y versión, actualización de reglas y comunidad |
+| `docs/en/TESTER.md` | Colaborar como probador |
+| `docs/en/COMMUNITY.md` | Enviar informes; cómo se convierten en reglas nuevas y actualizaciones de reglas |
+| `docs/en/NATIVE.md` | La interfaz como aplicación nativa: mosaico, servicio, protocolo, estado |
+| `docs/en/TITLE.md` | Vía anterior (Starter, launcher, websrv), solo como solución de reserva |
 | `knowledge/` | Reglas (`rules.json`), códigos de error (`error_codes.json`), traducciones (`l10n/`) y esquemas JSON |
 
 ## Licencia y agradecimientos

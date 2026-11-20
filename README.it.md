@@ -111,7 +111,7 @@
 2. ShadowMount+ crea in pochi secondi il riquadro **PS5 Medic** sotto «Media».
 3. Una pressione sul riquadro avvia l'app (prima la schermata di avvio, poi la schermata iniziale). All'avvio invia il servizio all'ELF loader (porta 9021), che deve essere attivo; un riavvio della console non cambia nulla, il riquadro resta. ◯ nella schermata iniziale chiude app e servizio.
 
-Il riquadro `FAKE42007` sostituisce i metodi precedenti (launcher, websrv, riquadri `FAKE42008` e `FAKE42009`). Se ci sono ancora vecchi riquadri, si possono rimuovere nelle impostazioni di archiviazione della PS5. Dettagli sull'app: [docs/NATIVE.md](docs/NATIVE.md).
+Il riquadro `FAKE42007` sostituisce i metodi precedenti (launcher, websrv, riquadri `FAKE42008` e `FAKE42009`). Se ci sono ancora vecchi riquadri, si possono rimuovere nelle impostazioni di archiviazione della PS5. Dettagli sull'app: [docs/NATIVE.md](docs/en/NATIVE.md).
 
 ## Uso
 
@@ -139,7 +139,7 @@ make host        # medic-cli e l'anteprima dell'interfaccia su PC
 make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # immagini dell'interfaccia su PC (de en fr it es)
 ```
 
-Per la console servono il [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versione 0.50** (`PS5_PAYLOAD_SDK`) e SDL2 per la PS5 (solo per l'interfaccia di riserva); le istruzioni di compilazione si trovano in [docs/PHASE3.md](docs/PHASE3.md), struttura e compilazione dell'app nativa in [docs/NATIVE.md](docs/NATIVE.md).
+Per la console servono il [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **versione 0.50** (`PS5_PAYLOAD_SDK`) e SDL2 per la PS5 (solo per l'interfaccia di riserva); le istruzioni di compilazione si trovano in [docs/PHASE3.md](docs/en/PHASE3.md), struttura e compilazione dell'app nativa in [docs/NATIVE.md](docs/en/NATIVE.md).
 
 ```bash
 make native-ui                      # app nativa (build-native/FAKE42007)
@@ -165,7 +165,7 @@ L'interfaccia si trova in `ui/i18n/<lingua>.json`; i testi di conoscenza per fra
 
 ## Contribuire
 
-**Cercasi tester** (altri firmware e altre configurazioni): [docs/TESTER.md](docs/TESTER.md). Segnalare i problemi con il modello di issue, incollando il rapporto (□).
+**Cercasi tester** (altri firmware e altre configurazioni): [docs/TESTER.md](docs/en/TESTER.md). Segnalare i problemi con il modello di issue, incollando il rapporto (□).
 
 Una nuova regola richiede: una voce in `knowledge/rules.json` con fonte, una fixture positiva e una negativa in `tests/fixtures/` e `expect.json`. I test impongono entrambe. Le fixture sono **sintetiche**: nomi reali di file e giochi non appartengono al repository.
 
@@ -174,16 +174,16 @@ Una nuova regola richiede: una voce in `knowledge/rules.json` con fonte, una fix
 | File | Contenuto |
 |---|---|
 | `CLAUDE.md` | Punto di ingresso per Claude Code: obiettivo, stack, limiti, modo di lavorare |
-| `docs/SPEC.md` | Funzioni, uso, non-obiettivi |
-| `docs/ARCHITECTURE.md` | Moduli, flusso dei dati, formato delle regole, sicurezza |
-| `docs/RULES.md` | Catalogo delle regole con fonti, stato e scostamenti |
-| `docs/DIAGNOSE.md` | Ampliamento della diagnosi: controlli realizzati, decisioni D1–D21, piano di sviluppo |
-| `docs/ROADMAP.md` | Fasi 0–5 |
-| `docs/PHASE2.md` fino a `PHASE5.md` | Console e snapshot, interfaccia e contesto app, rapporto e release, aggiornamento delle regole e community |
-| `docs/TESTER.md` | Partecipare come tester |
-| `docs/COMMUNITY.md` | Inviare rapporti; come diventano nuove regole e aggiornamenti delle regole |
-| `docs/NATIVE.md` | L'interfaccia come app nativa: riquadro, servizio, protocollo, stato |
-| `docs/TITLE.md` | Metodo precedente (starter, launcher, websrv), mantenuto solo come soluzione di riserva |
+| `docs/en/SPEC.md` | Funzioni, uso, non-obiettivi |
+| `docs/en/ARCHITECTURE.md` | Moduli, flusso dei dati, formato delle regole, sicurezza |
+| `docs/en/RULES.md` | Catalogo delle regole con fonti, stato e scostamenti |
+| `docs/en/DIAGNOSE.md` | Ampliamento della diagnosi: controlli realizzati, decisioni D1–D21, piano di sviluppo |
+| `docs/en/ROADMAP.md` | Fasi 0–5 |
+| `docs/en/PHASE2.md` fino a `PHASE5.md` | Console e snapshot, interfaccia e contesto app, rapporto e release, aggiornamento delle regole e community |
+| `docs/en/TESTER.md` | Partecipare come tester |
+| `docs/en/COMMUNITY.md` | Inviare rapporti; come diventano nuove regole e aggiornamenti delle regole |
+| `docs/en/NATIVE.md` | L'interfaccia come app nativa: riquadro, servizio, protocollo, stato |
+| `docs/en/TITLE.md` | Metodo precedente (starter, launcher, websrv), mantenuto solo come soluzione di riserva |
 | `knowledge/` | Regole (`rules.json`), codici di errore (`error_codes.json`), traduzioni (`l10n/`) e schemi JSON |
 
 ## Licenza e ringraziamenti

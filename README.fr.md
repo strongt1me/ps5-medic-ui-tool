@@ -111,7 +111,7 @@
 2. ShadowMount+ crée en quelques secondes la tuile **PS5 Medic** sous « Médias ».
 3. Une pression sur la tuile lance l'application (d'abord l'écran de démarrage, puis l'écran d'accueil). Au démarrage, elle envoie le service au chargeur d'ELF (port 9021), qui doit fonctionner ; un redémarrage de la console n'y change rien, la tuile reste. ◯ sur l'écran d'accueil ferme l'application et le service.
 
-La tuile `FAKE42007` remplace les anciennes méthodes (Launcher, websrv, tuiles `FAKE42008` et `FAKE42009`). S'il reste d'anciennes tuiles, elles peuvent être supprimées dans les paramètres de stockage de la PS5. Détails sur l'application : [docs/NATIVE.md](docs/NATIVE.md).
+La tuile `FAKE42007` remplace les anciennes méthodes (Launcher, websrv, tuiles `FAKE42008` et `FAKE42009`). S'il reste d'anciennes tuiles, elles peuvent être supprimées dans les paramètres de stockage de la PS5. Détails sur l'application : [docs/NATIVE.md](docs/en/NATIVE.md).
 
 ## Utilisation
 
@@ -139,7 +139,7 @@ make host        # medic-cli et l'aperçu de l'interface sur PC
 make preview SNAP=tests/fixtures/g1_pos OUT=build/preview PREVIEW_ARGS="--lang fr"   # images de l'interface sur PC (de en fr it es)
 ```
 
-Pour la console, il faut le [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **version 0.50** (`PS5_PAYLOAD_SDK`) et SDL2 pour la PS5 (uniquement pour l'interface de secours) ; la procédure de compilation correspondante se trouve dans [docs/PHASE3.md](docs/PHASE3.md), la structure et la compilation de l'application native dans [docs/NATIVE.md](docs/NATIVE.md).
+Pour la console, il faut le [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk) **version 0.50** (`PS5_PAYLOAD_SDK`) et SDL2 pour la PS5 (uniquement pour l'interface de secours) ; la procédure de compilation correspondante se trouve dans [docs/PHASE3.md](docs/en/PHASE3.md), la structure et la compilation de l'application native dans [docs/NATIVE.md](docs/en/NATIVE.md).
 
 ```bash
 make native-ui                      # application native (build-native/FAKE42007)
@@ -165,7 +165,7 @@ L'interface se trouve dans `ui/i18n/<langue>.json` ; les textes de connaissances
 
 ## Contribuer
 
-**Testeurs recherchés** (autres firmwares et configurations) : [docs/TESTER.md](docs/TESTER.md). Signaler les problèmes avec le modèle d'issue, en y collant le rapport (□).
+**Testeurs recherchés** (autres firmwares et configurations) : [docs/TESTER.md](docs/en/TESTER.md). Signaler les problèmes avec le modèle d'issue, en y collant le rapport (□).
 
 Une nouvelle règle requiert : une entrée dans `knowledge/rules.json` avec une source, une fixture positive et une fixture négative sous `tests/fixtures/` ainsi que `expect.json`. Les tests exigent les deux. Les fixtures sont **synthétiques** : les noms réels de fichiers et de jeux n'ont pas leur place dans le dépôt.
 
@@ -174,16 +174,16 @@ Une nouvelle règle requiert : une entrée dans `knowledge/rules.json` avec une 
 | Fichier | Contenu |
 |---|---|
 | `CLAUDE.md` | Point d'entrée pour Claude Code : objectif, pile technique, limites, méthode de travail |
-| `docs/SPEC.md` | Fonctions, utilisation, non-objectifs |
-| `docs/ARCHITECTURE.md` | Modules, flux de données, format des règles, sécurité |
-| `docs/RULES.md` | Catalogue des règles avec sources, statut et écarts |
-| `docs/DIAGNOSE.md` | Extension du diagnostic : vérifications réalisées, décisions D1–D21, plan de construction |
-| `docs/ROADMAP.md` | Phases 0–5 |
-| `docs/PHASE2.md` à `PHASE5.md` | Console et snapshot, interface et contexte d'application, rapport et release, mise à jour des règles et communauté |
-| `docs/TESTER.md` | Participer en tant que testeur |
-| `docs/COMMUNITY.md` | Envoyer des rapports ; comment ils deviennent de nouvelles règles et des mises à jour des règles |
-| `docs/NATIVE.md` | L'interface comme application native : tuile, service, protocole, état |
-| `docs/TITLE.md` | Ancienne méthode (Starter, Launcher, websrv), conservée uniquement comme solution de secours |
+| `docs/en/SPEC.md` | Fonctions, utilisation, non-objectifs |
+| `docs/en/ARCHITECTURE.md` | Modules, flux de données, format des règles, sécurité |
+| `docs/en/RULES.md` | Catalogue des règles avec sources, statut et écarts |
+| `docs/en/DIAGNOSE.md` | Extension du diagnostic : vérifications réalisées, décisions D1–D21, plan de construction |
+| `docs/en/ROADMAP.md` | Phases 0–5 |
+| `docs/en/PHASE2.md` à `PHASE5.md` | Console et snapshot, interface et contexte d'application, rapport et release, mise à jour des règles et communauté |
+| `docs/en/TESTER.md` | Participer en tant que testeur |
+| `docs/en/COMMUNITY.md` | Envoyer des rapports ; comment ils deviennent de nouvelles règles et des mises à jour des règles |
+| `docs/en/NATIVE.md` | L'interface comme application native : tuile, service, protocole, état |
+| `docs/en/TITLE.md` | Ancienne méthode (Starter, Launcher, websrv), conservée uniquement comme solution de secours |
 | `knowledge/` | Règles (`rules.json`), codes d'erreur (`error_codes.json`), traductions (`l10n/`) et schémas JSON |
 
 ## Licence et remerciements
