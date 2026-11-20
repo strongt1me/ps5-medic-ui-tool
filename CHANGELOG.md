@@ -2,6 +2,11 @@
 
 ## Unreleased / Unveröffentlicht
 
+## 0.4.5 (2026-11-20)
+
+- **English:** The Payload Manager catalog (`payload-manager/ps5-medic.json`) now has English descriptions; the French, Italian and Spanish READMEs link to the English documentation (`docs/en/`). The app itself is unchanged apart from the version number.
+- **Deutsch:** Der Payload-Manager-Katalog (`payload-manager/ps5-medic.json`) hat jetzt englische Beschreibungen; die französische, italienische und spanische README verlinken auf die englische Dokumentation (`docs/en/`). Die App selbst ist bis auf die Versionsnummer unverändert.
+
 ## 0.4.4 (2026-11-20)
 
 - **English:** Built with ps5-payload-sdk 0.50, whose start code covers firmwares up to 14.22; the stated firmware range is now 1.00 to 14.22 (README, badge, docs, `tools/fw_compat.py`). Only FW 12.00 is tested.
