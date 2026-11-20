@@ -43,12 +43,12 @@ def main():
 
     entries = [
         ("ps5medic", "PS5 Medic", "ps5medicui.elf",
-         "Vollbild-App: prueft den Live-Zustand des Homebrew-Setups (Firmware, HEN, kstuff, ShadowMount+, Payloads, Dateien, "
-         "Configs), erklaert Fehler in Klartext und repariert sicher mit Backup und Undo. Hinweis: Fuer den DualSense-Controller "
-         "ueber websrv starten (Big-App-Lader); als reiner Payload laeuft die Bedienung nur ohne Pad."),
+         "Full-screen app: checks the live state of the homebrew setup (firmware, HEN, kstuff, ShadowMount+, payloads, files, "
+         "configs), explains errors in plain language and repairs safely with backup and undo. Note: for the DualSense "
+         "controller start it via websrv (big app loader); as a plain payload it can only be used without a controller."),
         ("ps5medic-diagnose", "PS5 Medic Diagnose", "ps5medic.elf",
-         "Kleiner Diagnose-Payload ohne Oberflaeche: schreibt den Bericht nach /data/ps5medic/last_check.txt und legt einen "
-         "Snapshot in /data/ps5medic/snapshots/ ab."),
+         "Small diagnostic payload without a user interface: writes the report to /data/ps5medic/last_check.txt and stores a "
+         "snapshot in /data/ps5medic/snapshots/."),
     ]
     payloads = []
     for pid, name, fn, desc in entries:

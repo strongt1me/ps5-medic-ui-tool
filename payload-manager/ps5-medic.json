@@ -9,7 +9,7 @@
       "version": "0.4.4",
       "last_update": "2026-11-20",
       "category": "Utilities",
-      "description": "Vollbild-App: prueft den Live-Zustand des Homebrew-Setups (Firmware, HEN, kstuff, ShadowMount+, Payloads, Dateien, Configs), erklaert Fehler in Klartext und repariert sicher mit Backup und Undo. Hinweis: Fuer den DualSense-Controller ueber websrv starten (Big-App-Lader); als reiner Payload laeuft die Bedienung nur ohne Pad.",
+      "description": "Full-screen app: checks the live state of the homebrew setup (firmware, HEN, kstuff, ShadowMount+, payloads, files, configs), explains errors in plain language and repairs safely with backup and undo. Note: for the DualSense controller start it via websrv (big app loader); as a plain payload it can only be used without a controller.",
       "checksum": "558428f1465872d608e7d24aa8906566bddef9ba4e425d06297f638c873f1db9",
       "author": "strongt1me"
     },
@@ -21,7 +21,7 @@
       "version": "0.4.4",
       "last_update": "2026-11-20",
       "category": "Utilities",
-      "description": "Kleiner Diagnose-Payload ohne Oberflaeche: schreibt den Bericht nach /data/ps5medic/last_check.txt und legt einen Snapshot in /data/ps5medic/snapshots/ ab.",
+      "description": "Small diagnostic payload without a user interface: writes the report to /data/ps5medic/last_check.txt and stores a snapshot in /data/ps5medic/snapshots/.",
       "checksum": "8b90d23f4d2ae7229706f12aa863bb1bf023051932c89a166e71e35d26277816",
       "author": "strongt1me"
     }
