@@ -39,10 +39,32 @@ std::string backup_line(const Strings& S, const medic::BackupInfo& b) {
 
 
 constexpr int W = App::kWidth, H = App::kHeight, M = 96;
+// Zeilen der Einstellungen (Reihenfolge von oben nach unten)
+enum SettingsRow { kSetLang, kSetSize, kSetContrast, kSetZone, kSetAutostart, kSetRuleDl, kSetNetTest, kSetSource, kSetHidden, kSetBackups, kSetRows };
+
 constexpr int kRepVisible = 5, kListVisible = 6, kHidVisible = 6, kHistVisible = 6, kErrVisible = 8, kChkRows = 7, kChkBigH = 124, kChkToggleH = 64, kChkRowH = 76, kCmpVisible = 13, kGameVisible = 8, kGdVisible = 5;
 
-const Color kBg = rgb(14, 18, 24), kPanel = rgb(23, 29, 38), kPanelHi = rgb(33, 42, 56), kLine = rgb(42, 52, 66);
-const Color kText = rgb(232, 237, 242), kDim = rgb(141, 153, 168), kAccent = rgb(76, 154, 255);
+const Color kBg = rgb(14, 18, 24), kPanel = rgb(23, 29, 38), kPanelHi = rgb(33, 42, 56);
+Color kLine = rgb(42, 52, 66);                          // Linien, unbenutzte Schaltflaechen (Einstellung Kontrast: heller)
+Color kText = rgb(232, 237, 242), kDim = rgb(141, 153, 168);  // Text, Nebentext (Einstellung Kontrast: heller)
+const Color kAccent = rgb(76, 154, 255);
+
+// Einstellung "Kontrast: Hoch": hellere Nebentexte und Linien (Normal: die Grundfarben oben). Wird vor jedem Zeichnen gesetzt.
+void apply_contrast(bool high) {
+    kDim = high ? rgb(208, 216, 227) : rgb(141, 153, 168);
+    kText = high ? rgb(255, 255, 255) : rgb(232, 237, 242);
+    kLine = high ? rgb(98, 112, 134) : rgb(42, 52, 66);
+}
+
+// Einstellung "Zeitzone": Versatz zu UTC in Minuten, nur fuer die Anzeige in der App.
+int g_utc_offset_min = 0;
+std::string utc_label() {
+    if (g_utc_offset_min == 0) return "UTC";
+    const int a = g_utc_offset_min < 0 ? -g_utc_offset_min : g_utc_offset_min;
+    char buf[24];
+    std::snprintf(buf, sizeof buf, "UTC%c%02d:%02d", g_utc_offset_min < 0 ? '-' : '+', a / 60, a % 60);
+    return buf;
+}
 const Color kCrit = rgb(255, 92, 92), kWarn = rgb(255, 179, 71), kInfo = rgb(92, 184, 255), kOk = rgb(76, 208, 138);
 
 const Font& body() { return Font::get(Font::Id::Body); }
@@ -92,15 +114,19 @@ std::string pretty_day(const std::string& ts, Lang lang) {
     return d + "/" + m + "/" + y;
 }
 
-std::string pretty_ts(const std::string& ts, Lang lang) {
-    if (ts.size() >= 15 && ts[8] == 'T') return pretty_day(ts, lang) + " " + ts.substr(9, 2) + ":" + ts.substr(11, 2) + " UTC";
-    return ts;
+std::string pretty_ts(const std::string& ts0, Lang lang) {
+    if (ts0.size() >= 15 && ts0[8] == 'T') {
+        const std::string ts = medic::shift_timestamp(ts0, g_utc_offset_min);
+        return pretty_day(ts, lang) + " " + ts.substr(9, 2) + ":" + ts.substr(11, 2) + " " + utc_label();
+    }
+    return ts0;
 }
 
 int draw_badge(Canvas& c, int x, int y, const std::string& label, Color col) {
     const int w = small().width(label) + 24;
-    c.fill_round_rect(x, y, w, 34, 8, col);
-    small().draw(c, x + 12, y + 4, label, kBg);
+    const int h = std::max(34, small().line_height() + 7);  // grosse Schrift: Marke etwas hoeher
+    c.fill_round_rect(x, y, w, h, 8, col);
+    small().draw(c, x + 12, y + (h - small().line_height()) / 2 + 1, label, kBg);
     return w;
 }
 
@@ -410,6 +436,19 @@ App::App(IMedicService& svc, Lang lang) : svc_(svc), lang_(lang) {
     errors_ = svc_.error_codes();
     Lang saved;
     if (lang_from_code(svc_.language(), saved)) lang_ = saved;  // die in config.ini gespeicherte Sprache hat Vorrang vor dem Standard
+    load_settings();
+}
+
+void App::apply_look() const {
+    apply_contrast(cfg_.high_contrast);
+    Font::set_large(cfg_.large_text);
+    g_utc_offset_min = cfg_.utc_offset_min;
+}
+
+void App::load_settings() {
+    cfg_ = svc_.settings();
+    backup_ = svc_.backup_usage();
+    apply_look();
 }
 
 std::string App::finding_text(const medic::Finding& f) const { return pick_text(lang_, f.text_de, f.text_en, "rules", f.rule_id, "text"); }
@@ -924,8 +963,10 @@ void App::begin_fix(int index, Screen origin) {
 }
 
 void App::handle(Button b) {
+    apply_look();
     const Screen before = screen_;
     handle_impl(b);
+    apply_look();  // eine geaenderte Einstellung gilt sofort, auch fuer Messungen der naechsten Eingabe
     if (screen_ == Screen::Findings && before != Screen::Findings) maint_origin_ = false;  // wer in den Befunden landet, kommt nicht mehr aus "Mehr" (sonst fuehrt Kreis im Bericht dorthin statt zu den Befunden)
     // Ein aus "Mehr" geoeffneter Bildschirm fuehrt mit Kreis zurueck dorthin, nicht ins Startbild
     if (maint_origin_ && before != screen_ && screen_ == Screen::Start) {
@@ -1143,7 +1184,10 @@ void App::handle_impl(Button b) {
             else if (b == Button::L1) page_selection(hid_sel_, hid_top_, hn, kHidVisible, -1);
             else if (b == Button::R1) page_selection(hid_sel_, hid_top_, hn, kHidVisible, 1);
             else if (b == Button::Cross) restore_hidden(hid_sel_);
-            else if (b == Button::Circle) screen_ = Screen::Findings;
+            else if (b == Button::Circle) {
+                screen_ = settings_from_hidden_ ? Screen::Settings : Screen::Findings;
+                settings_from_hidden_ = false;
+            }
             break;
         }
         case Screen::CheckCompare: {
@@ -1187,14 +1231,18 @@ void App::handle_impl(Button b) {
             } else if (b == Button::Circle) screen_ = Screen::History;
             break;
         case Screen::Settings:
-            if (b == Button::Left || b == Button::Right || b == Button::Cross) {
-                const int n = static_cast<int>(sizeof kAllLangs / sizeof kAllLangs[0]);
-                int i = 0;
-                while (i < n && kAllLangs[i] != lang_) ++i;
-                lang_ = kAllLangs[(i + (b == Button::Left ? n - 1 : 1)) % n];
-                refresh_game_names();  // "Betrifft: ..." und Namen in der neuen Sprache
-                (void)svc_.set_language(lang_code(lang_));  // scheitert das Speichern, gilt die Sprache nur fuer diese Sitzung
-            }
+            set_saved_ = true;
+            if (b == Button::Up) set_sel_ = std::max(set_sel_ - 1, 0);
+            else if (b == Button::Down) set_sel_ = std::min(set_sel_ + 1, kSetRows - 1);
+            else if (b == Button::Left || b == Button::Right || b == Button::Cross) {
+                if (set_sel_ == kSetHidden) {
+                    if (b == Button::Cross && has_result_ && !hidden_.empty()) {  // Liste der ausgeblendeten Befunde; dort lassen sie sich wieder anzeigen
+                        hid_sel_ = hid_top_ = 0;
+                        settings_from_hidden_ = true;
+                        screen_ = Screen::Hidden;
+                    }
+                } else if (set_sel_ != kSetBackups) settings_change(set_sel_, b == Button::Left ? -1 : 1);
+            } else if ((b == Button::L1 || b == Button::R1) && set_sel_ == kSetZone) settings_step_offset(b == Button::L1 ? -15 : 15);
             else if (b == Button::Circle) screen_ = Screen::Start;
             break;
         case Screen::RulesUpdate:
@@ -1204,7 +1252,7 @@ void App::handle_impl(Button b) {
                         install_updates();
                     } else if (b == Button::Triangle && (offer_.can_rollback || codes_offer_.can_rollback)) {
                         update_stage_ = UpdateStage::ConfirmRollback;
-                    } else if (b == Button::Square) {
+                    } else if (b == Button::Square && cfg_.rule_download) {
                         download_url_ = svc_.rule_update_url();
                         update_stage_ = UpdateStage::ConfirmDownload;
                     } else if (b == Button::Circle) {
@@ -1355,8 +1403,13 @@ CheckResult App::run_check_with_progress() {
 }
 
 void App::update() {
+    apply_look();
     ++tick_;
     if (screen_ == Screen::Splash && tick_ >= splash_until_) screen_ = Screen::Start;
+    if (!look_checked_ && screen_ != Screen::Splash) {  // Einstellung "Check-up beim Start": einmal je Sitzung, nur vom Startbildschirm aus
+        look_checked_ = true;
+        if (cfg_.autostart_check && screen_ == Screen::Start && !has_result_ && !pending_check_) start_check();
+    }
     if (pending_check_ && running_rendered_) {  // erst ausfuehren, wenn "Pruefe..." sichtbar war
         pending_check_ = false;
         result_ = run_check_with_progress();
@@ -1408,6 +1461,7 @@ void App::update() {
 // ---- Darstellung ------------------------------------------------------------
 
 void App::render(Canvas& c) const {
+    apply_look();
     if (!bg_ || bg_->width() != c.width() || bg_->height() != c.height()) {  // Hintergrund einmal bauen: Verlauf und zwei weiche Lichtflecken
         bg_ = std::make_unique<Canvas>(c.width(), c.height());
         build_background(*bg_, bgimage_ && bgimage_->width() == c.width() && bgimage_->height() == c.height() ? bgimage_.get() : nullptr);
@@ -1590,20 +1644,25 @@ void App::draw_selftest(Canvas& c) const {
         else if (st == medic::TestStatus::Warn) ++warn;
         else if (st == medic::TestStatus::Failed || st == medic::TestStatus::Error) ++failed;
         else if (st == medic::TestStatus::Skipped) ++skipped;
-        glass_panel(c, M, y, W - 2 * M, 58, 14);
+        const bool big = Font::large();  // grosse Schrift: eine Zeile je Test (Name links, Angabe daneben), sonst waere die Liste zu hoch
+        const int rh = big ? 54 : 58, step = big ? 58 : 63;
+        glass_panel(c, M, y, W - 2 * M, rh, 14);
         {
             const auto look = test_look(d.id);
-            draw_icon_badge(c, look.first, M + 12, y + 5, 48, look.second);
+            draw_icon_badge(c, look.first, M + 12, y + (rh - 48) / 2, 48, look.second);
         }
-        body().draw(c, M + 80, y + 0, pick_text(lang_, d.name_de, d.name_en, "selftests", d.id, "name"), kText, W - 2 * M - 480);
+        const std::string tname = pick_text(lang_, d.name_de, d.name_en, "selftests", d.id, "name");
+        if (big) body().draw(c, M + 80, y + (rh - body().line_height()) / 2, elide(body(), tname, 780), kText);
+        else body().draw(c, M + 80, y + 0, tname, kText, W - 2 * M - 480);
         std::string sub = S(d.tier == medic::TestTier::Quick ? "selftest.tier_quick" : (d.tier == medic::TestTier::Standard ? "selftest.tier_standard" : (d.tier == medic::TestTier::Thorough ? "selftest.tier_thorough" : "selftest.tier_user"))) + " · " + S.fmt("selftest.est", {{"s", std::to_string(d.est_seconds)}});
         if (r && !r->reason.empty()) sub += " · " + (S.has("selftest.reason." + r->reason) ? S("selftest.reason." + r->reason) : r->reason);
-        small().draw(c, M + 80, y + 29, elide(small(), sub, W - 2 * M - 480), kDim);
         const std::string label = S(std::string("selftest.status.") + medic::to_string(st));
         const int bx = W - M - 32 - (small().width(label) + 24);
-        draw_badge(c, bx, y + 12, label, status_color(st));
-        draw_icon(c, status_icon(st), bx - 28, y + 29, 30, status_color(st), status_color(st));
-        y += 63;
+        if (big) small().draw(c, M + 80 + 800, y + (rh - small().line_height()) / 2, elide(small(), sub, bx - 28 - 24 - (M + 80 + 800)), kDim);
+        else small().draw(c, M + 80, y + 29, elide(small(), sub, W - 2 * M - 480), kDim);
+        draw_badge(c, bx, y + (rh - 34) / 2, label, status_color(st));
+        draw_icon(c, status_icon(st), bx - 28, y + rh / 2, 30, status_color(st), status_color(st));
+        y += step;
     }
     if (!st_last_.empty())
         small().draw(c, M + 4, y + 6, S.fmt("selftest.summary", {{"p", std::to_string(passed)}, {"w", std::to_string(warn)}, {"f", std::to_string(failed)}, {"s", std::to_string(skipped)}}), kDim);
@@ -1752,7 +1811,10 @@ void App::draw_chrome(Canvas& c) const {
         small().draw(c, right - w + 50, 44, t, kWarn);
     }
     if (!viewing_old_ && has_result_ && result_.ts.size() >= 15 && result_.ts[8] == 'T') {  // wann der angezeigte Check-up lief und der wievielte es ist
-        const std::string t = S.fmt("header.checked", {{"time", result_.ts.substr(9, 2) + ":" + result_.ts.substr(11, 2) + ":" + result_.ts.substr(13, 2)}, {"n", std::to_string(check_runs_)}});
+        const std::string shifted = medic::shift_timestamp(result_.ts, g_utc_offset_min);
+        std::string t = S.fmt("header.checked", {{"time", shifted.substr(9, 2) + ":" + shifted.substr(11, 2) + ":" + shifted.substr(13, 2)}, {"n", std::to_string(check_runs_)}});
+        if (g_utc_offset_min != 0)  // der Text nennt "UTC" fest: durch die gewaehlte Zeitzone ersetzen
+            for (std::size_t p = t.find("UTC"); p != std::string::npos; p = t.find("UTC", p + utc_label().size())) t.replace(p, 3, utc_label());
         const int w = small().width(t) + 64;
         c.fill_round_rect(right - w, 36, w, 44, 22, rgba(255, 255, 255, 14));
         draw_icon(c, Icon::Stethoscope, right - w + 28, 58, 26, kDim, kDim);
@@ -1851,7 +1913,8 @@ void App::draw_start(Canvas& c) const {
     }
 
     // Statusfeld: sagt in einem Satz, wie es um die Konsole steht, und bietet den naechsten Schritt an ("Was jetzt?"). Die Ueberschrift folgt dem schlimmsten Befund.
-    const int hw = 1340, hx = cx - hw / 2, hy = 470, hh = 220;
+    const bool large = Font::large();  // grosse Schrift: Statusfeld und Kacheln etwas hoeher, Knopf breiter
+    const int hw = 1340, hx = cx - hw / 2, hy = 470, hh = large ? 252 : 220;
     {
         const bool sel0 = start_sel_ == 0;
         int crit = 0, warn = 0, info = 0, fixable = 0;
@@ -1902,7 +1965,7 @@ void App::draw_start(Canvas& c) const {
         card(c, hx, hy, hw, hh, sel0);
         c.glow(hx + 100, hy + hh / 2, 90, tint, sel0 ? 90 : 55);
         draw_icon_badge(c, icon, hx + 40, hy + (hh - 120) / 2, 120, tint);
-        const int tx = hx + 200, bw = 400, bh = 88, bx = hx + hw - 40 - bw, by = hy + (hh - bh) / 2, tw = bx - 30 - tx;
+        const int tx = hx + 200, bw = large ? 470 : 400, bh = 88, bx = hx + hw - 40 - bw, by = hy + (hh - bh) / 2, tw = bx - 30 - tx;
         title().draw(c, tx, hy + 32, elide(title(), head, tw), icon == Icon::Ok ? kOk : kText);
         int ty = hy + 32 + title().line_height() + 6;
         for (const auto& l : wrap_text(body(), sub, tw, sub2.empty() ? 3 : 2)) {
@@ -1922,7 +1985,7 @@ void App::draw_start(Canvas& c) const {
     }
 
     // Drei Kacheln: Spiele, Verlauf und "Mehr" (alles andere: Reparaturen, Selbsttest, Regeln, Backups, Fehlercodes, Einstellungen)
-    const int gap = 25, cw = (hw - 2 * gap) / 3, ty0 = 730, th = 176;
+    const int gap = 25, cw = (hw - 2 * gap) / 3, ty0 = large ? 750 : 730, th = large ? 200 : 176;
     const char* keys[3][2] = {{"start.games", "start.games_sub"}, {"start.history", "start.history_sub"}, {"start.more", "start.more_sub"}};
     const Icon icons[3] = {Icon::Gamepad, Icon::History, Icon::Gear};
     const Color tints[3] = {kTintPink, kTintViolet, kTintSlate};
@@ -2631,7 +2694,8 @@ void App::draw_checklist(Canvas& c) const {
     // big = der aktuellste, gross und abgesetzt.
     auto entry = [&](int i, int y, bool big, bool selected) {
         const auto& e = chk_[static_cast<std::size_t>(i)];
-        const int ch = big ? kChkBigH : kChkRowH;
+        const bool lg = Font::large();  // grosse Schrift: Zeilen etwas hoeher
+        const int ch = big ? kChkBigH : (lg ? kChkRowH + 14 : kChkRowH);
         card(c, M, y, cw, ch, selected);
         const bool partial = e.untested > 0;
         Icon ic = Icon::Ok;
@@ -2645,7 +2709,7 @@ void App::draw_checklist(Canvas& c) const {
         const int ty = big ? y + 18 : y + 6;
         (big ? title() : body()).draw(c, tx, ty, pretty_ts(e.ts, lang_), kText);
         if (big) draw_badge(c, tx + title().width(pretty_ts(e.ts, lang_)) + 24, ty + 8, S("checks.latest"), kAccent);
-        small().draw(c, tx, big ? y + 78 : y + 42, S.fmt("checks.line", {{"fw", e.fw.empty() ? "?" : e.fw}, {"rules", e.rules_version.empty() ? "?" : e.rules_version}}), kDim, cw - 900);
+        small().draw(c, tx, big ? y + 78 : y + (lg ? 46 : 42), S.fmt("checks.line", {{"fw", e.fw.empty() ? "?" : e.fw}, {"rules", e.rules_version.empty() ? "?" : e.rules_version}}), kDim, cw - 900);
         // rechts oben: Marken je Schweregrad (Symbol und Zahl), sonst "keine Befunde"; darunter der Vergleich mit dem Check-up davor
         int x = M + cw - 28;
         const int cy = big ? y + 20 : y + 8;
@@ -2668,13 +2732,13 @@ void App::draw_checklist(Canvas& c) const {
         } else if (static_cast<std::size_t>(n) < medic::kChecksListMax) {
             delta = S("checks.delta_first");
         }
-        if (!delta.empty()) text_right(c, small(), M + cw - 28, big ? y + 78 : y + 46, delta, dcol);
+        if (!delta.empty()) text_right(c, small(), M + cw - 28, big ? y + 78 : y + (lg ? 52 : 46), delta, dcol);
     };
     int y = y0;
     int shown = 0;
     for (int r = chk_top_; r < rows; ++r) {
         const int ent = chk_entry_of_row(r, n);
-        const int h = r == 0 ? kChkBigH : (ent < 0 ? kChkToggleH : kChkRowH);
+        const int h = r == 0 ? kChkBigH : (ent < 0 ? kChkToggleH : (Font::large() ? kChkRowH + 14 : kChkRowH));
         if (r > chk_top_ && y + h > ybottom) break;
         if (ent >= 0) {
             entry(ent, y, r == 0, r == chk_sel_);
@@ -3055,26 +3119,175 @@ void App::draw_undo_confirm(Canvas& c) const {
     draw_hints(c, {{PadGlyph::Cross, S("common.confirm")}, {PadGlyph::Circle, S("common.cancel")}});
 }
 
+// Eine Einstellung der gewaehlten Zeile aendern (dir: -1 zurueck, +1 weiter; Schalter wechseln bei beidem).
+void App::settings_change(int row, int dir) {
+    auto save = [&](const char* key, const std::string& value) { set_saved_ = svc_.set_setting(key, value); };
+    switch (row) {
+        case kSetLang: {
+            const int n = static_cast<int>(sizeof kAllLangs / sizeof kAllLangs[0]);
+            int i = 0;
+            while (i < n && kAllLangs[i] != lang_) ++i;
+            lang_ = kAllLangs[(i + (dir < 0 ? n - 1 : 1)) % n];
+            refresh_game_names();  // "Betrifft: ..." und Namen in der neuen Sprache
+            (void)svc_.set_language(lang_code(lang_));  // scheitert das Speichern, gilt die Sprache nur fuer diese Sitzung
+            break;
+        }
+        case kSetSize:
+            cfg_.large_text = !cfg_.large_text;
+            save("text_size", cfg_.large_text ? "large" : "normal");
+            break;
+        case kSetContrast:
+            cfg_.high_contrast = !cfg_.high_contrast;
+            save("contrast", cfg_.high_contrast ? "high" : "normal");
+            break;
+        case kSetZone: settings_step_offset(dir * 60); break;
+        case kSetAutostart:
+            cfg_.autostart_check = !cfg_.autostart_check;
+            save("autostart_check", cfg_.autostart_check ? "on" : "off");
+            break;
+        case kSetRuleDl:
+        case kSetNetTest: {  // Netzschalter gelten nur, wenn sie gespeichert sind: der Dienst liest sie aus config.ini
+            bool& flag = row == kSetRuleDl ? cfg_.rule_download : cfg_.net_test;
+            flag = !flag;
+            save(row == kSetRuleDl ? "rule_download" : "net_test", flag ? "on" : "off");
+            if (!set_saved_) flag = !flag;
+            break;
+        }
+        case kSetSource:
+            if (cfg_.custom_url.empty()) break;  // ohne eigene Adresse in config.ini gibt es nichts umzuschalten
+            cfg_.custom_source = !cfg_.custom_source;
+            save("update_source", cfg_.custom_source ? "custom" : "default");
+            if (!set_saved_) cfg_.custom_source = !cfg_.custom_source;
+            cfg_.effective_url = cfg_.custom_source ? cfg_.custom_url : std::string(medic::kDefaultUpdateUrl);
+            break;
+        default: break;
+    }
+}
+
+void App::settings_step_offset(int minutes) {
+    cfg_.utc_offset_min = std::clamp(cfg_.utc_offset_min + minutes, medic::kUtcOffsetMin, medic::kUtcOffsetMax);
+    set_saved_ = svc_.set_setting("utc_offset", std::to_string(cfg_.utc_offset_min));
+}
+
 void App::draw_settings(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     title_icon(c, Icon::Gear, kTintSlate, S("settings.title"));
-    card(c, M, 230, W - 2 * M, 150, true);
-    draw_icon_badge(c, Icon::Globe, M + 36, 266, 78, kTintViolet);
-    body().draw(c, M + 144, 262, S("settings.language"), kText);
-    small().draw(c, M + 144, 316, S("settings.note"), kDim);
-    int x = W - M - 40;
-    for (auto it = std::rbegin(kAllLangs); it != std::rend(kAllLangs); ++it) {  // von rechts nach links: Es, It, Fr, En, De
-        const Lang l = *it;
-        const std::string name = S(std::string("settings.lang_") + lang_code(l));
-        const int w = body().width(name) + 48;
-        x -= w;
-        const bool on = l == lang_;
-        c.fill_round_rect(x, 262, w, 56, 28, on ? kAccent : kLine);
-        body().draw(c, x + 24, 262 + (56 - body().line_height()) / 2, name, on ? rgb(255, 255, 255) : kDim);
-        x -= 12;
+    constexpr int y0 = 204, gap = 4;
+    const int rh = std::max(62, body().line_height() + 22);
+    const int cw = W - 2 * M;
+    const int pill_h = rh - 14;
+
+    struct Opt {
+        std::string text;
+        bool on;
+        bool enabled;
+    };
+    // Auswahl rechts in der Zeile (von rechts nach links gezeichnet); die gewaehlte Option ist blau, nicht waehlbare sind gedaempft
+    auto pills = [&](int y, const std::vector<Opt>& opts) {
+        int x = W - M - 28;
+        for (auto it = opts.rbegin(); it != opts.rend(); ++it) {
+            const int w = body().width(it->text) + 40;
+            x -= w;
+            c.fill_round_rect(x, y + (rh - pill_h) / 2, w, pill_h, pill_h / 2, it->on ? kAccent : kLine);
+            body().draw(c, x + 20, y + (rh - body().line_height()) / 2, it->text, it->on ? rgb(255, 255, 255) : (it->enabled ? kDim : rgba(141, 153, 168, 110)));
+            x -= 10;
+        }
+    };
+    auto onoff = [&](bool on) { return std::vector<Opt>{{S("settings.v_off"), !on, true}, {S("settings.v_on"), on, true}}; };
+    auto value_text = [&](int y, const std::string& v) { body().draw(c, W - M - 28 - body().width(v), y + (rh - body().line_height()) / 2, v, kDim); };
+
+    std::string help;  // Hilfetext der gewaehlten Zeile
+    for (int i = 0; i < kSetRows; ++i) {
+        const int y = y0 + i * (rh + gap);
+        const bool sel = i == set_sel_;
+        card(c, M, y, cw, rh, sel);
+        Icon icon = Icon::Drive;
+        Color tint = kTintPink;
+        const char* label = "settings.backups";
+        switch (i) {
+            case kSetLang: icon = Icon::Globe; tint = kTintViolet; label = "settings.language"; break;
+            case kSetSize: icon = Icon::Report; tint = kTintBlue; label = "settings.textsize"; break;
+            case kSetContrast: icon = Icon::Display; tint = kTintTeal; label = "settings.contrast"; break;
+            case kSetZone: icon = Icon::History; tint = kTintOrange; label = "settings.timezone"; break;
+            case kSetAutostart: icon = Icon::Stethoscope; tint = kTintGreen; label = "settings.autostart"; break;
+            case kSetRuleDl: icon = Icon::Download; tint = kTintBlue; label = "settings.rule_dl"; break;
+            case kSetNetTest: icon = Icon::Wifi; tint = kTintTeal; label = "settings.net_test"; break;
+            case kSetSource: icon = Icon::Database; tint = kTintViolet; label = "settings.source"; break;
+            case kSetHidden: icon = Icon::Shield; tint = kTintSlate; label = "settings.hidden"; break;
+            default: break;
+        }
+        draw_icon_badge(c, icon, M + 22, y + (rh - 44) / 2, 44, tint);
+        body().draw(c, M + 84, y + (rh - body().line_height()) / 2, S(label), kText);
+        switch (i) {
+            case kSetLang: {
+                std::vector<Opt> o;
+                for (const Lang l : kAllLangs) o.push_back({S(std::string("settings.lang_") + lang_code(l)), l == lang_, true});
+                pills(y, o);
+                if (sel) help = S("settings.help.lang");
+                break;
+            }
+            case kSetSize:
+                pills(y, {{S("settings.v_normal"), !cfg_.large_text, true}, {S("settings.v_large"), cfg_.large_text, true}});
+                if (sel) help = S("settings.help.textsize");
+                break;
+            case kSetContrast:
+                pills(y, {{S("settings.v_normal"), !cfg_.high_contrast, true}, {S("settings.v_high"), cfg_.high_contrast, true}});
+                if (sel) help = S("settings.help.contrast");
+                break;
+            case kSetZone:
+                pills(y, {{utc_label(), true, true}});
+                if (sel) help = S("settings.help.timezone");
+                break;
+            case kSetAutostart:
+                pills(y, onoff(cfg_.autostart_check));
+                if (sel) help = S("settings.help.autostart");
+                break;
+            case kSetRuleDl:
+                pills(y, onoff(cfg_.rule_download));
+                if (sel) help = S("settings.help.rule_dl");
+                break;
+            case kSetNetTest:
+                pills(y, onoff(cfg_.net_test));
+                if (sel) help = S("settings.help.net_test");
+                break;
+            case kSetSource: {
+                const bool custom = !cfg_.custom_url.empty();
+                pills(y, {{S("settings.v_default_src"), !(custom && cfg_.custom_source), true}, {S("settings.v_custom_src"), custom && cfg_.custom_source, custom}});
+                if (sel) help = S.fmt(custom ? "settings.help.source" : "settings.help.source_none", {{"url", cfg_.effective_url}});
+                break;
+            }
+            case kSetHidden:
+                value_text(y, has_result_ ? S.fmt("settings.hidden_count", {{"n", std::to_string(hidden_.size())}}) : S("settings.hidden_unknown"));
+                if (sel) help = S(has_result_ ? "settings.help.hidden" : "settings.help.hidden_none");
+                break;
+            default: {
+                std::string v;
+                if (!backup_.known) v = S("settings.backup_unknown");
+                else if (backup_.sets == 0) v = S("settings.backup_none");
+                else {
+                    char buf[32];
+                    if (backup_.bytes >= 1048576ULL) std::snprintf(buf, sizeof buf, "%.1f MB", static_cast<double>(backup_.bytes) / 1048576.0);
+                    else std::snprintf(buf, sizeof buf, "%llu KB", static_cast<unsigned long long>((backup_.bytes + 1023) / 1024));
+                    v = S.fmt("settings.backup_value", {{"n", std::to_string(backup_.sets)}, {"size", buf}});
+                }
+                value_text(y, v);
+                if (sel) help = S("settings.help.backups");
+                break;
+            }
+        }
     }
-    if (has_result_ && !result_.rules_version.empty()) small().draw(c, M + 8, 410, S.fmt("settings.rules", {{"v", result_.rules_version}}), kDim);
-    draw_hints(c, {{PadGlyph::LeftRight, S("common.toggle")}, {PadGlyph::Circle, S("common.back")}});
+    // Hilfe zur gewaehlten Zeile; ein fehlgeschlagenes Speichern steht darueber
+    int ty = y0 + kSetRows * (rh + gap) + 6;
+    if (!set_saved_) {
+        small().draw(c, M + 8, ty, S("settings.not_saved"), kWarn, cw - 16);
+        ty += small().line_height() + 2;
+    }
+    for (const auto& l : wrap_text(small(), help, cw - 16, 2)) {
+        small().draw(c, M + 8, ty, l, kDim);
+        ty += small().line_height();
+    }
+    if (has_result_ && !result_.rules_version.empty() && ty + small().line_height() <= H - 112) small().draw(c, M + 8, ty, S.fmt("settings.rules", {{"v", result_.rules_version}}), kDim);
+    draw_hints(c, {{PadGlyph::UpDown, S("common.select")}, {PadGlyph::LeftRight, S("common.toggle")}, {PadGlyph::Circle, S("common.back")}});
 }
 
 void App::draw_rules_update(Canvas& c) const {
@@ -3137,7 +3350,8 @@ void App::draw_rules_update(Canvas& c) const {
             if (offer_.can_rollback) paragraph(small(), S.fmt("update.can_rollback", {{"v", offer_.installed_version}}), kDim, 3);
             if (codes_offer_.can_rollback) paragraph(small(), S.fmt("update.can_rollback_codes", {{"v", codes_offer_.installed_version}}), kDim, 3);
             if (offer_.can_rollback || codes_offer_.can_rollback) hints.emplace_back(PadGlyph::Triangle, S("update.rollback"));
-            hints.emplace_back(PadGlyph::Square, S("update.download"));
+            if (cfg_.rule_download) hints.emplace_back(PadGlyph::Square, S("update.download"));
+            else paragraph(small(), S("update.download_off"), kDim, 3);
             hints.emplace_back(PadGlyph::Circle, S("common.back"));
             break;
         case UpdateStage::ConfirmDownload:

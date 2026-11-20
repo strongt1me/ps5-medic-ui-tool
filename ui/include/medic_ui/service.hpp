@@ -16,6 +16,7 @@
 #include "medic/ignore.hpp"
 #include "medic/rules.hpp"
 #include "medic/selftest.hpp"
+#include "medic/settings.hpp"
 
 #include <chrono>
 #include <functional>
@@ -119,6 +120,12 @@ public:
     // Gespeicherte Sprache der Oberflaeche (config.ini, Schluessel language: de en fr it es); leer = keine. set_language speichert sie.
     virtual std::string language() { return {}; }
     virtual bool set_language(const std::string& /*code*/) { return true; }
+    // Weitere Einstellungen (libmedic/include/medic/settings.hpp, config.ini). Standard: alles auf Vorgabe; set_setting speichert nur gueltige
+    // Schluessel und Werte (false: nicht gespeichert, die Einstellung gilt dann nur fuer diese Sitzung nicht).
+    virtual medic::AppSettings settings() { return {}; }
+    virtual bool set_setting(const std::string& /*key*/, const std::string& /*value*/) { return false; }
+    // Platz der eigenen Sicherungen (nur Anzeige).
+    virtual medic::BackupUsage backup_usage() { return {}; }
     // Update der Fehlercode-Datei (error_codes.json im Update-Ordner), gleiche Pruefungen und gleicher Ablauf wie beim Regel-Update.
     // Standard: es gibt nie ein Angebot. check schreibt nichts; install und rollback schreiben und werden nur nach ausdruecklicher
     // Bestaetigung (Kreuz) aufgerufen.
@@ -211,6 +218,9 @@ public:
     std::string rule_update_url() override;
     std::string language() override;
     bool set_language(const std::string& code) override;
+    medic::AppSettings settings() override;
+    bool set_setting(const std::string& key, const std::string& value) override;
+    medic::BackupUsage backup_usage() override;
     medic::RuleDownloadResult download_rule_update() override;
     const medic::ErrorCodeSet& error_codes() override { return error_codes_; }
     CodeContext code_context(const medic::ErrorCode& code) override;

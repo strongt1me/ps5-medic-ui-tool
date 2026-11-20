@@ -135,6 +135,10 @@ private:
     void draw_gamelist(Canvas& c) const;
     void draw_gamedetail(Canvas& c) const;
     void draw_settings(Canvas& c) const;
+    void apply_look() const;                 // Kontrast, Schriftgroesse und Zeitzone der Einstellungen setzen (vor Zeichnen und Eingabe)
+    void load_settings();                    // Einstellungen und Sicherungsgroesse neu vom Dienst holen
+    void settings_change(int row, int dir);  // Einstellung der gewaehlten Zeile aendern (dir = -1/+1, bei Zeitzone Schritte)
+    void settings_step_offset(int minutes);
     void draw_report(Canvas& c) const;
     void draw_rules_update(Canvas& c) const;
     void draw_error_codes(Canvas& c) const;
@@ -172,6 +176,13 @@ private:
     std::map<std::string, std::string> title_names_;       // Titel-Kennung -> Name (nur bekannte)
     std::vector<std::vector<std::string>> finding_games_;  // je Befund die betroffenen Spiele (Name und Kennung)
     double check_progress_ = 0;  // 0 bis 1 waehrend des Check-ups
+
+    medic::AppSettings cfg_;  // Einstellungen (config.ini), beim Start und nach jeder Aenderung geladen
+    medic::BackupUsage backup_;
+    int set_sel_ = 0;         // Einstellungen: gewaehlte Zeile
+    bool set_saved_ = true;              // false: die letzte Aenderung konnte nicht gespeichert werden (Hinweis in den Einstellungen)
+    bool settings_from_hidden_ = false;  // die Liste ausgeblendeter Befunde wurde aus den Einstellungen geoeffnet (Kreis fuehrt dorthin zurueck)
+    bool look_checked_ = false;          // Check-up beim Start (Einstellung) hoechstens einmal je Sitzung pruefen
 
     int start_sel_ = 0;
     int start_small_ = 1;  // kleine Kachel (1..3), von der man zur grossen hochgegangen ist: Ziel von Runter

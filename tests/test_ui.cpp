@@ -72,6 +72,17 @@ struct FakeService : IMedicService {
     std::string url;                     // Download-Adresse aus der Konfiguration
     RuleDownloadResult download_result = [] { RuleDownloadResult r; r.ok = true; return r; }();
     int downloads = 0;
+    medic::AppSettings cfg;                 // Einstellungen, die der Fake liefert
+    medic::BackupUsage backups;
+    std::map<std::string, std::string> saved;  // gespeicherte Schluessel (set_setting)
+    bool save_ok = true;
+    medic::AppSettings settings() override { return cfg; }
+    bool set_setting(const std::string& k, const std::string& v) override {
+        if (!save_ok) return false;
+        saved[k] = v;
+        return true;
+    }
+    medic::BackupUsage backup_usage() override { return backups; }
     ErrorCodeSet errors;  // Fehlercode-Nachschlagewerk (leer: keine Datei geladen)
     int error_loads = 0;
     // Update der Fehlercode-Datei, Vermerk fuer den Bericht
@@ -1511,10 +1522,93 @@ void shoulder_and_stick_flow_tests() {
         App a(svc);
         more_open(a, 6);
         CHECK(a.screen() == App::Screen::Settings, "Einstellungen offen");
-        press(a, {Button::Down, Button::R1});
-        CHECK(a.screen() == App::Screen::Settings, "Einstellungen: Runter/R1 oeffnen kein Regel-Update");
+        press(a, {Button::Up, Button::R1});
+        CHECK(a.screen() == App::Screen::Settings, "Einstellungen: Hoch/R1 oeffnen kein Regel-Update");
         press(a, {Button::Right});
         CHECK(a.lang() == Lang::En, "Einstellungen: Rechts wechselt die Sprache");
+    }
+    {  // Einstellungen: Zeilen wechseln, Werte speichern
+        FakeService s2;
+        s2.result = svc.result;
+        App a(s2);
+        Canvas cv2(App::kWidth, App::kHeight);
+        more_open(a, 6);
+        a.render(cv2);
+        press(a, {Button::Down, Button::Right});  // Zeile 2: Textgroesse
+        CHECK(s2.saved["text_size"] == "large" && Font::large(), "Einstellungen: Textgroesse gross wird gespeichert und gilt sofort");
+        a.render(cv2);  // grosse Schrift: kein Absturz, Bildschirm bleibt
+        press(a, {Button::Cross});
+        CHECK(s2.saved["text_size"] == "normal" && !Font::large(), "Einstellungen: Kreuz schaltet zurueck");
+        press(a, {Button::Down, Button::Right});  // Kontrast
+        CHECK(s2.saved["contrast"] == "high", "Einstellungen: hoher Kontrast gespeichert");
+        a.render(cv2);
+        press(a, {Button::Down, Button::Right, Button::Right});  // Zeitzone +2 h
+        CHECK(s2.saved["utc_offset"] == "120", "Einstellungen: Zeitzone in Stunden");
+        press(a, {Button::R1, Button::L1, Button::L1, Button::Left});
+        CHECK(s2.saved["utc_offset"] == "45", "Einstellungen: L1/R1 stellen Viertelstunden (120 + 15 - 15 - 15 - 60)");
+        a.render(cv2);
+        press(a, {Button::Down, Button::Cross});  // Check-up beim Start
+        CHECK(s2.saved["autostart_check"] == "on", "Einstellungen: Check-up beim Start gespeichert");
+        press(a, {Button::Down, Button::Cross});  // Regel-Download
+        CHECK(s2.saved["rule_download"] == "off", "Einstellungen: Regel-Download aus gespeichert");
+        press(a, {Button::Down, Button::Cross});  // Netztest
+        CHECK(s2.saved["net_test"] == "off", "Einstellungen: Netztest aus gespeichert");
+        press(a, {Button::Down, Button::Cross});  // Quelle: ohne eigene Adresse nichts umzuschalten
+        CHECK(s2.saved.count("update_source") == 0, "Einstellungen: ohne eigene Adresse gibt es keine Quelle zu wechseln");
+        press(a, {Button::Down, Button::Cross});  // Ausgeblendete Befunde: noch kein Check-up
+        CHECK(a.screen() == App::Screen::Settings, "Einstellungen: ausgeblendete Befunde ohne Check-up oeffnen nichts");
+        press(a, {Button::Down, Button::Cross, Button::Right});  // Sicherungen: nur Anzeige
+        CHECK(a.screen() == App::Screen::Settings, "Einstellungen: Sicherungen sind nur eine Anzeige");
+        a.render(cv2);
+        press(a, {Button::Down});
+        for (int i = 0; i < 12; ++i) press(a, {Button::Up});
+        press(a, {Button::Cross});  // Zeile 0 (Sprache) wechselt weiter
+        CHECK(a.lang() != Lang::De, "Einstellungen: ganz oben wechselt Kreuz die Sprache");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Maintenance, "Einstellungen: Kreis zurueck");
+        App fresh(svc);  // Standardansicht wieder herstellen (Schrift und Farben sind global)
+        fresh.render(cv2);
+        CHECK(!Font::large(), "Einstellungen: eine App mit Standardwerten setzt die normale Schrift wieder");
+    }
+    {  // Einstellungen: eigene Quelle umschalten, Speichern schlaegt fehl
+        FakeService s3;
+        s3.cfg.custom_url = "http://example.test/rules/";
+        s3.cfg.custom_source = true;
+        s3.cfg.effective_url = s3.cfg.custom_url;
+        App a(s3);
+        more_open(a, 6);
+        for (int i = 0; i < 7; ++i) press(a, {Button::Down});  // Quelle
+        press(a, {Button::Cross});
+        CHECK(s3.saved["update_source"] == "default", "Einstellungen: Standardquelle gewaehlt");
+        press(a, {Button::Cross});
+        CHECK(s3.saved["update_source"] == "custom", "Einstellungen: eigene Quelle wieder gewaehlt");
+        s3.save_ok = false;
+        press(a, {Button::Up, Button::Cross});  // Netztest: Speichern scheitert -> Schalter bleibt, wie er war
+        Canvas cv3(App::kWidth, App::kHeight);
+        a.render(cv3);
+        CHECK(a.screen() == App::Screen::Settings && s3.saved["net_test"].empty(), "Einstellungen: Netzschalter ohne Speichern aendert nichts");
+    }
+    {  // Einstellungen: Check-up beim Start
+        FakeService s4;
+        s4.cfg.autostart_check = true;
+        App a(s4);
+        a.update();
+        CHECK(a.screen() == App::Screen::Running, "Check-up beim Start: der Check-up beginnt");
+        FakeService s5;
+        App b(s5);
+        b.update();
+        CHECK(b.screen() == App::Screen::Start, "Check-up beim Start: aus = nichts passiert");
+    }
+    {  // Regel-Download aus: Quadrat holt nichts
+        FakeService s6;
+        s6.cfg.rule_download = false;
+        App a(s6);
+        more_open(a, 2);
+        CHECK(a.screen() == App::Screen::RulesUpdate, "Regel-Download aus: Regel-Update offen");
+        Canvas cv6(App::kWidth, App::kHeight);
+        a.render(cv6);
+        press(a, {Button::Square, Button::Cross});
+        CHECK(s6.downloads == 0 && a.screen() == App::Screen::RulesUpdate, "Regel-Download aus: Quadrat und Kreuz holen nichts");
     }
     {  // Details: zwischen den Befunden blaettern
         App a(svc);

@@ -26,4 +26,5 @@ void review2_tests();       // tests/test_review2.cpp
 void review4_tests();       // tests/test_review4.cpp
 void game_issue_tests();    // tests/test_game_issues.cpp
 void history_tests();       // tests/test_history.cpp
+void settings_tests();      // tests/test_settings.cpp
 void selftest_tests();      // tests/test_selftest.cpp

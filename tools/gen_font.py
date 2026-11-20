@@ -19,6 +19,8 @@ FONTS = [
     ("small", "DejaVuSans.ttf", 22, "full"),
     ("body", "DejaVuSans.ttf", 28, "full"),
     ("title", "DejaVuSans-Bold.ttf", 48, "basic"),
+    ("small_l", "DejaVuSans.ttf", 27, "full"),  # Einstellung "Textgroesse: Gross" (rund 20 Prozent groesser)
+    ("body_l", "DejaVuSans.ttf", 34, "full"),
 ]
 
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "medic/selftest.hpp"
 #include "medic/jsondump.hpp"
+#include "medic/rule_download.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -875,6 +876,10 @@ bool is_private_ipv4(const std::string& ip) {
 class NetLocalSession final : public BaseSession {
 public:
     NetLocalSession(Platform& p, const Facts& f, const TestDef& d, const TestContext& ctx) : BaseSession(d), p_(p), gap_ms_(ctx.net_gap_ms) {
+        if (configured_value(p.fs(), "net_test") == "off") {  // Einstellung "Lokaler Netztest aus": nichts ansprechen
+            finish(TestStatus::Skipped, "disabled");
+            return;
+        }
         const json* gw = f.get("net.gateway");
         if (!gw || !gw->is_string() || gw->get<std::string>().empty()) {
             finish(TestStatus::Skipped, "no_gateway");

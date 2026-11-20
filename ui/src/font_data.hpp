@@ -21,6 +21,6 @@ struct Blob {
     std::size_t hexlen;
 };
 
-extern const Blob small_blob, body_blob, title_blob;
+extern const Blob small_blob, body_blob, title_blob, small_l_blob, body_l_blob;
 
 }  // namespace medic::ui::fontdata

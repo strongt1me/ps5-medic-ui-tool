@@ -2,6 +2,9 @@
 
 ## Unreleased / Unveröffentlicht
 
+- **English:** More settings (More → Settings): text size (Large), contrast (High), time zone (offset to UTC, display only), check-up at start, rule download on/off, local network test on/off, rule source (default or own address), a list of hidden findings (open and show again) and the space used by backups. Large text also fits the other screens (start screen, self-test list, check-up history, badges). The screenshot script no longer switches the language half-way (the German README images showed the error-code list in English).
+- **Deutsch:** Mehr Einstellungen (Mehr → Einstellungen): Textgröße (Groß), Kontrast (Hoch), Zeitzone (Versatz zu UTC, nur Anzeige), Check-up beim Start, Regel-Download an/aus, lokaler Netztest an/aus, Regel-Quelle (Standard oder eigene Adresse), Liste ausgeblendeter Befunde (öffnen und wieder anzeigen) und der Platz der Sicherungen. Die große Schrift passt auch auf die übrigen Bildschirme (Startbild, Selbsttest-Liste, Check-up-Verlauf, Marken). Das Bilderskript schaltet die Sprache nicht mehr mitten im Ablauf um (die deutschen README-Bilder zeigten die Fehlercode-Liste auf Englisch).
+
 ## 0.4.5 (2026-11-20)
 
 - **English:** The Payload Manager catalog (`payload-manager/ps5-medic.json`) now has English descriptions; the French, Italian and Spanish READMEs link to the English documentation (`docs/en/`). The app itself is unchanged apart from the version number.

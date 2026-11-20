@@ -127,11 +127,12 @@ int main(int argc, char** argv) {
         for (int i = 0; i < 6; ++i) app.handle(Button::Down);
         app.handle(Button::Cross);  // Einstellungen (siebter Eintrag)
         shot("07_settings");
-        app.handle(Button::Down);
-        shot("07b_settings_rules_update");
+        for (int i = 0; i < 7; ++i) app.handle(Button::Down);  // Zeile "Regel-Quelle": die Hilfe zeigt die Adresse
+        shot("07b_settings_source");
+        app.handle(Button::Circle);  // Mehr (Kreuz in den Einstellungen wuerde etwas umstellen)
+        for (int i = 0; i < 4; ++i) app.handle(Button::Up);  // von "Einstellungen" (7.) zu "Regeln aktualisieren" (3.)
         app.handle(Button::Cross);  // Regel-Update (zeigt das Angebot, installiert nichts)
         shot("08_rules_update");
-        app.handle(Button::Circle);  // Einstellungen
         app.handle(Button::Circle);  // Mehr
         app.handle(Button::Circle);  // Start
         app.handle(Button::Cross);   // Mehr (die Auswahl steht noch auf Kachel 3)

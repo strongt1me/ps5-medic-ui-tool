@@ -669,6 +669,7 @@ int main() {
     review4_tests();
     game_issue_tests();
     history_tests();
+    settings_tests();
     selftest_tests();
     ui_tests();
     std::cout << g_pass << " Pruefungen ok, " << g_fail << " fehlgeschlagen\n";

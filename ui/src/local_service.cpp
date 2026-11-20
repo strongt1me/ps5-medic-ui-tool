@@ -366,8 +366,16 @@ std::string LocalService::rule_update_url() { return medic::effective_update_url
 std::string LocalService::language() { return medic::configured_value(p_.fs(), "language"); }
 
 bool LocalService::set_language(const std::string& code) { return medic::set_config_value(p_, "language", code); }
+medic::AppSettings LocalService::settings() { return medic::load_app_settings(p_.fs()); }
+bool LocalService::set_setting(const std::string& key, const std::string& value) { return medic::set_app_setting(p_, key, value); }
+medic::BackupUsage LocalService::backup_usage() { return medic::backup_usage(p_.fs()); }
 
 medic::RuleDownloadResult LocalService::download_rule_update() {
+    if (!medic::load_app_settings(p_.fs()).rule_download) {  // Einstellung "Regel-Download aus": kein Netzzugriff
+        medic::RuleDownloadResult r;
+        r.error = "disabled";
+        return r;
+    }
     if (!http_) {
         medic::RuleDownloadResult r;
         r.error = "no_network";

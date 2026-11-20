@@ -50,6 +50,7 @@ std::string configured_value(const IFileSystem& fs, const std::string& key) {
 std::string configured_update_url(const IFileSystem& fs) { return configured_value(fs, "update_url"); }
 
 std::string effective_update_url(const IFileSystem& fs) {
+    if (configured_value(fs, "update_source") == "default") return kDefaultUpdateUrl;  // Einstellung "Standardquelle": update_url bleibt stehen, wird aber nicht benutzt
     const std::string url = configured_update_url(fs);
     return url.empty() ? std::string(kDefaultUpdateUrl) : url;
 }

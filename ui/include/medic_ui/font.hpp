@@ -18,6 +18,9 @@ class Font {
 public:
     enum class Id { Small, Body, Title };
     static const Font& get(Id id);
+    // Schriftgroesse der Oberflaeche (Einstellung "Textgroesse"): true = Small und Body etwas groesser (Title bleibt). Gilt fuer alle folgenden get().
+    static void set_large(bool large);
+    static bool large();
 
     int ascent() const { return ascent_; }
     int line_height() const { return line_height_; }

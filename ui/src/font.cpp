@@ -28,7 +28,18 @@ Font::Font(const fontdata::Blob& blob) : ascent_(blob.ascent), line_height_(blob
     for (std::size_t i = 0; i < alpha_.size(); ++i) alpha_[i] = static_cast<std::uint8_t>(hex_val(blob.hex[2 * i]) * 16 + hex_val(blob.hex[2 * i + 1]));
 }
 
+namespace {
+bool g_large = false;
+}  // namespace
+
+void Font::set_large(bool large) { g_large = large; }
+bool Font::large() { return g_large; }
+
 const Font& Font::get(Id id) {
+    if (g_large && id != Id::Title) {  // die grossen Schnitte werden erst beim ersten Gebrauch aufgebaut
+        static const Font small_l(fontdata::small_l_blob), body_l(fontdata::body_l_blob);
+        return id == Id::Small ? small_l : body_l;
+    }
     static const Font small(fontdata::small_blob), body(fontdata::body_blob), title(fontdata::title_blob);
     switch (id) {
         case Id::Small: return small;
