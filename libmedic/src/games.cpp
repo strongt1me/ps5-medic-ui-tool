@@ -84,6 +84,9 @@ std::vector<GameInfo> collect_game_infos(const Facts& facts, const std::vector<F
     if (const json* a = arr_of(facts, "games.need_backport"))
         for (const auto& e : *a)
             if (GameInfo* g = at(str_of(e, "titleid"))) g->needs_backport = true;
+    if (const json* a = arr_of(facts, "games.backport_incomplete"))  // halber Backport: die Module verlangen noch mehr, als die Konsole hat
+        for (const auto& e : *a)
+            if (GameInfo* g = at(str_of(e, "titleid"))) g->needs_backport = true;
     if (const json* a = arr_of(facts, "apps.oversized"))
         for (const auto& e : *a)
             if (GameInfo* g = at(str_of(e, "titleid"))) {

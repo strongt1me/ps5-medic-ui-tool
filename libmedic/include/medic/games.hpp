@@ -32,9 +32,9 @@ struct GameInfo {
     int registered = -1;  // Systemdatenbank kennt den Titel: 1 ja, 0 nein (Ordner ohne Eintrag), -1 nicht gelesen
     bool orphan = false;  // Eintrag in der Systemdatenbank ohne Ordner
     std::string required_fw, sdk_fw;
-    bool backport_inline = false;  // der Backport steckt im Spiel selbst (SDK-Version der eboot.bin nicht ueber der Firmware, param.json verlangt mehr)
+    bool backport_inline = false;  // der Backport steckt im Spiel selbst (SDK-Version der eboot.bin und der Module nicht ueber der Firmware, param.json verlangt mehr)
     int backport = -1;    // Backport-Ordner vorhanden: 1 ja, 0 nein, -1 unbekannt (keine Firmware-Angabe)
-    bool needs_backport = false;  // verlangt neuere Firmware als die Konsole, ohne Backport
+    bool needs_backport = false;  // verlangt neuere Firmware als die Konsole, ohne Backport (auch bei einem halben: eboot.bin herabgesetzt, Module nicht)
     bool eboot_bad = false, case_mismatch = false, oversized = false;
     std::string compat, compat_format;  // Eintrag der Kompatibilitaetsliste: "ok", "fail", "mixed" (leer: Titel steht nicht in der Liste); Format "ZSTD", "LZ4" ...
     bool noexec = false, pack_bad = false, runtime_bad = false;  // Programmdatei ohne Ausfuehrungsrecht, unvollstaendiges Pack, Laufzeit passt nicht zu den Packs

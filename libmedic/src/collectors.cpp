@@ -685,11 +685,13 @@ std::string decode_param_fw(const json& param, const char* key) {
     return buf;
 }
 
-// SDK-Version aus den Prozessparametern einer (fake-signierten) SELF-eboot.bin, wie PS5 Cooling & System Center sie liest
-// (an drei Spielen der Test-Konsole gemessen): Kopf 4F 15 3D 1D oder 54 14 F5 EE, ab 0x18 die Zahl der Eintraege n (je 32 Byte ab 0x20),
-// danach der ELF-Kopf mit den Programmkoepfen. PT_SCE_PROCPARAM (0x61000001) liegt in einem LOAD-Segment; die Datei-Position steht im
-// Eintrag dieses Segments. Der Block beginnt mit seiner Groesse und "ORBI"; das u32 bei +0x14 ist die SDK-Version
-// (0x04000033 = 4.00, 0x10000040 = 10.00). Zwei kleine Lesezugriffe, nie die ganze Datei (manche sind ueber 200 MB). 0 = nicht lesbar.
+// SDK-Version aus dem Modulkopf einer Programmdatei (eboot.bin, .prx, .sprx), wie PS5 Cooling & System Center sie liest (an drei Spielen der
+// Test-Konsole gemessen; die Module am 23. Nov. 2026 an zwei Ordner-Spielen derselben Konsole). Zwei Formen: eine fake-signierte SELF (Kopf
+// 4F 15 3D 1D oder 54 14 F5 EE; ab 0x18 die Zahl der Eintraege n, je 32 Byte ab 0x20, danach der ELF-Kopf mit den Programmkoepfen; die Datei-Position
+// des Modulkopfs steht im Eintrag des Segments, das ihn traegt) oder ein reines ELF (der Programmkopf nennt die Datei-Position selbst).
+// Der Modulkopf ist PT_SCE_PROCPARAM (0x61000001, eboot.bin; Block mit "ORBI" bei +8) oder PT_SCE_MODULE_PARAM (0x61000002, Module; Kennung
+// BF F4 13 3C bei +8); das u32 bei +0x14 ist die SDK-Version (0x04000033 = 4.00, 0x10000040 = 10.00). Zwei kleine Lesezugriffe, nie die ganze Datei
+// (manche sind ueber 200 MB). 0 = nicht lesbar, auch bei verschluesselten oder komprimierten Segmenten: nie geraten.
 std::uint32_t rd_le(const std::string& b, std::size_t off, int n) {
     std::uint64_t v = 0;
     for (int i = n - 1; i >= 0; --i) v = (v << 8) | static_cast<unsigned char>(b[off + static_cast<std::size_t>(i)]);
@@ -702,39 +704,56 @@ std::uint64_t rd_le64(const std::string& b, std::size_t off) {
 // Liest Bytebereiche der eboot.bin: aus einer Datei im Dateisystem oder aus einem exFAT-Image.
 using RangeReader = std::function<bool(std::uint64_t, std::size_t, std::string&)>;
 
-std::uint32_t eboot_sdk_raw(const RangeReader& read) {
+std::uint32_t program_sdk_raw(const RangeReader& read) {
+    constexpr std::uint32_t kProcParam = 0x61000001u, kModuleParam = 0x61000002u;
     std::string h;
     if (!read(0, 4096, h) || h.size() < 0x100) return 0;
-    if (h.compare(0, 4, "\x4f\x15\x3d\x1d") != 0 && h.compare(0, 4, "\x54\x14\xf5\xee") != 0) return 0;
-    const std::uint32_t cnt = rd_le(h, 0x18, 2);
-    const std::size_t elf = 0x20 + static_cast<std::size_t>(cnt) * 0x20;
-    if (cnt == 0 || cnt > 64 || elf + 64 > h.size() || h.compare(elf, 4, "\x7f" "ELF") != 0) return 0;
+    std::uint32_t cnt = 0;  // 0: reines ELF
+    std::size_t elf = 0;
+    if (h.compare(0, 4, "\x4f\x15\x3d\x1d") == 0 || h.compare(0, 4, "\x54\x14\xf5\xee") == 0) {
+        cnt = rd_le(h, 0x18, 2);
+        if (cnt == 0 || cnt > 64) return 0;
+        elf = 0x20 + static_cast<std::size_t>(cnt) * 0x20;
+    } else if (h.compare(0, 4, "\x7f" "ELF") != 0) {
+        return 0;
+    }
+    if (elf + 64 > h.size() || h.compare(elf, 4, "\x7f" "ELF") != 0) return 0;
     const std::uint64_t phoff = rd_le64(h, elf + 32);
     const std::uint32_t phent = rd_le(h, elf + 54, 2), phnum = rd_le(h, elf + 56, 2);
     if (phent != 56 || phnum == 0 || phnum > 64 || phoff > h.size() || elf + phoff + static_cast<std::uint64_t>(phnum) * 56 > h.size()) return 0;
     const std::size_t ph = elf + static_cast<std::size_t>(phoff);
     std::uint64_t pp = UINT64_MAX;
-    for (std::uint32_t i = 0; i < phnum; ++i)
-        if (rd_le(h, ph + i * 56, 4) == 0x61000001u) {
+    std::uint32_t kind = 0;
+    for (std::uint32_t i = 0; i < phnum; ++i) {
+        const std::uint32_t type = rd_le(h, ph + i * 56, 4);
+        if (type == kProcParam || type == kModuleParam) {
             pp = rd_le64(h, ph + i * 56 + 8);
+            kind = type;
             break;
         }
+    }
     if (pp == UINT64_MAX) return 0;
+    // Der Block muss seine Kennung tragen (sonst ist es kein Modulkopf) und ist mindestens 0x18 Byte gross.
+    const auto sdk_of = [kind](const std::string& b) -> std::uint32_t {
+        if (b.size() != 0x18) return 0;
+        const bool ok = kind == kProcParam ? b.compare(8, 4, "ORBI") == 0 : rd_le(b, 8, 4) == 0x3C13F4BFu;
+        return ok ? rd_le(b, 0x14, 4) : 0;
+    };
+    std::string b;
+    if (cnt == 0) return read(pp, 0x18, b) ? sdk_of(b) : 0;
     for (std::uint32_t i = 0; i < phnum; ++i) {
         const std::size_t p = ph + i * 56;
         const std::uint64_t off = rd_le64(h, p + 8), fsz = rd_le64(h, p + 32);
-        if (rd_le(h, p, 4) != 1 || pp < off || pp - off + 0x18 > fsz) continue;
+        if (pp < off || pp - off + 0x18 > fsz) continue;
         for (std::uint32_t e = 0; e < cnt; ++e) {
             const std::size_t en = 0x20 + e * 0x20;
             const std::uint64_t props = rd_le64(h, en);
-            if (((props >> 20) & 0xFFFF) != i || (props & 0x10000)) continue;
-            if (props & 0xA) return 0;  // verschluesselt oder komprimiert
+            if (((props >> 20) & 0xFFFF) != i || (props & 0x10000) || (props & 0xA)) continue;  // anderes Segment, Pruefblock, verschluesselt oder komprimiert
             const std::uint64_t eoff = rd_le64(h, en + 8), efsz = rd_le64(h, en + 16), rel = pp - off;
-            std::string b;
-            if (rel + 0x18 <= efsz && read(eoff + rel, 0x18, b) && b.size() == 0x18 && b.compare(8, 4, "ORBI") == 0) return rd_le(b, 0x14, 4);
-            return 0;
+            if (rel + 0x18 > efsz) continue;
+            if (read(eoff + rel, 0x18, b))
+                if (const std::uint32_t v = sdk_of(b)) return v;
         }
-        return 0;
     }
     return 0;
 }
@@ -762,12 +781,66 @@ std::string sdk_raw_to_fw(std::uint32_t v) {
     return buf;
 }
 
+std::string lower_copy(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return s;
+}
+
+// Das hoechste SDK der Module in <Ordner>/sce_module (.prx, .sprx) als "12.00"; leer, wenn keines lesbar ist. Je Modul nur die Kopfzeilen. Die Konsole
+// prueft beim Start das SDK aller Programme, nicht nur das der eboot.bin: ein Backport-Werkzeug, das nach der eboot.bin abbricht, laesst die Module hoch
+// (Befund des PS5 Dump & Image Converter vom 22. Nov. 2026). Nur bei Ordner-Spielen; in Images liest Medic nur die eboot.bin.
+std::string module_sdk_in_folder(const IFileSystem& fs, const std::string& src) {
+    constexpr std::size_t kMaxModules = 512;  // mehr hat kein echtes Spiel (einige Dutzend)
+    std::string dir;
+    for (const auto& e : fs.list_dir(src))
+        if (e.is_dir && lower_copy(e.name) == "sce_module") {
+            dir = join_path(src, e.name);
+            break;
+        }
+    if (dir.empty()) return {};
+    std::uint32_t best = 0;
+    std::size_t n = 0;
+    for (const auto& e : fs.list_dir(dir)) {
+        if (e.is_dir) continue;
+        const std::string ext = lower_ext_of(e.name);
+        if (ext != ".prx" && ext != ".sprx") continue;
+        if (++n > kMaxModules) break;
+        const std::string path = join_path(dir, e.name);
+        const std::uint32_t raw = program_sdk_raw([&](std::uint64_t off, std::size_t len, std::string& out) { return fs.read_range(path, off, len, out); });
+        if (!sdk_raw_to_fw(raw).empty() && raw > best) best = raw;  // BCD: die Zahl ordnet wie die Version
+    }
+    return sdk_raw_to_fw(best);
+}
+
+// Firmware-Marke eines Backports im Spielordner: eine Datei "FW4" oder ein Ordner "fw10" in fakelib2 bzw. fakelib (ShadowMount+ nimmt fakelib2 zuerst, es
+// gilt nur einer der beiden; so legen BackPork Kitchen und der PS5 Dump & Image Converter ihren Satz ab). Ergibt die kleinste Hauptversion unter den Marken,
+// 0 ohne Marke. Ein fakelib nur mit AMPR EMU, PlayGo oder DLC EMU traegt keine Marke und ist kein Backport.
+int fakelib_marker_major(const IFileSystem& fs, const std::string& src) {
+    const auto entries = fs.list_dir(src);
+    for (const char* want : {"fakelib2", "fakelib"})
+        for (const auto& e : entries) {
+            if (!e.is_dir || lower_copy(e.name) != want) continue;
+            int lowest = 0;
+            for (const auto& m : fs.list_dir(join_path(src, e.name))) {
+                const std::string n = lower_copy(m.name);
+                if (n.size() < 3 || n.size() > 4 || n.compare(0, 2, "fw") != 0) continue;
+                if (!std::all_of(n.begin() + 2, n.end(), [](unsigned char c) { return std::isdigit(c) != 0; })) continue;
+                const int v = std::atoi(n.c_str() + 2);
+                if (v > 0 && (lowest == 0 || v < lowest)) lowest = v;
+            }
+            return lowest;
+        }
+    return 0;
+}
+
 }  // namespace
 
 // games.fw[]: PS5-Titel (PPSA...) unter /user/app mit der Firmware, die ihre param.json verlangt (SM+ legt dort je gemountetem Spiel
 // einen Ordner mit sce_sys/param.json an). games.need_backport[]: davon die Titel, die eine neuere Firmware verlangen, als die Konsole hat,
 // und fuer die es weder einen Backport-Ordner <Scanpfad>/backports/<TITLE_ID>[Zusatz]/ gibt noch einen im Spiel eingebauten Backport (SDK-Version der
-// eboot.bin nicht ueber der Firmware, games.fw[].backport_inline). Nur lesen.
+// eboot.bin nicht ueber der Firmware, games.fw[].backport_inline; bei einem Ordner-Spiel zusaetzlich kein Modul in sce_module darueber) noch eine
+// Firmware-Marke im fakelib (games.fw[].backport_marker). games.backport_incomplete[]: Ordner-Spiele mit herabgesetzter eboot.bin, deren Module noch ein
+// SDK ueber der Firmware tragen (halber Backport). Nur lesen.
 void collect_game_firmware(const Platform& p, Facts& f) {
     const IFileSystem& fs = p.fs();
     // Ein nicht lesbarer Rohwert ("0x00000000" u. ae., siehe format_ps5_fw) ist keine Version: dann gilt die Firmware als unbekannt und kein
@@ -794,7 +867,7 @@ void collect_game_firmware(const Platform& p, Facts& f) {
         for (const auto& b : fs.list_dir(join_path(r, "backports")))
             if (b.is_dir) backport_names.push_back(b.name);
     static const std::regex id_re("^PPSA[0-9]{5}$");
-    json games = json::array(), need = json::array();
+    json games = json::array(), need = json::array(), incomplete_list = json::array();
     for (const auto& app : fs.list_dir("/user/app")) {
         if (!app.is_dir || !std::regex_match(app.name, id_re)) continue;
         std::string text;
@@ -809,36 +882,61 @@ void collect_game_firmware(const Platform& p, Facts& f) {
                 backport = true;
                 break;
             }
-        // Backport im Spiel selbst (Marc, 12. Nov. 2026: zwei Spiele verlangen 13.60 und laufen auf 12.00): Ein Backport-Werkzeug setzt die
-        // SDK-Version in den Prozessparametern der eboot.bin herunter, param.json behaelt die alte Angabe. Liegt die SDK-Version der eboot.bin
-        // nicht ueber der Firmware der Konsole, obwohl param.json mehr verlangt, ist das Spiel angepasst. Nur wenn die eboot.bin lesbar ist.
-        std::string eboot_sdk;
+        std::string eboot_sdk, dir_src;  // dir_src: der Spielordner, aus dem die eboot.bin kam (sonst der erste Ordner der Quellen): dort liegen Module und fakelib
         if (const auto it = folders.find(app.name); it != folders.end())
             for (const auto& src : it->second) {
                 std::uint32_t raw = 0;
-                if (fs.is_dir(src)) {
+                const bool folder = fs.is_dir(src);
+                if (folder) {
+                    if (dir_src.empty()) dir_src = src;
                     const std::string eboot = join_path(src, "eboot.bin");
-                    raw = eboot_sdk_raw([&](std::uint64_t off, std::size_t n, std::string& out) { return fs.read_range(eboot, off, n, out); });
+                    raw = program_sdk_raw([&](std::uint64_t off, std::size_t n, std::string& out) { return fs.read_range(eboot, off, n, out); });
                 } else if (const std::string ext = lower_ext_of(src); ext == ".exfat" || ext == ".ffpkg" || ext == ".ffpfs" || ext == ".ffpfsc") {
                     // Image (exFAT, UFS2, PFS, PFSC): ohne Einhaengen aus dem Image lesen (libmedic/src/imgread.c)
                     if (const auto img = ImageReader::open(fs, src))
-                        raw = eboot_sdk_raw([&](std::uint64_t off, std::size_t n, std::string& out) { return img->read_file("/eboot.bin", off, n, out); });
+                        raw = program_sdk_raw([&](std::uint64_t off, std::size_t n, std::string& out) { return img->read_file("/eboot.bin", off, n, out); });
                 }
                 eboot_sdk = sdk_raw_to_fw(raw);
-                if (!eboot_sdk.empty()) break;
+                if (!eboot_sdk.empty()) {
+                    if (folder) dir_src = src;
+                    break;
+                }
             }
-        bool backport_inline = false;
-        if (!backport && !fw.empty() && !eboot_sdk.empty() && compare_versions(required, fw) > 0 && compare_versions(eboot_sdk, fw) <= 0) {
-            backport = true;
-            backport_inline = true;
+        // Backport im Spiel selbst (Marc, 12. Nov. 2026: zwei Spiele verlangen 13.60 und laufen auf 12.00; beide liegen als Image vor): Ein Backport-Werkzeug
+        // setzt die SDK-Version in den Modulkoepfen herunter, param.json behaelt die alte Angabe. Liegt die SDK-Version der eboot.bin nicht ueber der Firmware
+        // der Konsole, obwohl param.json mehr verlangt, ist das Spiel angepasst - bei einem Ordner-Spiel nur, wenn auch kein Modul in sce_module ueber der Firmware
+        // liegt (sonst ein halber Backport: games.backport_incomplete). Ohne lesbare eboot.bin zaehlt eine Firmware-Marke im fakelib (Datei FW<N>, N nicht ueber der
+        // Konsole), solange nichts Gelesenes widerspricht. Nur wenn die Dateien lesbar sind.
+        const bool needs = !fw.empty() && compare_versions(required, fw) > 0;
+        std::string module_sdk;
+        bool backport_inline = false, backport_marker = false, incomplete = false;
+        int marker_fw = 0;  // Hauptversion der angewendeten fakelib-Marke
+        if (!backport && needs) {
+            const bool eboot_low = !eboot_sdk.empty() && compare_versions(eboot_sdk, fw) <= 0;
+            if (eboot_low && !dir_src.empty()) module_sdk = module_sdk_in_folder(fs, dir_src);
+            const bool modules_high = !module_sdk.empty() && compare_versions(module_sdk, fw) > 0;
+            if (eboot_low && !modules_high) backport = backport_inline = true;
+            else if (eboot_low) incomplete = true;
+            else if (eboot_sdk.empty() && !dir_src.empty()) {
+                const int marker = fakelib_marker_major(fs, dir_src);
+                if (marker > 0 && marker <= std::atoi(fw.c_str())) {
+                    backport = backport_marker = true;
+                    marker_fw = marker;
+                }
+            }
         }
         games.push_back({{"titleid", app.name}, {"name", app_title_name(param, app.name)}, {"required_fw", required}, {"sdk_fw", decode_param_fw(param, "sdkVersion")},
-                         {"eboot_sdk", eboot_sdk}, {"backport", backport}, {"backport_inline", backport_inline}});
-        if (!fw.empty() && !backport && compare_versions(required, fw) > 0)
+                         {"eboot_sdk", eboot_sdk}, {"module_sdk", module_sdk}, {"backport", backport}, {"backport_inline", backport_inline},
+                         {"backport_marker", backport_marker}, {"backport_marker_fw", marker_fw}, {"backport_incomplete", incomplete}});
+        if (incomplete)
+            incomplete_list.push_back({{"titleid", app.name}, {"required_fw", required}, {"eboot_sdk", eboot_sdk}, {"module_sdk", module_sdk},
+                                       {"desc", app.name + ": eboot.bin " + eboot_sdk + ", sce_module " + module_sdk}});
+        else if (needs && !backport)
             need.push_back({{"titleid", app.name}, {"required_fw", required}, {"desc", app.name + ": " + required}});
     }
     f.set("games.fw", std::move(games));
     f.set("games.need_backport", std::move(need));
+    f.set("games.backport_incomplete", std::move(incomplete_list));
 }
 
 namespace {

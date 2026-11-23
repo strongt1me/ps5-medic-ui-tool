@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.55",
+  "db_version": "2026.11.56",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -1188,8 +1188,8 @@
         ]
       },
       "text": {
-        "de": "Für diese Spiele verlangt die param.json eine höhere Firmware-Version als die der Konsole, und in den Scanpfaden fehlt der Ordner backports/<TITLE_ID>/. Laut Backport-Toolkit startet die Konsole sie nur mit Backport oder AMPR Emu / AMPR Emu NG; an dieser Konsole ist das nicht bestätigt. Bei Images (außer .exfat) kann Medic nicht prüfen, ob der Backport schon im Spiel steckt; dann kann der Befund hinfällig sein.",
-        "en": "For these games the param.json requires a higher firmware version than the console has, and the scan paths contain no backports/<TITLE_ID>/ folder. According to the backport toolkit the console only starts them with a backport or AMPR Emu / AMPR Emu NG; this is not confirmed on this console. For images (other than .exfat) Medic cannot check whether the backport is already built into the game; the finding may then not apply."
+        "de": "Für diese Spiele verlangt die param.json eine höhere Firmware-Version als die der Konsole, und in den Scanpfaden fehlt der Ordner backports/<TITLE_ID>/. Laut Backport-Toolkit startet die Konsole sie nur mit Backport oder AMPR Emu / AMPR Emu NG; an dieser Konsole ist das nicht bestätigt. Medic liest das SDK der eboot.bin (bei Spielen als Ordner auch das der Module in sce_module); liegt es nicht über der Firmware der Konsole, gilt der Backport als im Spiel eingebaut, ebenso eine Firmware-Marke (FW<N>) im Ordner fakelib. Bei Images prüft Medic nur die eboot.bin, und lässt sie sich nicht lesen (anderes Format, beschädigt, verschlüsselt), kann der Befund hinfällig sein.",
+        "en": "For these games the param.json requires a higher firmware version than the console has, and the scan paths contain no backports/<TITLE_ID>/ folder. According to the backport toolkit the console only starts them with a backport or AMPR Emu / AMPR Emu NG; this is not confirmed on this console. Medic reads the SDK of the eboot.bin (for games stored as a folder also that of the modules in sce_module); if it is not above the console's firmware, the backport counts as built into the game, as does a firmware marker (FW<N>) in the fakelib folder. For images Medic checks only the eboot.bin, and if it cannot be read (other format, damaged, encrypted) the finding may not apply."
       },
       "evidence": "games.need_backport[].desc",
       "fix": null,
@@ -1201,6 +1201,34 @@
         "reason": {
           "de": "Die verlangte Version ist aus der param.json gelesen und mit der Konsole verglichen. Dass die Spiele deshalb nicht starten, sagt nur das Backport-Toolkit; an dieser Konsole ist das nicht bestätigt.",
           "en": "The required version is read from the param.json and compared with the console's. That the games therefore do not start is stated only by the backport toolkit; not confirmed on this console."
+        }
+      }
+    },
+    {
+      "id": "game.backport_incomplete",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.backport_incomplete[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Bei diesen Spielen ist der Backport nur halb eingebaut: Die eboot.bin trägt schon ein SDK, das zur Konsole passt, aber mindestens ein Modul in sce_module verlangt noch ein höheres. Laut Doku des PS5 Dump & Image Converter prüft die Konsole beim Start das SDK aller Programme, nicht nur das der eboot.bin; an dieser Konsole ist das nicht bestätigt. Eine mögliche Ursache: Das Backport-Werkzeug brach nach der eboot.bin ab. Medic ändert hier nichts; den Backport noch einmal über das ganze Spiel laufen lassen.",
+        "en": "For these games the backport is only half built in: the eboot.bin already carries an SDK that fits the console, but at least one module in sce_module still demands a higher one. According to the documentation of PS5 Dump & Image Converter the console checks the SDK of all programs at startup, not only that of the eboot.bin; this is not confirmed on this console. One possible cause: the backport tool stopped after the eboot.bin. Medic changes nothing here; run the backport over the whole game again."
+      },
+      "evidence": "games.backport_incomplete[].desc",
+      "fix": null,
+      "source": "https://github.com/strongt1me/PS5-Dump-Image-Converter",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Das SDK der eboot.bin und der Module ist aus dem Modulkopf gelesen (das Format der Modulköpfe ist an zwei Spielen der Entwickler-Konsole bestätigt) und mit der Firmware verglichen. Dass die Konsole das SDK der Module beim Start prüft, steht nur in der Doku des PS5 Dump & Image Converter; an dieser Konsole ist es nicht bestätigt.",
+          "en": "The SDK of the eboot.bin and of the modules is read from the module header (the format of the module headers is confirmed on two games of the developer's console) and compared with the firmware. That the console checks the SDK of the modules at startup is stated only in the documentation of PS5 Dump & Image Converter; not confirmed on this console."
         }
       }
     },

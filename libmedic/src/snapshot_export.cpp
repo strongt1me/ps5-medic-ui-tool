@@ -174,7 +174,8 @@ bool mask_param_json(const std::string& text, std::string& out) {
 // oder Programm-Header jenseits des Dateiendes).
 // Ersatz-eboot.bin mit derselben SDK-Version in den Prozessparametern (Aufbau wie ihn collectors.cpp liest: SELF-Kopf, zwei Eintraege,
 // ELF-Kopf mit PT_LOAD und PT_SCE_PROCPARAM, Block "ORBI"). Enthaelt sonst nichts. Leer, wenn die Version nicht passt.
-std::string stub_eboot_with_sdk(const std::string& fw) {
+// `module`: stattdessen ein Ersatz-Modul (PT_SCE_MODULE_PARAM, Kennung BF F4 13 3C bei +8).
+std::string stub_eboot_with_sdk(const std::string& fw, bool module = false) {
     int major = 0, minor = 0;
     if (std::sscanf(fw.c_str(), "%d.%d", &major, &minor) != 2 || major < 1 || major > 99 || minor < 0 || minor > 99) return {};
     std::string b(0x1200, '\0');
@@ -191,9 +192,10 @@ std::string stub_eboot_with_sdk(const std::string& fw) {
     put(elf + 54, 56, 2);
     put(elf + 56, 2, 2);
     put(ph, 1, 4);               put(ph + 8, 0x1000, 8);       put(ph + 32, 0x100, 8);    // PT_LOAD
-    put(ph + 56, 0x61000001u, 4); put(ph + 56 + 8, 0x1010, 8);  put(ph + 56 + 32, 0x40, 8);  // PT_SCE_PROCPARAM
+    put(ph + 56, module ? 0x61000002u : 0x61000001u, 4); put(ph + 56 + 8, 0x1010, 8);  put(ph + 56 + 32, 0x40, 8);  // PT_SCE_PROCPARAM bzw. PT_SCE_MODULE_PARAM
     put(0x1010, 0x40, 8);
-    b.replace(0x1010 + 8, 4, "ORBI");
+    if (module) b.replace(0x1010 + 8, 4, "\xbf\xf4\x13\x3c", 4);
+    else b.replace(0x1010 + 8, 4, "ORBI");
     const std::uint32_t sdk = (static_cast<std::uint32_t>((major / 10) << 4 | (major % 10)) << 24) | (static_cast<std::uint32_t>((minor / 10) << 4 | (minor % 10)) << 16) | 0x40u;
     put(0x1010 + 0x14, sdk, 4);
     return b;
@@ -592,6 +594,24 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
                                 }
                             }
                         }
+                        break;
+                    }
+            }
+        // Halber Backport und Firmware-Marke (nur Ordner-Spiele): ein Ersatz-Modul mit dem hoechsten SDK der Module in sce_module und die leere Markendatei
+        // FW<N> im fakelib, damit beides auch am PC aus dem Export entsteht (games.fw[].module_sdk, backport_marker_fw)
+        if (t && t->is_array())
+            for (const auto& e : *g) {
+                if (!e.is_object() || !e.contains("titleid") || !e["titleid"].is_string()) continue;
+                const std::string module_sdk = e.contains("module_sdk") && e["module_sdk"].is_string() ? e["module_sdk"].get<std::string>() : std::string();
+                const int marker = e.contains("backport_marker_fw") && e["backport_marker_fw"].is_number_integer() ? e["backport_marker_fw"].get<int>() : 0;
+                const std::string module_stub = module_sdk.empty() ? std::string() : stub_eboot_with_sdk(module_sdk, true);
+                if (module_stub.empty() && marker <= 0) continue;
+                for (const auto& x : *t)
+                    if (x.is_object() && x.contains("titleid") && x["titleid"] == e["titleid"] && x.contains("path") && x["path"].is_string() &&
+                        !image_paths.count(x["path"].get<std::string>())) {
+                        const std::string src = x["path"].get<std::string>();
+                        if (!module_stub.empty()) ex.write(join_path(join_path(src, "sce_module"), "medic_stub.sprx"), module_stub);
+                        if (marker > 0 && marker < 100) ex.write(join_path(join_path(src, "fakelib"), "FW" + std::to_string(marker)), "");
                         break;
                     }
             }

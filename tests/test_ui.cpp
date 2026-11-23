@@ -2502,6 +2502,9 @@ void error_context_tests() {
         CHECK(kinds(none) == std::vector<std::string>({"fw", "need_backport_none"}), "Kontext: ohne betroffene Titel steht das da");
         const CodeContext bp = context_for("g1_neg_backport", "CE-107520-5", true);
         CHECK(kinds(bp) == std::vector<std::string>({"fw", "need_backport_none"}), "Kontext: mit Backport-Ordner gilt der Titel als versorgt");
+        const CodeContext half = context_for("g1_pos_backport_halb", "CE-107520-5", true);
+        const ContextLine* hn = line(half, "need_backport");
+        CHECK(hn && hn->args.at("list") == "PPSA00001 (13.60)", "Kontext: ein halber Backport (Module ueber der Firmware) steht in der Liste der betroffenen Titel");
     }
     {  // Speicher: freier Platz je grossem Laufwerk
         const CodeContext c = context_for("g1_pos", "CE-100028-1", true);

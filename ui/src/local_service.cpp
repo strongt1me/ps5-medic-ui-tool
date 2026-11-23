@@ -313,10 +313,11 @@ CodeContext LocalService::code_context(const medic::ErrorCode& code) {
                 c.lines.push_back({leak ? "smp_leak" : "smp_no_leak", {}});
             }
         } else if (kind == "need_backport") {
-            const nlohmann::json* n = facts_.get("games.need_backport");
-            if (n && n->is_array() && !n->empty()) {
-                std::string list;
-                for (const auto& g : *n) list += (list.empty() ? "" : ", ") + g.value("titleid", std::string("?")) + " (" + g.value("required_fw", std::string("?")) + ")";
+            std::string list;
+            for (const char* key : {"games.need_backport", "games.backport_incomplete"})  // auch der halbe Backport: seine Module verlangen noch mehr, als die Konsole hat
+                if (const nlohmann::json* n = facts_.get(key); n && n->is_array())
+                    for (const auto& g : *n) list += (list.empty() ? "" : ", ") + g.value("titleid", std::string("?")) + " (" + g.value("required_fw", std::string("?")) + ")";
+            if (!list.empty()) {
                 c.lines.push_back({"need_backport", {{"list", list}, {"fw", fw}}});
             } else {
                 c.lines.push_back({"need_backport_none", {{"fw", fw.empty() ? std::string("?") : fw}}});

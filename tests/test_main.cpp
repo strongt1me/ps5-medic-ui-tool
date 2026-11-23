@@ -6,6 +6,7 @@
 #include "medic/sqlite_check.hpp"
 #include "medic/collectors.hpp"
 #include "medic/exfat.hpp"
+#include "medic/games.hpp"
 #include "medic/image_reader.hpp"
 #include "medic/platform.hpp"
 #include "medic/rules.hpp"
@@ -204,6 +205,36 @@ static void new_fact_tests() {
             const json* ig2 = imgnew.get("games.fw");
             CHECK(ig2 && ig2->size() == 1 && (*ig2)[0]["eboot_sdk"] == "13.60" && imgnew.get("games.need_backport")->size() == 1, "G1: Image mit SDK 13.60: der Befund bleibt");
             CHECK((*facts_of("g1_neg_backport").get("games.fw"))[0]["eboot_sdk"] == "" && (*facts_of("g1_neg_backport").get("games.fw"))[0]["backport_inline"] == false, "G1: ohne lesbare eboot.bin bleibt die SDK-Version leer");
+        }
+        {  // Erkennung eines Backports (Ergaenzung 23. Nov. 2026): reines ELF, Module in sce_module, Firmware-Marke im fakelib
+            auto field = [&](const auto& fx, const char* key) -> json {  // Feld des einen Spiels in games.fw, sonst null (kein Absturz bei einem Fehlschlag)
+                const json* a = fx.get("games.fw");
+                return a && a->is_array() && a->size() == 1 && (*a)[0].contains(key) ? (*a)[0][key] : json();
+            };
+            auto count = [&](const auto& fx, const char* key) { const json* a = fx.get(key); return a && a->is_array() ? a->size() : std::size_t(999); };
+            const auto elf = facts_of("g1_neg_inline_elf");
+            CHECK(field(elf, "eboot_sdk") == "12.00" && field(elf, "backport_inline") == true && count(elf, "games.need_backport") == 0 && count(elf, "games.backport_incomplete") == 0,
+                  "G1: eine eboot.bin als reines ELF (ohne SELF-Huelle) wird gelesen und gilt als eingebauter Backport");
+            const auto ok = facts_of("g1_neg_inline_module");
+            CHECK(field(ok, "module_sdk") == "12.00" && field(ok, "backport_inline") == true && count(ok, "games.need_backport") == 0 && count(ok, "games.backport_incomplete") == 0,
+                  "G1: eboot.bin und Module (12.00 und 11.00) nicht ueber der Konsole: Backport vollstaendig, das hoechste Modul-SDK zaehlt");
+            const auto half = facts_of("g1_pos_backport_halb");
+            const json* hl = half.get("games.backport_incomplete");
+            CHECK(field(half, "module_sdk") == "13.60" && field(half, "backport") == false && field(half, "backport_inline") == false && field(half, "backport_incomplete") == true &&
+                      count(half, "games.need_backport") == 0 && hl && hl->size() == 1 && (*hl)[0]["desc"] == "PPSA00001: eboot.bin 12.00, sce_module 13.60",
+                  "G1: eboot.bin 12.00 mit einem Modul auf 13.60 ist ein halber Backport: eigener Fakt, nicht in games.need_backport");
+            const auto marker = facts_of("g1_neg_marker");
+            CHECK(field(marker, "eboot_sdk") == "" && field(marker, "backport") == true && field(marker, "backport_marker") == true && field(marker, "backport_marker_fw") == 7 &&
+                      field(marker, "backport_inline") == false && count(marker, "games.need_backport") == 0,
+                  "G1: ohne lesbare eboot.bin deckt die Marke fakelib/FW7 die Konsole mit Firmware 12.00");
+            const auto high = facts_of("g1_pos_marker_eboot_hoch");
+            CHECK(field(high, "eboot_sdk") == "13.60" && field(high, "backport") == false && field(high, "backport_marker") == false && count(high, "games.need_backport") == 1,
+                  "G1: die gelesene eboot.bin mit SDK 13.60 widerspricht der Marke: der Befund bleibt");
+            const auto newer = facts_of("g1_pos_marker_zu_neu");
+            CHECK(field(newer, "backport") == false && field(newer, "backport_marker") == false && field(newer, "backport_marker_fw") == 0 && count(newer, "games.need_backport") == 1,
+                  "G1: eine Marke ueber der Firmware der Konsole (FW13 bei 12.00) reicht nicht");
+            const auto infos = medic::collect_game_infos(half, {});
+            CHECK(infos.size() == 1 && infos[0].needs_backport && !infos[0].backport_inline, "G1: ein halber Backport zaehlt in der Spieleliste als \"braucht Backport\"");
         }
         CHECK(facts_of("g1_neg_nofw").get("games.need_backport")->empty() && facts_of("g1_neg_nofw").get("games.fw")->size() == 1, "G1: ohne bekannte Firmware kein Befund, die Liste bleibt");
         CHECK(facts_of("g1_neg_badformat").get("games.fw")->empty(), "G1: ungueltige Versionsangaben (zu kurz, keine BCD-Ziffern, Klartext) werden ignoriert");

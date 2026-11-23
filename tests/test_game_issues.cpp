@@ -552,6 +552,43 @@ void backport_name_tests() {
     CHECK(listed == "PPSA00053 ", "Backport: Ordner mit Namenszusatz und mit genauem Namen gelten, ein anderer Titel nicht (" + listed + ")");
 }
 
+// Firmware-Marke im fakelib (Ergaenzung 23. Nov. 2026): fakelib2 hat Vorrang (ShadowMount+ nimmt nur einen der beiden Ordner), die Schreibweise ist egal, die Marke
+// ist eine Datei FW<N> oder ein Ordner fw<N>, und N darf nicht ueber der Firmware der Konsole liegen
+void backport_marker_tests() {
+    Sandbox sb;
+    spit(sb.dir / "system.json", R"({"model":"CFI-TEST","fw":"12.00"})");
+    const auto titles = [&](std::initializer_list<const char*> ids) {
+        json t = json::array();
+        for (const char* id : ids) {
+            spit(sb.real(std::string("/user/app/") + id + "/sce_sys/param.json"),
+                 std::string(R"({"titleId":")") + id + R"(","requiredSystemSoftwareVersion":"0x1360000000000000","sdkVersion":"0x1360000000000000"})");
+            t.push_back({{"titleid", id}, {"path", std::string("/data/homebrew/Spiel-") + id}});
+        }
+        return t;
+    };
+    Facts f;
+    f.set("smp.titles", titles({"PPSA00061", "PPSA00062", "PPSA00063", "PPSA00064", "PPSA00065", "PPSA00066"}));
+    spit(sb.real("/data/homebrew/Spiel-PPSA00061/fakelib2/liesmich.txt"), "x");  // fakelib2 gilt, hat aber keine Marke ...
+    spit(sb.real("/data/homebrew/Spiel-PPSA00061/fakelib/FW7"), "");               // ... die Marke im verdeckten fakelib zaehlt nicht
+    spit(sb.real("/data/homebrew/Spiel-PPSA00062/FakeLib/Fw7"), "");               // Schreibweise egal
+    spit(sb.real("/data/homebrew/Spiel-PPSA00063/fakelib/fw10/libMuster.sprx"), "x");  // Ordner fw10 (BackPork Kitchen) bei Firmware 12.00: reicht
+    spit(sb.real("/data/homebrew/Spiel-PPSA00064/fakelib/fw/x"), "x");              // "fw" ohne Ziffern ist keine Marke
+    spit(sb.real("/data/homebrew/Spiel-PPSA00065/fakelib/FW100"), "");              // dreistellig: keine Marke
+    spit(sb.real("/data/homebrew/Spiel-PPSA00066/fakelib2/FW9"), "");               // zwei Marken: die kleinste zaehlt (FW9 und FW4 sind beide <= 12)
+    spit(sb.real("/data/homebrew/Spiel-PPSA00066/fakelib2/FW4"), "");
+    auto p = make_snapshot_platform(sb.dir.string());
+    collect_game_firmware(*p, f);
+    std::string covered, open;
+    int low = 0;
+    if (const json* g = f.get("games.fw"))
+        for (const auto& e : *g) {
+            (e["backport"] == true ? covered : open) += e["titleid"].get<std::string>() + " ";
+            if (e["titleid"] == "PPSA00066") low = e["backport_marker_fw"].get<int>();
+        }
+    CHECK(covered == "PPSA00062 PPSA00063 PPSA00066 " && open == "PPSA00061 PPSA00064 PPSA00065 ", "Marke: fakelib2 hat Vorrang, Schreibweise egal, Ordner fw10 zaehlt, fw ohne Ziffern und FW100 nicht (" + covered + "| " + open + ")");
+    CHECK(low == 4, "Marke: bei mehreren Marken gilt die kleinste Hauptversion");
+}
+
 // Weitere Absicherungen aus der Pruefung vom 15. Nov. 2026
 void review_followup_tests() {
     {  // chmod folgt keinem Symlink
@@ -1062,6 +1099,7 @@ void game_issue_tests() {
     leftover_tests();
     rename_device_tests();
     backport_name_tests();
+    backport_marker_tests();
     runtime_tests();
     folder_and_kraken_tests();
     review_followup_tests();
