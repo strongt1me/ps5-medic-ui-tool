@@ -8,6 +8,10 @@
   g1_neg_marker              eboot.bin nicht lesbar (verschluesseltes Segment), fakelib/FW7: Marke deckt die Konsole (12.00)
   g1_pos_marker_eboot_hoch   Marke FW7, aber die eboot.bin traegt SDK 13.60: die Messung widerspricht der Marke, der Befund bleibt
   g1_pos_marker_zu_neu       Marke FW13 liegt ueber der Konsole (12.00): reicht nicht
+  g1_neg_kraken_cache        .pkg-Spiel ueber Kraken Mount: der Cache /data/krakenmount/caches/<ID> (mit .done) traegt eboot.bin und Modul mit SDK 12.00
+  g1_pos_kraken_cache_hoch   derselbe Cache, aber die eboot.bin traegt SDK 13.60: der Befund bleibt
+  g1_pos_kraken_cache_halb   Cache mit eboot.bin 12.00, aber einem Modul mit 13.60: halber Backport
+  g1_pos_kraken_cache_unfertig  Cache ohne .done (Kraken Mount ist noch nicht fertig): wird nicht gelesen, der Befund bleibt
 
 Aufbau der Modulkoepfe wie in collectors.cpp (program_sdk_raw): fake-signierte SELF mit zwei Eintraegen (Pruefblock, Daten), ELF-Kopf, PT_LOAD und
 das Param-Segment (PT_SCE_PROCPARAM mit "ORBI" bzw. PT_SCE_MODULE_PARAM mit BF F4 13 3C bei +8, SDK bei +0x14). Nur erfundene Inhalte.
@@ -100,6 +104,29 @@ def make(name, expect, neg_for, eboot, modules=(), marker=None):
         f.write("{" + ", ".join(parts) + "}\n")
 
 
+CACHE = "fs/data/krakenmount/caches/PPSA00001"
+
+
+def make_cache(name, expect, neg_for, eboot, modules=(), done=True):
+    """Spiel als .pkg ueber Kraken Mount: es gibt keinen Spielordner in einem Scanpfad, nur den Cache mit dem ausgepackten Inhalt."""
+    dst = os.path.join(FIX, name)
+    if os.path.isdir(dst):
+        shutil.rmtree(dst)
+    for rel in ("procs.json", "system.json", "fs/user/app/PPSA00001/sce_sys/param.json"):
+        os.makedirs(os.path.dirname(os.path.join(dst, rel)), exist_ok=True)
+        shutil.copyfile(os.path.join(SKELETON, rel), os.path.join(dst, rel))
+    put(os.path.join(dst, CACHE, "eboot.bin"), eboot)
+    for mod_name, data in modules:
+        put(os.path.join(dst, CACHE, "sce_module", mod_name), data)
+    if done:
+        put(os.path.join(dst, CACHE, ".done"), b'{"backport":null,"fakelib":null,"kind":"pkg","v":2}')
+    parts = ['"expect": [%s]' % ", ".join('"%s"' % r for r in expect)]
+    if neg_for:
+        parts.append('"neg_for": [%s]' % ", ".join('"%s"' % r for r in neg_for))
+    with open(os.path.join(dst, "expect.json"), "w", encoding="utf-8", newline="\n") as f:
+        f.write("{" + ", ".join(parts) + "}\n")
+
+
 def main():
     sdk12, sdk11, sdk13 = 0x12000040, 0x11000040, 0x13600040
     needs = "game.needs_backport"
@@ -112,6 +139,10 @@ def main():
     make("g1_neg_marker", [], [needs], fake_self(sdk12, encrypted=True), marker="FW7")
     make("g1_pos_marker_eboot_hoch", [needs], None, fake_self(sdk13), marker="FW7")
     make("g1_pos_marker_zu_neu", [needs], None, fake_self(sdk12, encrypted=True), marker="FW13")
+    make_cache("g1_neg_kraken_cache", [], [needs, half], fake_self(sdk12), modules=[("libMuster.prx", fake_self(sdk12, MODULE))])
+    make_cache("g1_pos_kraken_cache_hoch", [needs], None, fake_self(sdk13))
+    make_cache("g1_pos_kraken_cache_halb", [half], None, fake_self(sdk12), modules=[("libMuster.prx", fake_self(sdk13, MODULE))])
+    make_cache("g1_pos_kraken_cache_unfertig", [needs], None, fake_self(sdk12), done=False)
     print("ok")
 
 

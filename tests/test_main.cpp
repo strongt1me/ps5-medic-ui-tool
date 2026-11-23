@@ -235,6 +235,18 @@ static void new_fact_tests() {
                   "G1: eine Marke ueber der Firmware der Konsole (FW13 bei 12.00) reicht nicht");
             const auto infos = medic::collect_game_infos(half, {});
             CHECK(infos.size() == 1 && infos[0].needs_backport && !infos[0].backport_inline, "G1: ein halber Backport zaehlt in der Spieleliste als \"braucht Backport\"");
+            // .pkg-Spiel ueber Kraken Mount: der Cache /data/krakenmount/caches/<TITLE_ID> (fertig = .done) wird wie ein Spielordner gelesen (Marc, 23. Nov. 2026)
+            const auto kc = facts_of("g1_neg_kraken_cache");
+            CHECK(field(kc, "eboot_sdk") == "12.00" && field(kc, "module_sdk") == "12.00" && field(kc, "backport_inline") == true && field(kc, "sdk_dir") == "/data/krakenmount/caches/PPSA00001" &&
+                      count(kc, "games.need_backport") == 0 && count(kc, "games.backport_incomplete") == 0,
+                  "G1: Kraken-Cache mit eboot.bin und Modul auf SDK 12.00: eingebauter Backport");
+            const auto kh = facts_of("g1_pos_kraken_cache_hoch");
+            CHECK(field(kh, "eboot_sdk") == "13.60" && field(kh, "backport") == false && count(kh, "games.need_backport") == 1, "G1: Kraken-Cache mit eboot.bin auf SDK 13.60: der Befund bleibt");
+            const auto kb = facts_of("g1_pos_kraken_cache_halb");
+            CHECK(field(kb, "module_sdk") == "13.60" && field(kb, "backport_incomplete") == true && count(kb, "games.backport_incomplete") == 1 && count(kb, "games.need_backport") == 0,
+                  "G1: Kraken-Cache mit herabgesetzter eboot.bin, aber einem Modul auf 13.60: halber Backport");
+            const auto ku = facts_of("g1_pos_kraken_cache_unfertig");
+            CHECK(field(ku, "eboot_sdk") == "" && field(ku, "sdk_dir") == "" && count(ku, "games.need_backport") == 1, "G1: ein Kraken-Cache ohne .done (unfertig) wird nicht gelesen");
         }
         CHECK(facts_of("g1_neg_nofw").get("games.need_backport")->empty() && facts_of("g1_neg_nofw").get("games.fw")->size() == 1, "G1: ohne bekannte Firmware kein Befund, die Liste bleibt");
         CHECK(facts_of("g1_neg_badformat").get("games.fw")->empty(), "G1: ungueltige Versionsangaben (zu kurz, keine BCD-Ziffern, Klartext) werden ignoriert");

@@ -615,6 +615,19 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
                         break;
                     }
             }
+        // Kraken-Mount-Cache (games.fw[].sdk_dir = /data/krakenmount/caches/<TITLE_ID>): dort las der Collector die eboot.bin und die Module eines .pkg-Spiels;
+        // Ersatzdateien samt .done (ohne sie gilt der Cache als unfertig), damit der Befund am PC aus dem Export entsteht
+        for (const auto& e : *g) {
+            if (!e.is_object() || !e.contains("sdk_dir") || !e["sdk_dir"].is_string()) continue;
+            const std::string dir = e["sdk_dir"].get<std::string>();
+            if (dir.compare(0, 25, "/data/krakenmount/caches/") != 0) continue;
+            const std::string eboot_sdk = e.contains("eboot_sdk") && e["eboot_sdk"].is_string() ? e["eboot_sdk"].get<std::string>() : std::string();
+            const std::string module_sdk = e.contains("module_sdk") && e["module_sdk"].is_string() ? e["module_sdk"].get<std::string>() : std::string();
+            ex.write(join_path(dir, ".done"), "{}");
+            if (const std::string stub = stub_eboot_with_sdk(eboot_sdk); !eboot_sdk.empty() && !stub.empty()) ex.write(join_path(dir, "eboot.bin"), stub);
+            if (const std::string stub = stub_eboot_with_sdk(module_sdk, true); !module_sdk.empty() && !stub.empty())
+                ex.write(join_path(join_path(dir, "sce_module"), "medic_stub.sprx"), stub);
+        }
     }
 
     // Link-Dateien von ShadowMount+ (Pfad des Images bzw. Ordners je Titel): damit entsteht der Duplikat-Befund (Ordner und Image

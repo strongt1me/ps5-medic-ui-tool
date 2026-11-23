@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.56",
+  "db_version": "2026.11.57",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -1188,8 +1188,8 @@
         ]
       },
       "text": {
-        "de": "Für diese Spiele verlangt die param.json eine höhere Firmware-Version als die der Konsole, und in den Scanpfaden fehlt der Ordner backports/<TITLE_ID>/. Laut Backport-Toolkit startet die Konsole sie nur mit Backport oder AMPR Emu / AMPR Emu NG; an dieser Konsole ist das nicht bestätigt. Medic liest das SDK der eboot.bin (bei Spielen als Ordner auch das der Module in sce_module); liegt es nicht über der Firmware der Konsole, gilt der Backport als im Spiel eingebaut, ebenso eine Firmware-Marke (FW<N>) im Ordner fakelib. Bei Images prüft Medic nur die eboot.bin, und lässt sie sich nicht lesen (anderes Format, beschädigt, verschlüsselt), kann der Befund hinfällig sein.",
-        "en": "For these games the param.json requires a higher firmware version than the console has, and the scan paths contain no backports/<TITLE_ID>/ folder. According to the backport toolkit the console only starts them with a backport or AMPR Emu / AMPR Emu NG; this is not confirmed on this console. Medic reads the SDK of the eboot.bin (for games stored as a folder also that of the modules in sce_module); if it is not above the console's firmware, the backport counts as built into the game, as does a firmware marker (FW<N>) in the fakelib folder. For images Medic checks only the eboot.bin, and if it cannot be read (other format, damaged, encrypted) the finding may not apply."
+        "de": "Für diese Spiele verlangt die param.json eine höhere Firmware-Version als die der Konsole, und in den Scanpfaden fehlt der Ordner backports/<TITLE_ID>/. Laut Backport-Toolkit startet die Konsole sie nur mit Backport oder AMPR Emu / AMPR Emu NG; an dieser Konsole ist das nicht bestätigt. Medic liest das SDK der eboot.bin (bei Spielen als Ordner auch das der Module in sce_module); liegt es nicht über der Firmware der Konsole, gilt der Backport als im Spiel eingebaut, ebenso eine Firmware-Marke (FW<N>) im Ordner fakelib. Bei einem .pkg, das Kraken Mount einhängt, liest Medic den fertigen Cache unter /data/krakenmount/caches/<TITLE_ID>/. Bei Images prüft Medic nur die eboot.bin, und lässt sie sich nicht lesen (anderes Format, beschädigt, verschlüsselt, ein .pkg ohne fertigen Cache), kann der Befund hinfällig sein.",
+        "en": "For these games the param.json requires a higher firmware version than the console has, and the scan paths contain no backports/<TITLE_ID>/ folder. According to the backport toolkit the console only starts them with a backport or AMPR Emu / AMPR Emu NG; this is not confirmed on this console. Medic reads the SDK of the eboot.bin (for games stored as a folder also that of the modules in sce_module); if it is not above the console's firmware, the backport counts as built into the game, as does a firmware marker (FW<N>) in the fakelib folder. For a .pkg that Kraken Mount mounts, Medic reads the finished cache under /data/krakenmount/caches/<TITLE_ID>/. For images Medic checks only the eboot.bin, and if it cannot be read (other format, damaged, encrypted, a .pkg without a finished cache) the finding may not apply."
       },
       "evidence": "games.need_backport[].desc",
       "fix": null,

@@ -902,6 +902,17 @@ void collect_game_firmware(const Platform& p, Facts& f) {
                     break;
                 }
             }
+        // Kraken Mount haengt ein .pkg nicht aus der Datei ein, sondern legt dessen Inhalt in /data/krakenmount/caches/<TITLE_ID>/ ab (fertig, sobald .done
+        // da ist): dort liegen eboot.bin, sce_module und fakelib wie in einem Spielordner. Ohne diese Quelle sah Medic bei so einem Spiel nie ein eingebautes
+        // Backport (Marc, 23. Nov. 2026: ein FPKG-Spiel lief auf 12.00, Medic warnte trotzdem). Nur, wenn aus den anderen Quellen nichts zu lesen war.
+        if (eboot_sdk.empty()) {
+            const std::string cache = join_path("/data/krakenmount/caches", app.name);
+            if (fs.exists(join_path(cache, ".done"))) {
+                const std::string eboot = join_path(cache, "eboot.bin");
+                eboot_sdk = sdk_raw_to_fw(program_sdk_raw([&](std::uint64_t off, std::size_t n, std::string& out) { return fs.read_range(eboot, off, n, out); }));
+                if (!eboot_sdk.empty() || dir_src.empty()) dir_src = cache;
+            }
+        }
         // Backport im Spiel selbst (Marc, 12. Nov. 2026: zwei Spiele verlangen 13.60 und laufen auf 12.00; beide liegen als Image vor): Ein Backport-Werkzeug
         // setzt die SDK-Version in den Modulkoepfen herunter, param.json behaelt die alte Angabe. Liegt die SDK-Version der eboot.bin nicht ueber der Firmware
         // der Konsole, obwohl param.json mehr verlangt, ist das Spiel angepasst - bei einem Ordner-Spiel nur, wenn auch kein Modul in sce_module ueber der Firmware
@@ -927,7 +938,7 @@ void collect_game_firmware(const Platform& p, Facts& f) {
         }
         games.push_back({{"titleid", app.name}, {"name", app_title_name(param, app.name)}, {"required_fw", required}, {"sdk_fw", decode_param_fw(param, "sdkVersion")},
                          {"eboot_sdk", eboot_sdk}, {"module_sdk", module_sdk}, {"backport", backport}, {"backport_inline", backport_inline},
-                         {"backport_marker", backport_marker}, {"backport_marker_fw", marker_fw}, {"backport_incomplete", incomplete}});
+                         {"backport_marker", backport_marker}, {"backport_marker_fw", marker_fw}, {"backport_incomplete", incomplete}, {"sdk_dir", dir_src}});
         if (incomplete)
             incomplete_list.push_back({{"titleid", app.name}, {"required_fw", required}, {"eboot_sdk", eboot_sdk}, {"module_sdk", module_sdk},
                                        {"desc", app.name + ": eboot.bin " + eboot_sdk + ", sce_module " + module_sdk}});

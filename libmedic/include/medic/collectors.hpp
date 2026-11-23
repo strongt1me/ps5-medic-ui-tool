@@ -16,7 +16,7 @@ void collect_system(const Platform& p, Facts& f);      // net.port_9021, jb.seco
 void collect_shadowmount(const Platform& p, Facts& f); // smp.*
 void collect_plugins(const Platform& p, Facts& f);     // ps5theme.version, ps5theme.source
 void collect_apps(const Platform& p, Facts& f);        // apps.oversized[].{titleid,name,reserved_mib,content_bytes}
-void collect_game_firmware(const Platform& p, Facts& f);  // games.fw[].{titleid,name,required_fw,sdk_fw,eboot_sdk,module_sdk,backport,backport_inline,backport_marker,backport_incomplete}, games.need_backport[].{titleid,required_fw,desc}, games.backport_incomplete[].{titleid,required_fw,eboot_sdk,module_sdk,desc}
+void collect_game_firmware(const Platform& p, Facts& f);  // games.fw[].{titleid,name,required_fw,sdk_fw,eboot_sdk,module_sdk,backport,backport_inline,backport_marker,backport_marker_fw,backport_incomplete,sdk_dir}, games.need_backport[].{titleid,required_fw,desc}, games.backport_incomplete[].{titleid,required_fw,eboot_sdk,module_sdk,desc}
 void collect_autoload(const Platform& p, Facts& f);       // autoload.problems[], pldmgr.autoload_enabled/_entries
 void collect_payload_files(const Platform& p, Facts& f);  // payload.elf_files[], payload.broken_elfs[]
 void collect_helpers(const Platform& p, Facts& f);        // nanodns.log.*, etahen.*
