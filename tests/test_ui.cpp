@@ -220,14 +220,14 @@ void press(App& a, std::initializer_list<Button> bs) {
 }
 
 // Absolute Wege vom Startbild (unabhaengig von der bisherigen Auswahl): L1 bis ganz oben, R1 bis zur Kachel, Kreuz.
-// Kacheln: 1 Spiele, 2 Verlauf, 3 Mehr. Mehr: 0 Reparaturen, 1 Selbsttest, 2 Regeln, 3 Backups/Rueckgaengig, 4 Bericht, 5 Fehlercodes, 6 Einstellungen.
+// Kacheln: 1 Spiele, 2 Verlauf, 3 Controller-Test, 4 Mehr. Mehr: 0 Reparaturen, 1 Selbsttest, 2 Regeln, 3 Backups/Rueckgaengig, 4 Bericht, 5 Fehlercodes, 6 Einstellungen.
 void start_open(App& a, int tile) {
     press(a, {Button::L1, Button::L1, Button::L1, Button::L1});
     for (int i = 0; i < tile; ++i) a.handle(Button::R1);
     a.handle(Button::Cross);
 }
 void more_open(App& a, int item) {
-    start_open(a, 3);
+    start_open(a, 4);
     for (int i = 0; i < item; ++i) a.handle(Button::Down);
     a.handle(Button::Cross);
 }
@@ -1492,7 +1492,7 @@ void shoulder_and_stick_flow_tests() {
     Canvas cv(App::kWidth, App::kHeight);
     Strings::missing().clear();
 
-    {  // Start: L1/R1 wie Hoch/Runter, Links/Rechts zwischen den drei Kacheln
+    {  // Start: L1/R1 wie Hoch/Runter, Links/Rechts zwischen den vier Kacheln
         App a(svc);
         press(a, {Button::R1, Button::Cross});
         CHECK(a.screen() == App::Screen::Running, "Start: R1 waehlt die erste Kachel (Spiele); ohne Check-up wird erst geprueft");
@@ -1504,9 +1504,13 @@ void shoulder_and_stick_flow_tests() {
         press(a, {Button::L1, Button::L1, Button::R1, Button::R1, Button::Cross, Button::Square});
         CHECK(a.screen() == App::Screen::History, "Start: R1 zweimal waehlt Verlauf (Quadrat dort: Journal)");
         press(a, {Button::Circle, Button::Circle, Button::Right, Button::Cross});
-        CHECK(a.screen() == App::Screen::Maintenance, "Start: Rechts springt von Verlauf zu Mehr");
-        press(a, {Button::Circle, Button::Left, Button::Cross});
-        CHECK(a.screen() == App::Screen::CheckList, "Start: Links springt von Mehr zu Verlauf");
+        CHECK(a.screen() == App::Screen::PadTest, "Start: Rechts springt von Verlauf zur Kachel Controller-Test");
+        press(a, {Button::Circle});
+        CHECK(a.screen() == App::Screen::Start, "Start: Kreis im Einstieg des Controller-Tests fuehrt zur Startseite");
+        press(a, {Button::Right, Button::Cross});
+        CHECK(a.screen() == App::Screen::Maintenance, "Start: Rechts springt von Controller-Test zu Mehr");
+        press(a, {Button::Circle, Button::Left, Button::Left, Button::Cross});
+        CHECK(a.screen() == App::Screen::CheckList, "Start: Links springt von Mehr ueber den Controller-Test zu Verlauf");
         press(a, {Button::Circle, Button::L1, Button::L1, Button::L1, Button::Left, Button::Right, Button::Cross});
         CHECK(a.screen() == App::Screen::Findings, "Start: oben (Statusfeld) bleiben Links/Rechts wirkungslos; Kreuz oeffnet die Befunde");
     }
@@ -1637,7 +1641,7 @@ void shoulder_and_stick_flow_tests() {
         FakeService svc2;
         svc2.result.findings = {mk_finding("rule.a", Severity::Warning, false), mk_finding("rule.b", Severity::Warning, true)};
         App a(svc2);
-        start_open(a, 3);  // Kachel 3: Mehr
+        start_open(a, 4);  // Kachel 4: Mehr
         CHECK(a.screen() == App::Screen::Maintenance, "Wartung: Kachel oeffnet den Bereich");
         a.render(cv);
         press(a, {Button::Down, Button::Down, Button::Cross});  // Regeln aktualisieren (dritter Eintrag)
@@ -3123,7 +3127,7 @@ void history_ui_tests() {
 void usertest_ui_tests() {
     Canvas cv(App::kWidth, App::kHeight);
     auto open_list = [&](App& a) { more_open(a, 1); };
-    // Controller-Test (L1): Auswertung im Kern (tests/test_padtest.cpp), hier der Bildschirm: Einstieg, Schritte ueber pad_sample, Zusammenfassung, Eintrag.
+    // Controller-Test (Kachel auf der Startseite): Auswertung im Kern (tests/test_padtest.cpp), hier der Bildschirm: Einstieg, Schritte ueber pad_sample, Zusammenfassung, Eintrag.
     struct PadDriver {
         App& app;
         std::uint32_t now = 1000;
@@ -3142,21 +3146,23 @@ void usertest_ui_tests() {
         smp.extra = true;
         return smp;
     };
-    {   // Einstieg: L1 oeffnet den Test, Kreis geht zurueck, nichts eingetragen
+    {   // Einstieg: die Kachel oeffnet den Test, Kreis geht zur Startseite zurueck, nichts eingetragen; im Selbsttest oeffnet L1 ihn nicht mehr
         FakeService svc;
         App a(svc);
-        open_list(a);
-        press(a, {Button::L1});
-        CHECK(a.screen() == App::Screen::PadTest, "Controller-Test: L1 oeffnet ihn");
+        start_open(a, 3);
+        CHECK(a.screen() == App::Screen::PadTest, "Controller-Test: die Kachel auf der Startseite oeffnet ihn");
         a.render(cv);
         press(a, {Button::Circle});
-        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.empty(), "Controller-Test: Kreis im Einstieg geht zurueck, nichts eingetragen");
+        CHECK(a.screen() == App::Screen::Start && svc.recorded.empty(), "Controller-Test: Kreis im Einstieg geht zur Startseite zurueck, nichts eingetragen");
+        open_list(a);
+        press(a, {Button::L1});
+        CHECK(a.screen() == App::Screen::SelfTest, "Selbsttest: L1 oeffnet den Controller-Test nicht mehr (er liegt auf der Startseite)");
     }
     {   // alle sechs Schritte, dann eintragen
         FakeService svc;
         App a(svc);
-        open_list(a);
-        press(a, {Button::L1, Button::Cross});  // Einstieg, Start
+        start_open(a, 3);
+        press(a, {Button::Cross});  // Einstieg, Start
         PadDriver d{a};
         d.feed(pad_neutral());
         d.look();
@@ -3224,14 +3230,14 @@ void usertest_ui_tests() {
         a.render(cv);
         CHECK(a.screen() == App::Screen::PadTest && svc.recorded.empty(), "Controller-Test: in der Zusammenfassung ist noch nichts eingetragen");
         press(a, {Button::Cross});
-        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.size() == 1 && svc.recorded[0].id == "hw.pad.buttons" && svc.recorded[0].status == TestStatus::Passed && svc.recorded[0].reason.empty(),
+        CHECK(a.screen() == App::Screen::Start && svc.recorded.size() == 1 && svc.recorded[0].id == "hw.pad.buttons" && svc.recorded[0].status == TestStatus::Passed && svc.recorded[0].reason.empty(),
               "Controller-Test: alle Schritte ok = bestanden, eingetragen");
     }
     {   // Kreis zweimal im Tasten-Schritt, die uebrigen Schritte ueberspringen: Warnung mit fehlenden Tasten
         FakeService svc;
         App a(svc);
-        open_list(a);
-        press(a, {Button::L1, Button::Cross});
+        start_open(a, 3);
+        press(a, {Button::Cross});
         PadDriver d{a};
         d.feed(pad_neutral());
         for (int i = 0; i < 2; ++i) {
@@ -3244,14 +3250,14 @@ void usertest_ui_tests() {
         press(a, {Button::Triangle, Button::Triangle, Button::Triangle, Button::Triangle, Button::Triangle});  // Sticks, Rundlauf, Trigger, Touchpad, Bewegung
         a.render(cv);
         press(a, {Button::Cross});
-        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.size() == 1 && svc.recorded[0].status == TestStatus::Warn && svc.recorded[0].reason == "buttons_missing",
+        CHECK(a.screen() == App::Screen::Start && svc.recorded.size() == 1 && svc.recorded[0].status == TestStatus::Warn && svc.recorded[0].reason == "buttons_missing",
               "Controller-Test: fehlende Tasten = Warnung (buttons_missing), eingetragen");
     }
     {   // Kreis mitten im Test: zurueck ohne Eintrag
         FakeService svc;
         App a(svc);
-        open_list(a);
-        press(a, {Button::L1, Button::Cross});
+        start_open(a, 3);
+        press(a, {Button::Cross});
         PadDriver d{a};
         d.feed(pad_neutral());
         d.feed(pad_neutral());
@@ -3263,13 +3269,12 @@ void usertest_ui_tests() {
         }
         CHECK(a.screen() == App::Screen::PadTest, "Controller-Test: Kreis zweimal beendet nur den Tasten-Schritt");
         press(a, {Button::Circle});  // jetzt in Sticks in Ruhe: Kreis bricht ab
-        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.empty(), "Controller-Test: Kreis in einem Schritt bricht ab, nichts eingetragen");
+        CHECK(a.screen() == App::Screen::Start && svc.recorded.empty(), "Controller-Test: Kreis in einem Schritt bricht ab, nichts eingetragen");
     }
     {   // ohne Controller-Zustand steht ein Hinweis im Einstieg; Quadrat in der Zusammenfassung beginnt von vorn
         FakeService svc;
         App a(svc);
-        open_list(a);
-        press(a, {Button::L1});
+        start_open(a, 3);
         a.render(cv);  // Einstieg ohne Zustand (Hinweis)
         press(a, {Button::Cross});
         PadDriver d{a};
@@ -3810,14 +3815,22 @@ void start_nav_tests() {
     {
         FakeService fk;
         App app(fk);
-        press(app, {Button::Down, Button::Down, Button::Down, Button::Up, Button::Cross});  // Kachel 3 (Mehr), dann hoch, Kreuz
+        press(app, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Up, Button::Cross});  // Kachel 4 (Mehr), dann hoch, Kreuz
         CHECK(app.screen() == App::Screen::Running, "Start: Hoch von einer Kachel erreicht das Statusfeld (ohne Ergebnis: Check-up)");
     }
     {
         FakeService fk;
         App app(fk);
-        press(app, {Button::Down, Button::Down, Button::Down, Button::Up, Button::Down, Button::Cross});
+        press(app, {Button::Down, Button::Down, Button::Down, Button::Down, Button::Up, Button::Down, Button::Cross});
         CHECK(app.screen() == App::Screen::Maintenance, "Start: Runter aus dem Statusfeld geht zur Kachel zurueck, von der man kam (Mehr)");
+    }
+    {
+        FakeService fk;
+        App app(fk);
+        press(app, {Button::Down, Button::Down, Button::Down, Button::Up, Button::Down, Button::Cross});
+        CHECK(app.screen() == App::Screen::PadTest, "Start: Runter aus dem Statusfeld geht auch zur dritten Kachel zurueck (Controller-Test)");
+        press(app, {Button::Circle, Button::Down, Button::Down, Button::Cross});
+        CHECK(app.screen() == App::Screen::Maintenance, "Start: Runter ueber die letzte Kachel hinaus bleibt bei Mehr");
     }
     {
         FakeService fk;
@@ -3903,7 +3916,7 @@ void icon_tests() {
     const Color bg = rgb(0, 0, 0), main_c = rgb(255, 0, 0), acc_c = rgb(0, 0, 255);
     bool all_visible = true, inside_field = true;
     int with_accent = 0;
-    for (int i = 0; i <= static_cast<int>(Icon::Shield); ++i)
+    for (int i = 0; i <= static_cast<int>(Icon::Pad); ++i)
         for (int size : {24, 48, 96}) {
             Canvas c(size + 40, size + 40);
             c.clear(bg);

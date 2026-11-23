@@ -184,7 +184,7 @@ std::pair<Icon, Color> test_look(const std::string& id) {
     if (id == "hw.thermal.short_soak") return {Icon::Flame, kTintOrange};
     if (id == "hw.mem.userland_pattern") return {Icon::Chip, kTintViolet};
     if (id == "hw.storage.write_verify") return {Icon::Pencil, kTintPink};
-    if (id == "hw.pad.buttons") return {Icon::Gamepad, kTintGreen};
+    if (id == "hw.pad.buttons") return {Icon::Pad, kTintGreen};
     if (id == "hw.display.pattern") return {Icon::Display, kTintGreen};
     return {Icon::Checklist, kTintSlate};
 }
@@ -982,17 +982,17 @@ void App::handle_impl(Button b) {
     }
     switch (screen_) {
         case Screen::Start:
-            // Das Statusfeld (0) liegt ueber den drei Kacheln (1 Spiele, 2 Verlauf, 3 Mehr), die nebeneinander liegen: Hoch von einer Kachel fuehrt
-            // zum Statusfeld, Runter vom Statusfeld wieder zu der Kachel, von der man gekommen ist (start_small_).
+            // Das Statusfeld (0) liegt ueber den vier Kacheln (1 Spiele, 2 Verlauf, 3 Controller-Test, 4 Mehr), die nebeneinander liegen: Hoch von einer
+            // Kachel fuehrt zum Statusfeld, Runter vom Statusfeld wieder zu der Kachel, von der man gekommen ist (start_small_).
             if (b == Button::Up) {
                 if (start_sel_ >= 1) start_small_ = start_sel_;
                 start_sel_ = 0;
             } else if (b == Button::L1) start_sel_ = std::max(start_sel_ - 1, 0);
-            else if (b == Button::Down && start_sel_ == 0) start_sel_ = std::clamp(start_small_, 1, 3);
+            else if (b == Button::Down && start_sel_ == 0) start_sel_ = std::clamp(start_small_, 1, kStartTiles);
             else if (b == Button::Down || b == Button::R1) {
-                start_sel_ = std::min(start_sel_ + 1, 3);
+                start_sel_ = std::min(start_sel_ + 1, kStartTiles);
             } else if (b == Button::Left && start_sel_ >= 2) --start_sel_;
-            else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < 3) ++start_sel_;
+            else if (b == Button::Right && start_sel_ >= 1 && start_sel_ < kStartTiles) ++start_sel_;
             else if (b == Button::Triangle) {  // Anzeige zuruecksetzen: der naechste Check-up beginnt bei Null
                 if (has_result_) reset_view();
             } else if (b == Button::Square) {  // jederzeit neu pruefen
@@ -1013,6 +1013,7 @@ void App::handle_impl(Button b) {
                         start_check();
                     }
                 } else if (start_sel_ == 2) open_checks();
+                else if (start_sel_ == 3) open_padtest();
                 else open_maintenance();
             } else if (b == Button::Circle) quit_ = true;
             break;
@@ -1353,7 +1354,6 @@ void App::handle_impl(Button b) {
                     st_tier_ = 2;
                     st_state_ = StState::Confirm;
                 } else if (b == Button::Square) start_selftest(0);
-                else if (b == Button::L1) open_padtest();
                 else if (b == Button::R1) open_usertest();
                 else if (b == Button::Circle) screen_ = Screen::Start;
             } else if (st_state_ == StState::Confirm) {
@@ -1751,7 +1751,7 @@ void App::draw_usertest(Canvas& c) const {
     draw_hints(c, {{PadGlyph::Cross, S("usertest.nothing")}, {PadGlyph::Triangle, S("usertest.noticed")}, {PadGlyph::Circle, S("usertest.dontknow")}});
 }
 
-// ---- Controller-Test (Mehr > Selbsttest > L1) ----------------------------------------------------------------------------------------------------------------
+// ---- Controller-Test (Kachel auf der Startseite) ----------------------------------------------------------------------------------------------------------------
 // Die Auswertung steht in medic::PadTest (Kern, am PC getestet); hier nur Eingabe und Darstellung. Die Tasten kommen als rohes Abbild (pad_sample), nicht als
 // Button-Ereignisse: im Tasten-Schritt ist jede Taste selbst ein Pruefpunkt, die Bedienung (Kreuz weiter, Dreieck ueberspringen, Kreis abbrechen) gilt erst danach.
 
@@ -1785,7 +1785,7 @@ void App::leave_padtest(bool save) {
     }
     pt_.reset();
     pt_intro_ = true;
-    screen_ = Screen::SelfTest;
+    screen_ = Screen::Start;  // zurueck zur Kachel, von der der Test kam (start_sel_ bleibt)
 }
 
 void App::handle_padtest(Button b) {
@@ -1795,7 +1795,7 @@ void App::handle_padtest(Button b) {
             pt_.reset();
             pt_intro_ = false;
         } else if (b == Button::Circle) {
-            screen_ = Screen::SelfTest;
+            screen_ = Screen::Start;
         }
         return;
     }
@@ -1846,7 +1846,7 @@ void App::draw_padtest(Canvas& c) const {
     using St = medic::PadTest::Stage;
     using Vd = medic::PadTest::Verdict;
     const auto& S = Strings::get(lang_);
-    title_icon(c, Icon::Gamepad, kTintGreen, S("padtest.title"));
+    title_icon(c, Icon::Pad, kTintGreen, S("padtest.title"));
 
     if (pt_intro_) {
         glass_panel(c, M, 230, W - 2 * M, 480, 24);
@@ -2270,18 +2270,18 @@ void App::draw_start(Canvas& c) const {
         body().draw(c, bx + 90 + (lw2 - body().width(label)) / 2, by + (bh - body().line_height()) / 2, label, rgb(255, 255, 255));
     }
 
-    // Drei Kacheln: Spiele, Verlauf und "Mehr" (alles andere: Reparaturen, Selbsttest, Regeln, Backups, Fehlercodes, Einstellungen)
-    const int gap = 25, cw = (hw - 2 * gap) / 3, ty0 = large ? 750 : 730, th = large ? 200 : 176;
-    const char* keys[3][2] = {{"start.games", "start.games_sub"}, {"start.history", "start.history_sub"}, {"start.more", "start.more_sub"}};
-    const Icon icons[3] = {Icon::Gamepad, Icon::History, Icon::Gear};
-    const Color tints[3] = {kTintPink, kTintViolet, kTintSlate};
-    for (int i = 0; i < 3; ++i) {
+    // Vier Kacheln: Spiele, Verlauf, Controller-Test und "Mehr" (alles andere: Reparaturen, Selbsttest, Regeln, Backups, Fehlercodes, Einstellungen)
+    const int gap = 22, cw = (hw - (kStartTiles - 1) * gap) / kStartTiles, ty0 = large ? 750 : 730, th = large ? 200 : 176, badge = 64, inset = 22;
+    const char* keys[kStartTiles][2] = {{"start.games", "start.games_sub"}, {"start.history", "start.history_sub"}, {"start.pad", "start.pad_sub"}, {"start.more", "start.more_sub"}};
+    const Icon icons[kStartTiles] = {Icon::Gamepad, Icon::History, Icon::Pad, Icon::Gear};
+    const Color tints[kStartTiles] = {kTintPink, kTintViolet, kTintGreen, kTintSlate};
+    for (int i = 0; i < kStartTiles; ++i) {
         const bool sel = start_sel_ == i + 1;
         const int x = hx + i * (cw + gap);
         card(c, x, ty0, cw, th, sel);
-        c.glow(x + 66, ty0 + th / 2, 56, tints[i], sel ? 90 : 55);
-        draw_icon_badge(c, icons[i], x + 28, ty0 + (th - 76) / 2, 76, tints[i]);
-        const int tx = x + 128, tw = cw - 128 - 22;
+        c.glow(x + inset + badge / 2, ty0 + th / 2, 50, tints[i], sel ? 90 : 55);
+        draw_icon_badge(c, icons[i], x + inset, ty0 + (th - badge) / 2, badge, tints[i]);
+        const int tx = x + inset + badge + 16, tw = cw - (tx - x) - 14;
         body().draw(c, tx, ty0 + 24, elide(body(), S(keys[i][0]), tw), kText);
         int ty = ty0 + 24 + body().line_height() + 4;
         for (const auto& l : wrap_text(small(), S(keys[i][1]), tw, 3)) {

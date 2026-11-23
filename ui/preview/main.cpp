@@ -29,7 +29,7 @@ int write_icon_sheet(const std::string& path) {
     Canvas c(1920, 1080);
     c.clear(rgb(14, 18, 24));
     const Color tints[] = {rgb(76, 154, 255), rgb(167, 139, 250), rgb(45, 212, 191), rgb(251, 146, 60), rgb(255, 92, 92), rgb(76, 208, 138)};
-    const int n = static_cast<int>(Icon::Shield) + 1;
+    const int n = static_cast<int>(Icon::Pad) + 1;
     for (int i = 0; i < n; ++i) {
         const int col = i % 8, row = i / 8, x = 40 + col * 232, y = 20 + row * 260;
         c.fill_round_rect(x, y, 212, 244, 16, rgb(23, 29, 38));
@@ -263,10 +263,7 @@ int main(int argc, char** argv) {
                 return smp;
             };
             for (int i = 0; i < 3; ++i) pa.handle(Button::Down);
-            pa.handle(Button::Cross);  // Mehr
-            pa.handle(Button::Down);
-            pa.handle(Button::Cross);  // Selbsttest
-            pa.handle(Button::L1);     // Controller-Test
+            pa.handle(Button::Cross);  // Kachel Controller-Test auf der Startseite
             png("40_padtest_intro.png");
             pa.handle(Button::Cross);
             feed(neutral());

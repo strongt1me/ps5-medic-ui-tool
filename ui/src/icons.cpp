@@ -287,6 +287,12 @@ std::vector<Shape> build(Icon icon) {
             b.arc(0.05f, 0.1f, 0.62f, 0.62f, 185, 440);
             b.fillpoly({{-0.98f, 0.1f}, {-0.3f, 0.1f}, {-0.64f, -0.36f}}).acc();
             break;
+        case Icon::Pad:  // Controller von oben: Gehaeuse, Touchpad (Akzent), zwei Sticks
+            b.rrect(-0.98f, -0.6f, 1.96f, 1.22f, 0.5f);
+            b.rrect(-0.3f, -0.4f, 0.6f, 0.3f, 0.09f).acc().wd(0.1f);
+            b.ring(-0.42f, 0.28f, 0.2f).wd(0.1f);
+            b.ring(0.42f, 0.28f, 0.2f).wd(0.1f);
+            break;
         case Icon::Shield:
             b.poly({{0, -0.95f}, {0.8f, -0.62f}, {0.8f, 0.1f}, {0.55f, 0.58f}, {0, 0.95f}, {-0.55f, 0.58f}, {-0.8f, 0.1f}, {-0.8f, -0.62f}});
             b.line({{-0.32f, 0.0f}, {-0.08f, 0.26f}, {0.36f, -0.24f}}).acc().wd(0.13f);

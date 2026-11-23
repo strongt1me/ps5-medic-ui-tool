@@ -38,6 +38,7 @@ enum class Icon {
     Lightbulb,
     Undo,
     Shield,
+    Pad,          // Controller von oben (Controller-Test)
 };
 
 // Zeichnet das Symbol mit Mittelpunkt (cx, cy) in einem Feld der Kantenlaenge `size`. accent == 0: Akzentteile in der Hauptfarbe.

@@ -28,6 +28,7 @@ public:
     enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, PadTest, CheckList, CheckCompare, GameList, GameDetail, Hidden, Repairs, Maintenance, Splash };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
+    static constexpr int kStartTiles = 4;  // Kacheln der Startseite: Spiele, Verlauf, Controller-Test, Mehr
     static constexpr int kMaintItems = 7;  // Reparaturen, Selbsttest, Regeln, Backups/Rueckgaengig, Bericht, Fehlercodes, Einstellungen
 
     explicit App(IMedicService& svc, Lang lang = Lang::De);
@@ -193,7 +194,7 @@ private:
     bool look_checked_ = false;          // Check-up beim Start (Einstellung) hoechstens einmal je Sitzung pruefen
 
     int start_sel_ = 0;
-    int start_small_ = 1;  // kleine Kachel (1..3), von der man zur grossen hochgegangen ist: Ziel von Runter
+    int start_small_ = 1;  // kleine Kachel (1..4), von der man zur grossen hochgegangen ist: Ziel von Runter
 
     bool has_result_ = false;
     int check_runs_ = 0;           // Check-ups seit dem Start bzw. dem letzten Zuruecksetzen (zeigt, dass ein Check-up neu lief)
@@ -266,7 +267,7 @@ private:
     // Nutzer-Test Anzeige (Farbflaechen, dann Urteil)
     int ut_color_ = 0;
     bool ut_asking_ = false;
-    // Controller-Test (Mehr > Selbsttest > L1): Auswertung im Kern (medic::PadTest), hier Zustand der Oberflaeche
+    // Controller-Test (Kachel auf der Startseite): Auswertung im Kern (medic::PadTest), hier Zustand der Oberflaeche
     medic::PadTest pt_;
     bool pt_intro_ = true, pt_has_sample_ = false;
     std::uint32_t pt_now_ = 0;
