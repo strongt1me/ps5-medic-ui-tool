@@ -120,6 +120,8 @@ public:
     virtual std::map<std::string, std::map<std::string, std::string>> components() const = 0;
     // Zeitpunkt des letzten Konsolenstarts (Sekunden seit 1970), 0 = unbekannt.
     virtual std::int64_t boot_epoch() const { return 0; }
+    // Die Uhr der Konsole jetzt (Sekunden seit 1970), 0 = unbekannt. Der Snapshot nennt sie in system.json ("now"); ohne Angabe ist sie unbekannt.
+    virtual std::int64_t now_epoch() const { return 0; }
     // CPU- und SoC-Temperatur. Standard: unbekannt (Plattform kann nicht messen).
     virtual Thermal thermal() const { return {}; }
     // Nimmt ein lokaler TCP-Port Verbindungen an? Unknown, wenn die Plattform das nicht pruefen kann
@@ -172,8 +174,8 @@ struct Platform {
 //                        sie unbekannt (die echten Modi des Git-Checkouts zaehlen nie)
 //   <root>/system.json   {"fw":"4.03","model":"...","storage":[{"mount":"/data","total":..,"free":..,"fstype":"bfs","ro":false}],
 //                         "components":{"kstuff":{"version":"1.10","origin":"echostretch"},"smp":{"version":"1.7"}},
-//                         "boot":1794060571, "ports":{"9021":true}, "temp":{"cpu":36,"soc":34}}
-//                        (boot, ports, temp sowie fstype/ro je Laufwerk sind optional)
+//                         "boot":1794060571, "now":1795500000, "ports":{"9021":true}, "temp":{"cpu":36,"soc":34}}
+//                        (boot, now, ports, temp sowie fstype/ro je Laufwerk sind optional)
 // Fehlende Dateien sind erlaubt (leerer Zustand).
 // writable=true erlaubt Schreibzugriffe (fs_rw) direkt im Ordner -- Fixtures vorher kopieren!
 std::unique_ptr<Platform> make_snapshot_platform(const std::string& root_dir, bool writable = false);

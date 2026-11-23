@@ -9,6 +9,7 @@
 #include "medic/games.hpp"
 #include "medic/image_reader.hpp"
 #include "medic/platform.hpp"
+#include "medic/report.hpp"
 #include "medic/rules.hpp"
 #include "check.hpp"
 
@@ -251,6 +252,62 @@ static void new_fact_tests() {
         CHECK(facts_of("g1_neg_nofw").get("games.need_backport")->empty() && facts_of("g1_neg_nofw").get("games.fw")->size() == 1, "G1: ohne bekannte Firmware kein Befund, die Liste bleibt");
         CHECK(facts_of("g1_neg_badformat").get("games.fw")->empty(), "G1: ungueltige Versionsangaben (zu kurz, keine BCD-Ziffern, Klartext) werden ignoriert");
         CHECK(facts_of("a3_neg").get("games.fw")->empty(), "G1: ohne /user/app leere Liste");
+    }
+    {  // Luefterregler (23. Nov. 2026): erkannt an Prozessnamen und Dateien; zwei laufende zugleich = Doppelregler
+        auto names = [](const auto& fx, const char* key) {
+            std::string s;
+            if (const json* a = fx.get(key); a && a->is_array())
+                for (const auto& e : *a) s += e.get<std::string>() + "|";
+            return s;
+        };
+        const auto dbl = facts_of("fan_double_pos");
+        CHECK(names(dbl, "fan.controllers_running") == "Breeze|fan_target|" && names(dbl, "fan.controllers") == "Breeze|fan_target|" && str(dbl, "fan.controller.name") == "Breeze",
+              "Luefterregler: Breeze und fan_target laufen (Prozessnamen), der erste laufende ist der Regler des Waermetests");
+        const auto one = facts_of("fan_single_neg");
+        CHECK(names(one, "fan.controllers_running") == "Breeze|" && names(one, "fan.controllers") == "PS5 Cooling Center|Breeze|ps5-fan-control|" && str(one, "fan.controller.name") == "PS5 Cooling Center" &&
+                  one.get("fan.controller.target_c")->get<double>() == 68,
+              "Luefterregler: der Hilfsprozess breeze-guard zaehlt nicht doppelt, installierte (Cooling Center, fan_control.ini) laufen nicht; das Cooling Center bleibt der Regler");
+        CHECK(!facts_of("g1_pos").get("fan.controllers") && !facts_of("g1_pos").get("fan.controllers_running"), "Luefterregler: ohne Regler keine Fakten");
+    }
+    {  // Konsolenuhr (23. Nov. 2026): gegen das Erscheinungsdatum dieser Version, einen Tag Spielraum; ohne lesbare Uhr keine Fakten
+        const auto bad = facts_of("clock_pos");
+        CHECK(bad.get("sys.clock_epoch")->get<long>() == 946684800 && bad.get("sys.clock_ok")->get<bool>() == false &&
+                  str(bad, "sys.clock_desc") == std::string("2000-01-01T00:00:00Z, PS5 Medic ") + medic::kMedicVersion + " " + medic::kMedicReleaseDate,
+              "Uhr: das Jahr 2000 ist falsch, der Beleg nennt Uhrzeit und Erscheinungsdatum");
+        const auto good = facts_of("clock_neg");
+        CHECK(good.get("sys.clock_ok")->get<bool>() == true && !good.get("sys.clock_desc"), "Uhr: nach dem Erscheinen der Version ist die Uhr plausibel, ohne Beleg");
+        CHECK(!facts_of("g1_pos").get("sys.clock_ok") && !facts_of("g1_pos").get("sys.clock_epoch"), "Uhr: ohne Angabe im Snapshot keine Fakten (Zeit unbekannt)");
+        // Das Erscheinungsdatum steht im CHANGELOG hinter der Versionsnummer; Datum und Epoch passen zueinander
+        std::ifstream cl(std::string(MEDIC_SOURCE_DIR) + "/CHANGELOG.md", std::ios::binary);
+        std::ostringstream cls;
+        cls << cl.rdbuf();
+        CHECK(cls.str().find(std::string("## ") + medic::kMedicVersion + " (" + medic::kMedicReleaseDate + ")") != std::string::npos,
+              "Uhr: kMedicReleaseDate steht im CHANGELOG hinter kMedicVersion (bei einer neuen Version beide hochsetzen)");
+        int y = 0, m = 0, d = 0;
+        std::sscanf(medic::kMedicReleaseDate, "%d-%d-%d", &y, &m, &d);
+        y -= m <= 2;  // Tage seit 1970 nach dem Verfahren von Howard Hinnant
+        const long era = (y >= 0 ? y : y - 399) / 400;
+        const long yoe = y - era * 400, doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1, doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+        CHECK((era * 146097 + doe - 719468) * 86400 == medic::kMedicReleaseEpoch, "Uhr: kMedicReleaseEpoch ist 00:00 Uhr UTC von kMedicReleaseDate");
+    }
+    {  // Verwaiste Inhalte (23. Nov. 2026): nur Namen; Spiel da = installiert oder als Quelle bekannt (hier: Kraken-Cache)
+        auto ids = [](const auto& fx, const char* key) {
+            std::string s;
+            if (const json* a = fx.get(key); a && a->is_array())
+                for (const auto& e : *a) s += (e.is_string() ? e.get<std::string>() : e.value("titleid", e.value("name", std::string("?")))) + "|";
+            return s;
+        };
+        const auto pos = facts_of("content_all_pos");
+        CHECK(ids(pos, "content.installed_ids") == "PPSA00001|" && ids(pos, "content.dlc_without_game") == "PPSA00002|PPSA00003|" && ids(pos, "content.license_without_game") == "PPSA00009|" &&
+                  ids(pos, "content.download_tasks") == "4242|",
+              "Verwaiste Inhalte: Zusatzinhalt und Update ohne Spiel, Lizenz ohne Spiel, ein Auftrag");
+        const json& d0 = (*pos.get("content.dlc_without_game"))[0];
+        CHECK(d0["kind"] == "addcont" && d0["path"] == "/user/addcont/PPSA00002" && d0["desc"] == "PPSA00002 (addcont)" && (*pos.get("content.dlc_without_game"))[1]["kind"] == "patch",
+              "Verwaiste Inhalte: Art und Pfad der Funde");
+        const auto neg = facts_of("content_neg");
+        CHECK(ids(neg, "content.dlc_without_game").empty() && ids(neg, "content.license_without_game").empty() && ids(neg, "content.download_tasks").empty() && ids(neg, "content.source_ids") == "PPSA00004|",
+              "Verwaiste Inhalte: Spiel installiert oder als Kraken-Cache bekannt, Lizenz mit Spiel, eine Datei statt eines Auftragsordners: kein Fund");
+        CHECK(!facts_of("c1_pos").get("content.dlc_without_game") && !facts_of("c1_pos").get("content.installed_ids"), "Verwaiste Inhalte: ohne lesbares /user/app keine Fakten (kein Beweis)");
     }
     {  // C2: nur Apps mit grosser Reservierung und kleinem Inhalt
         auto f = facts_of("c2_pos");

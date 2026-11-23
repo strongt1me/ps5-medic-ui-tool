@@ -443,6 +443,7 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
     for (const auto& [name, props] : p.sys().components())
         for (const auto& [k, v] : props) sys["components"][name][k] = v;
     if (const auto boot = p.sys().boot_epoch(); boot > 0) sys["boot"] = boot;
+    if (const auto now = p.sys().now_epoch(); now > 0) sys["now"] = now;
     if (const auto* v = facts.get("net.port_9021"); v && v->is_string()) sys["ports"]["9021"] = v->get<std::string>() == "open";
     {  // Port der ShadowMount+-API samt Zustand, damit der Snapshot am PC dasselbe Ergebnis liefert
         const auto* port = facts.get("smp.api.port");
@@ -629,6 +630,31 @@ ExportResult export_snapshot(const Platform& p, const Facts& facts, const std::s
                 ex.write(join_path(join_path(dir, "sce_module"), "medic_stub.sprx"), stub);
         }
     }
+
+    // Luefterregler, die an Dateien erkannt wurden (die am Prozessnamen erkannten kommen ueber procs.json): Breeze am Ordner /data/breeze, ps5-fan-control an fan_control.ini.
+    // Das Cooling Center bleibt aussen vor (seine config.json gehoert nicht in einen Export).
+    if (const auto* c = facts.get("fan.controllers"); c && c->is_array())
+        for (const auto& e : *c) {
+            if (e == "Breeze") ex.write("/data/breeze/medic_export", "");
+            else if (e == "ps5-fan-control") ex.write("/data/fan_control.ini", "");
+        }
+
+    // Verwaiste Inhalte (collect_content_leftovers liest nur Namen): installierte Titel und bekannte Quellen als leere Platzhalter, dazu die Funde selbst
+    if (const auto* ids = facts.get("content.installed_ids"); ids && ids->is_array())
+        for (const auto& e : *ids)
+            if (e.is_string()) ex.write("/user/app/" + e.get<std::string>() + "/medic_export", "");
+    if (const auto* ids = facts.get("content.source_ids"); ids && ids->is_array())
+        for (const auto& e : *ids)
+            if (e.is_string()) ex.write("/data/krakenmount/caches/" + e.get<std::string>() + "/medic_export", "");
+    if (const auto* d = facts.get("content.dlc_without_game"); d && d->is_array())
+        for (const auto& e : *d)
+            if (e.is_object() && e.contains("path") && e["path"].is_string()) ex.write(e["path"].get<std::string>() + "/medic_export", "");
+    if (const auto* l = facts.get("content.license_without_game"); l && l->is_array())
+        for (const auto& e : *l)
+            if (e.is_object() && e.contains("file") && e["file"].is_string()) ex.write("/user/license/" + e["file"].get<std::string>(), "");
+    if (const auto* t = facts.get("content.download_tasks"); t && t->is_array())
+        for (const auto& e : *t)
+            if (e.is_object() && e.contains("name") && e["name"].is_string()) ex.write("/user/bgft/task/" + e["name"].get<std::string>() + "/medic_export", "");
 
     // Link-Dateien von ShadowMount+ (Pfad des Images bzw. Ordners je Titel): damit entsteht der Duplikat-Befund (Ordner und Image
     // desselben Titels) auch am PC aus dem Export.

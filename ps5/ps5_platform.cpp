@@ -119,6 +119,13 @@ public:
     // (siehe docs/ROADMAP.md Phase 2). Bis dahin leer; Regeln, die Versionen brauchen, feuern dann nicht.
     std::map<std::string, std::map<std::string, std::string>> components() const override { return {}; }
 
+    // Die Uhr der Konsole jetzt (gettimeofday); 0, wenn sie nicht lesbar ist.
+    std::int64_t now_epoch() const override {
+        struct timeval tv;
+        std::memset(&tv, 0, sizeof tv);
+        return gettimeofday(&tv, nullptr) == 0 && tv.tv_sec > 0 ? static_cast<std::int64_t>(tv.tv_sec) : 0;
+    }
+
     // kern.boottime; falls die Konsole den Wert nicht liefert, gilt die Startzeit von PID 1 (mini-syscore.elf) als Konsolenstart.
     std::int64_t boot_epoch() const override {
         struct timeval tv;

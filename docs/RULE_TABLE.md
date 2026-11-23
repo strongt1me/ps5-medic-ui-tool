@@ -3,7 +3,7 @@
 
 **Deutsch** · [English](en/RULE_TABLE.md)
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.57, 102 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.58, 107 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -12,12 +12,16 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `autoload.elfldr_without_delay` | warning | alle | `autoload_insert_delay` | doc | In der Autoload-Liste folgt auf den Loader (elfldr) sofort der nächste Eintrag. |
 | `autoload.entry_duplicate` | info | alle | `autoload_remove_duplicates` | doc | Ein Eintrag steht mehrfach in der Autoload-Liste und wird jedes Mal gesendet (die Loader entfernen Doppelte nicht). |
 | `autoload.entry_missing` | warning | alle | `autoload_fix_missing` | doc | Ein Eintrag der Autoload-Liste hat keine passende Payload-Datei (oder nur die Groß-/Kleinschreibung weicht ab; Namen sind case-sensitiv). |
+| `content.dlc_without_game` | info | alle | - | todo | Zusatzinhalte oder Updates ohne Spiel: Für diese Titel liegen Daten unter /user/addcont oder /user/patch, aber das Spiel ist weder instal... |
+| `content.download_task_pending` | info | alle | - | todo | Unerledigte Download- oder Installationsaufträge: Unter /user/bgft/task liegen Aufträge der Systemsoftware. |
+| `content.license_without_game` | info | alle | - | todo | Lizenzen ohne Spiel: Unter /user/license liegen Lizenzdateien (.rif) für Titel, die weder installiert noch als Quelle zu finden sind. |
 | `db.header_invalid` | warning | alle | - | doc | Der Kopf einer Datenbank der Systemsoftware ist ungültig (fehlende Kacheln oder „Datenbank beschädigt“ möglich). |
 | `db.integrity_failed` | warning | alle | - | doc | Eine Datenbank der Systemsoftware ist beschädigt (SQLite integrity_check auf einer Kopie). |
 | `db.journal_pending` | info | alle | - | doc | Neben einer Datenbank der Systemsoftware liegt ein Journal mit offener Transaktion. |
 | `db.truncated` | warning | alle | - | doc | Eine Datenbank der Systemsoftware ist kleiner, als ihr Kopf angibt (abgeschnitten), z. |
 | `errors.recurring_system_app` | info | alle | - | todo | Eine Systemanwendung (Titel NPXS…) hat im Fehlerverlauf mehrfach denselben CE-Fehlercode gemeldet. |
 | `errors.recurring_title` | warning | alle | - | todo | Der Fehlerverlauf (/system_data/priv/error/history) enthält denselben CE-Fehlercode mehrfach für denselben Titel: Der Titel startet oder... |
+| `fan.double_controller` | warning | alle | - | todo | Zwei Lüfterregler laufen gleichzeitig (siehe Liste). |
 | `game.backport_incomplete` | warning | alle | - | todo | Bei diesen Spielen ist der Backport nur halb eingebaut: Die eboot.bin trägt schon ein SDK, das zur Konsole passt, aber mindestens ein Mod... |
 | `game.compat_known_bad` | info | alle | - | community | Laut der Kompatibilitätsliste für ZSTD- und LZ4-Sicherungen läuft dieses Spiel bei Testern nicht oder nur mit widersprüchlichen Berichten... |
 | `game.eboot_invalid` | warning | alle | - | todo | Die eboot.bin eines Spielordners ist unbrauchbar: kleiner als 64 Byte oder reiner Text (z. |
@@ -105,6 +109,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `storage.oversized_reservation` | info | alle | - | todo | Eine Homebrew-App reserviert mehrere GB Speicher (param.json: downloadDataSize), obwohl ihre Dateien zusammen unter 1 GB bleiben (z. |
 | `storage.scanpath_drive_missing` | info | alle | - | doc | Ein eigener Scanpfad in der config.ini liegt auf einem nicht angeschlossenen Laufwerk (/mnt/usbN oder /mnt/extN): Die Spiele dort werden... |
 | `storage.usb_mounted_ro` | info | alle | - | todo | Ein angeschlossenes Laufwerk ist schreibgeschützt eingehängt: Kopieren, Verschieben und Reparaturen gehen dort nicht. |
+| `sys.clock_implausible` | warning | alle | - | todo | Die Uhr der Konsole geht falsch: Sie steht vor dem Erscheinungsdatum dieser Medic-Version und kann deshalb nicht stimmen (Uhrzeit und Dat... |
 | `sys.temp_above_usual` | info | alle | - | todo | Die Konsole ist wärmer als sonst: CPU oder SoC liegen mehr als 12 °C über dem Median deiner letzten Prüfungen (mindestens fünf). |
 | `sys.temp_high` | info | alle | - | todo | Die Konsole ist gerade sehr heiß (CPU oder SoC über 85 °C). |
 | `sys.unclean_boot` | warning | alle | - | todo | Der Startverlauf (/system_data/priv/vshlog) zeigt in den letzten 14 Tagen mindestens drei Neustarts, vor denen kein Herunterfahren protok... |

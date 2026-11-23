@@ -364,6 +364,26 @@
   "appdb.unregistered_folder": {
    "text": "Sotto /user/app c'è una cartella di titolo (PPSA/CUSA) che il database della console non conosce; il gioco manca nella libreria. Per un titolo montato da ShadowMount+ di solito la registrazione fallisce o è ancora in corso (vedi «Register failed»); altrimenti è un residuo di una disinstallazione o di un montaggio PKG di PS4Mount disattivato. Medic qui non modifica nulla.",
    "confidence_reason": "Cartella e voci del database vengono lette. Da questo non si capisce perché la voce manchi; mentre ShadowMount+ sta registrando, il rilevamento può comparire per breve tempo."
+  },
+  "fan.double_controller": {
+   "text": "Due regolatori della ventola sono attivi contemporaneamente (vedi elenco). Ognuno scrive la soglia di temperatura della ventola e sovrascrive quanto impostato dall'altro; la curva della ventola diventa difficile da prevedere e la console può risultare più rumorosa o più calda del voluto. Lascia attivo un solo regolatore (non avviare più gli altri o chiuderli). Medic qui non modifica nulla. Il PS5 Cooling Center non viene contato: Medic lo riconosce solo dal file delle impostazioni, non dal fatto che sia in esecuzione.",
+   "confidence_reason": "Due dei regolatori noti (Breeze, fan_target, ps5-fan-control) compaiono nell'elenco dei processi. Che si sovrascrivano a vicenda deriva dal loro codice sorgente (tutti scrivono la soglia tramite la stessa interfaccia /dev/icc_fan); non misurato su questa console."
+  },
+  "sys.clock_implausible": {
+   "text": "L'orologio della console è sbagliato: indica una data precedente all'uscita di questa versione di Medic e quindi non può essere giusto (ora e data della versione sono riportate come prova). Un orologio sbagliato disturba i certificati (anche il download delle regole di Medic fallisce), l'accesso e i timestamp di salvataggi e trofei. Imposta data e ora correttamente in Impostazioni → Sistema → Data e ora. Medic non imposta l'orologio da solo.",
+   "confidence_reason": "L'orologio della console viene confrontato con la data di uscita di questa versione; ciò che precede di un giorno o più è sicuramente sbagliato. Le conseguenze su questa console non sono misurate (che il download delle regole controlli i certificati con questo orologio deriva dal testo del programma)."
+  },
+  "content.dlc_without_game": {
+   "text": "Contenuti aggiuntivi o aggiornamenti senza gioco: per questi titoli ci sono dati in /user/addcont o /user/patch, ma il gioco non è né installato né reperibile come fonte (nessuna voce in un percorso di scansione, nessuna cache Kraken). Di solito il gioco è stato rimosso e i contenuti aggiuntivi sono rimasti. Occupano un po' di spazio e per il resto sono innocui. Medic non modifica nulla; se il gioco si trova su un'unità che al momento manca, è tutto a posto.",
+   "confidence_reason": "I nomi delle cartelle in /user/addcont e /user/patch vengono confrontati con i titoli installati e le fonti note (secondo lo scanner di orfani di ps5-tools, MIT). Che i contenuti siano davvero rimasti non è misurato: un'unità scollegata ha lo stesso aspetto."
+  },
+  "content.license_without_game": {
+   "text": "Licenze senza gioco: in /user/license ci sono file di licenza (.rif) per titoli che non sono né installati né reperibili come fonte. Di solito sono resti di giochi rimossi o di pacchetti falsi; sono piccoli e innocui. Medic legge solo i nomi dei file e non modifica nulla. Se il gioco si trova su un'unità che al momento manca, è tutto a posto.",
+   "confidence_reason": "L'ID del titolo è nel nome del file di licenza (il file stesso non viene aperto); viene confrontato con i titoli installati e le fonti note (secondo ps5-tools, MIT). Le console dello sviluppatore hanno avuto risultati simili; che fossero davvero resti non è stato verificato."
+  },
+  "content.download_task_pending": {
+   "text": "Attività di download o installazione non terminate: in /user/bgft/task ci sono attività del software di sistema. Se è in corso un'installazione o un download, è normale. Altrimenti le attività interrotte restano (spazio occupato, una scritta «installazione in corso» senza avanzamento). Medic non modifica nulla; le attività si possono annullare in Download/Upload della console.",
+   "confidence_reason": "Una cartella in /user/bgft/task è un'attività del software di sistema (secondo lo scanner di orfani di ps5-tools, MIT). Se sia bloccata, Medic non lo vede: un'attività in corso ha lo stesso aspetto."
   }
  },
  "coverage": {

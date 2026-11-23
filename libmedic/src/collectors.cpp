@@ -6,6 +6,7 @@
 #include "medic/selftest.hpp"
 
 #include "medic/readtail.hpp"
+#include "medic/report.hpp"
 #include "medic/rules.hpp"
 #include "medic/sqlite_check.hpp"
 
@@ -1792,17 +1793,65 @@ void collect_baseline(const Platform& p, Facts& f) {
     if (max_samples) f.set("baseline.temp_samples", static_cast<long>(max_samples));
 }
 
-// Lüfterregler (die eigene App des Entwicklers, PS5 Cooling Center): Sie regelt den Lüfter und haelt die Konsole kuehl; dann sagt ein Waermetest
-// wenig ueber die Standardkuehlung. Nur Vorhandensein, Modus und Zieltemperatur aus ihrer config.json (reine Zahlen und Modus).
-// fan.controller.name, fan.controller.mode, fan.controller.target_c
+// Lüfterregler: die eigene App des Entwicklers (PS5 Cooling Center) und drei Payloads anderer Autoren. Ein Regler haelt die Konsole kuehl; dann sagt ein Waermetest
+// wenig ueber die Standardkuehlung, und zwei Regler zugleich ueberschreiben sich. Vom Cooling Center nur Vorhandensein, Modus und Zieltemperatur aus der config.json
+// (reine Zahlen und Modus). Die Merkmale der anderen stammen aus deren Quelltext (23. Nov. 2026, an der Konsole nicht geprueft; alle schreiben die Schwelle ueber
+// /dev/icc_fan): Breeze (Prozess breeze und breeze-guard, Ordner /data/breeze), fan_target (Prozess fan_target), ps5-fan-control (Prozess ps5-fan-control, Datei
+// fan_control.ini in /data oder /mnt/usb0 bis usb7). Ein Cooling Center laesst sich nicht am Prozessnamen erkennen (Payloads heissen auf der Konsole oft payload.elf):
+// es zaehlt als "vorhanden", nie als "laeuft".
+// fan.controller.name, fan.controller.mode, fan.controller.target_c (wie bisher: ein Regler, der den Lüfter wirklich regelt oder regeln kann),
+// fan.controllers[] (alle Namen: laufend oder installiert), fan.controllers_running[] (nur die am Prozessnamen erkannten, die laufen)
 void collect_fan_controller(const Platform& p, Facts& f) {
+    std::vector<std::string> found, running;
+    auto add = [](std::vector<std::string>& v, const std::string& n) {
+        if (std::find(v.begin(), v.end(), n) == v.end()) v.push_back(n);
+    };
+    json cooling;
     std::string text;
-    if (!p.fs().read_file("/data/PS5-Cooling-Center/config.json", text)) return;
-    const json j = json::parse(text, nullptr, false);
-    if (!j.is_object()) return;
-    f.set("fan.controller.name", std::string("PS5 Cooling Center"));
-    if (j.contains("mode") && j["mode"].is_string()) f.set("fan.controller.mode", j["mode"].get<std::string>());
-    if (j.contains("target_temp_c") && j["target_temp_c"].is_number()) f.set("fan.controller.target_c", j["target_temp_c"].get<double>());
+    if (p.fs().read_file("/data/PS5-Cooling-Center/config.json", text)) {
+        cooling = json::parse(text, nullptr, false);
+        if (cooling.is_object()) add(found, "PS5 Cooling Center");
+    }
+    static const struct {
+        const char* name;
+        const char* proc;
+    } kTools[] = {{"Breeze", "breeze"}, {"Breeze", "breeze-guard"}, {"fan_target", "fan_target"}, {"ps5-fan-control", "ps5-fan-control"}};
+    if (const json* r = f.get("proc.running"); r && r->is_array())
+        for (const auto& e : *r) {
+            if (!e.is_string()) continue;
+            for (const auto& t : kTools)
+                if (e.get<std::string>() == t.proc) {
+                    add(found, t.name);
+                    add(running, t.name);
+                }
+        }
+    if (p.fs().exists("/data/breeze")) add(found, "Breeze");
+    bool ini = p.fs().exists("/data/fan_control.ini");
+    for (int i = 0; i < 8 && !ini; ++i) ini = p.fs().exists("/mnt/usb" + std::to_string(i) + "/fan_control.ini");
+    if (ini) add(found, "ps5-fan-control");
+    if (found.empty()) return;
+
+    if (cooling.is_object()) {
+        f.set("fan.controller.name", std::string("PS5 Cooling Center"));
+        if (cooling.contains("mode") && cooling["mode"].is_string()) f.set("fan.controller.mode", cooling["mode"].get<std::string>());
+        if (cooling.contains("target_temp_c") && cooling["target_temp_c"].is_number()) f.set("fan.controller.target_c", cooling["target_temp_c"].get<double>());
+    } else if (!running.empty()) {
+        f.set("fan.controller.name", running.front());  // nur ein laufender Regler regelt auch; ein installierter allein sagt nichts
+    }
+    f.set("fan.controllers", json(found));
+    if (!running.empty()) f.set("fan.controllers_running", json(running));
+}
+
+// Die Uhr der Konsole gegen das Erscheinungsdatum dieser Version (kMedicReleaseEpoch, einen Tag Spielraum): Eine Uhr davor geht sicher falsch, etwa nach einem leeren
+// Uhrenpuffer. Das stoert Zertifikate (der Regel-Download prueft sie gegen diese Uhr, posix_http.cpp), Anmeldung und Zeitstempel. Ohne lesbare Uhr fehlen die Fakten.
+// sys.clock_epoch, sys.clock_ok, sys.clock_desc (nur bei falscher Uhr: Uhrzeit und Datum der Version)
+void collect_clock(const Platform& p, Facts& f) {
+    const std::int64_t now = p.sys().now_epoch();
+    if (now <= 0) return;
+    f.set("sys.clock_epoch", static_cast<long>(now));
+    const bool ok = now >= kMedicReleaseEpoch - 86400;
+    f.set("sys.clock_ok", ok);
+    if (!ok) f.set("sys.clock_desc", iso_from_epoch(now) + ", PS5 Medic " + kMedicVersion + " " + kMedicReleaseDate);
 }
 
 // Kernel-Log (klogsrv, Port 3232; Freigabe von Marc, D10). Das Lesen VERBRAUCHT, was sich seit dem letzten Leser angesammelt hat; ein Check-up
@@ -1938,7 +1987,7 @@ void collect_app_registry(const Platform& p, Facts& f) {
 Facts collect_all(const Platform& p, const std::function<void(int, int)>& progress) {
     Facts f;
     json failed = json::array();
-    constexpr int kSteps = 31;  // 30 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
+    constexpr int kSteps = 33;  // 32 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
     int done = 0;
     // Jeder Collector einzeln: ein Fehler (z. B. beschaedigtes JSON in einer von Hand bearbeiteten Datei) beendet nicht den ganzen Check-up,
     // sondern wird als collector.failed vermerkt; die uebrigen Fakten bleiben gueltig (Audit 12. Nov. 2026)
@@ -1981,8 +2030,10 @@ Facts collect_all(const Platform& p, const std::function<void(int, int)>& progre
     MEDIC_RUN(collect_baseline);
     MEDIC_RUN(collect_selftest);
     MEDIC_RUN(collect_fan_controller);
+    MEDIC_RUN(collect_clock);
     MEDIC_RUN(collect_klog);
     MEDIC_RUN(collect_app_registry);
+    MEDIC_RUN(collect_content_leftovers);
 #undef MEDIC_RUN
     run("net.gateway", [&] {
         if (const std::string gw = p.sys().default_gateway(); !gw.empty()) f.set("net.gateway", gw);  // fuer den lokalen Netztest des Selbsttests

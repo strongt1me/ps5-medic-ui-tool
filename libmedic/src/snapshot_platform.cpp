@@ -62,6 +62,7 @@ public:
         fw_ = j.value("fw", std::string());
         model_ = j.value("model", std::string());
         boot_ = j.value("boot", std::int64_t{0});
+        now_ = j.value("now", std::int64_t{0});
         gateway_ = j.value("gateway", std::string());
         if (j.contains("net_probe") && j["net_probe"].is_object()) {  // Fixture: so antwortet das Gateway (reply, rtt_ms, loss_every = jeder n-te Versuch geht verloren)
             const auto& n = j["net_probe"];
@@ -107,6 +108,7 @@ public:
     std::vector<StorageInfo> storage() const override { return storage_; }
     std::map<std::string, std::map<std::string, std::string>> components() const override { return components_; }
     std::int64_t boot_epoch() const override { return boot_; }
+    std::int64_t now_epoch() const override { return now_; }
     Thermal thermal() const override { return thermal_; }
     std::string default_gateway() const override { return gateway_; }
     ProbeOutcome tcp_probe(const std::string& ipv4, int port, int timeout_ms) const override {
@@ -131,7 +133,7 @@ public:
     }
 
 private:
-    std::int64_t boot_ = 0;
+    std::int64_t boot_ = 0, now_ = 0;
     std::string klog_, gateway_;
     bool probe_scripted_ = false, probe_reply_ = true;
     double probe_rtt_ = 2.0;

@@ -9,6 +9,8 @@
 namespace medic {
 
 void collect_firmware(const Platform& p, Facts& f);    // fw.version, fw.model
+void collect_clock(const Platform& p, Facts& f);       // sys.clock_epoch, sys.clock_ok, sys.clock_desc (Konsolenuhr gegen das Erscheinungsdatum dieser Version)
+void collect_content_leftovers(const Platform& p, Facts& f);  // content.installed_ids[], content.source_ids[], content.dlc_without_game[], content.license_without_game[], content.download_tasks[] (collectors_games.cpp)
 void collect_processes(const Platform& p, Facts& f);   // proc.running[] (klein geschrieben)
 void collect_storage(const Platform& p, Facts& f);     // storage.mounts[].{mount,total,free,free_pct}
 void collect_components(const Platform& p, Facts& f);  // kstuff.version, kstuff.origin, smp.version, ...

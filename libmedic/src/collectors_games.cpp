@@ -793,4 +793,72 @@ void collect_kraken(const Platform& p, Facts& f) {
     for (Kind* k : {&sparse, &sysex, &other, &trunc, &cache, &foreign}) f.set(k->fact, std::move(k->out));
 }
 
+// Verwaiste Inhalte (23. Nov. 2026; Vorbild: orphan-scan in ps5-tools von CreamyG31337, MIT, dort ueber FTP): Medic liest nur Ordner- und Dateinamen, nie Inhalte (D17).
+//  - Zusatzinhalte und Updates (/user/addcont/<ID>, /user/patch/<ID>), deren Spiel fehlt,
+//  - Lizenzen (/user/license/*.rif; die Titel-ID steht im Dateinamen, die Datei wird nicht geoeffnet), deren Spiel fehlt,
+//  - unerledigte Download- und Installationsauftraege (/user/bgft/task/<Auftrag>, je ein Ordner).
+// "Spiel da" heisst: installiert (/user/app und /system_ex/app, dazu Erweiterungsspeicher /mnt/ext0 bis ext2 und /mnt/m2) ODER eine Quelle ist bekannt (smp.titles, Kraken-Cache):
+// Ein Spiel auf einem getrennten USB-Laufwerk ist nicht verwaist, und Kraken Mount behaelt Zusatzinhalte absichtlich. Ist /user/app leer oder nicht lesbar, fehlen alle
+// Fakten (kein Beweis). An den Test-Konsolen am 23. Nov. 2026 gezaehlt: je 0 Zusatzinhalte ohne Spiel und 0 Auftraege, 2 bzw. 3 Lizenzen ohne installiertes Spiel.
+// content.installed_ids[] und content.source_ids[] (nur fuer den Snapshot-Export), content.dlc_without_game[].{titleid,kind,path,desc}, content.license_without_game[].{titleid,file,desc},
+// content.download_tasks[].{name,desc}
+void collect_content_leftovers(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    static const std::regex game_id(R"(^(PPSA|CUSA)[0-9]{5}$)");
+    static const std::regex id_in_name(R"((PPSA|CUSA)[0-9]{5})");
+    static const char* const kRoots[] = {"", "/mnt/ext0", "/mnt/ext1", "/mnt/ext2", "/mnt/m2"};
+
+    std::set<std::string> installed;
+    auto add_ids = [&](const std::string& dir) {
+        for (const auto& e : fs.list_dir(dir))
+            if (e.is_dir && std::regex_match(e.name, game_id)) installed.insert(e.name);
+    };
+    for (const char* root : kRoots) add_ids(std::string(root) + "/user/app");
+    add_ids("/system_ex/app");
+    if (installed.empty()) return;
+
+    std::set<std::string> known = installed;  // installiert oder als Quelle bekannt
+    if (const json* t = f.get("smp.titles"); t && t->is_array())
+        for (const auto& e : *t)
+            if (e.is_object() && e.contains("titleid") && e["titleid"].is_string()) known.insert(e["titleid"].get<std::string>());
+    for (const auto& e : fs.list_dir("/data/krakenmount/caches"))
+        if (e.is_dir && std::regex_match(e.name, game_id)) known.insert(e.name);
+
+    json ids = json::array(), sources = json::array();
+    for (const auto& id : installed)
+        if (ids.size() < 500) ids.push_back(id);
+    for (const auto& id : known)
+        if (!installed.count(id) && sources.size() < 500) sources.push_back(id);
+    f.set("content.installed_ids", std::move(ids));
+    f.set("content.source_ids", std::move(sources));
+
+    json dlc = json::array();
+    for (const char* kind : {"addcont", "patch"})
+        for (const char* root : kRoots) {
+            const std::string dir = std::string(root) + "/user/" + kind;
+            for (const auto& e : fs.list_dir(dir))
+                if (e.is_dir && std::regex_match(e.name, game_id) && !known.count(e.name) && dlc.size() < 100)
+                    dlc.push_back({{"titleid", e.name}, {"kind", kind}, {"path", dir + "/" + e.name}, {"desc", e.name + " (" + kind + ")"}});
+        }
+    f.set("content.dlc_without_game", std::move(dlc));
+
+    json lic = json::array();
+    std::set<std::string> lic_seen;
+    for (const char* root : kRoots)
+        for (const auto& e : fs.list_dir(std::string(root) + "/user/license")) {
+            const std::string l = lower(e.name);
+            if (e.is_dir || l.size() < 5 || l.compare(l.size() - 4, 4, ".rif") != 0) continue;
+            std::smatch m;
+            if (!std::regex_search(e.name, m, id_in_name)) continue;
+            const std::string tid = m[0].str();
+            if (!known.count(tid) && lic_seen.insert(tid).second && lic.size() < 100) lic.push_back({{"titleid", tid}, {"file", e.name}, {"desc", tid}});
+        }
+    f.set("content.license_without_game", std::move(lic));
+
+    json tasks = json::array();
+    for (const auto& e : fs.list_dir("/user/bgft/task"))
+        if (e.is_dir && tasks.size() < 20) tasks.push_back({{"name", e.name}, {"desc", e.name}});
+    f.set("content.download_tasks", std::move(tasks));
+}
+
 }  // namespace medic

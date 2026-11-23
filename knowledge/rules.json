@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.57",
+  "db_version": "2026.11.58",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -1229,6 +1229,149 @@
         "reason": {
           "de": "Das SDK der eboot.bin und der Module ist aus dem Modulkopf gelesen (das Format der Modulköpfe ist an zwei Spielen der Entwickler-Konsole bestätigt) und mit der Firmware verglichen. Dass die Konsole das SDK der Module beim Start prüft, steht nur in der Doku des PS5 Dump & Image Converter; an dieser Konsole ist es nicht bestätigt.",
           "en": "The SDK of the eboot.bin and of the modules is read from the module header (the format of the module headers is confirmed on two games of the developer's console) and compared with the firmware. That the console checks the SDK of the modules at startup is stated only in the documentation of PS5 Dump & Image Converter; not confirmed on this console."
+        }
+      }
+    },
+    {
+      "id": "fan.double_controller",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "fan.controllers_running",
+            "count_matches": {
+              "regex": ".",
+              "gte": 2
+            }
+          }
+        ]
+      },
+      "text": {
+        "de": "Zwei Lüfterregler laufen gleichzeitig (siehe Liste). Jeder von ihnen schreibt die Temperaturschwelle des Lüfters und überschreibt damit, was der andere eingestellt hat; die Lüfterkurve ist dann schwer vorherzusagen, die Konsole kann lauter oder heißer laufen als gewollt. Lass nur einen Regler laufen (die anderen nicht mehr starten oder beenden). Medic ändert hier nichts. Das PS5 Cooling Center zählt hier nicht mit: Medic erkennt es nur an seiner Einstellungsdatei, nicht daran, ob es gerade läuft.",
+        "en": "Two fan controllers are running at the same time (see the list). Each of them writes the fan's temperature threshold and so overwrites what the other has set; the fan curve then becomes hard to predict, and the console may run louder or hotter than intended. Run only one controller (do not start the others any more, or stop them). Medic changes nothing here. The PS5 Cooling Center does not count here: Medic recognizes it only by its settings file, not by whether it is running."
+      },
+      "evidence": "fan.controllers_running",
+      "fix": null,
+      "source": "https://github.com/MiladRTX/Breeze",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Zwei der bekannten Lüfterregler (Breeze, fan_target, ps5-fan-control) stehen in der Prozessliste. Dass sie sich dabei überschreiben, folgt aus ihrem Quelltext (alle schreiben die Schwelle über dieselbe Schnittstelle /dev/icc_fan); an dieser Konsole ist es nicht gemessen.",
+          "en": "Two of the known fan controllers (Breeze, fan_target, ps5-fan-control) are in the process list. That they overwrite each other follows from their source code (all write the threshold through the same interface /dev/icc_fan); not measured on this console."
+        }
+      }
+    },
+    {
+      "id": "sys.clock_implausible",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "sys.clock_ok",
+            "eq": false
+          }
+        ]
+      },
+      "text": {
+        "de": "Die Uhr der Konsole geht falsch: Sie steht vor dem Erscheinungsdatum dieser Medic-Version und kann deshalb nicht stimmen (Uhrzeit und Datum der Version stehen als Beleg dabei). Eine falsche Uhr stört Zertifikate (auch der Regel-Download von Medic scheitert dann), die Anmeldung und die Zeitstempel von Spielständen und Trophäen. Stelle Datum und Uhrzeit unter Einstellungen → System → Datum und Uhrzeit richtig ein. Medic stellt die Uhr nicht selbst.",
+        "en": "The console clock is wrong: it is set before the release date of this Medic version and therefore cannot be right (the time and the date of the version are given as evidence). A wrong clock disturbs certificates (Medic's rule download then fails too), sign-in and the timestamps of saves and trophies. Set the date and time correctly under Settings → System → Date and Time. Medic does not set the clock itself."
+      },
+      "evidence": "sys.clock_desc",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Uhr der Konsole wird mit dem Erscheinungsdatum dieser Version verglichen; was einen Tag davor oder früher liegt, ist sicher falsch. Welche Folgen das an dieser Konsole hat, ist nicht gemessen (dass der Regel-Download Zertifikate gegen diese Uhr prüft, folgt aus dem Programmtext).",
+          "en": "The console clock is compared with the release date of this version; anything a day before it or earlier is certainly wrong. What this causes on this console is not measured (that the rule download checks certificates against this clock follows from the program text)."
+        }
+      }
+    },
+    {
+      "id": "content.dlc_without_game",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "content.dlc_without_game[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Zusatzinhalte oder Updates ohne Spiel: Für diese Titel liegen Daten unter /user/addcont oder /user/patch, aber das Spiel ist weder installiert noch als Quelle zu finden (kein Eintrag in einem Scanpfad, kein Kraken-Cache). Meist wurde das Spiel entfernt und die Zusatzinhalte blieben liegen. Sie belegen etwas Platz und schaden sonst nicht. Medic ändert nichts; liegt das Spiel auf einem Laufwerk, das gerade fehlt, ist alles in Ordnung.",
+        "en": "Add-on content or updates without a game: for these titles there is data under /user/addcont or /user/patch, but the game is neither installed nor to be found as a source (no entry in a scan path, no Kraken cache). Usually the game was removed and the add-on content stayed behind. It takes up some space and is otherwise harmless. Medic changes nothing; if the game is on a drive that is missing right now, everything is fine."
+      },
+      "evidence": "content.dlc_without_game[].desc",
+      "fix": null,
+      "source": "https://github.com/CreamyG31337/ps5-tools",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Ordnernamen unter /user/addcont und /user/patch werden mit den installierten Titeln und den bekannten Quellen verglichen (nach dem Orphan-Scanner von ps5-tools, MIT). Dass die Inhalte wirklich übrig sind, ist nicht gemessen: ein getrenntes Laufwerk sieht genauso aus.",
+          "en": "The folder names under /user/addcont and /user/patch are compared with the installed titles and the known sources (after the orphan scanner of ps5-tools, MIT). That the content is really left over is not measured: a disconnected drive looks the same."
+        }
+      }
+    },
+    {
+      "id": "content.license_without_game",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "content.license_without_game[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Lizenzen ohne Spiel: Unter /user/license liegen Lizenzdateien (.rif) für Titel, die weder installiert noch als Quelle zu finden sind. Das sind meist Reste entfernter Spiele oder gefälschter Pakete; sie sind klein und schaden nicht. Medic liest nur die Dateinamen und ändert nichts. Liegt das Spiel auf einem Laufwerk, das gerade fehlt, ist alles in Ordnung.",
+        "en": "Licenses without a game: under /user/license there are license files (.rif) for titles that are neither installed nor to be found as a source. These are mostly leftovers of removed games or fake packages; they are small and harmless. Medic reads only the file names and changes nothing. If the game is on a drive that is missing right now, everything is fine."
+      },
+      "evidence": "content.license_without_game[].desc",
+      "fix": null,
+      "source": "https://github.com/CreamyG31337/ps5-tools",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Titel-ID steht im Dateinamen der Lizenz (die Datei selbst wird nicht geöffnet); sie wird mit den installierten Titeln und den bekannten Quellen verglichen (nach ps5-tools, MIT). An den Konsolen des Entwicklers gab es solche Treffer; ob es wirklich Reste waren, ist nicht geprüft.",
+          "en": "The title ID is in the file name of the license (the file itself is not opened); it is compared with the installed titles and the known sources (after ps5-tools, MIT). The developer's consoles had such hits; whether they were really leftovers has not been checked."
+        }
+      }
+    },
+    {
+      "id": "content.download_task_pending",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "content.download_tasks[].name",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Unerledigte Download- oder Installationsaufträge: Unter /user/bgft/task liegen Aufträge der Systemsoftware. Läuft gerade eine Installation oder ein Download, ist das normal. Sonst bleiben abgebrochene Aufträge liegen (belegter Platz, eine Anzeige „wird installiert“ ohne Fortschritt). Medic ändert nichts; in den Downloads/Uploads der Konsole lassen sich Aufträge abbrechen.",
+        "en": "Unfinished download or installation tasks: under /user/bgft/task there are tasks of the system software. If an installation or a download is running right now, this is normal. Otherwise aborted tasks stay behind (used space, an “installing” display without progress). Medic changes nothing; tasks can be cancelled in the console's Downloads/Uploads."
+      },
+      "evidence": "content.download_tasks[].desc",
+      "fix": null,
+      "source": "https://github.com/CreamyG31337/ps5-tools",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Ein Ordner unter /user/bgft/task ist ein Auftrag der Systemsoftware (nach dem Orphan-Scanner von ps5-tools, MIT). Ob er hängt, sieht Medic nicht: ein laufender Auftrag sieht genauso aus.",
+          "en": "A folder under /user/bgft/task is a task of the system software (after the orphan scanner of ps5-tools, MIT). Whether it is stuck, Medic cannot see: a running task looks the same."
         }
       }
     },

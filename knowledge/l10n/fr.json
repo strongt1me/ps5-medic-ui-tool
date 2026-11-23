@@ -364,6 +364,26 @@
   "appdb.unregistered_folder": {
    "text": "Sous /user/app se trouve un dossier de titre (PPSA/CUSA) que la base de données de la console ne connaît pas ; le jeu manque dans la bibliothèque. Pour un titre monté par ShadowMount+, l'enregistrement échoue en général ou est encore en cours (voir « Register failed ») ; sinon c'est un résidu de désinstallation ou d'un montage PKG de PS4Mount désactivé. Medic ne modifie rien ici.",
    "confidence_reason": "Les entrées de dossier et de base de données sont lues. Pourquoi l'entrée manque ne peut pas en être déduit ; pendant que ShadowMount+ enregistre, le résultat peut apparaître brièvement."
+  },
+  "fan.double_controller": {
+   "text": "Deux régulateurs de ventilateur tournent en même temps (voir la liste). Chacun écrit le seuil de température du ventilateur et écrase ce que l'autre a réglé ; la courbe du ventilateur devient alors difficile à prévoir, et la console peut être plus bruyante ou plus chaude que voulu. Ne laissez tourner qu'un seul régulateur (ne plus lancer les autres ou les arrêter). Medic ne modifie rien ici. Le PS5 Cooling Center n'est pas compté ici : Medic ne le reconnaît qu'à son fichier de réglages, pas au fait qu'il tourne.",
+   "confidence_reason": "Deux des régulateurs connus (Breeze, fan_target, ps5-fan-control) figurent dans la liste des processus. Qu'ils s'écrasent mutuellement découle de leur code source (tous écrivent le seuil via la même interface /dev/icc_fan) ; non mesuré sur cette console."
+  },
+  "sys.clock_implausible": {
+   "text": "L'horloge de la console est fausse : elle indique une date antérieure à la sortie de cette version de Medic et ne peut donc pas être juste (l'heure et la date de la version figurent comme preuve). Une horloge fausse perturbe les certificats (le téléchargement des règles de Medic échoue alors aussi), la connexion et les horodatages des sauvegardes et des trophées. Réglez la date et l'heure sous Paramètres → Système → Date et heure. Medic ne règle pas l'horloge lui-même.",
+   "confidence_reason": "L'horloge de la console est comparée à la date de sortie de cette version ; ce qui date d'un jour avant ou plus tôt est forcément faux. Les conséquences sur cette console ne sont pas mesurées (le fait que le téléchargement des règles vérifie les certificats avec cette horloge découle du texte du programme)."
+  },
+  "content.dlc_without_game": {
+   "text": "Contenus additionnels ou mises à jour sans jeu : pour ces titres il y a des données sous /user/addcont ou /user/patch, mais le jeu n'est ni installé ni trouvable comme source (aucune entrée dans un chemin d'analyse, aucun cache Kraken). Le plus souvent le jeu a été supprimé et les contenus additionnels sont restés. Ils occupent un peu de place et sont sinon inoffensifs. Medic ne modifie rien ; si le jeu se trouve sur un lecteur actuellement absent, tout est en ordre.",
+   "confidence_reason": "Les noms des dossiers sous /user/addcont et /user/patch sont comparés aux titres installés et aux sources connues (d'après le scanner d'orphelins de ps5-tools, MIT). Que les contenus soient vraiment orphelins n'est pas mesuré : un lecteur déconnecté a le même aspect."
+  },
+  "content.license_without_game": {
+   "text": "Licences sans jeu : sous /user/license se trouvent des fichiers de licence (.rif) pour des titres qui ne sont ni installés ni trouvables comme source. Ce sont le plus souvent des restes de jeux supprimés ou de paquets factices ; ils sont petits et inoffensifs. Medic ne lit que les noms de fichiers et ne modifie rien. Si le jeu se trouve sur un lecteur actuellement absent, tout est en ordre.",
+   "confidence_reason": "L'ID du titre figure dans le nom du fichier de licence (le fichier lui-même n'est pas ouvert) ; il est comparé aux titres installés et aux sources connues (d'après ps5-tools, MIT). Les consoles du développeur ont eu de tels résultats ; qu'il s'agisse vraiment de restes n'a pas été vérifié."
+  },
+  "content.download_task_pending": {
+   "text": "Tâches de téléchargement ou d'installation inachevées : sous /user/bgft/task se trouvent des tâches du logiciel système. Si une installation ou un téléchargement est en cours, c'est normal. Sinon, des tâches interrompues restent (espace occupé, un affichage « installation en cours » sans progression). Medic ne modifie rien ; les tâches peuvent être annulées dans Téléchargements/Envois de la console.",
+   "confidence_reason": "Un dossier sous /user/bgft/task est une tâche du logiciel système (d'après le scanner d'orphelins de ps5-tools, MIT). Medic ne voit pas si elle est bloquée : une tâche en cours a le même aspect."
   }
  },
  "coverage": {
