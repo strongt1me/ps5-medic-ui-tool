@@ -1632,8 +1632,17 @@ void App::draw_selftest(Canvas& c) const {
     }
 
     // Liste: letztes Ergebnis je Test (bei Done das frische)
-    small().draw(c, M + 4, 196, S("selftest.sub"), kDim, W - 2 * M - 8);  // die franzoesische Fassung ist gekuerzt, damit der Satz in eine Zeile passt
     int y = 230;
+    {  // Hinweis: normal eine Zeile (die franzoesische Fassung ist dafuer gekuerzt); in grosser Schrift reicht die Zeile nicht, dann zwei Zeilen und die Liste rutscht nach
+        const int sw = W - 2 * M - 8;
+        const std::string sub_text = S("selftest.sub");
+        if (small().width(sub_text) <= sw) small().draw(c, M + 4, 196, sub_text, kDim, sw);
+        else {
+            const auto lines = wrap_text(small(), sub_text, sw, 2);
+            for (std::size_t k = 0; k < lines.size(); ++k) small().draw(c, M + 4, 196 + static_cast<int>(k) * (small().line_height() + 2), lines[k], kDim, sw);
+            if (lines.size() > 1) y += static_cast<int>(lines.size() - 1) * (small().line_height() + 2) + 6;  // die erste Zeile steht schon auf der Hoehe der einzeiligen Fassung
+        }
+    }
     int passed = 0, warn = 0, failed = 0, skipped = 0;
     for (const auto& d : st_defs_) {
         const medic::TestResult* r = nullptr;
@@ -2975,7 +2984,8 @@ void App::draw_gamedetail(Canvas& c) const {
             ty += body().line_height() + 4;
         }
     } else {
-        const int ch = 124, gap = 8;
+        // Kartenhoehe: Titel + zwei Zeilen Erklaerung; in grosser Schrift waechst die Karte mit
+        const int ch = std::max(124, 12 + body().line_height() + 6 + 2 * (small().line_height() + 2) + 12), gap = 8;
         int cy = py + 36;
         const int last = std::min(n, gd_top_ + kGdVisible);
         for (int i = gd_top_; i < last; ++i, cy += ch + gap) {
