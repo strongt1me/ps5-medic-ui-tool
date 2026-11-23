@@ -601,7 +601,17 @@ int main() {
                 send = true;
                 pad_sent = false;
             }
-            if (send && !medic::proto::send_message_drop(sock, medic::proto::kPad, msg, sizeof msg)) {
+            bool sent_ok = true;
+            if (send && pad_good) {  // Zusatz fuer den Controller-Test (Trigger, Touchpad, Bewegung): vor dem Zustand, damit der Dienst beides zusammen sieht
+                std::uint8_t ext[medic::proto::kPadExtraLen];
+                ext[0] = d.l2;
+                ext[1] = d.r2;
+                std::memcpy(ext + 2, d.touch, 24);
+                std::memcpy(ext + 26, d.acell, 12);
+                std::memcpy(ext + 38, d.vel, 12);
+                sent_ok = medic::proto::send_message_drop(sock, medic::proto::kPadExtra, ext, sizeof ext);
+            }
+            if (send && (!sent_ok || !medic::proto::send_message_drop(sock, medic::proto::kPad, msg, sizeof msg))) {
                 char why[80];
                 std::snprintf(why, sizeof why, "Senden an den Dienst fehlgeschlagen (errno %d)", errno);
                 trace(why);

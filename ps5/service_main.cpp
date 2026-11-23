@@ -12,6 +12,7 @@
 #include "medic/error_codes.hpp"
 #include "medic/http.hpp"
 #include "medic/newest.hpp"
+#include "medic/padtest.hpp"
 #include "medic/rules.hpp"
 #include "medic_ui/app.hpp"
 #include "medic_ui/pad_nav.hpp"
@@ -22,7 +23,9 @@
 #include <signal.h>
 #include <time.h>
 
+#include <algorithm>
 #include <cerrno>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -275,6 +278,7 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
         if (link_ok && !emit_frame()) link_ok = false;  // der Hauptlauf bemerkt es nach dem Check-up
     });
 
+    medic::PadSample pad_extra;  // Trigger, Touchpad, Bewegung aus der letzten 'T'-Nachricht (extra = false, solange keine kam: aeltere App)
     for (;;) {
         const std::uint32_t t0 = now_ms();
 
@@ -342,6 +346,34 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
                 dir(kBtnRight, Button::Right);
                 nav.stick((static_cast<int>(pl[4]) - 128) * 256, (static_cast<int>(pl[5]) - 128) * 256, t0, pressed);
                 prev_buttons = b;
+                {  // das ganze Abbild fuer den Controller-Test (Trigger, Touchpad und Bewegung vom letzten 'T', solange die App sie schickt)
+                    medic::PadSample smp = pad_extra;
+                    smp.buttons = b;
+                    smp.lx = pl[4];
+                    smp.ly = pl[5];
+                    smp.rx = pl[6];
+                    smp.ry = pl[7];
+                    app.pad_sample(smp, t0);
+                }
+            } else if (type == proto::kPadExtra && len >= proto::kPadExtraLen && !stale) {
+                pad_extra.extra = true;
+                pad_extra.l2 = pl[0];
+                pad_extra.r2 = pl[1];
+                const std::uint8_t* tp = pl + 2;  // PS5_PadTouchData: Anzahl, 3 + 4 Reserve, danach zwei Beruehrungen zu je 8 Byte (x, y, Kennung, Reserve)
+                pad_extra.touch_count = std::min<int>(tp[0], 2);
+                for (int i = 0; i < 2; ++i) {
+                    pad_extra.finger[i].x = proto::get16(tp + 8 + 8 * i);
+                    pad_extra.finger[i].y = proto::get16(tp + 10 + 8 * i);
+                }
+                auto f = [&](const std::uint8_t* p) {
+                    float v;
+                    std::memcpy(&v, p, sizeof v);
+                    return std::isfinite(v) ? v : 0.0f;
+                };
+                for (int i = 0; i < 3; ++i) {
+                    pad_extra.va[i] = f(pl + 26 + 4 * i);
+                    pad_extra.vb[i] = f(pl + 38 + 4 * i);
+                }
             }
             used += 5 + len;
         }

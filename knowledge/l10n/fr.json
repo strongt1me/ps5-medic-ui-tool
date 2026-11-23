@@ -461,8 +461,8 @@
    "proves_not": "durée de vie restante, usure, vitesse au-delà du cache d'écriture ; la relecture peut venir du cache"
   },
   "hw.pad.buttons": {
-   "name": "Boutons de la manette (test utilisateur)",
-   "proves_not": "sticks, gâchettes, drift, qualité radio, capacité de la batterie ; seulement si chaque bouton arrive"
+   "name": "Test de la manette (test utilisateur)",
+   "proves_not": "boutons Create et PS, vibration, barre lumineuse, gâchettes adaptatives, niveau de batterie, qualité radio ; seulement ce que la manette signale à l'application"
   },
   "hw.display.pattern": {
    "name": "Motifs d'affichage (test utilisateur)",

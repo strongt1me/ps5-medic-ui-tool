@@ -44,7 +44,7 @@
     </td>
     <td valign="top">
       <h3>🧪 Self-test</h3>
-      Eleven tests of the console: storage, temperatures, databases, payloads and images, read test, local network (router only), heat test, memory pattern, write test, controller buttons and display patterns. Each test says what it does <i>not</i> prove.
+      Eleven tests of the console: storage, temperatures, databases, payloads and images, read test, local network (router only), heat test, memory pattern, write test, controller (buttons, sticks, triggers, touchpad, motion) and display patterns. Each test says what it does <i>not</i> prove.
     </td>
   </tr>
   <tr>

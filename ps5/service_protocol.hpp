@@ -9,6 +9,8 @@
 //                   'Q' Ende        (leer): die Oberflaeche wurde beendet, App schliessen
 //                   'G' Fortschritt (u8 Prozent 0..100): Ladestand des Dienstes, die App zeigt ihn im Balken des Startbilds
 //   App -> Dienst:  'S' Pad-Zustand (u32 Tasten wie ScePad, u8 linker Stick x, u8 y, u8 rechter x, u8 y)
+//                   'T' Pad-Zusatz  (u8 L2, u8 R2, 24 Byte Touchpad wie PS5_PadTouchData, 3 float Beschleunigung, 3 float Winkelgeschwindigkeit; 50 Byte,
+//                                    kommt vor dem 'S' desselben Zustands; fuer den Controller-Test. Ein aelterer Dienst ueberspringt die Nachricht.)
 //                   'X' Dienst beenden (leer)
 #pragma once
 #include <cstddef>
@@ -37,7 +39,8 @@ constexpr int kLoaderPort = 9021;
 constexpr int kWidth = 1920, kHeight = 1080;
 constexpr int kBandRows = 8;  // Rastergroesse, in dem Aenderungen erkannt werden
 
-constexpr char kHello = 'H', kBand = 'B', kPresent = 'P', kQuit = 'Q', kProgress = 'G', kPad = 'S', kShutdown = 'X';
+constexpr char kHello = 'H', kBand = 'B', kPresent = 'P', kQuit = 'Q', kProgress = 'G', kPad = 'S', kPadExtra = 'T', kShutdown = 'X';
+constexpr std::uint32_t kPadExtraLen = 50;  // 2 + 24 + 12 + 12
 
 inline void put32(std::uint8_t* p, std::uint32_t v) {
     for (int i = 0; i < 4; ++i) p[i] = static_cast<std::uint8_t>(v >> (8 * i));

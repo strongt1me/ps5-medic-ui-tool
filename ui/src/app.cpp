@@ -1353,8 +1353,8 @@ void App::handle_impl(Button b) {
                     st_tier_ = 2;
                     st_state_ = StState::Confirm;
                 } else if (b == Button::Square) start_selftest(0);
-                else if (b == Button::L1) open_usertest(true);
-                else if (b == Button::R1) open_usertest(false);
+                else if (b == Button::L1) open_padtest();
+                else if (b == Button::R1) open_usertest();
                 else if (b == Button::Circle) screen_ = Screen::Start;
             } else if (st_state_ == StState::Confirm) {
                 if (b == Button::Cross) start_selftest(st_tier_);
@@ -1364,6 +1364,7 @@ void App::handle_impl(Button b) {
             }
             break;
         case Screen::UserTest: handle_usertest(b); break;
+        case Screen::PadTest: handle_padtest(b); break;
         case Screen::ErrorCodeSource:  // QR-Code der Quelle: nur Anzeige
             if (const medic::ErrorCode* e = current_error()) {
                 const int n = static_cast<int>(error_sources(*e).size());
@@ -1503,6 +1504,7 @@ void App::render(Canvas& c) const {
             draw_selftest(c);
             break;
         case Screen::UserTest: draw_usertest(c); break;
+        case Screen::PadTest: draw_padtest(c); break;
     }
 }
 
@@ -1680,25 +1682,17 @@ void App::draw_selftest(Canvas& c) const {
     draw_hints(c, {{PadGlyph::Cross, S("selftest.all")}, {PadGlyph::Square, S("selftest.quick")}, {PadGlyph::Triangle, S("selftest.thorough")}, {PadGlyph::Shoulders, S("selftest.user")}, {PadGlyph::Circle, S("common.back")}});
 }
 
-void App::open_usertest(bool pad) {
-    ut_pad_ = pad;
-    for (bool& x : ut_pressed_) x = false;
-    ut_presses_ = 0;
-    ut_last_circle_ = false;
+void App::open_usertest() {
     ut_color_ = 0;
     ut_asking_ = false;
     screen_ = Screen::UserTest;
 }
 
-void App::finish_usertest(medic::TestStatus st, const std::string& reason, double missing) {
+void App::finish_usertest(medic::TestStatus st, const std::string& reason) {
     medic::TestResult r;
-    r.id = ut_pad_ ? "hw.pad.buttons" : "hw.display.pattern";
+    r.id = "hw.display.pattern";
     r.status = st;
     r.reason = reason;
-    if (ut_pad_) {
-        r.measurements.push_back({"buttons_pressed", static_cast<double>(ut_presses_), ""});
-        r.measurements.push_back({"buttons_missing", missing, ""});
-    }
     if (st != medic::TestStatus::NotRun) {
         svc_.selftest_record(r);
         bool found = false;
@@ -1712,26 +1706,8 @@ void App::finish_usertest(medic::TestStatus st, const std::string& reason, doubl
     screen_ = Screen::SelfTest;
 }
 
-// Pad: jede der elf Tasten einmal druecken; Kreis zweimal hintereinander beendet vorzeitig (ein einzelner Kreis zaehlt als Taste). Anzeige: Kreuz
-// blaettert durch sechs Farbflaechen, dann das Urteil (Kreuz nichts aufgefallen, Dreieck Auffaelligkeit, Kreis weiss nicht = uebersprungen).
+// Anzeige: Kreuz blaettert durch sechs Farbflaechen, dann das Urteil (Kreuz nichts aufgefallen, Dreieck Auffaelligkeit, Kreis weiss nicht = uebersprungen).
 void App::handle_usertest(Button b) {
-    if (ut_pad_) {
-        const int idx = static_cast<int>(b);
-        if (idx >= 0 && idx < 11 && !ut_pressed_[idx]) {
-            ut_pressed_[idx] = true;
-            ++ut_presses_;
-        }
-        const bool again = b == Button::Circle && ut_last_circle_;
-        ut_last_circle_ = b == Button::Circle;
-        if (ut_presses_ == 11) {
-            finish_usertest(medic::TestStatus::Passed, "", 0);
-        } else if (again) {
-            const double missing = 11 - ut_presses_;
-            if (ut_presses_ >= 3) finish_usertest(medic::TestStatus::Warn, "buttons_missing", missing);
-            else finish_usertest(medic::TestStatus::Skipped, "not_tested", missing);
-        }
-        return;
-    }
     if (!ut_asking_) {
         if (b == Button::Cross) {
             if (++ut_color_ >= 6) ut_asking_ = true;
@@ -1740,14 +1716,14 @@ void App::handle_usertest(Button b) {
         }
         return;
     }
-    if (b == Button::Cross) finish_usertest(medic::TestStatus::Passed, "", 0);
-    else if (b == Button::Triangle) finish_usertest(medic::TestStatus::Warn, "user_reported", 0);
-    else if (b == Button::Circle) finish_usertest(medic::TestStatus::Skipped, "unknown", 0);
+    if (b == Button::Cross) finish_usertest(medic::TestStatus::Passed, "");
+    else if (b == Button::Triangle) finish_usertest(medic::TestStatus::Warn, "user_reported");
+    else if (b == Button::Circle) finish_usertest(medic::TestStatus::Skipped, "unknown");
 }
 
 void App::draw_usertest(Canvas& c) const {
     const auto& S = Strings::get(lang_);
-    if (!ut_pad_ && !ut_asking_) {
+    if (!ut_asking_) {
         // Vollbild-Farbflaechen (ruhig, ohne Blinken): schwarz, weiss, rot, gruen, blau, Verlauf
         const Color cols[5] = {rgb(0, 0, 0), rgb(255, 255, 255), rgb(255, 0, 0), rgb(0, 255, 0), rgb(0, 0, 255)};
         if (ut_color_ < 5) {
@@ -1765,22 +1741,7 @@ void App::draw_usertest(Canvas& c) const {
         small().draw(c, 40, H - 60, S.fmt("usertest.display_hint", {{"i", std::to_string(ut_color_ + 1)}, {"n", "6"}}), hint);
         return;
     }
-    title_icon(c, ut_pad_ ? Icon::Gamepad : Icon::Display, kTintGreen, S(ut_pad_ ? "usertest.pad_title" : "usertest.display_title"));
-    if (ut_pad_) {
-        small().draw(c, M + 4, 192, S("usertest.pad_sub"), kDim);
-        const char* names[11] = {"usertest.btn.up", "usertest.btn.down", "usertest.btn.left", "usertest.btn.right", "usertest.btn.cross", "usertest.btn.circle",
-                                 "usertest.btn.square", "usertest.btn.triangle", "usertest.btn.l1", "usertest.btn.r1", "usertest.btn.options"};
-        const int cols = 4, gap = 24, cw = (W - 2 * M - (cols - 1) * gap) / cols, ch = 130;
-        for (int i = 0; i < 11; ++i) {
-            const int x = M + (i % cols) * (cw + gap), y = 250 + (i / cols) * (ch + gap);
-            c.fill_round_rect(x, y, cw, ch, 16, ut_pressed_[i] ? kOk : kPanel);
-            body().draw(c, x + 32, y + 44, S(names[i]), ut_pressed_[i] ? kBg : kText, cw - 120);
-            draw_icon(c, ut_pressed_[i] ? Icon::Ok : Icon::Circle, x + cw - 48, y + 65, 40, ut_pressed_[i] ? kBg : kLine, ut_pressed_[i] ? kBg : kLine);
-        }
-        small().draw(c, M + 4, 250 + 3 * (ch + gap) + 6, S.fmt("usertest.pad_count", {{"n", std::to_string(ut_presses_)}}), kDim);
-        draw_hints(c, {{PadGlyph::Circle, S("usertest.pad_exit")}});
-        return;
-    }
+    title_icon(c, Icon::Display, kTintGreen, S("usertest.display_title"));
     glass_panel(c, M, 230, W - 2 * M, 330, 24);
     int y = 270;
     for (auto& l : wrap_text(body(), S("usertest.display_question"), W - 2 * M - 96, 6)) {
@@ -1788,6 +1749,322 @@ void App::draw_usertest(Canvas& c) const {
         y += body().line_height() + 6;
     }
     draw_hints(c, {{PadGlyph::Cross, S("usertest.nothing")}, {PadGlyph::Triangle, S("usertest.noticed")}, {PadGlyph::Circle, S("usertest.dontknow")}});
+}
+
+// ---- Controller-Test (Mehr > Selbsttest > L1) ----------------------------------------------------------------------------------------------------------------
+// Die Auswertung steht in medic::PadTest (Kern, am PC getestet); hier nur Eingabe und Darstellung. Die Tasten kommen als rohes Abbild (pad_sample), nicht als
+// Button-Ereignisse: im Tasten-Schritt ist jede Taste selbst ein Pruefpunkt, die Bedienung (Kreuz weiter, Dreieck ueberspringen, Kreis abbrechen) gilt erst danach.
+
+void App::open_padtest() {
+    pt_.reset();
+    pt_intro_ = true;
+    screen_ = Screen::PadTest;
+}
+
+void App::pad_sample(const medic::PadSample& s, std::uint32_t now_ms) {
+    pt_has_sample_ = true;
+    pt_now_ = now_ms;
+    if (screen_ != Screen::PadTest || pt_intro_) return;
+    pt_.feed(s, now_ms);
+    if (pt_.stage() == medic::PadTest::Stage::Buttons && pt_.circle_exit_requested()) pt_.next();  // Kreis zweimal: Tasten-Schritt endet mit dem, was da ist
+}
+
+void App::leave_padtest(bool save) {
+    if (save) {
+        const medic::TestResult r = pt_.result("");
+        if (r.status != medic::TestStatus::Skipped) {  // nichts getestet traegt nichts ein
+            svc_.selftest_record(r);
+            bool found = false;
+            for (auto& x : st_last_)
+                if (x.id == r.id) {
+                    x = r;
+                    found = true;
+                }
+            if (!found) st_last_.push_back(r);
+        }
+    }
+    pt_.reset();
+    pt_intro_ = true;
+    screen_ = Screen::SelfTest;
+}
+
+void App::handle_padtest(Button b) {
+    using St = medic::PadTest::Stage;
+    if (pt_intro_) {
+        if (b == Button::Cross) {
+            pt_.reset();
+            pt_intro_ = false;
+        } else if (b == Button::Circle) {
+            screen_ = Screen::SelfTest;
+        }
+        return;
+    }
+    const St st = pt_.stage();
+    if (st == St::Summary) {
+        if (b == Button::Cross) leave_padtest(true);
+        else if (b == Button::Circle) leave_padtest(false);
+        else if (b == Button::Square) pt_.reset();  // nochmal
+        return;
+    }
+    if (st == St::Buttons) {  // jede Taste ist ein Pruefpunkt; erst wenn alle da sind, geht es mit Kreuz weiter (sonst: Kreis zweimal)
+        if (pt_.stage_done() && b == Button::Cross) pt_.next();
+        return;
+    }
+    if (b == Button::Cross) pt_.next();
+    else if (b == Button::Triangle) pt_.skip();
+    else if (b == Button::Circle) leave_padtest(false);
+}
+
+namespace {
+
+// Kreis als Linienzug (Mitte, Radius, Strichstaerke)
+void ring(Canvas& c, float cx, float cy, float r, float w, Color col) {
+    std::vector<std::pair<float, float>> pts;
+    constexpr int kSeg = 96;
+    for (int i = 0; i <= kSeg; ++i) {
+        const float a = static_cast<float>(i) * 6.2831853f / kSeg;
+        pts.emplace_back(cx + r * std::cos(a), cy + r * std::sin(a));
+    }
+    c.stroke_polyline(pts, w, col);
+}
+
+const char* const kPadStageKeys[medic::PadTest::kStageCount] = {"buttons", "stick_rest", "stick_circle", "triggers", "touchpad", "motion"};
+const char* const kPadButtonKeys[medic::PadTest::kButtons] = {"usertest.btn.cross", "usertest.btn.circle", "usertest.btn.square", "usertest.btn.triangle", "usertest.btn.l1", "usertest.btn.r1",
+                                                              "padtest.btn.l2",      "padtest.btn.r2",      "padtest.btn.l3",       "padtest.btn.r3",       "usertest.btn.options", "padtest.btn.touch",
+                                                              "usertest.btn.up",     "usertest.btn.down",   "usertest.btn.left",    "usertest.btn.right"};
+
+std::string pct_text(double v) {
+    char buf[24];
+    std::snprintf(buf, sizeof buf, "%.1f", v);
+    std::string s = buf;
+    return s;
+}
+
+}  // namespace
+
+void App::draw_padtest(Canvas& c) const {
+    using St = medic::PadTest::Stage;
+    using Vd = medic::PadTest::Verdict;
+    const auto& S = Strings::get(lang_);
+    title_icon(c, Icon::Gamepad, kTintGreen, S("padtest.title"));
+
+    if (pt_intro_) {
+        glass_panel(c, M, 230, W - 2 * M, 480, 24);
+        int y = 262;
+        for (const auto& l : wrap_text(body(), S("padtest.intro"), W - 2 * M - 96, 9)) {
+            body().draw(c, M + 48, y, l, kText);
+            y += body().line_height() + 6;
+        }
+        if (!pt_has_sample_) {
+            y += 10;
+            for (const auto& l : wrap_text(small(), S("padtest.intro_none"), W - 2 * M - 96, 2)) {
+                small().draw(c, M + 48, y, l, kWarn);
+                y += small().line_height() + 2;
+            }
+        }
+        draw_hints(c, {{PadGlyph::Cross, S("padtest.start")}, {PadGlyph::Circle, S("common.back")}});
+        return;
+    }
+
+    auto vcolor = [&](Vd v) { return v == Vd::Ok ? kOk : (v == Vd::Warn ? kWarn : (v == Vd::Skipped ? kDim : kLine)); };
+    const medic::PadTest::Stage stage = pt_.stage();
+
+    if (stage == St::Summary) {
+        small().draw(c, M + 4, 192, S("padtest.summary_sub"), kDim);
+        const int gap = 10, rh = std::max(84, body().line_height() + small().line_height() + 26);
+        int y = 226;
+        for (int i = 0; i < medic::PadTest::kStageCount; ++i) {
+            const auto& r = pt_.result_of(i);
+            const bool ok = r.verdict == Vd::Ok, warn = r.verdict == Vd::Warn;
+            card(c, M, y, W - 2 * M, rh, false);
+            c.fill_round_rect(M, y + 14, 8, rh - 28, 4, vcolor(r.verdict));
+            draw_icon(c, ok ? Icon::Ok : (warn ? Icon::Warning : Icon::Skip), M + 52, y + rh / 2, 44, vcolor(r.verdict), vcolor(r.verdict));
+            body().draw(c, M + 100, y + 10, S(std::string("padtest.stage.") + kPadStageKeys[i]), kText);
+            std::string detail;
+            switch (i) {
+                case 0: detail = S.fmt(warn ? "padtest.hint.buttons_missing" : "padtest.sum.buttons", {{"n", std::to_string(pt_.buttons_pressed())}, {"m", std::to_string(medic::PadTest::kButtons - pt_.buttons_pressed())}}); break;
+                case 1:
+                    detail = S.fmt(warn ? "padtest.hint.stick_drift" : "padtest.sum.stick_rest",
+                                   {{"l", pct_text(pt_.rest_offset_pct(0))}, {"r", pct_text(pt_.rest_offset_pct(1))}, {"dz", std::to_string(std::max(pt_.rest_deadzone_pct(0), pt_.rest_deadzone_pct(1)))}});
+                    break;
+                case 2: detail = S.fmt(warn ? "padtest.hint.stick_range" : "padtest.sum.stick_circle", {{"a", std::to_string(pt_.sectors_reached(0))}, {"b", std::to_string(pt_.sectors_reached(1))}}); break;
+                case 3: detail = S.fmt(warn ? "padtest.hint.trigger_range" : "padtest.sum.triggers", {{"a", std::to_string(pt_.trigger_max(0))}, {"b", std::to_string(pt_.trigger_max(1))}}); break;
+                case 4: detail = S.fmt(warn ? "padtest.hint." + r.reason : "padtest.sum.touchpad", {{"n", std::to_string(pt_.cells_touched())}}); break;
+                default: detail = S(warn ? "padtest.hint." + r.reason : "padtest.sum.motion"); break;
+            }
+            if (r.verdict == Vd::Skipped || r.verdict == Vd::Pending) detail = S("padtest.hint." + (r.reason.empty() ? std::string("not_tested") : r.reason));
+            small().draw(c, M + 100, y + 10 + body().line_height() + 2, elide(small(), detail, W - 2 * M - 140), warn ? kWarn : kDim);
+            y += rh + gap;
+        }
+        draw_hints(c, {{PadGlyph::Cross, S("padtest.save")}, {PadGlyph::Square, S("padtest.repeat")}, {PadGlyph::Circle, S("padtest.discard")}});
+        return;
+    }
+
+    // Kopf: Schrittanzeige, Punkte, Anweisung
+    const int si = pt_.stage_index();
+    small().draw(c, M + 4, 192, S.fmt("padtest.step", {{"i", std::to_string(si + 1)}, {"n", std::to_string(medic::PadTest::kStageCount)}, {"name", S(std::string("padtest.stage.") + kPadStageKeys[si])}}), kDim);
+    for (int i = 0; i < medic::PadTest::kStageCount; ++i) {
+        const int px = W - M - (medic::PadTest::kStageCount - i) * 52;
+        const Color col = i == si ? kAccent : vcolor(pt_.result_of(i).verdict);
+        c.fill_round_rect(px, 198, 42, 12, 6, col);
+    }
+    int y0 = 222;
+    for (const auto& l : wrap_text(small(), S(std::string("padtest.i.") + kPadStageKeys[si]), W - 2 * M - 8, 2)) {
+        small().draw(c, M + 4, y0, l, kText);
+        y0 += small().line_height() + 2;
+    }
+    y0 += 18;
+    const int area_bottom = 948;
+    const medic::PadSample& cur = pt_.sample();
+    const bool done = pt_.stage_done();
+
+    switch (stage) {
+        case St::Buttons: {
+            const int cols = 4, gap = 18, cw = (W - 2 * M - (cols - 1) * gap) / cols;
+            const int ch = std::min(126, (area_bottom - y0 - 44 - 3 * gap) / 4);
+            for (int i = 0; i < medic::PadTest::kButtons; ++i) {
+                const int x = M + (i % cols) * (cw + gap), y = y0 + (i / cols) * (ch + gap);
+                const bool on = pt_.button_pressed(i);
+                c.fill_round_rect(x, y, cw, ch, 16, on ? kOk : kPanel);
+                body().draw(c, x + 28, y + (ch - body().line_height()) / 2, elide(body(), S(kPadButtonKeys[i]), cw - 110), on ? kBg : kText);
+                draw_icon(c, on ? Icon::Ok : Icon::Circle, x + cw - 44, y + ch / 2, 36, on ? kBg : kLine, on ? kBg : kLine);
+            }
+            small().draw(c, M + 4, y0 + 4 * (ch + gap) - gap + 12, S.fmt("padtest.count_buttons", {{"n", std::to_string(pt_.buttons_pressed())}, {"m", std::to_string(medic::PadTest::kButtons)}}), kDim);
+            break;
+        }
+        case St::StickRest:
+        case St::StickCircle: {
+            const bool rest = stage == St::StickRest;
+            const int gap = 24, pw = (W - 2 * M - gap) / 2, ph = area_bottom - y0;
+            for (int k = 0; k < 2; ++k) {
+                const int px = M + k * (pw + gap);
+                glass_panel(c, px, y0, pw, ph, 20);
+                body().draw(c, px + 28, y0 + 14, S(k == 0 ? "padtest.left" : "padtest.right"), kText);
+                const float R = static_cast<float>(std::min(150, (ph - 14 - body().line_height() - 3 * (small().line_height() + 4) - 90) / 2));
+                const float cx = static_cast<float>(px + pw / 2), cy = static_cast<float>(y0 + 14 + body().line_height() + 24) + R + 24;
+                const int sx = k == 0 ? cur.lx : cur.rx, sy = k == 0 ? cur.ly : cur.ry;
+                const float dx = (static_cast<float>(sx) - 128.0f) / 127.0f, dy = (static_cast<float>(sy) - 128.0f) / 127.0f;
+                int ty = static_cast<int>(cy + R) + 36;  // darunter: Text
+                if (rest) {
+                    // Vergroesserung: der aeussere Ring ist 25 % des Hubs, die Ringe darin 5 % (gruen) und 10 % (orange)
+                    ring(c, cx, cy, R, 3, kLine);
+                    ring(c, cx, cy, R * 0.4f, 3, kOk);
+                    ring(c, cx, cy, R * 0.2f, 3, kWarn);
+                    c.fill_rect(static_cast<int>(cx) - 1, static_cast<int>(cy - R), 2, static_cast<int>(2 * R), rgba(255, 255, 255, 25));
+                    c.fill_rect(static_cast<int>(cx - R), static_cast<int>(cy) - 1, static_cast<int>(2 * R), 2, rgba(255, 255, 255, 25));
+                    float ox = dx * 4.0f * R, oy = dy * 4.0f * R;  // 100 % Hub = 4 Radien
+                    const float ol = std::sqrt(ox * ox + oy * oy);
+                    if (ol > R) {
+                        ox *= R / ol;
+                        oy *= R / ol;
+                    }
+                    c.fill_disc(cx + ox, cy + oy, 11, kAccent);
+                    if (pt_.rest_measured()) {
+                        const double v = pt_.rest_offset_pct(k);
+                        const std::string lab = medic::PadTest::drift_label(v);
+                        const Color col = v < 5.0 ? kOk : (v < 10.0 ? kWarn : kCrit);
+                        body().draw(c, px + 28, ty, S.fmt("padtest.rest_value", {{"pct", pct_text(v)}, {"label", S("padtest.drift." + lab)}}), col);
+                        ty += body().line_height() + 4;
+                        if (v >= 5.0) small().draw(c, px + 28, ty, S.fmt("padtest.deadzone", {{"pct", std::to_string(pt_.rest_deadzone_pct(k))}}), kDim);
+                    } else {
+                        const double prog = pt_.measure_progress();
+                        small().draw(c, px + 28, ty, S(prog > 0 ? "padtest.measuring" : "padtest.release"), kDim);
+                        c.fill_round_rect(px + 28, ty + small().line_height() + 10, pw - 56, 14, 7, kPanel);
+                        c.fill_round_rect(px + 28, ty + small().line_height() + 10, static_cast<int>((pw - 56) * prog), 14, 7, kAccent);
+                        if (pt_.rest_restarts() > 0) small().draw(c, px + 28, ty + small().line_height() + 34, S.fmt("padtest.restarts", {{"n", std::to_string(pt_.rest_restarts())}}), kWarn);
+                    }
+                } else {
+                    ring(c, cx, cy, R, 3, kLine);
+                    for (int s = 0; s < medic::PadTest::kSectors; ++s) {
+                        const float a = (static_cast<float>(s) + 0.5f) * 6.2831853f / medic::PadTest::kSectors;
+                        const float r0 = R + 12, r1 = R + 34;
+                        c.stroke_polyline({{cx + r0 * std::cos(a), cy + r0 * std::sin(a)}, {cx + r1 * std::cos(a), cy + r1 * std::sin(a)}}, 6, pt_.sector_reached(k, s) ? kOk : kLine);
+                    }
+                    c.fill_disc(cx + dx * R, cy + dy * R, 11, kAccent);
+                    const int n = pt_.sectors_reached(k);
+                    body().draw(c, px + 28, ty, S.fmt("padtest.sectors", {{"n", std::to_string(n)}, {"m", std::to_string(medic::PadTest::kSectors)}}), n >= 68 ? kOk : kText);
+                    ty += body().line_height() + 4;
+                    if (n > 0) small().draw(c, px + 28, ty, S.fmt("padtest.radius", {{"pct", std::to_string(static_cast<int>(std::lround(pt_.circle_avg_radius(k) * 100)))}}), kDim);
+                }
+            }
+            break;
+        }
+        case St::Triggers: {
+            const int bx = M + 150, bw = W - 2 * M - 150 - 330, bh = 50;
+            for (int k = 0; k < 2; ++k) {
+                const int y = y0 + 30 + k * 170;
+                const int v = k == 0 ? cur.l2 : cur.r2;
+                glass_panel(c, M, y - 24, W - 2 * M, 124, 18);
+                body().draw(c, M + 32, y + (bh - body().line_height()) / 2, k == 0 ? "L2" : "R2", kText);
+                c.fill_round_rect(bx, y, bw, bh, 12, kPanel);
+                c.fill_round_rect(bx, y, std::max(0, bw * v / 255), bh, 12, kAccent);
+                const int mx = bx + bw * pt_.trigger_max(k) / 255;
+                c.fill_rect(mx - 2, y - 8, 4, bh + 16, kWarn);
+                text_right(c, body(), W - M - 32, y + (bh - body().line_height()) / 2, std::to_string(v), kText);
+                small().draw(c, bx, y + bh + 10, S.fmt("padtest.trigger_max", {{"v", std::to_string(pt_.trigger_max(k))}}) + (pt_.trigger_released(k) ? "  ·  " + S("padtest.released") : std::string()),
+                             pt_.trigger_released(k) ? kOk : kDim);
+            }
+            if (!cur.extra) small().draw(c, M + 4, y0 + 380, S("padtest.hint.not_supported"), kWarn);
+            break;
+        }
+        case St::Touchpad: {
+            const int pw = std::min(1000, W - 2 * M - 360), phh = pw * 9 / 16, cw = pw / medic::PadTest::kCols, chh = phh / medic::PadTest::kRows;
+            for (int r = 0; r < medic::PadTest::kRows; ++r)
+                for (int cc = 0; cc < medic::PadTest::kCols; ++cc) {
+                    const bool on = pt_.cell_touched(cc, r);
+                    c.fill_round_rect(M + cc * cw + 3, y0 + r * chh + 3, cw - 6, chh - 6, 10, on ? kOk : kPanel);
+                }
+            for (int i = 0; i < std::min(2, cur.touch_count); ++i) c.fill_disc(static_cast<float>(M + cur.finger[i].x * pw / 1920), static_cast<float>(y0 + cur.finger[i].y * phh / 1080), 18, i == 0 ? kAccent : kWarn);
+            const int tx = M + pw + 40;
+            body().draw(c, tx, y0 + 10, S.fmt("padtest.cells", {{"n", std::to_string(pt_.cells_touched())}, {"m", std::to_string(medic::PadTest::kCols * medic::PadTest::kRows)}}), pt_.cells_touched() == 18 ? kOk : kText);
+            draw_icon(c, pt_.saw_two_fingers() ? Icon::Ok : Icon::Circle, tx + 18, y0 + 10 + body().line_height() + 38, 32, pt_.saw_two_fingers() ? kOk : kLine, pt_.saw_two_fingers() ? kOk : kLine);
+            small().draw(c, tx + 50, y0 + 10 + body().line_height() + 24, S("padtest.two_fingers"), pt_.saw_two_fingers() ? kOk : kDim);
+            if (!cur.extra) small().draw(c, tx, y0 + 200, S("padtest.hint.not_supported"), kWarn);
+            break;
+        }
+        case St::Motion: {
+            const auto phase = pt_.motion_phase();
+            small().draw(c, M + 4, y0, S(phase == medic::PadTest::MotionPhase::Settle ? "padtest.motion.settle" : (phase == medic::PadTest::MotionPhase::Rest ? "padtest.motion.rest" : "padtest.motion.move")),
+                         phase == medic::PadTest::MotionPhase::Move ? kOk : kText);
+            const int by = y0 + small().line_height() + 8;
+            c.fill_round_rect(M + 4, by, W - 2 * M - 8, 14, 7, kPanel);
+            c.fill_round_rect(M + 4, by, static_cast<int>((W - 2 * M - 8) * pt_.measure_progress()), 14, 7, phase == medic::PadTest::MotionPhase::Move ? kOk : kAccent);
+            const int gap = 24, pw = (W - 2 * M - gap) / 2, py = by + 36, ph = area_bottom - py;
+            const int ag = pt_.accel_group();  // 1 = erste Gruppe ist die Beschleunigung, 2 = zweite, 0 = unbekannt
+            for (int k = 0; k < 2; ++k) {
+                const int px = M + k * (pw + gap);
+                glass_panel(c, px, py, pw, ph, 20);
+                const bool is_accel = ag != 0 && (k + 1) == ag;
+                const std::string name = ag == 0 ? S(k == 0 ? "padtest.sensor1" : "padtest.sensor2") : S(is_accel ? "padtest.motion_accel" : "padtest.motion_gyro");
+                body().draw(c, px + 28, py + 14, name, kText);
+                const float* v = k == 0 ? cur.va : cur.vb;
+                static const char* const axis[3] = {"x", "y", "z"};
+                for (int i = 0; i < 3; ++i) {
+                    char buf[40];
+                    std::snprintf(buf, sizeof buf, "%s  %+.2f", axis[i], static_cast<double>(v[i]));
+                    small().draw(c, px + 28, py + 24 + body().line_height() + i * (small().line_height() + 6), buf, kDim);
+                }
+                const int yy = py + 24 + body().line_height() + 3 * (small().line_height() + 6) + 16;
+                const double prog = ag == 0 ? 0.0 : (is_accel ? pt_.motion_accel_progress() : pt_.motion_gyro_progress());
+                const bool moved = ag != 0 && (is_accel ? pt_.motion_accel_moved() : pt_.motion_gyro_moved());
+                c.fill_round_rect(px + 28, yy, pw - 56, 20, 10, kPanel);
+                c.fill_round_rect(px + 28, yy, static_cast<int>((pw - 56) * prog), 20, 10, moved ? kOk : kAccent);
+                if (moved) small().draw(c, px + 28, yy + 30, S("padtest.detected"), kOk);
+            }
+            if (!cur.extra) small().draw(c, M + 4, area_bottom - small().line_height(), S("padtest.hint.not_supported"), kWarn);
+            break;
+        }
+        case St::Summary: break;
+    }
+    if (done) small().draw(c, M + 4, area_bottom + 2, S("padtest.stage_done"), kOk);
+    if (stage == St::Buttons) {
+        std::vector<std::pair<PadGlyph, std::string>> hints;
+        if (done) hints.emplace_back(PadGlyph::Cross, S("padtest.next"));
+        hints.emplace_back(PadGlyph::Circle, S("padtest.circle2"));
+        draw_hints(c, hints);
+    } else {
+        draw_hints(c, {{PadGlyph::Cross, S("padtest.next")}, {PadGlyph::Triangle, S("padtest.skip")}, {PadGlyph::Circle, S("padtest.exit")}});
+    }
 }
 
 void App::draw_chrome(Canvas& c) const {

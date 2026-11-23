@@ -9,6 +9,7 @@
 // Die Fehlercodes (Start) sind ein reines Nachschlagewerk: sie zeigen Text, kein Knopf dort loest etwas aus.
 #pragma once
 #include "medic/diff.hpp"
+#include "medic/padtest.hpp"
 #include "medic/qr.hpp"
 #include "medic_ui/canvas.hpp"
 #include "medic_ui/i18n.hpp"
@@ -24,7 +25,7 @@ namespace medic::ui {
 
 class App {
 public:
-    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, CheckList, CheckCompare, GameList, GameDetail, Hidden, Repairs, Maintenance, Splash };
+    enum class Screen { Start, Running, Findings, Detail, FixPreview, FixDone, History, UndoConfirm, Settings, Report, RulesUpdate, ErrorCodes, ErrorCodeDetail, ErrorCodeSource, SelfTest, UserTest, PadTest, CheckList, CheckCompare, GameList, GameDetail, Hidden, Repairs, Maintenance, Splash };
 
     static constexpr int kWidth = 1920, kHeight = 1080;
     static constexpr int kMaintItems = 7;  // Reparaturen, Selbsttest, Regeln, Backups/Rueckgaengig, Bericht, Fehlercodes, Einstellungen
@@ -42,6 +43,9 @@ public:
     void set_redraw_hook(std::function<void()> h) { redraw_ = std::move(h); }
     // Hintergrundbild fuer alle Bildschirme (wird abgedunkelt, damit Text lesbar bleibt); ohne Bild gilt der einfache Verlauf.
     void set_background(const Canvas& image);
+    // Das ganze Abbild des Controllers (Tasten, Sticks, Trigger, Touchpad, Bewegung) fuer den Controller-Test; der Host ruft es mit jedem Pad-Zustand.
+    // now_ms ist eine laufende Uhr in Millisekunden. Ausserhalb des Controller-Tests wird der Zustand nur gemerkt.
+    void pad_sample(const medic::PadSample& s, std::uint32_t now_ms);
 
     Screen screen() const { return screen_; }
     Lang lang() const { return lang_; }
@@ -146,9 +150,13 @@ private:
     void draw_error_source(Canvas& c) const;
     void draw_selftest(Canvas& c) const;
     void draw_usertest(Canvas& c) const;
-    void open_usertest(bool pad);
+    void open_usertest();
     void handle_usertest(Button b);
-    void finish_usertest(medic::TestStatus st, const std::string& reason, double missing);
+    void finish_usertest(medic::TestStatus st, const std::string& reason);
+    void draw_padtest(Canvas& c) const;
+    void open_padtest();
+    void handle_padtest(Button b);
+    void leave_padtest(bool save);
 
     std::string finding_text(const medic::Finding& f) const;
     std::string rule_title(const std::string& id, const std::string& text) const;  // Kurztitel der Regel (Standard: erster Satz des Textes)
@@ -255,13 +263,13 @@ private:
     int st_tier_ = 1;           // gewaehlte Stufe: 0 Schnell, 1 Standard, 2 Gruendlich
     double st_progress_ = 0;    // Fortschritt des laufenden Tests (0 bis 1)
 
-    // Nutzer-Tests: Pad-Tasten (jede Taste einmal druecken) und Anzeige (Farbflaechen, dann Urteil)
-    bool ut_pad_ = true;
-    bool ut_pressed_[11] = {};
-    int ut_presses_ = 0;
-    bool ut_last_circle_ = false;
+    // Nutzer-Test Anzeige (Farbflaechen, dann Urteil)
     int ut_color_ = 0;
     bool ut_asking_ = false;
+    // Controller-Test (Mehr > Selbsttest > L1): Auswertung im Kern (medic::PadTest), hier Zustand der Oberflaeche
+    medic::PadTest pt_;
+    bool pt_intro_ = true, pt_has_sample_ = false;
+    std::uint32_t pt_now_ = 0;
     mutable bool st_rendered_ = false;  // die Fortschrittsanzeige muss vor jedem Test gezeichnet worden sein
 
     enum class UpdateStage { Offer, ConfirmRollback, ConfirmDownload, Downloading, DownloadFail, DoneOk, DoneFail };

@@ -204,6 +204,7 @@ const char* screen_name(App::Screen s) {
         case App::Screen::ErrorCodeSource: return "Fehlercode-Quelle";
         case App::Screen::SelfTest: return "Selbsttest";
         case App::Screen::UserTest: return "Nutzer-Test";
+        case App::Screen::PadTest: return "Controller-Test";
         case App::Screen::CheckList: return "Check-up-Verlauf";
         case App::Screen::CheckCompare: return "Vergleich";
         case App::Screen::GameList: return "Spiele";

@@ -461,8 +461,8 @@
    "proves_not": "durata residua, usura, velocità oltre la cache di scrittura; la rilettura può venire dalla cache"
   },
   "hw.pad.buttons": {
-   "name": "Tasti del controller (test utente)",
-   "proves_not": "stick, grilletti, drift, qualità radio, capacità della batteria; solo se ogni tasto arriva"
+   "name": "Test del controller (test utente)",
+   "proves_not": "tasti Create e PS, vibrazione, barra luminosa, grilletti adattivi, livello della batteria, qualità radio; solo ciò che il controller comunica all'app"
   },
   "hw.display.pattern": {
    "name": "Schemi dello schermo (test utente)",

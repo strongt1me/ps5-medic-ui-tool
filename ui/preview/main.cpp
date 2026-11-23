@@ -8,6 +8,7 @@
 #include "medic_ui/png.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -242,6 +243,108 @@ int main(int argc, char** argv) {
                 if (!write_png((out / "00_splash.png").string(), canvas, scale)) throw std::runtime_error("PNG nicht schreibbar: 00_splash.png");
                 ++shots;
             }
+        }
+        {  // Controller-Test: jeder Schritt mit erfundenen Pad-Verlaeufen (kein echter Controller)
+            App pa(svc, lang);
+            if (has_backdrop) pa.set_background(backdrop);
+            auto png = [&](const char* name) {
+                pa.render(canvas);
+                if (!write_png((out / name).string(), canvas, scale)) throw std::runtime_error(std::string("PNG nicht schreibbar: ") + name);
+                ++shots;
+            };
+            std::uint32_t now = 1000;
+            auto feed = [&](const medic::PadSample& smp, int ms = 16) {
+                pa.pad_sample(smp, now);
+                now += static_cast<std::uint32_t>(ms);
+            };
+            auto neutral = [] {
+                medic::PadSample smp;
+                smp.extra = true;
+                return smp;
+            };
+            for (int i = 0; i < 3; ++i) pa.handle(Button::Down);
+            pa.handle(Button::Cross);  // Mehr
+            pa.handle(Button::Down);
+            pa.handle(Button::Cross);  // Selbsttest
+            pa.handle(Button::L1);     // Controller-Test
+            png("40_padtest_intro.png");
+            pa.handle(Button::Cross);
+            feed(neutral());
+            const std::uint32_t bits[] = {medic::kPadCross, medic::kPadCircle, medic::kPadL1, medic::kPadR1, medic::kPadL2, medic::kPadUp, medic::kPadRight, medic::kPadTouch};
+            for (const std::uint32_t b : bits) {
+                medic::PadSample smp = neutral();
+                smp.buttons = b;
+                feed(smp);
+                feed(neutral());
+            }
+            png("41_padtest_buttons.png");
+            for (int i = 0; i < 16; ++i) {  // alle Tasten, Weiter
+                const std::uint32_t all[16] = {medic::kPadCross, medic::kPadCircle, medic::kPadSquare, medic::kPadTriangle, medic::kPadL1, medic::kPadR1, medic::kPadL2, medic::kPadR2,
+                                               medic::kPadL3, medic::kPadR3, medic::kPadOptions, medic::kPadTouch, medic::kPadUp, medic::kPadDown, medic::kPadLeft, medic::kPadRight};
+                medic::PadSample smp = neutral();
+                smp.buttons = all[i];
+                feed(smp);
+                feed(neutral());
+            }
+            pa.handle(Button::Cross);
+            for (int e = 0; e < 2400; e += 16) {  // Sticks in Ruhe: rechts mit leichtem Drift
+                medic::PadSample smp = neutral();
+                smp.rx = 136;
+                smp.ry = 131;
+                feed(smp);
+            }
+            png("42_padtest_rest_measuring.png");
+            for (int e = 0; e < 3000; e += 16) {
+                medic::PadSample smp = neutral();
+                smp.rx = 136;
+                smp.ry = 131;
+                feed(smp);
+            }
+            png("43_padtest_rest_done.png");
+            pa.handle(Button::Cross);
+            for (int deg = 0; deg < 270; deg += 2) {  // Rundlauf: links fast voll, rechts nur zur Haelfte
+                const double ang = deg * 3.14159265358979 / 180.0;
+                medic::PadSample smp = neutral();
+                smp.lx = static_cast<std::uint8_t>(std::lround(128 + 127 * std::cos(ang)));
+                smp.ly = static_cast<std::uint8_t>(std::lround(128 + 127 * std::sin(ang)));
+                if (deg < 160) {
+                    smp.rx = static_cast<std::uint8_t>(std::lround(128 + 120 * std::cos(ang)));
+                    smp.ry = static_cast<std::uint8_t>(std::lround(128 + 120 * std::sin(ang)));
+                }
+                feed(smp);
+            }
+            png("44_padtest_circle.png");
+            pa.handle(Button::Cross);
+            for (int v = 0; v <= 255; v += 5) {
+                medic::PadSample smp = neutral();
+                smp.l2 = static_cast<std::uint8_t>(v);
+                smp.r2 = static_cast<std::uint8_t>(std::min(v, 200));
+                feed(smp);
+            }
+            png("45_padtest_triggers.png");
+            pa.handle(Button::Cross);
+            for (int r = 0; r < 3; ++r)
+                for (int cc = 0; cc < 4; ++cc) {
+                    medic::PadSample smp = neutral();
+                    smp.touch_count = 1;
+                    smp.finger[0].x = cc * 320 + 160;
+                    smp.finger[0].y = r * 360 + 180;
+                    feed(smp);
+                }
+            png("46_padtest_touchpad.png");
+            pa.handle(Button::Cross);
+            medic::PadSample rest = neutral();
+            rest.vb[2] = 9.8f;
+            for (int e = 0; e < 1500; e += 16) feed(rest);
+            png("47_padtest_motion_rest.png");
+            for (int e = 0; e < 2000; e += 16) feed(rest);
+            medic::PadSample moved = rest;
+            moved.va[0] = 1.2f;
+            moved.vb[0] = 2.0f;
+            feed(moved);
+            png("48_padtest_motion_move.png");
+            pa.handle(Button::Cross);
+            png("49_padtest_summary.png");
         }
         {  // Verlauf: Check-up-Liste und Reparaturen. Arbeitskopie des Snapshots, damit gespeichert werden darf (Uhr: je Check-up eine Minute weiter)
             const std::filesystem::path work = out / "_work";

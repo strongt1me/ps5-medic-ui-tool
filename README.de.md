@@ -44,7 +44,7 @@
     </td>
     <td valign="top">
       <h3>🧪 Selbsttest</h3>
-      Elf Tests der Konsole: Speicher, Temperaturen, Datenbanken, Payloads und Images, Lesetest, lokales Netz (nur Router), Wärmetest, Speichermuster, Schreibtest, Controller-Tasten und Anzeige-Muster. Jeder Test sagt, was er <i>nicht</i> beweist.
+      Elf Tests der Konsole: Speicher, Temperaturen, Datenbanken, Payloads und Images, Lesetest, lokales Netz (nur Router), Wärmetest, Speichermuster, Schreibtest, Controller (Tasten, Sticks, Trigger, Touchpad, Bewegung) und Anzeige-Muster. Jeder Test sagt, was er <i>nicht</i> beweist.
     </td>
   </tr>
   <tr>

@@ -461,8 +461,8 @@
    "proves_not": "vida útil restante, desgaste, velocidad más allá de la caché de escritura; la relectura puede venir de la caché"
   },
   "hw.pad.buttons": {
-   "name": "Botones del mando (prueba del usuario)",
-   "proves_not": "sticks, gatillos, drift, calidad de radio, capacidad de la batería; solo si llega cada botón"
+   "name": "Prueba del mando (prueba del usuario)",
+   "proves_not": "botones Create y PS, vibración, barra de luz, gatillos adaptativos, nivel de batería, calidad de radio; solo lo que el mando comunica a la app"
   },
   "hw.display.pattern": {
    "name": "Patrones de pantalla (prueba del usuario)",

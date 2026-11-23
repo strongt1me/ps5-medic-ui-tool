@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <regex>
@@ -3119,31 +3120,170 @@ void history_ui_tests() {
 void usertest_ui_tests() {
     Canvas cv(App::kWidth, App::kHeight);
     auto open_list = [&](App& a) { more_open(a, 1); };
-    {   // alle elf Tasten = bestanden
+    // Controller-Test (L1): Auswertung im Kern (tests/test_padtest.cpp), hier der Bildschirm: Einstieg, Schritte ueber pad_sample, Zusammenfassung, Eintrag.
+    struct PadDriver {
+        App& app;
+        std::uint32_t now = 1000;
+        Canvas cv{App::kWidth, App::kHeight};
+        void feed(const medic::PadSample& smp, int ms = 16) {
+            app.pad_sample(smp, now);
+            now += static_cast<std::uint32_t>(ms);
+        }
+        void hold(const medic::PadSample& smp, int total_ms) {
+            for (int e = 0; e < total_ms; e += 16) feed(smp);
+        }
+        void look() { app.render(cv); }  // jeder Schritt wird auch gezeichnet (kein Absturz, kein Ueberlauf)
+    };
+    auto pad_neutral = [] {
+        medic::PadSample smp;
+        smp.extra = true;
+        return smp;
+    };
+    {   // Einstieg: L1 oeffnet den Test, Kreis geht zurueck, nichts eingetragen
         FakeService svc;
         App a(svc);
         open_list(a);
         press(a, {Button::L1});
-        CHECK(a.screen() == App::Screen::UserTest, "Nutzer-Test: L1 oeffnet den Pad-Test");
+        CHECK(a.screen() == App::Screen::PadTest, "Controller-Test: L1 oeffnet ihn");
         a.render(cv);
-        press(a, {Button::Up, Button::Down, Button::Left, Button::Right, Button::Cross, Button::Square, Button::Triangle, Button::L1, Button::R1, Button::Options});
-        CHECK(a.screen() == App::Screen::UserTest && svc.recorded.empty(), "Nutzer-Test: zehn Tasten reichen nicht (Kreis fehlt noch)");
         press(a, {Button::Circle});
-        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.size() == 1 && svc.recorded[0].id == "hw.pad.buttons" && svc.recorded[0].status == TestStatus::Passed, "Nutzer-Test: alle elf Tasten = bestanden, eingetragen");
+        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.empty(), "Controller-Test: Kreis im Einstieg geht zurueck, nichts eingetragen");
     }
-    {   // vorzeitig beenden: Kreis zweimal
+    {   // alle sechs Schritte, dann eintragen
         FakeService svc;
         App a(svc);
         open_list(a);
-        press(a, {Button::L1, Button::Up, Button::Down, Button::Left, Button::Circle, Button::Circle});
-        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.size() == 1 && svc.recorded[0].status == TestStatus::Warn && svc.recorded[0].reason == "buttons_missing", "Nutzer-Test: fehlende Tasten = Warnung (buttons_missing)");
+        press(a, {Button::L1, Button::Cross});  // Einstieg, Start
+        PadDriver d{a};
+        d.feed(pad_neutral());
+        d.look();
+        const std::uint32_t bits[medic::PadTest::kButtons] = {medic::kPadCross, medic::kPadCircle, medic::kPadSquare, medic::kPadTriangle, medic::kPadL1,   medic::kPadR1,
+                                                              medic::kPadL2,    medic::kPadR2,     medic::kPadL3,     medic::kPadR3,       medic::kPadOptions, medic::kPadTouch,
+                                                              medic::kPadUp,    medic::kPadDown,   medic::kPadLeft,   medic::kPadRight};
+        for (int i = 0; i < medic::PadTest::kButtons; ++i) {
+            medic::PadSample smp = pad_neutral();
+            smp.buttons = bits[i];
+            d.feed(smp);
+            d.feed(pad_neutral());
+            if (i == 7) d.look();
+        }
+        d.look();
+        press(a, {Button::Down, Button::Square});  // Richtungen und Quadrat sind im Tasten-Schritt keine Bedienung
+        CHECK(a.screen() == App::Screen::PadTest, "Controller-Test: Tasten-Schritt reagiert nicht auf Tasten als Bedienung");
+        press(a, {Button::Cross});  // weiter: Sticks in Ruhe
+        d.hold(pad_neutral(), 5000);
+        d.look();
+        press(a, {Button::Cross});  // weiter: Rundlauf
+        for (int deg = 0; deg < 360; deg += 2) {
+            const double ang = deg * 3.14159265358979 / 180.0;
+            medic::PadSample smp = pad_neutral();
+            smp.lx = smp.rx = static_cast<std::uint8_t>(std::lround(128 + 127 * std::cos(ang)));
+            smp.ly = smp.ry = static_cast<std::uint8_t>(std::lround(128 + 127 * std::sin(ang)));
+            d.feed(smp);
+        }
+        d.look();
+        press(a, {Button::Cross});  // weiter: Trigger
+        for (int v = 0; v <= 255; v += 5) {
+            medic::PadSample smp = pad_neutral();
+            smp.l2 = smp.r2 = static_cast<std::uint8_t>(v);
+            d.feed(smp);
+        }
+        d.feed(pad_neutral());
+        d.look();
+        press(a, {Button::Cross});  // weiter: Touchpad
+        for (int r = 0; r < medic::PadTest::kRows; ++r)
+            for (int cc = 0; cc < medic::PadTest::kCols; ++cc) {
+                medic::PadSample smp = pad_neutral();
+                smp.touch_count = 1;
+                smp.finger[0].x = cc * 320 + 160;
+                smp.finger[0].y = r * 360 + 180;
+                d.feed(smp);
+            }
+        medic::PadSample two = pad_neutral();
+        two.touch_count = 2;
+        two.finger[0].x = 300;
+        two.finger[0].y = 300;
+        two.finger[1].x = 1500;
+        two.finger[1].y = 700;
+        d.feed(two);
+        d.look();
+        press(a, {Button::Cross});  // weiter: Bewegung
+        medic::PadSample rest = pad_neutral();
+        rest.vb[2] = 9.8f;
+        d.hold(rest, 4000);
+        d.look();
+        medic::PadSample moved = rest;
+        moved.va[0] = 2.5f;
+        moved.vb[0] = 5.0f;
+        d.feed(moved);
+        d.look();
+        press(a, {Button::Cross});  // weiter: Zusammenfassung
+        a.render(cv);
+        CHECK(a.screen() == App::Screen::PadTest && svc.recorded.empty(), "Controller-Test: in der Zusammenfassung ist noch nichts eingetragen");
+        press(a, {Button::Cross});
+        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.size() == 1 && svc.recorded[0].id == "hw.pad.buttons" && svc.recorded[0].status == TestStatus::Passed && svc.recorded[0].reason.empty(),
+              "Controller-Test: alle Schritte ok = bestanden, eingetragen");
     }
-    {   // kaum getestet = uebersprungen, nie bestanden
+    {   // Kreis zweimal im Tasten-Schritt, die uebrigen Schritte ueberspringen: Warnung mit fehlenden Tasten
         FakeService svc;
         App a(svc);
         open_list(a);
-        press(a, {Button::L1, Button::Circle, Button::Circle});
-        CHECK(svc.recorded.size() == 1 && svc.recorded[0].status == TestStatus::Skipped && svc.recorded[0].reason == "not_tested", "Nutzer-Test: fast nichts gedrueckt = skipped (not_tested)");
+        press(a, {Button::L1, Button::Cross});
+        PadDriver d{a};
+        d.feed(pad_neutral());
+        for (int i = 0; i < 2; ++i) {
+            medic::PadSample smp = pad_neutral();
+            smp.buttons = medic::kPadCircle;
+            d.feed(smp);
+            d.feed(pad_neutral());
+        }
+        d.look();
+        press(a, {Button::Triangle, Button::Triangle, Button::Triangle, Button::Triangle, Button::Triangle});  // Sticks, Rundlauf, Trigger, Touchpad, Bewegung
+        a.render(cv);
+        press(a, {Button::Cross});
+        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.size() == 1 && svc.recorded[0].status == TestStatus::Warn && svc.recorded[0].reason == "buttons_missing",
+              "Controller-Test: fehlende Tasten = Warnung (buttons_missing), eingetragen");
+    }
+    {   // Kreis mitten im Test: zurueck ohne Eintrag
+        FakeService svc;
+        App a(svc);
+        open_list(a);
+        press(a, {Button::L1, Button::Cross});
+        PadDriver d{a};
+        d.feed(pad_neutral());
+        d.feed(pad_neutral());
+        for (int i = 0; i < 2; ++i) {
+            medic::PadSample smp = pad_neutral();
+            smp.buttons = medic::kPadCircle;
+            d.feed(smp);
+            d.feed(pad_neutral());
+        }
+        CHECK(a.screen() == App::Screen::PadTest, "Controller-Test: Kreis zweimal beendet nur den Tasten-Schritt");
+        press(a, {Button::Circle});  // jetzt in Sticks in Ruhe: Kreis bricht ab
+        CHECK(a.screen() == App::Screen::SelfTest && svc.recorded.empty(), "Controller-Test: Kreis in einem Schritt bricht ab, nichts eingetragen");
+    }
+    {   // ohne Controller-Zustand steht ein Hinweis im Einstieg; Quadrat in der Zusammenfassung beginnt von vorn
+        FakeService svc;
+        App a(svc);
+        open_list(a);
+        press(a, {Button::L1});
+        a.render(cv);  // Einstieg ohne Zustand (Hinweis)
+        press(a, {Button::Cross});
+        PadDriver d{a};
+        d.feed(pad_neutral());
+        for (int i = 0; i < 2; ++i) {
+            medic::PadSample smp = pad_neutral();
+            smp.buttons = medic::kPadCircle;
+            d.feed(smp);
+            d.feed(pad_neutral());
+        }
+        press(a, {Button::Triangle, Button::Triangle, Button::Triangle, Button::Triangle, Button::Triangle});  // alle weiteren Schritte ueberspringen
+        a.render(cv);
+        press(a, {Button::Square});
+        a.render(cv);
+        CHECK(a.screen() == App::Screen::PadTest && svc.recorded.empty(), "Controller-Test: Quadrat in der Zusammenfassung beginnt von vorn, nichts eingetragen");
+        press(a, {Button::Circle});  // im ersten Schritt zaehlt Kreis als Taste, ohne Wirkung
+        CHECK(a.screen() == App::Screen::PadTest, "Controller-Test: Kreis im Tasten-Schritt ist eine Taste, keine Bedienung");
     }
     {   // Anzeige: sechs Muster, dann Urteil
         FakeService svc;
