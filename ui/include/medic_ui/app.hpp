@@ -271,6 +271,7 @@ private:
     medic::PadTest pt_;
     bool pt_intro_ = true, pt_has_sample_ = false;
     std::uint32_t pt_now_ = 0;
+    int pt_battery_pct_ = -1, pt_battery_state_ = -1;  // Akkustand aus dem letzten Pad-Abbild (-1 = unbekannt); gilt auch vor dem Start des Tests
     mutable bool st_rendered_ = false;  // die Fortschrittsanzeige muss vor jedem Test gezeichnet worden sein
 
     enum class UpdateStage { Offer, ConfirmRollback, ConfirmDownload, Downloading, DownloadFail, DoneOk, DoneFail };

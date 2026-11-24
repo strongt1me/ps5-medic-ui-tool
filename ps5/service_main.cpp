@@ -38,6 +38,8 @@
 #include <ps5/klog.h>
 
 extern "C" int sceSystemServiceParamGetInt(int param_id, int* value);
+extern "C" int sceKernelLoadStartModule(const char* name, std::size_t args, const void* argp, unsigned flags, const void* opt, int* res);
+extern "C" int sceKernelDlsym(int handle, const char* name, void** addr);
 
 using namespace medic::ui;
 namespace proto = medic::proto;
@@ -97,6 +99,67 @@ Lang console_language() {
         }
     }
     return cached;
+}
+
+// Akkustand des Controllers (Controller-Test): sceHidControlGetBatteryState(Geraete-ID, Puffer). Die Bibliothek hat keinen SDK-Stub und wird zur Laufzeit geladen; die Signatur
+// stammt aus der Programmdatei eines fremden Payloads (nur angesehen, nicht ausgefuehrt) und ist auf der Konsole nicht bestaetigt. Der erste Aufruf steht unter einer Marke: kommt
+// er nie zurueck (Absturz), bleibt sie liegen, und der Akkustand wird nie wieder abgefragt. Nur lesend; ohne Antwort bleibt pct/state -1 und die Oberflaeche zeigt nichts.
+void query_battery(std::uint32_t device_id, int& pct, int& state) {
+    using Fn = int (*)(int, void*);
+    const char* const kGuard = "/data/ps5medic/battery_call.pending";
+    static bool tried = false, disabled = false, guard_done = false;
+    static Fn fn = nullptr;
+    static int failures_logged = 0, last_pct = -2, last_state = -2;
+    pct = state = -1;
+    if (disabled) return;
+    if (!tried) {
+        tried = true;
+        std::error_code ec;
+        if (std::filesystem::exists(kGuard, ec)) {
+            disabled = true;
+            trace("Akkustand: der letzte Aufruf kam nicht zurueck (Marke " + std::string(kGuard) + "), wird nicht mehr abgefragt");
+            return;
+        }
+        const int handle = sceKernelLoadStartModule("libSceHidControl.sprx", 0, nullptr, 0, nullptr, nullptr);
+        void* addr = nullptr;
+        const int drc = handle >= 0 ? sceKernelDlsym(handle, "sceHidControlGetBatteryState", &addr) : -1;
+        trace("Akkustand: libSceHidControl handle=" + std::to_string(handle) + " dlsym rc=" + std::to_string(drc) + (addr ? " gefunden" : " nicht gefunden"));
+        if (!addr) {
+            disabled = true;
+            return;
+        }
+        fn = reinterpret_cast<Fn>(addr);
+    }
+    alignas(16) std::uint8_t buf[32] = {};
+    if (!guard_done) {
+        if (std::FILE* f = std::fopen(kGuard, "w")) std::fclose(f);
+    }
+    const int rc = fn(static_cast<int>(device_id), buf);
+    if (!guard_done) {
+        guard_done = true;
+        std::remove(kGuard);
+    }
+    char raw[40];
+    std::snprintf(raw, sizeof raw, "%02x %02x %02x %02x %02x %02x %02x %02x", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
+    if (rc < 0) {
+        if (failures_logged++ < 3) {
+            char why[80];
+            std::snprintf(why, sizeof why, "Akkustand: Aufruf fehlgeschlagen rc=0x%x Geraet=0x%x", static_cast<unsigned>(rc), static_cast<unsigned>(device_id));
+            trace(why);
+        }
+        return;
+    }
+    int p = -1, s = -1;
+    const bool ok = medic::decode_battery_state(buf, 8, p, s);
+    if (ok) {
+        pct = p;
+        state = s;
+    }
+    if (p != last_pct || s != last_state) {  // nur bei Aenderung (und beim ersten Mal): der Rohwert hilft, das Layout auf der Konsole zu bestaetigen
+        last_pct = p;
+        last_state = s;
+        trace(std::string("Akkustand: roh ") + raw + (ok ? " -> " + std::to_string(p) + " % Status " + std::to_string(s) : std::string(" -> keine Angabe")));
+    }
 }
 
 // Beide Orte werden gelesen; es gilt die Datei mit der neueren db_version (libmedic/newest.hpp, mit PC-Test).
@@ -374,6 +437,10 @@ bool serve(int client, medic::Platform& platform, const std::shared_ptr<medic::I
                     pad_extra.va[i] = f(pl + 26 + 4 * i);
                     pad_extra.vb[i] = f(pl + 38 + 4 * i);
                 }
+            } else if (type == proto::kPadDevice && len >= proto::kPadDeviceLen && !stale) {
+                // Akkustand nur im Controller-Test abfragen: die Oberflaeche zeigt ihn nur dort, und der Aufruf ist auf der Konsole noch nicht lange erprobt
+                if (app.screen() == App::Screen::PadTest) query_battery(proto::get32(pl), pad_extra.battery_pct, pad_extra.battery_state);
+                else pad_extra.battery_pct = pad_extra.battery_state = -1;
             }
             used += 5 + len;
         }

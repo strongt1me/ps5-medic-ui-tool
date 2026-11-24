@@ -42,6 +42,7 @@ int scePadInit();
 int scePadOpen(int user_id, int type, int index, void* param);
 int scePadClose(int handle);
 int scePadReadState(int handle, void* data);
+int scePadGetDeviceId(int handle, int* device_id);
 }
 
 namespace {
@@ -454,6 +455,8 @@ int main() {
     int pad = -1;
     std::uint32_t next_pad_try = 0;
     bool pad_sent = false;  // zuletzt wurde ein echter Zustand gesendet (nach einem Verlust folgt einmal der Ruhezustand)
+    std::uint32_t last_dev_ms = 0;  // letzte Geraete-ID an den Dienst (Akkustand), einmal je Sekunde
+    bool dev_logged = false;
     auto open_pad = [&]() {
         const std::uint32_t t = now_ms();
         if (pad >= 0 || t < next_pad_try) return;
@@ -610,6 +613,22 @@ int main() {
                 std::memcpy(ext + 26, d.acell, 12);
                 std::memcpy(ext + 38, d.vel, 12);
                 sent_ok = medic::proto::send_message_drop(sock, medic::proto::kPadExtra, ext, sizeof ext);
+            }
+            if (send && pad_good && sent_ok && now_ms() - last_dev_ms >= 1000) {  // Akkustand: nur die Geraete-ID, abgefragt wird im Dienst
+                last_dev_ms = now_ms();
+                int dev = 0;
+                const int dev_rc = scePadGetDeviceId(pad, &dev);
+                if (!dev_logged) {
+                    dev_logged = true;
+                    char why[80];
+                    std::snprintf(why, sizeof why, "scePadGetDeviceId rc=0x%x id=0x%x", static_cast<unsigned>(dev_rc), static_cast<unsigned>(dev));
+                    trace(why);
+                }
+                if (dev_rc >= 0) {
+                    std::uint8_t b[medic::proto::kPadDeviceLen];
+                    medic::proto::put32(b, static_cast<std::uint32_t>(dev));
+                    sent_ok = medic::proto::send_message_drop(sock, medic::proto::kPadDevice, b, sizeof b);
+                }
             }
             if (send && (!sent_ok || !medic::proto::send_message_drop(sock, medic::proto::kPad, msg, sizeof msg))) {
                 char why[80];

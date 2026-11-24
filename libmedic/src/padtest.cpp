@@ -35,6 +35,19 @@ PadTest::StageResult skipped_result(const char* reason) { return {PadTest::Verdi
 
 }  // namespace
 
+bool decode_battery_state(const std::uint8_t* raw, std::size_t n, int& pct, int& state) {
+    pct = state = -1;
+    if (!raw || n < 8) return false;
+    bool any = false;
+    for (std::size_t i = 0; i < 8; ++i) any = any || raw[i] != 0;
+    if (!any) return false;
+    auto u32 = [&](std::size_t o) { return static_cast<unsigned long long>(raw[o]) | static_cast<unsigned long long>(raw[o + 1]) << 8 | static_cast<unsigned long long>(raw[o + 2]) << 16 | static_cast<unsigned long long>(raw[o + 3]) << 24; };
+    if (u32(4) > 100) return false;
+    pct = static_cast<int>(u32(4));
+    state = static_cast<int>(std::min<unsigned long long>(u32(0), 255));
+    return true;
+}
+
 const char* PadTest::drift_label(double pct) { return pct < kDriftOk ? "ok" : (pct < kDriftLight ? "light" : "drift"); }
 
 int PadTest::rest_deadzone_pct(int stick) const { return static_cast<int>(std::ceil(rest_dist_[static_cast<std::size_t>(stick)])) + 2; }
@@ -355,6 +368,10 @@ TestResult PadTest::result(const std::string& started) const {
         r.measurements.push_back({"trigger_r2_max", static_cast<double>(trig_max_[1]), "of 255"});
     }
     if (saw_finger_) r.measurements.push_back({"touch_cells", static_cast<double>(cells_touched()), "of 18"});
+    if (cur_.battery_pct >= 0) {  // nur zur Anzeige und fuer die Akten: aendert das Ergebnis nicht
+        r.measurements.push_back({"battery_pct", static_cast<double>(cur_.battery_pct), "%"});
+        if (cur_.battery_state >= 0) r.measurements.push_back({"battery_state_raw", static_cast<double>(cur_.battery_state), ""});
+    }
     return r;
 }
 

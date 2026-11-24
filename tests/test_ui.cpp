@@ -3158,6 +3158,39 @@ void usertest_ui_tests() {
         press(a, {Button::L1});
         CHECK(a.screen() == App::Screen::SelfTest, "Selbsttest: L1 oeffnet den Controller-Test nicht mehr (er liegt auf der Startseite)");
     }
+    {   // Akkustand: Texte in allen fuenf Sprachen, Anzeige im Einstieg und in der Zusammenfassung (nur Zeichnen: kein Absturz), vor dem Test nichts Unbekanntes
+        for (Lang l : {Lang::De, Lang::En, Lang::Fr, Lang::It, Lang::Es})
+            for (const char* key : {"padtest.battery", "padtest.battery_charging", "padtest.battery_full", "padtest.battery_low"}) {
+                const std::string t = Strings::get(l).fmt(key, {{"pct", "64"}});
+                CHECK(Strings::get(l).has(key) && t.find("64") != std::string::npos && t.find("{pct}") == std::string::npos, std::string("Controller-Test: Akkutext ") + key + " (" + lang_code(l) + ")");
+            }
+        FakeService svc;
+        App a(svc);
+        start_open(a, 3);
+        PadDriver d{a};
+        for (const auto& st : {std::pair<int, int>{64, 0}, {64, 1}, {100, 2}, {12, 0}, {12, 1}, {-1, -1}}) {  // Prozent, Status
+            medic::PadSample smp = pad_neutral();
+            smp.battery_pct = st.first;
+            smp.battery_state = st.second;
+            d.feed(smp);
+            d.look();  // Einstieg
+        }
+        press(a, {Button::Cross});  // Start
+        medic::PadSample smp = pad_neutral();
+        smp.battery_pct = 12;
+        smp.battery_state = 0;
+        d.feed(smp);
+        for (int i = 0; i < 2; ++i) {  // Kreis zweimal beendet den Tasten-Schritt
+            medic::PadSample circle = smp;
+            circle.buttons = medic::kPadCircle;
+            d.feed(circle);
+            d.feed(smp);
+        }
+        for (int i = 1; i < medic::PadTest::kStageCount; ++i) press(a, {Button::Triangle});  // die uebrigen Schritte ueberspringen: Zusammenfassung
+        d.feed(smp);
+        d.look();
+        CHECK(a.screen() == App::Screen::PadTest, "Controller-Test: Zusammenfassung mit Akkustand wird gezeichnet");
+    }
     {   // alle sechs Schritte, dann eintragen
         FakeService svc;
         App a(svc);

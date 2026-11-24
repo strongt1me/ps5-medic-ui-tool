@@ -1758,12 +1758,15 @@ void App::draw_usertest(Canvas& c) const {
 void App::open_padtest() {
     pt_.reset();
     pt_intro_ = true;
+    pt_battery_pct_ = pt_battery_state_ = -1;
     screen_ = Screen::PadTest;
 }
 
 void App::pad_sample(const medic::PadSample& s, std::uint32_t now_ms) {
     pt_has_sample_ = true;
     pt_now_ = now_ms;
+    pt_battery_pct_ = s.battery_pct;
+    pt_battery_state_ = s.battery_state;
     if (screen_ != Screen::PadTest || pt_intro_) return;
     pt_.feed(s, now_ms);
     if (pt_.stage() == medic::PadTest::Stage::Buttons && pt_.circle_exit_requested()) pt_.next();  // Kreis zweimal: Tasten-Schritt endet mit dem, was da ist
@@ -1848,6 +1851,15 @@ void App::draw_padtest(Canvas& c) const {
     const auto& S = Strings::get(lang_);
     title_icon(c, Icon::Pad, kTintGreen, S("padtest.title"));
 
+    // Akkustand als Textzeile (leer, wenn unbekannt). Status 1 = laedt, 2 = voll (so im HID-Bericht des DualSense; auf der Konsole noch nicht bestaetigt); unter 20 % ohne Laden = niedrig.
+    auto battery_line = [&](bool& low) -> std::string {
+        low = false;
+        if (pt_battery_pct_ < 0) return {};
+        const bool charging = pt_battery_state_ == 1, full = pt_battery_state_ == 2;
+        low = pt_battery_pct_ < 20 && !charging && !full;
+        return S.fmt(charging ? "padtest.battery_charging" : (full ? "padtest.battery_full" : (low ? "padtest.battery_low" : "padtest.battery")), {{"pct", std::to_string(pt_battery_pct_)}});
+    };
+
     if (pt_intro_) {
         glass_panel(c, M, 230, W - 2 * M, 480, 24);
         int y = 262;
@@ -1862,6 +1874,8 @@ void App::draw_padtest(Canvas& c) const {
                 y += small().line_height() + 2;
             }
         }
+        bool blow = false;
+        if (const std::string bl = battery_line(blow); !bl.empty()) body().draw(c, M + 48, y + 14, bl, blow ? kWarn : kText);
         draw_hints(c, {{PadGlyph::Cross, S("padtest.start")}, {PadGlyph::Circle, S("common.back")}});
         return;
     }
@@ -1896,6 +1910,8 @@ void App::draw_padtest(Canvas& c) const {
             small().draw(c, M + 100, y + 10 + body().line_height() + 2, elide(small(), detail, W - 2 * M - 140), warn ? kWarn : kDim);
             y += rh + gap;
         }
+        bool blow = false;
+        if (const std::string bl = battery_line(blow); !bl.empty()) small().draw(c, M + 4, y + 2, bl, blow ? kWarn : kDim);
         draw_hints(c, {{PadGlyph::Cross, S("padtest.save")}, {PadGlyph::Square, S("padtest.repeat")}, {PadGlyph::Circle, S("padtest.discard")}});
         return;
     }

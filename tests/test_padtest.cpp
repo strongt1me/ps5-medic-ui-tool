@@ -361,6 +361,46 @@ void padtest_tests() {
         }
         CHECK(has_rest && has_buttons, "Padtest: Messwerte stehen im Ergebnis");
     }
+    {  // Akkustand (Stufe 2): Auswertung der rohen Bytes von sceHidControlGetBatteryState, nur Anzeige
+        int pct = 7, st = 7;
+        const std::uint8_t two32[8] = {1, 0, 0, 0, 64, 0, 0, 0};
+        CHECK(decode_battery_state(two32, 8, pct, st) && pct == 64 && st == 1, "Akku: zwei 32-Bit-Werte (Status, Prozent) werden gelesen");
+        const std::uint8_t edge[8] = {2, 0, 0, 0, 100, 0, 0, 0};
+        CHECK(decode_battery_state(edge, 8, pct, st) && pct == 100 && st == 2, "Akku: 100 % gilt noch");
+        const std::uint8_t zeros[8] = {};
+        CHECK(!decode_battery_state(zeros, 8, pct, st) && pct == -1 && st == -1, "Akku: lauter Nullen heissen keine Angabe (die Konsole hat nichts geschrieben)");
+        const std::uint8_t big_state[8] = {0x34, 0x12, 0, 0, 5, 0, 0, 0};  // Status wird auf 255 begrenzt
+        CHECK(decode_battery_state(big_state, 8, pct, st) && pct == 5 && st == 255, "Akku: ein grosser Statuswert wird auf 255 begrenzt");
+        const std::uint8_t over[8] = {1, 0, 0, 0, 101, 0, 0, 0};  // 101 % ist kein Prozentwert; andere Layouts werden nicht geraten
+        CHECK(!decode_battery_state(over, 8, pct, st) && pct == -1 && st == -1, "Akku: ueber 100 % = keine Angabe");
+        const std::uint8_t huge[8] = {1, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF};
+        CHECK(!decode_battery_state(huge, 8, pct, st), "Akku: 32-Bit-Wert ohne Ueberlauf geprueft");
+        const std::uint8_t one[2] = {1, 70};
+        CHECK(!decode_battery_state(one, 2, pct, st) && !decode_battery_state(nullptr, 8, pct, st), "Akku: zu kurze oder fehlende Daten = keine Angabe");
+
+        Drive b;
+        PadSample bs = neutral();
+        bs.battery_pct = 64;
+        bs.battery_state = 1;
+        b.feed(bs);
+        b.t.skip();
+        bool has_pct = false, has_state = false;
+        for (const auto& m : b.t.result("").measurements) {
+            if (m.name == "battery_pct" && m.value == 64) has_pct = true;
+            if (m.name == "battery_state_raw" && m.value == 1) has_state = true;
+        }
+        CHECK(has_pct && has_state, "Akku: der Messwert steht im Ergebnis");
+        Drive nb;
+        nb.feed(neutral());
+        bool any_battery = false;
+        for (const auto& m : nb.t.result("").measurements)
+            if (m.name.rfind("battery", 0) == 0) any_battery = true;
+        CHECK(!any_battery, "Akku: ohne Angabe kein Messwert");
+        Drive v1, v2;
+        v1.feed(bs);
+        v2.feed(neutral());
+        CHECK(v1.t.result("").status == v2.t.result("").status && v1.t.result("").reason == v2.t.result("").reason, "Akku: aendert das Ergebnis des Tests nicht");
+    }
     {  // reset
         Drive d;
         d.feed(pressed(kPadCross));

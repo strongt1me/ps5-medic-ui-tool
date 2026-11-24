@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Controller-Test (Stufe 1: nur Eingaben, nichts wird an den Controller gesendet): Tasten, Sticks (Ruhe/Drift und Rundlauf), Trigger, Touchpad, Bewegungssensoren.
+// Dazu der Akkustand (nur Anzeige, ohne Einfluss auf das Ergebnis).
 // Reine Auswertung ohne Plattform: die Oberflaeche fuettert Pad-Zustaende (feed), wechselt die Schritte (next/skip) und holt am Ende das Ergebnis.
 // So laeuft die ganze Auswertung am PC gegen erfundene Pad-Verlaeufe (tests/test_padtest.cpp). Die Schwellen sind Richtwerte, keine gemessene Norm.
 #pragma once
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 
@@ -29,7 +31,14 @@ struct PadSample {
     // Zwei Bewegungs-Dreiergruppen: welche die Beschleunigung ist und welche der Gyro, steht in der Struktur der App nicht sicher; der Test erkennt es an der
     // Schwerkraft im Ruhezustand (die Gruppe mit rund 1 g bzw. 9,8 m/s^2).
     float va[3] = {0, 0, 0}, vb[3] = {0, 0, 0};
+    // Akkustand (Stufe 2, nur lesen): Prozent 0..100 und der Statuswert, wie ihn die Konsole meldet; -1 = unbekannt (aeltere App, nicht lesbar, keine Angabe).
+    int battery_pct = -1, battery_state = -1;
 };
+
+// Wertet die rohen 8 Bytes aus, die sceHidControlGetBatteryState liefert (Puffer vorher genullt): zwei 32-Bit-Werte, erst der Status, dann der Prozentwert. Das Layout ist auf der
+// Konsole nicht bestaetigt (es stammt aus der Programmdatei eines fremden Payloads, die nur angesehen wurde); deshalb gilt nur diese eine Deutung und nur mit Prozent 0..100.
+// Lauter Nullen heissen "keine Angabe" (die Konsole hat nichts geschrieben). Rueckgabe false = unbekannt; der Dienst schreibt die Rohbytes ins Protokoll.
+bool decode_battery_state(const std::uint8_t* raw, std::size_t n, int& pct, int& state);
 
 class PadTest {
 public:
