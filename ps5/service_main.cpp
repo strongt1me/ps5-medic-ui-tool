@@ -40,7 +40,6 @@
 extern "C" int sceSystemServiceParamGetInt(int param_id, int* value);
 extern "C" int sceKernelLoadStartModule(const char* name, std::size_t args, const void* argp, unsigned flags, const void* opt, int* res);
 extern "C" int sceKernelDlsym(int handle, const char* name, void** addr);
-
 using namespace medic::ui;
 namespace proto = medic::proto;
 
@@ -120,10 +119,25 @@ void query_battery(std::uint32_t device_id, int& pct, int& state) {
             trace("Akkustand: der letzte Aufruf kam nicht zurueck (Marke " + std::string(kGuard) + "), wird nicht mehr abgefragt");
             return;
         }
-        const int handle = sceKernelLoadStartModule("libSceHidControl.sprx", 0, nullptr, 0, nullptr, nullptr);
+        // Unter dem blossen Namen schlug das Laden fehl (Konsole 24. Nov. 2026, FW 12.00); die Datei liegt in /system/common/lib
         void* addr = nullptr;
-        const int drc = handle >= 0 ? sceKernelDlsym(handle, "sceHidControlGetBatteryState", &addr) : -1;
-        trace("Akkustand: libSceHidControl handle=" + std::to_string(handle) + " dlsym rc=" + std::to_string(drc) + (addr ? " gefunden" : " nicht gefunden"));
+        for (const char* path : {"libSceHidControl.sprx", "/system/common/lib/libSceHidControl.sprx"}) {
+            const int handle = sceKernelLoadStartModule(path, 0, nullptr, 0, nullptr, nullptr);
+            int drc = handle >= 0 ? sceKernelDlsym(handle, "sceHidControlGetBatteryState", &addr) : -1;
+            if (drc != 0) addr = nullptr;
+            std::string found = addr ? "sceHidControlGetBatteryState" : "";
+            if (handle >= 0 && !addr) {
+                // Der Klartextname wird nicht gefunden (Konsole 24. Nov. 2026, FW 12.00, Bibliothek liegt in /system/common/lib). Auch die NID (SHA-1 des Namens, 11 Zeichen) allein nicht;
+                // die Namen stehen nicht in den geladenen Segmenten des Moduls (dort gesucht, nichts gefunden), und Bibliotheks- und Modulkennung fuer "NID#x#y" sind unbekannt.
+                drc = sceKernelDlsym(handle, "sazbddaCSWo", &addr);  // NID von sceHidControlGetBatteryState
+                if (drc != 0) addr = nullptr;
+                if (addr) found = "sazbddaCSWo";
+            }
+            char msg[200];
+            std::snprintf(msg, sizeof msg, "Akkustand: %s handle=0x%x dlsym rc=0x%x %s %s", path, static_cast<unsigned>(handle), static_cast<unsigned>(drc), addr ? "gefunden als" : "nicht gefunden", found.c_str());
+            trace(msg);
+            if (addr) break;
+        }
         if (!addr) {
             disabled = true;
             return;

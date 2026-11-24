@@ -49,6 +49,7 @@ sceKernelMapDirectMemory
 sceKernelSendNotificationRequest
 sceKernelUsleep
 scePadClose
+scePadGetDeviceId
 scePadInit
 scePadOpen
 scePadReadState
