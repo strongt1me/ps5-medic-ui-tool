@@ -97,10 +97,30 @@ void chmod_tests() {
     const RuleSet rs = load_rules_from_file(testutil::kShipped);
     const auto findings = evaluate(rs, f);
     const Finding* fd = find_rule(findings, "game.no_exec_permission");
-    CHECK(fd && fd->fix.empty(), "Rechte: Regel feuert, ohne Reparatur (Marc, 16. Nov. 2026: S13 nur erklaeren)");
+    CHECK(fd && fd->fix == "chmod_exec", "Rechte: Regel feuert mit dem Fix chmod_exec (Marc, 24. Nov. 2026; am 16. Nov. war S13 ohne Reparatur)");
     if (!fd) return;
-    CHECK(plan_fix(*fd, f, p.fs()).changes.empty(), "Rechte: ohne Fix plant plan_fix nichts");
-    // Die Rechte-Aenderung der Engine (Change::Kind::Chmod) bleibt als Baustein; getestet mit einem von Hand gebauten Plan
+    {   // plan_fix: Ausfuehrungsbits dazu (Modus | 0111), alle anderen Rechte bleiben
+        const FixPlan real = plan_fix(*fd, f, p.fs());
+        CHECK(real.changes.size() == 3 && real.warnings.empty(), "Rechte: Plan mit drei Aenderungen, ohne Warnung");
+        bool eboot = false, prx = false, unity = false;
+        for (const auto& c : real.changes) {
+            if (c.kind != Change::Kind::Chmod) continue;
+            if (c.path == game + "/eboot.bin" && c.base_mode == 0666 && c.mode == 0777) eboot = true;
+            if (c.path == game + "/sce_module/libfoo.prx" && c.base_mode == 0666 && c.mode == 0777) prx = true;
+            if (c.path == game + "/Media/Modules/Unity.prx" && c.base_mode == 0644 && c.mode == 0755) unity = true;
+        }
+        CHECK(eboot && prx && unity, "Rechte: 0666 -> 0777, 0644 -> 0755 (nur die Ausfuehrungsbits kommen dazu)");
+        CHECK(!real.hint_de.empty() && !real.hint_en.empty() && real.changes[0].note_de.find("Ausführungsrecht") != std::string::npos, "Rechte: Notiz und Hinweis vorhanden");
+        const ApplyResult rar = apply_plan(real, p, policy_from_facts(f), {"20261124T100000Z", true});
+        CHECK(rar.ok, "Rechte: geplanter Fix laesst sich anwenden (" + rar.error + ")");
+        CHECK(mode_of(sb.real(game + "/eboot.bin")) == 0777 && mode_of(sb.real(game + "/Media/Modules/Unity.prx")) == 0755 && mode_of(sb.real(game + "/sce_module/ok.sprx")) == 0755 &&
+                  mode_of(sb.real(game + "/Media/data.bin")) == 0666,
+              "Rechte: Programmdateien ausfuehrbar, Datendatei unberuehrt");
+        CHECK(plan_fix(*fd, f, p.fs()).changes.empty(), "Rechte: nach dem Anwenden plant der Fix nichts mehr (Dateien schon ausfuehrbar)");
+        const UndoResult rur = undo_txn(p, policy_from_facts(f), rar.txn, "20261124T100100Z");
+        CHECK(rur.ok && mode_of(sb.real(game + "/eboot.bin")) == 0666 && mode_of(sb.real(game + "/Media/Modules/Unity.prx")) == 0644, "Rechte: Rueckgaengig stellt 0666 und 0644 wieder her (" + rur.error + ")");
+    }
+    // Die Rechte-Aenderung der Engine (Change::Kind::Chmod) wird zusaetzlich mit einem von Hand gebauten Plan getestet
     FixPlan plan;
     plan.fix_id = "test_chmod";
     plan.rule_id = "test";

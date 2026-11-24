@@ -12,6 +12,12 @@ namespace {
 
 // Deutsches Fragment -> englisches Fragment; laengere zuerst. Pfade und Namen in den Meldungen bleiben stehen.
 const std::pair<const char*, const char*> kFragments[] = {
+    {"Es sind mehr Dateien betroffen als hier aufgeführt; nach dem Fix erneut prüfen",
+     "More files are affected than listed here; check again after the fix"},
+    {"Die Markierung des Selbsttests steht nicht auf „läuft“",
+     "The self-test marker is not set to “running”"},
+    {"Keine Markierung des Selbsttests gefunden",
+     "No self-test marker found"},
     // Rechte setzen (Change::Kind::Chmod)
     {"Die Rechte haben sich seit der Vorschau geändert (bitte neu prüfen): ",
      "The permissions changed since the preview (please check again): "},

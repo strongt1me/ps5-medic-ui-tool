@@ -20,6 +20,21 @@ struct Entry {
 
 const Entry kEntries[] = {
     // ---- Notizen und Hinweise der Fixes ----
+    {"Set the execute permission (", "Définir le droit d'exécution (", "Impostare il permesso di esecuzione (", "Establecer el permiso de ejecución ("},
+    {"Only the permissions change (to 0777, or the execute permission is added), the content stays; undo restores the old permissions. They can be missing again the next time you copy with FTP (depends on the FTP server).",
+     "Seuls les droits changent (0777, ou le droit d'exécution est ajouté), le contenu reste ; annuler rétablit les anciens droits. Ils peuvent manquer de nouveau à la prochaine copie par FTP (selon le serveur FTP).",
+     "Cambiano solo i permessi (a 0777, oppure si aggiunge il permesso di esecuzione), il contenuto resta; annullare ripristina i vecchi permessi. Possono mancare di nuovo alla prossima copia via FTP (dipende dal server FTP).",
+     "Solo cambian los permisos (a 0777, o se añade el permiso de ejecución), el contenido no cambia; deshacer restaura los permisos antiguos. Pueden volver a faltar en la próxima copia por FTP (según el servidor FTP)."},
+    {"Set the self-test marker from “running” to “done” (backup first)", "Passer le marqueur de l'autotest de « en cours » à « terminé » (sauvegarde d'abord)",
+     "Impostare il marcatore dell'autotest da «in esecuzione» a «terminato» (prima il backup)", "Cambiar el marcador del autotest de «en ejecución» a «terminado» (primero copia de seguridad)"},
+    {"Only the self-test marker file is changed; undo brings it and the hint back. The cause (crash, restart, power loss) stays unknown.",
+     "Seul le fichier marqueur de l'autotest est modifié ; annuler le ramène avec l'indice. La cause (plantage, redémarrage, coupure de courant) reste inconnue.",
+     "Viene modificato solo il file marcatore dell'autotest; annullare lo riporta insieme all'indizio. La causa (crash, riavvio, interruzione di corrente) resta sconosciuta.",
+     "Solo se cambia el archivo marcador del autotest; deshacer lo devuelve junto con el aviso. La causa (cuelgue, reinicio, corte de corriente) sigue sin conocerse."},
+    {"More files are affected than listed here; check again after the fix", "Plus de fichiers sont concernés que ceux listés ici ; revérifiez après le correctif",
+     "Sono interessati più file di quelli elencati qui; controlla di nuovo dopo la correzione", "Hay más archivos afectados de los listados aquí; vuelve a comprobar tras la corrección"},
+    {"No self-test marker found", "Aucun marqueur d'autotest trouvé", "Nessun marcatore dell'autotest trovato", "No se encontró ningún marcador del autotest"},
+    {"The self-test marker is not set to “running”", "Le marqueur de l'autotest n'est pas sur « en cours »", "Il marcatore dell'autotest non è su «in esecuzione»", "El marcador del autotest no está en «en ejecución»"},
     {"Remove parentheses from the file name", "Retirer les parenthèses du nom de fichier", "Rimuovere le parentesi dal nome del file", "Quitar los paréntesis del nombre del archivo"},
     {"Rename the file to the expected letter case (", "Mettre le nom du fichier dans la casse attendue (", "Portare il nome del file alle maiuscole/minuscole previste (",
      "Poner el nombre del archivo en las mayúsculas/minúsculas esperadas ("},

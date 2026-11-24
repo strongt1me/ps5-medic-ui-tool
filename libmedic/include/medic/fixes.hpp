@@ -30,6 +30,8 @@
 //                                       nie loeschen; check_size bricht ab, wenn die Datei noch waechst)
 //   quarantine_partial_folder           keine; liest games.partial_folders[] (zstd-Volumes ohne ampr_zstd.index), verschiebt den ganzen Ordner nach <Scanpfad>/.medic_broken/
 //                                       (derselbe Scanpfad, nie loeschen; Marc, 16. Nov. 2026: S32)
+//   chmod_exec                          keine; liest games.noexec[] (files[]), setzt das Ausfuehrungsrecht dazu (Modus | 0111); Rueckgaengig stellt den Modus wieder her
+//   selftest_clear_marker               keine; setzt die Markierung "running" in /data/ps5medic/selftest/running.json auf "done" (Backup, Rueckgaengig bringt sie zurueck)
 //   pldmgr_enable_autoload              keine; setzt AUTOLOAD_ENABLED=1 in /data/pldmgr/pldmgr_config.txt
 //   fix_image_nesting_hint              keine (nur Hinweis)
 #pragma once

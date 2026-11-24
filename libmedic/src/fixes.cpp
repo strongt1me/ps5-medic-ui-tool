@@ -4,6 +4,7 @@
 #include "medic/collectors.hpp"
 #include "medic/fixes.hpp"
 #include "medic/ini.hpp"
+#include "medic/selftest.hpp"
 #include "medic/sha256.hpp"
 
 #include <algorithm>
@@ -695,6 +696,77 @@ void plan_quarantine_partial_folder(FixPlan& plan, const Facts& facts, const IFi
     plan.hint_en = "The folder is not deleted but moved as a whole into .medic_broken in the scan path (undo brings it back). If it is still being written (a transfer or a pack job is running), this stops the job: let it finish first.";
 }
 
+// ---- chmod_exec ---------------------------------------------------------------------------------------------------------------
+// Programmdateien ohne Ausfuehrungsrecht (games.noexec[]: files[]): die Ausfuehrungsbits kommen dazu (Modus | 0111, aus 0666 wird 0777), alle anderen Rechte bleiben.
+// Der Modus wird beim Planen neu gelesen (base_mode): aendert er sich bis zur Bestaetigung, lehnt apply_plan ab; der alte Modus steht im Journal, Rueckgaengig stellt ihn wieder her.
+// Marc, 24. Nov. 2026: S13 wieder mit Reparatur (am 16. Nov. war sie entfernt, weil sie sich auf der Konsole nicht pruefen liess).
+
+void plan_chmod_exec(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    const PathPolicy policy = policy_from_facts(facts);
+    long total = 0, listed = 0;
+    for (const auto& g : array_fact(facts, "games.noexec")) {
+        total += g.value("count", 0L);
+        if (!g.contains("files") || !g["files"].is_array()) continue;
+        for (const auto& fj : g["files"]) {
+            if (!fj.is_string()) continue;
+            ++listed;
+            const std::string path = fj.get<std::string>();
+            if (std::string why; !policy.allowed(path, &why)) {
+                plan.warnings.push_back("Übersprungen (außerhalb der erlaubten Ordner): " + path);
+                continue;
+            }
+            std::uint32_t mode = 0;
+            if (!fs.exists(path) || !fs.file_mode(path, mode)) {
+                plan.warnings.push_back("Übersprungen (Rechte nicht lesbar): " + path);
+                continue;
+            }
+            if ((mode & 0111u) != 0) continue;  // inzwischen ausfuehrbar
+            Change c;
+            c.kind = Change::Kind::Chmod;
+            c.path = path;
+            c.base_mode = mode;
+            c.mode = (mode & 07777u) | 0111u;
+            c.note_de = "Ausführungsrecht setzen (" + base_of(path) + ")";
+            c.note_en = "Set the execute permission (" + base_of(path) + ")";
+            plan.changes.push_back(std::move(c));
+        }
+    }
+    if (plan.changes.empty()) plan.warnings.push_back("Keine Programmdatei ohne Ausführungsrecht in den erlaubten Ordnern gefunden");
+    if (total > listed) plan.warnings.push_back("Es sind mehr Dateien betroffen als hier aufgeführt; nach dem Fix erneut prüfen");
+    plan.hint_de = "Nur die Rechte ändern sich (zu 0777 bzw. um das Ausführungsrecht ergänzt), der Inhalt bleibt; Rückgängig stellt die alten Rechte wieder her. Beim nächsten Kopieren per FTP können sie wieder fehlen (je nach FTP-Server).";
+    plan.hint_en = "Only the permissions change (to 0777, or the execute permission is added), the content stays; undo restores the old permissions. They can be missing again the next time you copy with FTP (depends on the FTP server).";
+}
+
+// ---- selftest_clear_marker ----------------------------------------------------------------------------------------------------
+// Die Markierung "laeuft" des letzten Selbsttests (selftest/running.json) bleibt nach Absturz oder Stromverlust liegen. Der Fix setzt sie auf "done", wie ein ordentliches Ende
+// (die Datei wird gesichert, Rueckgaengig bringt die Markierung und damit den Befund zurueck). Ein neuer Selbsttest setzt sie ohnehin neu.
+
+void plan_selftest_clear_marker(FixPlan& plan, const IFileSystem& fs) {
+    std::string text;
+    if (!fs.read_file(kSelftestMarkerPath, text)) {
+        plan.warnings.push_back("Keine Markierung des Selbsttests gefunden");
+        return;
+    }
+    const json m = json::parse(text, nullptr, false);
+    if (!m.is_object() || str_of(m, "state") != "running") {
+        plan.warnings.push_back("Die Markierung des Selbsttests steht nicht auf „läuft“");
+        return;
+    }
+    json out = {{"state", "done"}, {"started", str_of(m, "started")}, {"cleared_by", "ps5medic"}};
+    Change c;
+    c.kind = Change::Kind::WriteFile;
+    c.path = kSelftestMarkerPath;
+    c.content = out.dump() + "\n";
+    c.check_base = true;
+    c.base_existed = true;
+    c.base_sha = sha256_hex(text);
+    c.note_de = "Markierung „läuft“ des Selbsttests auf „beendet“ setzen (vorher Backup)";
+    c.note_en = "Set the self-test marker from “running” to “done” (backup first)";
+    plan.changes.push_back(std::move(c));
+    plan.hint_de = "Nur die Markierungsdatei des Selbsttests wird geändert; Rückgängig bringt sie und damit den Hinweis zurück. Die Ursache (Absturz, Neustart, Stromverlust) bleibt unbekannt.";
+    plan.hint_en = "Only the self-test marker file is changed; undo brings it and the hint back. The cause (crash, restart, power loss) stays unknown.";
+}
+
 // ---- pldmgr_enable_autoload ---------------------------------------------------------------------------------------------------
 void plan_pldmgr_enable(FixPlan& plan, const Finding& finding, const Facts& facts, const IFileSystem& fs) {
     Finding f = finding;
@@ -826,6 +898,10 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
         plan_quarantine_leftovers(plan, facts, fs);
     } else if (finding.fix == "quarantine_partial_folder") {
         plan_quarantine_partial_folder(plan, facts, fs);
+    } else if (finding.fix == "chmod_exec") {
+        plan_chmod_exec(plan, facts, fs);
+    } else if (finding.fix == "selftest_clear_marker") {
+        plan_selftest_clear_marker(plan, fs);
     } else if (finding.fix == "pldmgr_enable_autoload") {
         plan_pldmgr_enable(plan, finding, facts, fs);
     } else if (finding.fix == "smp_disable_conflicting_backpork") {

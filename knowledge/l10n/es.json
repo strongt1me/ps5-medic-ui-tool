@@ -223,7 +223,7 @@
    "confidence_reason": "Se lee el tamaño; un sistema de archivos con seguridad no cabe en menos de 512 bytes. No se observó en la consola de prueba cómo trata ShadowMount+ esos archivos."
   },
   "game.no_exec_permission": {
-   "text": "Los archivos de programa de un juego (eboot.bin, módulos) no tienen permiso de ejecución, por ejemplo 0666 en lugar de 0777. La consola no inicia esos archivos y notifica CE-107750-0. Ocurre a menudo al copiar por FTP, según el servidor FTP. Pon los permisos de estos archivos en 0777 en tu programa FTP (chmod 777); el contenido no cambia. Medic no cambia nada aquí.",
+   "text": "Los archivos de programa de un juego (eboot.bin, módulos) no tienen permiso de ejecución, por ejemplo 0666 en lugar de 0777. La consola no inicia esos archivos y notifica CE-107750-0. Ocurre a menudo al copiar por FTP, según el servidor FTP. La corrección da permiso de ejecución a estos archivos (0666 pasa a 0777); el contenido no cambia, deshacer restaura los permisos antiguos. Pueden volver a faltar en la próxima copia por FTP: pon 0777 (chmod 777) como valor predeterminado en tu programa FTP.",
    "confidence_reason": "Los permisos se leen. Que la consola no inicie un archivo sin permiso de ejecución se observó el 13 de noviembre de 2026 en la consola de prueba con nuestro propio eboot.bin y lo confirmó un usuario (ampr-emu-ng, issue 41) con una copia FTP."
   },
   "game.leftover_parts": {
@@ -335,7 +335,7 @@
    "confidence_reason": "El resultado viene de una ejecución de esta app en esta consola y se lee. De ello no se puede determinar la causa de un error de lectura; las posibilidades indicadas son habituales, no demostradas."
   },
   "selftest.interrupted": {
-   "text": "El último autotest no terminó correctamente (marcador «en ejecución» aún en /data/ps5medic/selftest). Encaja con un cuelgue, un reinicio o un corte de corriente, pero también puede ser un simple apagado: indicio de problemas con la unidad, la memoria o la alimentación, no una prueba. Ejecuta el autotest de nuevo; así se restablece el marcador.",
+   "text": "El último autotest no terminó correctamente (marcador «en ejecución» aún en /data/ps5medic/selftest). Encaja con un cuelgue, un reinicio o un corte de corriente, pero también puede ser un simple apagado: indicio de problemas con la unidad, la memoria o la alimentación, no una prueba. La corrección restablece el marcador (copia de seguridad, deshacer lo devuelve); un nuevo autotest lo restablece de todos modos.",
    "confidence_reason": "Se lee el marcador. Interpretarlo como un cuelgue es una deducción: un apagado deliberado o un programa que terminó sin cierre correcto también lo dejan."
   },
   "selftest.write_failed": {

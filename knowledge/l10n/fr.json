@@ -223,7 +223,7 @@
    "confidence_reason": "La taille est lue ; un système de fichiers ne tient certainement pas dans moins de 512 octets. La façon dont ShadowMount+ traite ces fichiers n'a pas été observée sur la console de test."
   },
   "game.no_exec_permission": {
-   "text": "Les fichiers de programme d'un jeu (eboot.bin, modules) n'ont pas le droit d'exécution, par exemple 0666 au lieu de 0777. La console ne démarre pas ces fichiers et signale CE-107750-0. Cela arrive souvent lors d'une copie par FTP, selon le serveur FTP. Mettez les droits de ces fichiers sur 0777 dans votre client FTP (chmod 777) ; le contenu reste intact. Medic ne modifie rien ici.",
+   "text": "Les fichiers de programme d'un jeu (eboot.bin, modules) n'ont pas le droit d'exécution, par exemple 0666 au lieu de 0777. La console ne démarre pas ces fichiers et signale CE-107750-0. Cela arrive souvent lors d'une copie par FTP, selon le serveur FTP. Le correctif donne le droit d'exécution à ces fichiers (0666 devient 0777) ; le contenu reste intact, annuler rétablit les anciens droits. Ils peuvent manquer de nouveau à la prochaine copie par FTP : réglez 0777 (chmod 777) par défaut dans votre client FTP.",
    "confidence_reason": "Les droits sont lus. Que la console ne démarre pas un fichier sans droit d'exécution a été observé le 13 novembre 2026 sur la console de test avec notre propre eboot.bin, et confirmé par un utilisateur (ampr-emu-ng, issue 41) avec une copie FTP."
   },
   "game.leftover_parts": {
@@ -335,7 +335,7 @@
    "confidence_reason": "Le résultat provient d'une exécution de cette application sur cette console et est lu. La cause d'une erreur de lecture ne peut pas en être déduite ; les possibilités listées sont courantes, non prouvées."
   },
   "selftest.interrupted": {
-   "text": "Le dernier autotest ne s'est pas terminé correctement (marqueur « en cours » encore dans /data/ps5medic/selftest). Cela correspond à un plantage, à un redémarrage ou à une coupure de courant, mais peut aussi être un simple arrêt : indice de problèmes de disque, de mémoire ou d'alimentation, pas une preuve. Relancez l'autotest ; le marqueur est alors réinitialisé.",
+   "text": "Le dernier autotest ne s'est pas terminé correctement (marqueur « en cours » encore dans /data/ps5medic/selftest). Cela correspond à un plantage, à un redémarrage ou à une coupure de courant, mais peut aussi être un simple arrêt : indice de problèmes de disque, de mémoire ou d'alimentation, pas une preuve. Le correctif réinitialise le marqueur (sauvegarde, annuler le rétablit) ; un nouvel autotest le réinitialise de toute façon.",
    "confidence_reason": "Le marqueur est lu. L'interpréter comme un plantage est une déduction : un arrêt volontaire ou un programme terminé sans fin propre le laisse aussi."
   },
   "selftest.write_failed": {

@@ -223,7 +223,7 @@
    "confidence_reason": "La dimensione viene letta; un file system di certo non sta in meno di 512 byte. Come ShadowMount+ tratti tali file non è stato osservato sulla console di prova."
   },
   "game.no_exec_permission": {
-   "text": "I file di programma di un gioco (eboot.bin, moduli) non hanno il permesso di esecuzione, per esempio 0666 invece di 0777. La console non avvia tali file e segnala CE-107750-0. Succede spesso copiando via FTP, a seconda del server FTP. Imposta i permessi di questi file su 0777 nel programma FTP (chmod 777); il contenuto resta intatto. Medic qui non modifica nulla.",
+   "text": "I file di programma di un gioco (eboot.bin, moduli) non hanno il permesso di esecuzione, per esempio 0666 invece di 0777. La console non avvia tali file e segnala CE-107750-0. Succede spesso copiando via FTP, a seconda del server FTP. La correzione imposta il permesso di esecuzione di questi file (0666 diventa 0777); il contenuto resta intatto, annullare ripristina i vecchi permessi. Possono mancare di nuovo alla prossima copia via FTP: imposta 0777 (chmod 777) come predefinito nel programma FTP.",
    "confidence_reason": "I permessi vengono letti. Il fatto che la console non avvii un file senza permesso di esecuzione è stato osservato il 13 novembre 2026 sulla console di test con la nostra eboot.bin e confermato da un utente (ampr-emu-ng, issue 41) con una copia FTP."
   },
   "game.leftover_parts": {
@@ -335,7 +335,7 @@
    "confidence_reason": "Il risultato viene da un'esecuzione di questa app su questa console e viene letto. Da esso non si può stabilire la causa di un errore di lettura; le possibilità elencate sono comuni, non dimostrate."
   },
   "selftest.interrupted": {
-   "text": "L'ultimo autotest non è terminato correttamente (marcatore «in esecuzione» ancora in /data/ps5medic/selftest). È compatibile con un crash, un riavvio o un'interruzione di corrente, ma può essere anche un semplice spegnimento: un indizio di problemi con l'unità, la memoria o l'alimentazione, non una prova. Esegui di nuovo l'autotest; il marcatore viene azzerato nel frattempo.",
+   "text": "L'ultimo autotest non è terminato correttamente (marcatore «in esecuzione» ancora in /data/ps5medic/selftest). È compatibile con un crash, un riavvio o un'interruzione di corrente, ma può essere anche un semplice spegnimento: un indizio di problemi con l'unità, la memoria o l'alimentazione, non una prova. La correzione azzera il marcatore (backup, annullare lo ripristina); un nuovo autotest lo azzera comunque.",
    "confidence_reason": "Il marcatore viene letto. Interpretarlo come un crash è un'inferenza: lo lascia anche uno spegnimento voluto o un programma terminato senza una chiusura corretta."
   },
   "selftest.write_failed": {

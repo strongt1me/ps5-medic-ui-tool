@@ -3,6 +3,8 @@
 #include "check.hpp"
 #include "testutil.hpp"
 #include "medic/collectors.hpp"
+#include "medic/fixes.hpp"
+#include "medic/rules.hpp"
 #include "medic/platform.hpp"
 #include "medic/report.hpp"
 #include "medic/selftest.hpp"
@@ -209,6 +211,31 @@ void selftest_tests() {
         collect_selftest(*rw, f1);
         const json* st = f1.get("selftest.interrupted.started");
         CHECK(st && *st == "20261111T100000Z" && f1.get("selftest.interrupted.tests")->size() == 2, "Selbsttest: laufender Marker -> selftest.interrupted");
+        {   // Fix selftest_clear_marker (Marc, 24. Nov. 2026): Marker auf "done", Backup, Rueckgaengig bringt ihn zurueck
+            const RuleSet rs = load_rules_from_file(kShipped);
+            const Finding* fd = nullptr;
+            const auto findings = evaluate(rs, f1);
+            for (const auto& x : findings)
+                if (x.rule_id == "selftest.interrupted") fd = &x;
+            CHECK(fd && fd->fix == "selftest_clear_marker", "Selbsttest: selftest.interrupted hat den Fix selftest_clear_marker");
+            if (fd) {
+                const FixPlan plan = plan_fix(*fd, f1, rw->fs());
+                CHECK(plan.changes.size() == 1 && plan.changes[0].kind == Change::Kind::WriteFile && plan.changes[0].path == kSelftestMarkerPath && plan.warnings.empty() && !plan.hint_en.empty(),
+                      "Selbsttest: der Plan schreibt nur die Markierungsdatei");
+                const ApplyResult ar = apply_plan(plan, *rw, policy_from_facts(f1), {"20261124T110000Z", true});
+                CHECK(ar.ok, "Selbsttest: Fix angewendet (" + ar.error + ")");
+                Facts after;
+                collect_selftest(*rw, after);
+                CHECK(!after.get("selftest.interrupted.started"), "Selbsttest: nach dem Fix kein selftest.interrupted mehr");
+                std::string text;
+                CHECK(rw->fs().read_file(kSelftestMarkerPath, text) && text.find("\"done\"") != std::string::npos && text.find("20261111T100000Z") != std::string::npos, "Selbsttest: Markierung steht auf done, der Start bleibt vermerkt");
+                CHECK(plan_fix(*fd, after, rw->fs()).changes.empty(), "Selbsttest: ein zweiter Plan findet nichts mehr");
+                const UndoResult ur = undo_txn(*rw, policy_from_facts(f1), ar.txn, "20261124T110100Z");
+                Facts back;
+                collect_selftest(*rw, back);
+                CHECK(ur.ok && back.get("selftest.interrupted.started"), "Selbsttest: Rueckgaengig bringt die Markierung zurueck (" + ur.error + ")");
+            }
+        }
 
         TestResult ok, bad;
         ok.id = "sw.db.headers";
