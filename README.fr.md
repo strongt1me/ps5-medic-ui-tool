@@ -6,7 +6,7 @@
 
 **Diagnostic, explications en clair et réparation sûre pour les consoles PS5 jailbreakées, sous forme d'application plein écran pour la télévision, avec la DualSense.**
 
-![Version](https://img.shields.io/badge/Version-0.4.5-1f6feb)
+![Version](https://img.shields.io/badge/Version-0.5.0-1f6feb)
 ![Firmware](https://img.shields.io/badge/FW-1.00%20%C3%A0%2014.22-2ea44f)
 ![Licence](https://img.shields.io/badge/Licence-GPL--3.0--or--later-blue)
 ![Plateforme](https://img.shields.io/badge/Plateforme-PS5%20Payload-003791)

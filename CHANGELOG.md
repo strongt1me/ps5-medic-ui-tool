@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased / Unveröffentlicht
+## 0.5.0 (2026-11-26)
 
 - **English:** More settings (More → Settings): text size (Large), contrast (High), time zone (offset to UTC, display only), check-up at start, rule download on/off, local network test on/off, rule source (default or own address), a list of hidden findings (open and show again) and the space used by backups. Large text also fits the other screens (start screen, self-test list, check-up history, badges). The screenshot script no longer switches the language half-way (the German README images showed the error-code list in English).
 - **Deutsch:** Mehr Einstellungen (Mehr → Einstellungen): Textgröße (Groß), Kontrast (Hoch), Zeitzone (Versatz zu UTC, nur Anzeige), Check-up beim Start, Regel-Download an/aus, lokaler Netztest an/aus, Regel-Quelle (Standard oder eigene Adresse), Liste ausgeblendeter Befunde (öffnen und wieder anzeigen) und der Platz der Sicherungen. Die große Schrift passt auch auf die übrigen Bildschirme (Startbild, Selbsttest-Liste, Check-up-Verlauf, Marken). Das Bilderskript schaltet die Sprache nicht mehr mitten im Ablauf um (die deutschen README-Bilder zeigten die Fehlercode-Liste auf Englisch).
@@ -16,6 +16,8 @@
 - **Deutsch:** Der Controller-Test zeigt den Akkustand des Controllers (Einstieg und Zusammenfassung, z. B. „Akkustand: 64 % (lädt)“, „niedrig“ unter 20 %): nur Anzeige, ohne Einfluss auf das Ergebnis. Nur lesend und nur, solange der Test offen ist; auf der Konsole (FW 12.00) noch nicht lesbar, weil sich der Aufruf dort nicht auflösen lässt; dann steht nichts da (der Aufruf stammt aus der Analyse einer fremden Programmdatei, kein Code übernommen).
 - **English:** More automatic repairs: the permissions finding (program files without execute permission, CE-107750-0) can be repaired again (adds the execute permission, 0666 becomes 0777; undo restores the old permissions; not yet run on the console), and the leftover “running” marker of an interrupted self-test can be reset (backup, undo brings it back). 107 rules.
 - **Deutsch:** Mehr automatische Reparaturen: Der Rechte-Befund (Programmdateien ohne Ausführungsrecht, CE-107750-0) lässt sich wieder reparieren (setzt das Ausführungsrecht dazu, aus 0666 wird 0777; Rückgängig stellt die alten Rechte wieder her; an der Konsole noch nicht gelaufen), und die liegengebliebene Markierung „läuft“ eines unterbrochenen Selbsttests lässt sich zurücksetzen (Backup, Rückgängig bringt sie wieder). 107 Regeln.
+- **State of testing:** 9002 checks on the PC. On the test consoles (FW 12.00): controller test, backport detection and the self-test marker repair are confirmed, the three new checks were measured there beforehand; the permissions repair has only been tested on the PC, and the battery level of the controller cannot be read on FW 12.00 (the display stays empty).
+- **Stand der Prüfung:** 9002 Prüfungen am PC. An den Test-Konsolen (FW 12.00) bestätigt: Controller-Test, Backport-Erkennung und die Reparatur der Selbsttest-Markierung, die drei neuen Prüfungen dort vorab gemessen; die Rechte-Reparatur ist nur am PC getestet, und der Akkustand des Controllers ist auf FW 12.00 nicht lesbar (die Anzeige bleibt leer).
 
 ## 0.4.5 (2026-11-20)
 

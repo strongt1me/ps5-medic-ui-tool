@@ -17,11 +17,11 @@
 
 namespace medic {
 
-constexpr const char* kMedicVersion = "0.4.5";
+constexpr const char* kMedicVersion = "0.5.0";
 // Erscheinungsdatum dieser Version (UTC, 00:00 Uhr; steht auch im CHANGELOG hinter der Versionsnummer, ein Test haelt beides gleich): Eine Konsolenuhr, die weniger als
 // einen Tag davor steht, geht sicher falsch (sys.clock_ok, Regel sys.clock_implausible). Bei jeder neuen Version zusammen mit kMedicVersion hochsetzen.
-constexpr const char* kMedicReleaseDate = "2026-11-20";
-constexpr std::int64_t kMedicReleaseEpoch = 1795132800;
+constexpr const char* kMedicReleaseDate = "2026-11-26";
+constexpr std::int64_t kMedicReleaseEpoch = 1795651200;
 constexpr const char* kReportDir = "/data/ps5medic/reports";
 
 enum class ReportLang { De, En, Fr, It, Es };
