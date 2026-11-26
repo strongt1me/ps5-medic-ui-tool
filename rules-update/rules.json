@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.58",
+  "db_version": "2026.11.59",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2232,11 +2232,11 @@
         ]
       },
       "text": {
-        "de": "Programmdateien eines Spiels (eboot.bin, Module) haben kein Ausführungsrecht, zum Beispiel 0666 statt 0777. Die Konsole startet solche Dateien nicht und meldet CE-107750-0. Das passiert oft beim Kopieren per FTP, je nach FTP-Server. Setze die Rechte dieser Dateien im FTP-Programm auf 0777 (chmod 777); der Inhalt bleibt dabei unberührt. Medic ändert hier nichts.",
-        "en": "Program files of a game (eboot.bin, modules) have no execute permission, for example 0666 instead of 0777. The console does not start such files and reports CE-107750-0. This often happens when copying over FTP, depending on the FTP server. Set the permissions of these files to 0777 in your FTP program (chmod 777); the content stays untouched. Medic changes nothing here."
+        "de": "Programmdateien eines Spiels (eboot.bin, Module) haben kein Ausführungsrecht, zum Beispiel 0666 statt 0777. Die Konsole startet solche Dateien nicht und meldet CE-107750-0. Das passiert oft beim Kopieren per FTP, je nach FTP-Server. Der Fix setzt das Ausführungsrecht dieser Dateien (aus 0666 wird 0777); der Inhalt bleibt unberührt, Rückgängig stellt die alten Rechte wieder her. Beim nächsten Kopieren per FTP können sie wieder fehlen: stelle im FTP-Programm 0777 (chmod 777) als Standard ein.",
+        "en": "Program files of a game (eboot.bin, modules) have no execute permission, for example 0666 instead of 0777. The console does not start such files and reports CE-107750-0. This often happens when copying over FTP, depending on the FTP server. The fix sets the execute permission of these files (0666 becomes 0777); the content stays untouched, undo restores the old permissions. They can be missing again the next time you copy over FTP: set 0777 (chmod 777) as the default in your FTP program."
       },
       "evidence": "games.noexec[].path",
-      "fix": null,
+      "fix": "chmod_exec",
       "source": "https://github.com/quer3q/ampr-emu-ng/issues/41",
       "verified": "community",
       "confidence": {
@@ -3094,11 +3094,11 @@
         ]
       },
       "text": {
-        "de": "Der letzte Selbsttest wurde nicht ordentlich beendet (Markierung „läuft“ noch in /data/ps5medic/selftest). Das passt zu Absturz, Neustart oder Stromverlust, kann aber auch bloßes Ausschalten sein: ein Hinweis auf Probleme bei Laufwerk, Speicher oder Stromversorgung, kein Beweis. Lass den Selbsttest erneut laufen; die Markierung wird dabei neu gesetzt.",
-        "en": "The last self-test did not end properly (“running” marker still in /data/ps5medic/selftest). That fits a crash, restart or power loss, but may also be a plain power-off: a hint of problems with the drive, memory or power supply, not proof. Run the self-test again; the marker is reset in the process."
+        "de": "Der letzte Selbsttest wurde nicht ordentlich beendet (Markierung „läuft“ noch in /data/ps5medic/selftest). Das passt zu Absturz, Neustart oder Stromverlust, kann aber auch bloßes Ausschalten sein: ein Hinweis auf Probleme bei Laufwerk, Speicher oder Stromversorgung, kein Beweis. Der Fix setzt die Markierung zurück (Backup, Rückgängig bringt sie wieder); ein neuer Selbsttest setzt sie ohnehin neu.",
+        "en": "The last self-test did not end properly (“running” marker still in /data/ps5medic/selftest). That fits a crash, restart or power loss, but may also be a plain power-off: a hint of problems with the drive, memory or power supply, not proof. The fix resets the marker (backup, undo brings it back); a new self-test resets it anyway."
       },
       "evidence": "selftest.interrupted.started",
-      "fix": null,
+      "fix": "selftest_clear_marker",
       "source": "https://github.com/strongt1me/ps5-medic-ui-tool",
       "verified": "todo",
       "confidence": {
