@@ -493,7 +493,10 @@ bool live_only(const std::string& rule) {
                                                 "kraken.waiting_for_smp", "kraken.game_crashed", "kraken.kstuff_missing", "kraken.launch_failed", "ampr.trace_problem",
                                                 "ampr.stale_cache", "game.runtime_debug_build", "forge.old_version", "game.p5z_container", "game.p5z_truncated",
                                                 // die Antworten der lokalen Kraken-API (system.json "local_api") schreibt der Export nicht
-                                                "kraken.api_game_error", "kraken.api_duplicate", "kraken.api_low_space", "kraken.api_ampr_missing", "kraken.api_ampr_hand"};
+                                                "kraken.api_game_error", "kraken.api_duplicate", "kraken.api_low_space", "kraken.api_ampr_missing", "kraken.api_ampr_hand",
+                                                // PS5 Cooling Center (28. Nov. 2026): seine config.json gehoert nicht in einen Export, ebenso wenig kraken.log und die Spielordner
+                                                // unter Kraken-Games (der Export spiegelt nur die Scanpfade von ShadowMount+)
+                                                "fan.smp_target_vs_cooling", "games.two_mounters"};
     return rules.count(rule) != 0;
 }
 
@@ -1186,6 +1189,8 @@ void fix_tests() {
         // 28. Nov. 2026 (Recherche docs/RESEARCH_2026-11.md, Prio 1)
         {"smp1_pos_bad_value", "smp.config_rejected", true}, {"upd_pos", "update.pup_on_usb", true},
         {"al6_pos_pldmgr_unlisted", "autoload.pldmgr_not_listed", true},
+        // 28. Nov. 2026 (PS5 Cooling Center, Prio 1): Luefterziel von ShadowMount+ auf "system"
+        {"fan_cc_pos", "fan.smp_target_vs_cooling", true},
     };
     int i = 0;
     for (auto& fc : cases) roundtrip(fc, i++);

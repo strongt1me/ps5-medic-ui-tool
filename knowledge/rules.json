@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.61",
+  "db_version": "2026.11.62",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -1264,6 +1264,60 @@
       }
     },
     {
+      "id": "fan.smp_target_vs_cooling",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "any": [
+              {
+                "fact": "smp.config.fan.target_temperature",
+                "matches": "^\\s*[0-9]+\\s*$"
+              },
+              {
+                "fact": "smp.config.fan_target_temperature",
+                "matches": "^\\s*[0-9]+\\s*$"
+              }
+            ]
+          },
+          {
+            "fact": "fan.controller.name",
+            "eq": "PS5 Cooling Center"
+          },
+          {
+            "any": [
+              {
+                "fact": "fan.controller.mode",
+                "eq": "automatic"
+              },
+              {
+                "fact": "fan.controller.mode",
+                "exists": false
+              }
+            ]
+          },
+          {
+            "fact": "fan.cooling.port",
+            "eq": "open"
+          }
+        ]
+      },
+      "text": {
+        "de": "In der config.ini von ShadowMount+ steht ein festes Lüfterziel ([fan] target_temperature als Zahl), und das PS5 Cooling Center regelt den Lüfter gerade automatisch. Beide schreiben dieselbe Schwelle des Lüfters: Das Cooling Center setzt seine innerhalb von etwa 2 Sekunden wieder durch, der Wert von ShadowMount+ hält nur kurz. Der Fix stellt ShadowMount+ auf 'system' (es schreibt dann keine Schwelle mehr; Backup und Rückgängig inklusive). Wer den Wert von ShadowMount+ behalten will, stellt das Cooling Center auf 'Beobachten'.",
+        "en": "The ShadowMount+ config.ini sets a fixed fan target ([fan] target_temperature as a number), and the PS5 Cooling Center is controlling the fan automatically. Both write the same fan threshold: the Cooling Center puts its own back within about 2 seconds, the ShadowMount+ value only holds briefly. The fix sets ShadowMount+ to 'system' (it then writes no threshold; backup and undo included). To keep the ShadowMount+ value, set the Cooling Center to 'Observe'."
+      },
+      "evidence": "fan.controller.mode",
+      "fix": "smp_set_key",
+      "fix_params": {
+        "section": "fan",
+        "key": "target_temperature",
+        "legacy_key": "fan_target_temperature",
+        "value": "system"
+      },
+      "source": "https://github.com/strongt1me/ps5-cooling-system-center-pro/blob/main/docs/HANDBUCH.md",
+      "verified": "doc"
+    },
+    {
       "id": "sys.clock_implausible",
       "severity": "warning",
       "when": {
@@ -1682,14 +1736,34 @@
         ]
       },
       "text": {
-        "de": "Spiele starten nicht mehr: ShadowMount+ meldet mehrfach 'launch mount unavailable … status=16 (Device busy)'. Nach einem fehlgeschlagenen Spielwechsel blieb ein Titel reserviert (bis 1.7beta11, behoben in 1.7beta12). Den fehlgeschlagenen Titel einmal ohne laufendes Spiel starten oder ShadowMount+ erneut senden; ShadowMount+ aktualisieren.",
-        "en": "Games no longer start: ShadowMount+ repeatedly reports 'launch mount unavailable … status=16 (Device busy)'. After a failed game switch a title stayed reserved (up to 1.7beta11, fixed in 1.7beta12). Start the failed title once without a running game or send ShadowMount+ again; update ShadowMount+."
+        "de": "Spiele starten nicht mehr: ShadowMount+ meldet mehrfach 'launch mount unavailable … status=16 (Device busy)'. ShadowMount+ hat nur einen Platz zum Einhängen eines Spiels: Ein Spiel, das eingehängt, aber nicht gestartet ist, hält ihn, auch mit 1.7beta12 (an der Konsole nachgestellt); bis 1.7beta11 blieb zudem nach einem gescheiterten Spielwechsel ein Titel reserviert. Das eingehängte Spiel aushängen (Seite von ShadowMount+ oder PS5 Cooling Center) oder ShadowMount+ erneut senden. Welche Spiele das Cooling Center eingehängt hat, steht in /data/PS5-Cooling-Center/smp-mounted.txt.",
+        "en": "Games no longer start: ShadowMount+ repeatedly reports 'launch mount unavailable … status=16 (Device busy)'. ShadowMount+ has only one slot for mounting a game: a game that is mounted but not started holds it, also with 1.7beta12 (reproduced on the console); up to 1.7beta11 a title also stayed reserved after a failed game switch. Unmount that game (page of ShadowMount+ or PS5 Cooling Center) or send ShadowMount+ again. The games the Cooling Center mounted are listed in /data/PS5-Cooling-Center/smp-mounted.txt."
       },
       "evidence": "smp.log.lines",
       "evidence_filter": "launch mount unavailable",
       "fix": null,
       "source": "https://github.com/drakmor/ShadowMountPlus/issues/183",
       "verified": "community"
+    },
+    {
+      "id": "games.two_mounters",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.two_mounters[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Dasselbe Spiel wird von Kraken Mount und ShadowMount+ eingehängt (siehe Liste). Die beiden kommen sich in die Quere: Kraken hängt die Einhängung von ShadowMount+ aus ('not ours, or stale; unmounting it'), Starts scheitern mit 'Device busy', die Kachel wechselt. Je Spiel nur eine Quelle behalten: Spiele für Kraken Mount nur in den Ordner Kraken-Games, Spiele für ShadowMount+ nach homebrew. ShadowMount+ darf Kraken-Games nicht durchsuchen (scan depth 2 auf dem Hauptordner eines Laufwerks erfasst ihn mit). Medic verschiebt hier nichts.",
+        "en": "The same game is mounted by Kraken Mount and by ShadowMount+ (see list). They get in each other's way: Kraken unmounts the ShadowMount+ mount ('not ours, or stale; unmounting it'), starts fail with 'Device busy', the tile changes. Keep one source per game: games for Kraken Mount only in the Kraken-Games folder, games for ShadowMount+ in homebrew. ShadowMount+ must not scan Kraken-Games (scan depth 2 on the main folder of a drive includes it). Medic moves nothing here."
+      },
+      "evidence": "games.two_mounters[].desc",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-cooling-system-center-pro/blob/main/docs/HANDBUCH.md",
+      "verified": "doc"
     },
     {
       "id": "smp.fakelib_handoff_stuck",
