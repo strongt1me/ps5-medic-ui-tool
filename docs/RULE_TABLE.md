@@ -3,7 +3,7 @@
 
 **Deutsch** · [English](en/RULE_TABLE.md)
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.59, 107 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.60, 109 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -12,6 +12,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `autoload.elfldr_without_delay` | warning | alle | `autoload_insert_delay` | doc | In der Autoload-Liste folgt auf den Loader (elfldr) sofort der nächste Eintrag. |
 | `autoload.entry_duplicate` | info | alle | `autoload_remove_duplicates` | doc | Ein Eintrag steht mehrfach in der Autoload-Liste und wird jedes Mal gesendet (die Loader entfernen Doppelte nicht). |
 | `autoload.entry_missing` | warning | alle | `autoload_fix_missing` | doc | Ein Eintrag der Autoload-Liste hat keine passende Payload-Datei (oder nur die Groß-/Kleinschreibung weicht ab; Namen sind case-sensitiv). |
+| `autoload.pldmgr_not_listed` | warning | alle | `autoload_add_pldmgr` | doc | In /data/ps5_autoloader liegt pldmgr.elf, steht aber nicht in der autoload.txt. |
 | `content.dlc_without_game` | info | alle | - | todo | Zusatzinhalte oder Updates ohne Spiel: Für diese Titel liegen Daten unter /user/addcont oder /user/patch, aber das Spiel ist weder instal... |
 | `content.download_task_pending` | info | alle | - | todo | Unerledigte Download- oder Installationsaufträge: Unter /user/bgft/task liegen Aufträge der Systemsoftware. |
 | `content.license_without_game` | info | alle | - | todo | Lizenzen ohne Spiel: Unter /user/license liegen Lizenzdateien (.rif) für Titel, die weder installiert noch als Quelle zu finden sind. |
@@ -73,7 +74,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `smp.autotoggle_crash_1360` | warning | =13.60 | `smp_set_key` | community | Diese Kombination (FW 13.60, ShadowMount+ 1.7beta3, kstuff-lite 1.11, kstuff_game_auto_toggle=1) wurde mit wiederkehrenden Spielabstürzen... |
 | `smp.backpork_conflict` | warning | alle | `smp_disable_conflicting_backpork` | doc | BackPork läuft parallel zur Fakelib-Funktion von ShadowMount+. |
 | `smp.backport_overlay_denied` | warning | alle | - | community | Der Backport-Overlay (Fakelib) ließ sich nicht einhängen ('Operation not permitted'): auf USB-Laufwerken (exFAT) ist das nicht erlaubt. |
-| `smp.config_rejected` | critical | alle | - | doc | ShadowMount+ 1.7beta12 verwirft die ganze Konfiguration, wenn auch nur eine Zeile ungültig ist: Beim Start beendet sich der Payload (Meld... |
+| `smp.config_rejected` | critical | alle | `smp_comment_invalid_lines` | doc | ShadowMount+ 1.7beta12 verwirft die ganze Konfiguration, wenn auch nur eine Zeile ungültig ist: Beim Start beendet sich der Payload (Meld... |
 | `smp.custom_scanpath_hides_defaults` | warning | alle | `smp_set_key` | doc | Es sind eigene Scanpfade gesetzt, daher werden die Standardpfade nicht mehr gescannt und ShadowMount+ findet diese Spiele nicht. |
 | `smp.debug_off` | info | alle | `smp_set_key` | doc | debug=0: ohne Debug-Log ist keine Diagnose möglich. |
 | `smp.duplicate_titleid` | warning | alle | `move_duplicate_titleid` | doc | Dieselbe TITLE_ID liegt in mehreren Quellen (z. |
@@ -114,3 +115,4 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `sys.temp_high` | info | alle | - | todo | Die Konsole ist gerade sehr heiß (CPU oder SoC über 85 °C). |
 | `sys.unclean_boot` | warning | alle | - | todo | Der Startverlauf (/system_data/priv/vshlog) zeigt in den letzten 14 Tagen mindestens drei Neustarts, vor denen kein Herunterfahren protok... |
 | `sys.unclean_boot_history` | info | alle | - | todo | Der Startverlauf (/system_data/priv/vshlog) enthält Neustarts ohne protokolliertes Herunterfahren (z. |
+| `update.pup_on_usb` | warning | alle | `block_update_file` | doc | Auf einem USB-Laufwerk liegt die Datei PS5/UPDATE/PS5UPDATE.PUP. |

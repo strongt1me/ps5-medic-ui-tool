@@ -366,6 +366,11 @@ PathPolicy policy_from_facts(const Facts& facts) {
     if (const auto* v = facts.get("smp.scan_roots"); v && v->is_array())
         for (const auto& r : *v)
             if (r.is_string()) roots.push_back(r.get<std::string>());
+    // Ordner <USB>/PS5/UPDATE mit einer Installationsdatei der Systemsoftware (Fix block_update_file benennt sie nur um).
+    // Der Filter des Konstruktors laesst davon nur /mnt/usb<N>/... zu.
+    if (const auto* v = facts.get("update.pup_files"); v && v->is_array())
+        for (const auto& u : *v)
+            if (u.is_object() && u.contains("dir") && u["dir"].is_string()) roots.push_back(u["dir"].get<std::string>());
     return PathPolicy(std::move(roots));
 }
 

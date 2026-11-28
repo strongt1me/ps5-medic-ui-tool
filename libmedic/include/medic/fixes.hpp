@@ -33,6 +33,9 @@
 //   chmod_exec                          keine; liest games.noexec[] (files[]), setzt das Ausfuehrungsrecht dazu (Modus | 0111); Rueckgaengig stellt den Modus wieder her
 //   selftest_clear_marker               keine; setzt die Markierung "running" in /data/ps5medic/selftest/running.json auf "done" (Backup, Rueckgaengig bringt sie zurueck)
 //   pldmgr_enable_autoload              keine; setzt AUTOLOAD_ENABLED=1 in /data/pldmgr/pldmgr_config.txt
+//   smp_comment_invalid_lines           keine; liest smp.config_problems[] (line > 0), setzt "# " vor diese Zeilen der config.ini (SM+ nimmt dann den Standardwert)
+//   block_update_file                   keine; liest update.pup_files[], benennt <USB>/PS5/UPDATE/PS5UPDATE.PUP in PS5UPDATE.PUP.blocked um
+//   autoload_add_pldmgr                 keine; liest autoload.problems[] (kind pldmgr_not_listed), haengt pldmgr.elf an /data/ps5_autoloader/autoload.txt an
 //   fix_image_nesting_hint              keine (nur Hinweis)
 #pragma once
 #include "medic/facts.hpp"
