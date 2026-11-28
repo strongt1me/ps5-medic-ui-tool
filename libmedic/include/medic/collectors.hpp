@@ -32,6 +32,10 @@ void collect_kstuff_file(const Platform& p, Facts& f);    // kstuff.file, kstuff
 void collect_game_layout(const Platform& p, Facts& f);     // games.partial_folders[], games.undo_journals[], games.fakelib_layout[], games.with_fakelib[]: Aufbau von Spielordnern und Reste (nur Namen)
 void collect_game_hints(const Platform& p, Facts& f);      // games.unsigned_elf[], games.flex_small[], games.playgo_missing[], games.trophy_missing[]: Hinweise (S07, S08, S14, S24), nur mit Spur
 void collect_compat(const Platform& p, Facts& f);         // games.compat[].{titleid,status,format}, games.compat_bad[].{titleid,status,format,desc}: Treffer aus der eingebetteten Kompatibilitaetsliste (nach smp.titles und games.fw)
+void collect_ampr_trace(const Platform& p, Facts& f);  // ampr.trace_present, ampr.trace_problems[].{kind,line} (/data/ampr_emu_trace.txt), ampr.stale_cache
+void collect_dumpforge(const Platform& p, Facts& f);   // forge.version, forge.path, forge.before_056 (Marke in der Dump-Forge-Payload)
+void collect_p5z(const Platform& p, Facts& f);         // games.p5z[].{path,name,truncated,desc}: MaxPack-Container in den Scanpfaden
+void collect_kraken_api(const Platform& p, Facts& f);  // kraken.api.*: lokale API von Kraken Mount (nur GET 127.0.0.1:8097 /api/state, /api/ampr)
 void collect_kraken(const Platform& p, Facts& f);         // kraken.log_present, kraken.sparse_extent[]: Meldungen aus /data/krakenmount/kraken.log
 void collect_leftovers(const Platform& p, Facts& f);       // leftovers.files[].{path,name,size,is_dir,root}: Reste abgebrochener Kopier-/Packvorgaenge in den Scanpfaden
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.60",
+  "db_version": "2026.11.61",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -2685,8 +2685,8 @@
         ]
       },
       "text": {
-        "de": "Im Spiel liegt eine ampr-emu-ng-Fassung (0.3.5 oder 0.4.0, Release), bei der Nutzer Probleme beim Speichern melden, und die Konsole hat für dieses Spiel schon CE-108255-1 oder CE-107112-2 verzeichnet. Das passt zu einem Fehler beim Speichern, Laden oder Beenden. Laut den Release-Notizen behebt ampr-emu-ng 0.4.1 das (Issues 60, 63, 64). Lege ampr-emu-ng 0.4.1 oder neuer als fakelib/libSceAmpr.sprx ab oder starte das Spiel entpackt. Der Zusammenhang ist nicht bewiesen.",
-        "en": "The game contains an ampr-emu-ng build (0.3.5 or 0.4.0, release) for which users report problems when saving, and the console has already recorded CE-108255-1 or CE-107112-2 for this game. That fits an error when saving, loading or quitting. According to the release notes, ampr-emu-ng 0.4.1 fixes it (issues 60, 63, 64). Put ampr-emu-ng 0.4.1 or newer at fakelib/libSceAmpr.sprx or start the game unpacked. The connection is not proven."
+        "de": "Im Spiel liegt eine ampr-emu-ng-Fassung (0.3.5 oder 0.4.0, Release), bei der Nutzer Probleme beim Speichern melden, und die Konsole hat für dieses Spiel schon CE-108255-1 oder CE-107112-2 verzeichnet. Das passt zu einem Fehler beim Speichern, Laden oder Beenden. Laut den Release-Notizen behebt ampr-emu-ng 0.4.1 das (Issues 60, 63, 64). Lege ampr-emu-ng 0.4.1 oder neuer als fakelib/libSceAmpr.sprx ab oder starte das Spiel entpackt. Der Zusammenhang ist nicht bewiesen. Auch 0.4.1 bis 0.5.0 hatten noch Speicherfehler (0.5.0 behob zurückportierte FW-4.xx-Spiele, 0.5.1 Fehler im pkg-Modus).",
+        "en": "The game contains an ampr-emu-ng build (0.3.5 or 0.4.0, release) for which users report problems when saving, and the console has already recorded CE-108255-1 or CE-107112-2 for this game. That fits an error when saving, loading or quitting. According to the release notes, ampr-emu-ng 0.4.1 fixes it (issues 60, 63, 64). Put ampr-emu-ng 0.4.1 or newer at fakelib/libSceAmpr.sprx or start the game unpacked. The connection is not proven. 0.4.1 to 0.5.0 still had save bugs as well (0.5.0 fixed games backported to FW 4.xx, 0.5.1 bugs in pkg mode)."
       },
       "evidence": "games.runtime[].path",
       "fix": null,
@@ -2774,8 +2774,8 @@
         ]
       },
       "text": {
-        "de": "Kraken Mount hat eine .pkg abgelehnt: Das Layout der Paketdatei hat eine Lücke (sparse extent), und das Paket bekam deshalb keine Kachel; die Meldung steht nur in /data/krakenmount/kraken.log. Seit kraken-mount 0.2.0 werden auch solche Pakete unterstützt, die Meldung stammt dann von einer älteren Fassung (das Log wird nicht geleert). Sende die aktuelle kraken-mount.elf einmal an elfldr (Port 9021); der erste Start danach baut die Caches neu und braucht etwas freien Platz. Medic ändert hier nichts.",
-        "en": "Kraken Mount rejected a .pkg: the layout of the package file has a gap (sparse extent), so the package got no tile; the message is only in /data/krakenmount/kraken.log. Since kraken-mount 0.2.0 such packages are supported too, so the message then comes from an older build (the log is not cleared). Send the current kraken-mount.elf to elfldr once (port 9021); the first start afterwards rebuilds the caches and needs some free space. Medic changes nothing here."
+        "de": "Kraken Mount hat eine .pkg abgelehnt: Das Layout der Paketdatei hat eine Lücke (sparse extent), und das Paket bekam deshalb keine Kachel; die Meldung steht nur in /data/krakenmount/kraken.log. Seit kraken-mount 0.2.0 werden auch solche Pakete unterstützt, die Meldung stammt dann von einer älteren Fassung (das Log wird nicht geleert). Sende die aktuelle kraken-mount.elf einmal an elfldr (Port 9021); der erste Start danach baut die Caches neu und braucht etwas freien Platz. Medic ändert hier nichts. Kraken Mount ab 0.2.0 liest solche Pakete; die Meldung stammt von einer älteren Fassung.",
+        "en": "Kraken Mount rejected a .pkg: the layout of the package file has a gap (sparse extent), so the package got no tile; the message is only in /data/krakenmount/kraken.log. Since kraken-mount 0.2.0 such packages are supported too, so the message then comes from an older build (the log is not cleared). Send the current kraken-mount.elf to elfldr once (port 9021); the first start afterwards rebuilds the caches and needs some free space. Medic changes nothing here. Kraken Mount 0.2.0 and later read such packages; the message comes from an older version."
       },
       "evidence": "kraken.sparse_extent[].line",
       "fix": null,
@@ -2802,8 +2802,8 @@
         ]
       },
       "text": {
-        "de": "Kraken Mount konnte einen neuen Titel nicht anmelden: Die Konsole hat /system_ex schreibgeschützt eingehängt (os error 30), die Meldung steht nur in /data/krakenmount/kraken.log. Der Titel bekommt keine Kachel, früher angemeldete Titel laufen weiter. Vermutlich hilft es, vor Kraken Mount etaHEN oder ShadowMount+ zu starten, die /system_ex beim Start neu einhängen; das ist nicht an dieser Konsole geprüft. Medic ändert hier nichts.",
-        "en": "Kraken Mount could not register a new title: the console has mounted /system_ex read-only (os error 30); the message is only in /data/krakenmount/kraken.log. The title gets no tile, titles registered earlier keep running. Starting etaHEN or ShadowMount+ before Kraken Mount probably helps, since they remount /system_ex at start; this was not checked on this console. Medic changes nothing here."
+        "de": "Kraken Mount konnte einen neuen Titel nicht anmelden: Die Konsole hat /system_ex schreibgeschützt eingehängt (os error 30), die Meldung steht nur in /data/krakenmount/kraken.log. Der Titel bekommt keine Kachel, früher angemeldete Titel laufen weiter. Vermutlich hilft es, vor Kraken Mount etaHEN oder ShadowMount+ zu starten, die /system_ex beim Start neu einhängen; das ist nicht an dieser Konsole geprüft. Medic ändert hier nichts. Seit Kraken Mount 0.2.0 hängt es /system_ex selbst beschreibbar ein; steht die Meldung im Log, stammt sie von einer älteren Fassung.",
+        "en": "Kraken Mount could not register a new title: the console has mounted /system_ex read-only (os error 30); the message is only in /data/krakenmount/kraken.log. The title gets no tile, titles registered earlier keep running. Starting etaHEN or ShadowMount+ before Kraken Mount probably helps, since they remount /system_ex at start; this was not checked on this console. Medic changes nothing here. Since Kraken Mount 0.2.0 it mounts /system_ex writable itself; if the message is in the log, it comes from an older version."
       },
       "evidence": "kraken.sysex_readonly[].line",
       "fix": null,
@@ -3026,8 +3026,8 @@
         ]
       },
       "text": {
-        "de": "Im Spielordner gibt es sce_sys/trophy2 mit Dateien, aber mindestens eine der Trophäen-Dateien fehlt (sce_sys/nptitle.dat, sce_sys/uds/npbind.dat oder sce_sys/trophy2/npbind.dat). Aus FPKG konvertierte Spiele haben diese Dateien verloren, wenn der Container-Eintrag verschlüsselt war (Dump Forge, Fix nach 0.5.5). Möglicherweise erscheinen dann keine Trophäen. Erzeuge das Spiel mit einer aktuellen Forge-Fassung neu oder ergänze die Dateien aus einer eigenen vollständigen Kopie. Medic ändert hier nichts und liest nie die Inhalte.",
-        "en": "The game folder has sce_sys/trophy2 with files, but at least one of the trophy files is missing (sce_sys/nptitle.dat, sce_sys/uds/npbind.dat or sce_sys/trophy2/npbind.dat). Games converted from FPKG lost these files when the container entry was encrypted (Dump Forge, fix after 0.5.5). Trophies may then not appear. Build the game again with a current Forge version or add the files from your own complete copy. Medic changes nothing here and never reads the contents."
+        "de": "Im Spielordner gibt es sce_sys/trophy2 mit Dateien, aber mindestens eine der Trophäen-Dateien fehlt (sce_sys/nptitle.dat, sce_sys/uds/npbind.dat oder sce_sys/trophy2/npbind.dat). Aus FPKG konvertierte Spiele haben diese Dateien verloren, wenn der Container-Eintrag verschlüsselt war (Dump Forge, Fix nach 0.5.5). Möglicherweise erscheinen dann keine Trophäen. Erzeuge das Spiel mit einer aktuellen Forge-Fassung neu oder ergänze die Dateien aus einer eigenen vollständigen Kopie. Medic ändert hier nichts und liest nie die Inhalte. Eine bekannte Ursache: Dump Forge vor 0.5.6 verlor diese Dateien beim Umwandeln aus .pkg; mit einer aktuellen Fassung neu umwandeln.",
+        "en": "The game folder has sce_sys/trophy2 with files, but at least one of the trophy files is missing (sce_sys/nptitle.dat, sce_sys/uds/npbind.dat or sce_sys/trophy2/npbind.dat). Games converted from FPKG lost these files when the container entry was encrypted (Dump Forge, fix after 0.5.5). Trophies may then not appear. Build the game again with a current Forge version or add the files from your own complete copy. Medic changes nothing here and never reads the contents. A known cause: Dump Forge before 0.5.6 lost these files when converting from .pkg; reconvert with a current version."
       },
       "evidence": "games.trophy_missing[].desc",
       "fix": null,
@@ -3349,6 +3349,429 @@
       "fix": "block_update_file",
       "source": "https://www.playstation.com/en-us/support/hardware/update-playstation-system-software-safe-mode/",
       "verified": "doc"
+    },
+    {
+      "id": "kraken.waiting_for_smp",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.waiting_for_smp",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount wartet und hängt nichts ein: Es startet erst, wenn ShadowMount+ beendet ist, und ShadowMount+ läuft gerade (Meldung „waiting before start-up: shadowmount“ in kraken.log). Entscheide dich für eines der beiden und nimm das andere aus dem Autoload. Medic ändert nichts.",
+        "en": "Kraken Mount is waiting and mounts nothing: it only starts once ShadowMount+ has ended, and ShadowMount+ is running right now (message “waiting before start-up: shadowmount” in kraken.log). Choose one of the two and take the other out of the autoload. Medic changes nothing."
+      },
+      "evidence": "kraken.waiting_for_smp",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Logzeile und die Prozessliste werden gelesen. Dass Kraken Mount so lange wartet, steht im Quelltext von Kraken Mount 0.4.2 (main.rs).",
+          "en": "The log line and the process list are read. That Kraken Mount waits this long is stated in the source code of Kraken Mount 0.4.2 (main.rs)."
+        }
+      }
+    },
+    {
+      "id": "kraken.game_crashed",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.crashes[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount hat für diese Spiele in den letzten 14 Tagen einen Absturz festgehalten (/data/krakenmount/crashes.json, mit Grund wie „killed by signal 11“). Ein einzelner Absturz kann am Spiel selbst liegen; wiederholt er sich, das Spiel neu packen oder den Backport tauschen. Medic ändert nichts.",
+        "en": "Kraken Mount recorded a crash for these games in the last 14 days (/data/krakenmount/crashes.json, with a reason such as “killed by signal 11”). A single crash can be the game itself; if it repeats, repack the game or swap the backport. Medic changes nothing."
+      },
+      "evidence": "kraken.crashes[].desc",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Die Datei von Kraken Mount wird gelesen. Die Ursache eines Absturzes lässt sich daraus nicht ablesen.",
+          "en": "Kraken Mount's file is read. The cause of a crash cannot be read from it."
+        }
+      }
+    },
+    {
+      "id": "kraken.kstuff_missing",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.kstuff_missing[].line",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount konnte ein Spiel nicht starten, weil kstuff nicht lief („kstuff is not running“ in kraken.log). Ohne kstuff starten fake-signierte Spiele nicht. kstuff laden (Autoload prüfen) und das Spiel erneut starten. Medic ändert nichts.",
+        "en": "Kraken Mount could not start a game because kstuff was not running (“kstuff is not running” in kraken.log). Without kstuff, fake-signed games do not start. Load kstuff (check the autoload) and start the game again. Medic changes nothing."
+      },
+      "evidence": "kraken.kstuff_missing[].line",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Logzeile wird gelesen; ihre Bedeutung steht im Quelltext von Kraken Mount 0.4.2 (launch.rs).",
+          "en": "The log line is read; its meaning is stated in the source code of Kraken Mount 0.4.2 (launch.rs)."
+        }
+      }
+    },
+    {
+      "id": "kraken.launch_failed",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.launch_failed[].line",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Beim Start eines Spiels konnte Kraken Mount etwas nicht einhängen: Overlay, beschreibbares /app0 oder Backport-Umleitung („… FAILED“ in kraken.log). Das Spiel startet dann ohne Backport oder gar nicht. Die Konsole neu starten und es erneut versuchen; bleibt es, die Logzeile aus dem Beleg an die Entwickler von Kraken Mount geben. Medic ändert nichts.",
+        "en": "When starting a game, Kraken Mount could not mount something: the overlay, a writable /app0 or the backport redirection (“… FAILED” in kraken.log). The game then starts without its backport or not at all. Restart the console and try again; if it stays, give the log line from the evidence to the Kraken Mount developers. Medic changes nothing."
+      },
+      "evidence": "kraken.launch_failed[].line",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Logzeile wird gelesen; die Meldungen stehen im Quelltext von Kraken Mount 0.4.2 (launch.rs). Die Ursache im Einzelfall ist offen.",
+          "en": "The log line is read; the messages are in the source code of Kraken Mount 0.4.2 (launch.rs). The cause in a given case is open."
+        }
+      }
+    },
+    {
+      "id": "ampr.trace_problem",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "ampr.trace_problems[].kind",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Das Debug-Protokoll von ampr-emu-ng (/data/ampr_emu_trace.txt, letzter Spielstart) meldet einen Fehler: Index abgelehnt, Packs nicht verbunden, /app0 nicht beschreibbar oder das .pkg nicht erkannt (Zeile im Beleg). Dem Spiel fehlen dann gepackte Dateien, meist bricht es ab. Das Spiel neu packen bzw. neu umwandeln und erneut starten. Medic ändert nichts.",
+        "en": "The debug log of ampr-emu-ng (/data/ampr_emu_trace.txt, last game start) reports an error: index refused, packs not joined, /app0 not writable or the .pkg not recognised (line in the evidence). The game then lacks packed files and usually aborts. Repack or reconvert the game and start it again. Medic changes nothing."
+      },
+      "evidence": "ampr.trace_problems[].line",
+      "fix": null,
+      "source": "https://github.com/quer3q/ampr-emu-ng",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Zeilen werden gelesen; ihre Bedeutung steht in docs/debug-build.md von ampr-emu-ng. Das Protokoll gibt es nur mit der Debug-Fassung und nur für den letzten Spielstart.",
+          "en": "The lines are read; their meaning is in docs/debug-build.md of ampr-emu-ng. The log exists only with the debug build and only for the last game start."
+        }
+      }
+    },
+    {
+      "id": "ampr.stale_cache",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "ampr.stale_cache",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Im Ordner /data/ampr_cache liegen Reste des Plattencaches älterer ampr-emu-ng-Fassungen (bis 0.4.1); nach einem Absturz bleiben sie liegen und belegen Platz. Ab ampr-emu-ng 0.5.0 räumt die Laufzeit den Ordner beim nächsten Spielstart selbst auf. Medic löscht nichts.",
+        "en": "The folder /data/ampr_cache holds leftovers of the disk cache of older ampr-emu-ng versions (up to 0.4.1); after a crash they stay behind and take up space. From ampr-emu-ng 0.5.0 the runtime cleans up the folder itself at the next game start. Medic deletes nothing."
+      },
+      "evidence": "ampr.stale_cache",
+      "fix": null,
+      "source": "https://github.com/quer3q/ampr-emu-ng",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Der Ordner wird gelesen, die Fassungen der Laufzeit in den Spielen auch. Dass ab 0.5.0 aufgeräumt wird, steht im Quelltext von ampr-emu-ng (pack/mod.rs); ob der Inhalt wirklich übrig ist, ist nicht gemessen.",
+          "en": "The folder is read, and so are the runtime versions in the games. That 0.5.0 and later clean up is in the source code of ampr-emu-ng (pack/mod.rs); whether the content is really left over is not measured."
+        }
+      }
+    },
+    {
+      "id": "game.runtime_debug_build",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.runtime[].lib_debug",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "In diesen Spielen steckt die Debug-Fassung von ampr-emu-ng. Sie hat einen kleineren Speicher-Pool, öffnet Port 9090 und liest /data/ampr_emu_tune.txt; sie ist zur Fehlersuche gedacht. Für den Alltag die Release-Fassung einsetzen.",
+        "en": "These games contain the debug build of ampr-emu-ng. It has a smaller memory pool, opens port 9090 and reads /data/ampr_emu_tune.txt; it is meant for troubleshooting. For everyday use, put in the release build."
+      },
+      "evidence": "games.runtime[].path",
+      "fix": null,
+      "source": "https://github.com/quer3q/ampr-emu-ng",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Bibliothek im Spiel wird gelesen und an Marken erkannt, die nur im Debug-Build stehen (an 0.5.1 geprüft). Wie sehr der kleinere Pool ein Spiel bremst, ist nicht gemessen.",
+          "en": "The library in the game is read and recognised by markers that only the debug build contains (checked on 0.5.1). How much the smaller pool slows a game down is not measured."
+        }
+      }
+    },
+    {
+      "id": "forge.old_version",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "forge.before_056",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Installiert ist Dump Forge vor 0.5.6. Diese Fassungen verlieren beim Umwandeln aus .pkg die Trophäen-Dateien (nptitle.dat, npbind.dat), und Packs mit mehr als 32 Teilen brechen beim Schreiben direkt auf die PS5 ab. Eine aktuelle Fassung von Dump Forge verwenden und betroffene Spiele neu umwandeln.",
+        "en": "Dump Forge before 0.5.6 is installed. These versions lose the trophy files (nptitle.dat, npbind.dat) when converting from .pkg, and packs with more than 32 parts abort when written directly to the PS5. Use a current version of Dump Forge and reconvert the affected games."
+      },
+      "evidence": "forge.version",
+      "fix": null,
+      "source": "https://github.com/quer3q/ps5-dump-forge",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Die Version steht als Marke in der installierten Payload; die Fehler stehen in den Release-Notizen von Dump Forge 0.5.6. Ältere Fassungen ohne Marke erkennt Medic nicht.",
+          "en": "The version is a marker in the installed payload; the bugs are in the release notes of Dump Forge 0.5.6. Older versions without the marker are not recognised by Medic."
+        }
+      }
+    },
+    {
+      "id": "game.p5z_container",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.p5z[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "In einem Scanpfad liegen .p5z-Dateien. Das ist ein Behälter von MaxPack zum Aufbewahren: ShadowMount+, Kraken Mount und ampr-emu-ng lesen ihn nicht, das Spiel erscheint so nicht. Vor dem Spielen mit MaxPack auspacken. Medic ändert nichts.",
+        "en": "A scan path contains .p5z files. That is a MaxPack container for storage: ShadowMount+, Kraken Mount and ampr-emu-ng do not read it, so the game does not appear. Unpack it with MaxPack before playing. Medic changes nothing."
+      },
+      "evidence": "games.p5z[].path",
+      "fix": null,
+      "source": "https://github.com/DeLFuS77/maxpack",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Kopf der Datei („MAXPKP5Z“) wird gelesen. Dass kein Einhänger das Format liest, stammt aus dem Quelltext von Kraken Mount 0.4.2 und ampr-emu-ng 0.5.1 und kann sich mit neuen Fassungen ändern.",
+          "en": "The file header (“MAXPKP5Z”) is read. That no mounter reads the format comes from the source code of Kraken Mount 0.4.2 and ampr-emu-ng 0.5.1 and can change with new versions."
+        }
+      }
+    },
+    {
+      "id": "game.p5z_truncated",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.p5z[].truncated",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Eine .p5z-Datei ist unvollständig: Der Kopf ist da, das Ende (der Fuß, den MaxPack zuletzt schreibt) fehlt. Meist wurde die Übertragung abgebrochen. Die Datei erneut übertragen. Medic ändert nichts.",
+        "en": "A .p5z file is incomplete: the header is there, the end (the footer MaxPack writes last) is missing. Usually the transfer was interrupted. Transfer the file again. Medic changes nothing."
+      },
+      "evidence": "games.p5z[].path",
+      "fix": null,
+      "source": "https://github.com/DeLFuS77/maxpack",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Kopf und letzte 32 Byte werden gelesen; das Format beschreibt MaxPack in docs/p5z-format.md. Ob gerade noch eine Übertragung läuft, erkennt Medic nicht.",
+          "en": "The header and the last 32 bytes are read; MaxPack describes the format in docs/p5z-format.md. Whether a transfer is still running right now, Medic cannot tell."
+        }
+      }
+    },
+    {
+      "id": "kraken.api_game_error",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.api.games_error[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount meldet für diese Spiele einen Fehler (Status „error“, die Meldung steht im Beleg). Sie lassen sich so nicht spielen. Die Meldung zeigt meist die Ursache (Paket unvollständig, Cache nicht gebaut); danach das Spiel in Kraken Mount neu aufbauen lassen. Medic ändert nichts. Gelesen über die lokale Schnittstelle von Kraken Mount (nur lesend).",
+        "en": "Kraken Mount reports an error for these games (status “error”, the message is in the evidence). They cannot be played like this. The message usually shows the cause (package incomplete, cache not built); then let Kraken Mount rebuild the game. Medic changes nothing. Read through Kraken Mount's local interface (read only)."
+      },
+      "evidence": "kraken.api.games_error[].desc",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Der Zustand kommt von Kraken Mount selbst (lokale Schnittstelle, Port 8097, Quelltext 0.4.2 web.rs); Medic deutet ihn nicht weiter.",
+          "en": "The state comes from Kraken Mount itself (local interface, port 8097, source code 0.4.2 web.rs); Medic does not interpret it further."
+        }
+      }
+    },
+    {
+      "id": "kraken.api_duplicate",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.api.games_duplicate[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount findet dieselbe Title-ID mehrfach (Status „duplicate“) und hängt die zusätzlichen Quellen nicht ein. Nur eine Quelle je Spiel behalten, die anderen aus den Scanpfaden nehmen. Medic ändert nichts. Gelesen über die lokale Schnittstelle von Kraken Mount (nur lesend).",
+        "en": "Kraken Mount finds the same title ID more than once (status “duplicate”) and does not mount the extra sources. Keep only one source per game and take the others out of the scan paths. Medic changes nothing. Read through Kraken Mount's local interface (read only)."
+      },
+      "evidence": "kraken.api.games_duplicate[].desc",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Der Zustand kommt von Kraken Mount selbst (lokale Schnittstelle, Port 8097, Quelltext 0.4.2 web.rs); Medic deutet ihn nicht weiter.",
+          "en": "The state comes from Kraken Mount itself (local interface, port 8097, source code 0.4.2 web.rs); Medic does not interpret it further."
+        }
+      }
+    },
+    {
+      "id": "kraken.api_low_space",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.api.cache_low_space",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount meldet zu wenig freien Platz für seinen Cache. Neue .pkg-Spiele werden dann nicht mehr aufgebaut. Platz auf dem Laufwerk des Caches schaffen (nicht benötigte Spiele oder Caches in Kraken Mount entfernen). Medic löscht nichts. Gelesen über die lokale Schnittstelle von Kraken Mount (nur lesend).",
+        "en": "Kraken Mount reports too little free space for its cache. New .pkg games are then no longer built. Free up space on the cache drive (remove unneeded games or caches in Kraken Mount). Medic deletes nothing. Read through Kraken Mount's local interface (read only)."
+      },
+      "evidence": "kraken.api.cache_free",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Der Zustand kommt von Kraken Mount selbst (lokale Schnittstelle, Port 8097, Quelltext 0.4.2 web.rs); Medic deutet ihn nicht weiter.",
+          "en": "The state comes from Kraken Mount itself (local interface, port 8097, source code 0.4.2 web.rs); Medic does not interpret it further."
+        }
+      }
+    },
+    {
+      "id": "kraken.api_ampr_missing",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.api.ampr_kind",
+            "in": [
+              "missing",
+              "error"
+            ]
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount hat keine brauchbare ampr-emu-ng-Laufzeit (Zustand „missing“ oder „error“). Gepackte Spiele starten dann nicht. In Kraken Mount die Laufzeit neu laden bzw. aktualisieren lassen. Medic ändert nichts. Gelesen über die lokale Schnittstelle von Kraken Mount (nur lesend).",
+        "en": "Kraken Mount has no usable ampr-emu-ng runtime (state “missing” or “error”). Packed games then do not start. Let Kraken Mount reload or update the runtime. Medic changes nothing. Read through Kraken Mount's local interface (read only)."
+      },
+      "evidence": "kraken.api.ampr_kind",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Der Zustand kommt von Kraken Mount selbst (lokale Schnittstelle, Port 8097, Quelltext 0.4.2 web.rs); Medic deutet ihn nicht weiter.",
+          "en": "The state comes from Kraken Mount itself (local interface, port 8097, source code 0.4.2 web.rs); Medic does not interpret it further."
+        }
+      }
+    },
+    {
+      "id": "kraken.api_ampr_hand",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.api.ampr_kind",
+            "eq": "hand"
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount nutzt eine von Hand eingelegte ampr-emu-ng-Laufzeit (Zustand „hand“) statt der mitgelieferten oder heruntergeladenen. Das ist erlaubt, aber Fehler dieser Fassung behebt Kraken Mount nicht durch eigene Updates. Bei Problemen mit gepackten Spielen zuerst die mitgelieferte Laufzeit verwenden. Gelesen über die lokale Schnittstelle von Kraken Mount (nur lesend).",
+        "en": "Kraken Mount uses an ampr-emu-ng runtime put in by hand (state “hand”) instead of the bundled or downloaded one. That is allowed, but Kraken Mount does not fix bugs of that version with its own updates. If packed games have problems, use the bundled runtime first. Read through Kraken Mount's local interface (read only)."
+      },
+      "evidence": "kraken.api.ampr_version",
+      "fix": null,
+      "source": "https://github.com/quer3q/kraken-mount",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "observed",
+        "reason": {
+          "de": "Der Zustand kommt von Kraken Mount selbst (lokale Schnittstelle, Port 8097, Quelltext 0.4.2 web.rs); Medic deutet ihn nicht weiter.",
+          "en": "The state comes from Kraken Mount itself (local interface, port 8097, source code 0.4.2 web.rs); Medic does not interpret it further."
+        }
+      }
     }
   ]
 }

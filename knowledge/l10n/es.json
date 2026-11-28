@@ -259,7 +259,7 @@
    "confidence_reason": "El índice y el árbol de carpetas se leen (estructura del índice según Dump Forge). Que los archivos que faltan causen el fallo se deduce de informes del proyecto ampr-emu-ng (issues 7, 8, 43, 45); sin embargo, un índice puede diferir legítimamente de la carpeta (backport, archivos sustituidos después). eboot.bin, sce_sys, sce_module y fakelib no cuentan nunca. Solo vale para juegos sin pack."
   },
   "kraken.sysex_readonly": {
-   "text": "Kraken Mount no pudo registrar un título nuevo: la consola montó /system_ex como solo lectura (os error 30); el mensaje solo está en /data/krakenmount/kraken.log. El título no recibe icono, los títulos registrados antes siguen funcionando. Probablemente ayude iniciar etaHEN o ShadowMount+ antes de Kraken Mount, porque vuelven a montar /system_ex al arrancar; no se comprobó en esta consola. Medic no cambia nada aquí.",
+   "text": "Kraken Mount no pudo registrar un título nuevo: la consola montó /system_ex como solo lectura (os error 30); el mensaje solo está en /data/krakenmount/kraken.log. El título no recibe icono, los títulos registrados antes siguen funcionando. Probablemente ayude iniciar etaHEN o ShadowMount+ antes de Kraken Mount, porque vuelven a montar /system_ex al arrancar; no se comprobó en esta consola. Medic no cambia nada aquí. Desde Kraken Mount 0.2.0 monta por sí mismo /system_ex con escritura; si el mensaje está en el registro, procede de una versión anterior.",
    "confidence_reason": "El mensaje se lee del registro. Que el remontaje con etaHEN o ShadowMount+ ayude es solo una suposición no probada del proyecto Kraken Mount (PR 22)."
   },
   "kraken.pkg_unsupported": {
@@ -291,7 +291,7 @@
    "confidence_reason": "Los archivos y el código de error se leen. Que el stub que falta cause la pantalla negra viene de un solo informe; la mayoría de los juegos funciona sin él."
   },
   "game.trophy_files_missing": {
-   "text": "La carpeta del juego tiene sce_sys/trophy2 con archivos, pero falta al menos uno de los archivos de trofeos (sce_sys/nptitle.dat, sce_sys/uds/npbind.dat o sce_sys/trophy2/npbind.dat). Los juegos convertidos desde FPKG perdieron estos archivos cuando la entrada del contenedor estaba cifrada (Dump Forge, corrección tras 0.5.5). Puede que entonces no aparezcan trofeos. Vuelve a crear el juego con una versión actual de Forge o añade los archivos desde tu propia copia completa. Medic no cambia nada aquí y nunca lee los contenidos.",
+   "text": "La carpeta del juego tiene sce_sys/trophy2 con archivos, pero falta al menos uno de los archivos de trofeos (sce_sys/nptitle.dat, sce_sys/uds/npbind.dat o sce_sys/trophy2/npbind.dat). Los juegos convertidos desde FPKG perdieron estos archivos cuando la entrada del contenedor estaba cifrada (Dump Forge, corrección tras 0.5.5). Puede que entonces no aparezcan trofeos. Vuelve a crear el juego con una versión actual de Forge o añade los archivos desde tu propia copia completa. Medic no cambia nada aquí y nunca lee los contenidos. Una causa conocida: Dump Forge anterior a 0.5.6 perdía estos archivos al convertir desde .pkg; vuelve a convertir con una versión actual.",
    "confidence_reason": "Solo se comprueban los nombres de archivo. Los juegos sin trofeos carecen legítimamente de los archivos; Medic no puede ver si faltan trofeos en este juego, y en el issue 18 de Kraken Mount faltaban en todos los juegos, lo que apunta a otra causa."
   },
   "game.pack_runtime_mismatch": {
@@ -307,7 +307,7 @@
    "confidence_reason": "Se lee la ausencia del archivo. Que Dump Forge siempre la escribe consta en su documentación; que un juego no arranque sin ella no se observó."
   },
   "game.ng_save_risk": {
-   "text": "El juego contiene una versión de ampr-emu-ng (0.3.5 o 0.4.0, release) con la que los usuarios informan de problemas al guardar, y la consola ya ha registrado CE-108255-1 o CE-107112-2 para este juego. Eso encaja con un error al guardar, cargar o salir. Según las notas de la versión, ampr-emu-ng 0.4.1 lo corrige (issues 60, 63, 64). Coloca ampr-emu-ng 0.4.1 o más reciente en fakelib/libSceAmpr.sprx o inicia el juego sin empaquetar. La relación no está demostrada.",
+   "text": "El juego contiene una versión de ampr-emu-ng (0.3.5 o 0.4.0, release) con la que los usuarios informan de problemas al guardar, y la consola ya ha registrado CE-108255-1 o CE-107112-2 para este juego. Eso encaja con un error al guardar, cargar o salir. Según las notas de la versión, ampr-emu-ng 0.4.1 lo corrige (issues 60, 63, 64). Coloca ampr-emu-ng 0.4.1 o más reciente en fakelib/libSceAmpr.sprx o inicia el juego sin empaquetar. La relación no está demostrada. También las versiones 0.4.1 a 0.5.0 tenían aún fallos de guardado (0.5.0 corrigió los juegos con backport a FW 4.xx, 0.5.1 fallos en modo pkg).",
    "confidence_reason": "La versión se lee de la biblioteca. Que estas versiones causen problemas al guardar se basa en informes del proyecto ampr-emu-ng (issues 60, 63, 64) y no se reprodujo en esta consola."
   },
   "game.pack_incomplete": {
@@ -319,7 +319,7 @@
    "confidence_reason": "Los archivos se leen. Que los montadores omitan una carpeta incompleta sin mensaje se deduce de su documentación (Kraken Mount exige eboot.bin y sce_sys/param.json) y de informes sin registro; no se observó en esta consola."
   },
   "kraken.pkg_sparse_extent": {
-   "text": "Kraken Mount rechazó un .pkg: el diseño del archivo del paquete tiene un hueco (sparse extent), por lo que el paquete no recibió mosaico; el mensaje solo está en /data/krakenmount/kraken.log. Desde kraken-mount 0.2.0 también se admiten esos paquetes, así que el mensaje procede de una versión anterior (el registro no se vacía). Envía una vez el kraken-mount.elf actual a elfldr (puerto 9021); el primer inicio después reconstruye las cachés y necesita algo de espacio libre. Medic no cambia nada aquí.",
+   "text": "Kraken Mount rechazó un .pkg: el diseño del archivo del paquete tiene un hueco (sparse extent), por lo que el paquete no recibió mosaico; el mensaje solo está en /data/krakenmount/kraken.log. Desde kraken-mount 0.2.0 también se admiten esos paquetes, así que el mensaje procede de una versión anterior (el registro no se vacía). Envía una vez el kraken-mount.elf actual a elfldr (puerto 9021); el primer inicio después reconstruye las cachés y necesita algo de espacio libre. Medic no cambia nada aquí. Kraken Mount desde 0.2.0 lee estos paquetes; el mensaje procede de una versión anterior.",
    "confidence_reason": "El mensaje se lee del registro. Que proviene de un diseño con un hueco consta en el proyecto Kraken Mount (issues 4, 5, 8, 9, 13, 20); si reconstruir con --kraken stored ayuda no se comprobó allí con un paquete real."
   },
   "game.compat_known_bad": {
@@ -384,6 +384,66 @@
   "content.download_task_pending": {
    "text": "Tareas de descarga o instalación sin terminar: en /user/bgft/task hay tareas del software del sistema. Si se está instalando o descargando algo, es normal. Si no, las tareas interrumpidas se quedan (espacio ocupado, un aviso «instalando» sin avance). Medic no cambia nada; las tareas se pueden cancelar en Descargas/Subidas de la consola.",
    "confidence_reason": "Una carpeta en /user/bgft/task es una tarea del software del sistema (según el escáner de huérfanos de ps5-tools, MIT). Si está bloqueada, Medic no lo ve: una tarea en curso se ve igual."
+  },
+  "kraken.waiting_for_smp": {
+   "text": "Kraken Mount está esperando y no monta nada: solo arranca cuando ShadowMount+ ha terminado, y ShadowMount+ está en marcha ahora (mensaje «waiting before start-up: shadowmount» en kraken.log). Elige uno de los dos y quita el otro de la carga automática. Medic no cambia nada.",
+   "confidence_reason": "Se leen la línea del registro y la lista de procesos. Que Kraken Mount espere tanto figura en el código fuente de Kraken Mount 0.4.2 (main.rs)."
+  },
+  "kraken.game_crashed": {
+   "text": "Kraken Mount registró un cuelgue de estos juegos en los últimos 14 días (/data/krakenmount/crashes.json, con un motivo como «killed by signal 11»). Un cuelgue aislado puede deberse al propio juego; si se repite, vuelve a empaquetar el juego o cambia el backport. Medic no cambia nada.",
+   "confidence_reason": "Se lee el archivo de Kraken Mount. La causa de un cuelgue no se puede deducir de él."
+  },
+  "kraken.kstuff_missing": {
+   "text": "Kraken Mount no pudo iniciar un juego porque kstuff no estaba en marcha («kstuff is not running» en kraken.log). Sin kstuff, los juegos con firma falsa no arrancan. Carga kstuff (revisa la carga automática) y vuelve a iniciar el juego. Medic no cambia nada.",
+   "confidence_reason": "Se lee la línea del registro; su significado figura en el código fuente de Kraken Mount 0.4.2 (launch.rs)."
+  },
+  "kraken.launch_failed": {
+   "text": "Al iniciar un juego, Kraken Mount no pudo montar algo: el overlay, un /app0 con escritura o la redirección del backport («… FAILED» en kraken.log). El juego arranca entonces sin su backport o no arranca. Reinicia la consola y vuelve a intentarlo; si persiste, pasa la línea del registro de la prueba a los desarrolladores de Kraken Mount. Medic no cambia nada.",
+   "confidence_reason": "Se lee la línea del registro; los mensajes figuran en el código fuente de Kraken Mount 0.4.2 (launch.rs). La causa en cada caso sigue abierta."
+  },
+  "ampr.trace_problem": {
+   "text": "El registro de depuración de ampr-emu-ng (/data/ampr_emu_trace.txt, último inicio de juego) informa de un error: índice rechazado, packs no unidos, /app0 sin escritura o .pkg no reconocido (línea en la prueba). Al juego le faltan entonces archivos empaquetados y suele cerrarse. Vuelve a empaquetar o a convertir el juego e inícialo de nuevo. Medic no cambia nada.",
+   "confidence_reason": "Se leen las líneas; su significado está en docs/debug-build.md de ampr-emu-ng. El registro solo existe con la versión de depuración y solo para el último inicio."
+  },
+  "ampr.stale_cache": {
+   "text": "La carpeta /data/ampr_cache contiene restos de la caché de disco de versiones antiguas de ampr-emu-ng (hasta 0.4.1); tras un cuelgue se quedan y ocupan espacio. Desde ampr-emu-ng 0.5.0 el runtime limpia la carpeta por sí mismo en el siguiente inicio de un juego. Medic no borra nada.",
+   "confidence_reason": "Se leen la carpeta y las versiones del runtime en los juegos. Que desde 0.5.0 se limpie figura en el código fuente de ampr-emu-ng (pack/mod.rs); que el contenido sea realmente un resto no está medido."
+  },
+  "game.runtime_debug_build": {
+   "text": "Estos juegos contienen la versión de depuración de ampr-emu-ng. Tiene un pool de memoria menor, abre el puerto 9090 y lee /data/ampr_emu_tune.txt; está pensada para buscar fallos. Para el uso diario, pon la versión publicada.",
+   "confidence_reason": "Se lee la biblioteca del juego y se reconoce por marcas que solo contiene la versión de depuración (comprobado en 0.5.1). Cuánto frena el pool menor un juego no está medido."
+  },
+  "forge.old_version": {
+   "text": "Está instalado Dump Forge anterior a 0.5.6. Estas versiones pierden los archivos de trofeos (nptitle.dat, npbind.dat) al convertir desde .pkg, y los packs de más de 32 partes se interrumpen al escribirse directamente en la PS5. Usa una versión actual de Dump Forge y vuelve a convertir los juegos afectados.",
+   "confidence_reason": "La versión es una marca en la payload instalada; los fallos figuran en las notas de la versión 0.5.6 de Dump Forge. Medic no reconoce versiones anteriores sin marca."
+  },
+  "game.p5z_container": {
+   "text": "Una ruta de escaneo contiene archivos .p5z. Es un contenedor de MaxPack para guardar: ShadowMount+, Kraken Mount y ampr-emu-ng no lo leen, así que el juego no aparece. Descomprímelo con MaxPack antes de jugar. Medic no cambia nada.",
+   "confidence_reason": "Se lee la cabecera del archivo («MAXPKP5Z»). Que ningún montador lea el formato procede del código fuente de Kraken Mount 0.4.2 y de ampr-emu-ng 0.5.1 y puede cambiar con nuevas versiones."
+  },
+  "game.p5z_truncated": {
+   "text": "Un archivo .p5z está incompleto: la cabecera está, falta el final (el pie que MaxPack escribe en último lugar). Lo normal es que se interrumpiera la transferencia. Vuelve a transferir el archivo. Medic no cambia nada.",
+   "confidence_reason": "Se leen la cabecera y los últimos 32 bytes; MaxPack describe el formato en docs/p5z-format.md. Si aún hay una transferencia en curso, Medic no lo puede saber."
+  },
+  "kraken.api_game_error": {
+   "text": "Kraken Mount informa de un error en estos juegos (estado «error», el mensaje está en la prueba). Así no se pueden jugar. El mensaje suele mostrar la causa (paquete incompleto, caché sin construir); después deja que Kraken Mount reconstruya el juego. Medic no cambia nada. Leído a través de la interfaz local de Kraken Mount (solo lectura).",
+   "confidence_reason": "El estado procede del propio Kraken Mount (interfaz local, puerto 8097, código fuente 0.4.2 web.rs); Medic no lo interpreta más."
+  },
+  "kraken.api_duplicate": {
+   "text": "Kraken Mount encuentra el mismo ID de título varias veces (estado «duplicate») y no monta las fuentes adicionales. Conserva solo una fuente por juego y quita las demás de las rutas de escaneo. Medic no cambia nada. Leído a través de la interfaz local de Kraken Mount (solo lectura).",
+   "confidence_reason": "El estado procede del propio Kraken Mount (interfaz local, puerto 8097, código fuente 0.4.2 web.rs); Medic no lo interpreta más."
+  },
+  "kraken.api_low_space": {
+   "text": "Kraken Mount informa de que hay poco espacio libre para su caché. Los nuevos juegos .pkg ya no se construyen. Libera espacio en la unidad de la caché (elimina en Kraken Mount los juegos o cachés que no necesites). Medic no borra nada. Leído a través de la interfaz local de Kraken Mount (solo lectura).",
+   "confidence_reason": "El estado procede del propio Kraken Mount (interfaz local, puerto 8097, código fuente 0.4.2 web.rs); Medic no lo interpreta más."
+  },
+  "kraken.api_ampr_missing": {
+   "text": "Kraken Mount no tiene un runtime de ampr-emu-ng utilizable (estado «missing» o «error»). Los juegos empaquetados no arrancan. Deja que Kraken Mount recargue o actualice el runtime. Medic no cambia nada. Leído a través de la interfaz local de Kraken Mount (solo lectura).",
+   "confidence_reason": "El estado procede del propio Kraken Mount (interfaz local, puerto 8097, código fuente 0.4.2 web.rs); Medic no lo interpreta más."
+  },
+  "kraken.api_ampr_hand": {
+   "text": "Kraken Mount usa un runtime de ampr-emu-ng puesto a mano (estado «hand») en lugar del incluido o descargado. Está permitido, pero Kraken Mount no corrige los fallos de esa versión con sus propias actualizaciones. Si hay problemas con juegos empaquetados, usa primero el runtime incluido. Leído a través de la interfaz local de Kraken Mount (solo lectura).",
+   "confidence_reason": "El estado procede del propio Kraken Mount (interfaz local, puerto 8097, código fuente 0.4.2 web.rs); Medic no lo interpreta más."
   },
   "update.pup_on_usb": {
    "text": "Una unidad USB contiene el archivo PS5/UPDATE/PS5UPDATE.PUP. Con la unidad conectada, basta pulsar un botón equivocado en el modo seguro para que la consola lo instale; después el jailbreak ya no funciona en esta consola. La corrección cambia el nombre del archivo a PS5UPDATE.PUP.blocked; no se borra nada, deshacer restaura el nombre."

@@ -1987,7 +1987,7 @@ void collect_app_registry(const Platform& p, Facts& f) {
 Facts collect_all(const Platform& p, const std::function<void(int, int)>& progress) {
     Facts f;
     json failed = json::array();
-    constexpr int kSteps = 33;  // 32 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
+    constexpr int kSteps = 37;  // 36 Collectors + Gateway (nur fuer die Fortschrittsanzeige; Abweichungen schaden nicht)
     int done = 0;
     // Jeder Collector einzeln: ein Fehler (z. B. beschaedigtes JSON in einer von Hand bearbeiteten Datei) beendet nicht den ganzen Check-up,
     // sondern wird als collector.failed vermerkt; die uebrigen Fakten bleiben gueltig (Audit 12. Nov. 2026)
@@ -2025,6 +2025,10 @@ Facts collect_all(const Platform& p, const std::function<void(int, int)>& progre
     MEDIC_RUN(collect_game_layout);
     MEDIC_RUN(collect_game_hints);
     MEDIC_RUN(collect_kraken);
+    MEDIC_RUN(collect_kraken_api);
+    MEDIC_RUN(collect_ampr_trace);
+    MEDIC_RUN(collect_dumpforge);
+    MEDIC_RUN(collect_p5z);
     MEDIC_RUN(collect_kstuff_file);
     MEDIC_RUN(collect_compat);
     MEDIC_RUN(collect_baseline);

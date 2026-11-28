@@ -71,6 +71,8 @@ public:
             probe_rtt_ = n.value("rtt_ms", 2.0);
             probe_loss_every_ = n.value("loss_every", 0);
         }
+        if (j.contains("local_api") && j["local_api"].is_object())  // Fixture: Antworten lokaler Dienste, Schluessel "<port><pfad>"
+            for (auto& [key, v] : j["local_api"].items()) api_[key] = v.is_string() ? v.get<std::string>() : v.dump();
         if (j.contains("ports") && j["ports"].is_object()) {
             for (auto& [port, open] : j["ports"].items()) {
                 if (!open.is_boolean()) continue;
@@ -127,6 +129,14 @@ public:
         out = klog_.substr(0, max_bytes);
         return true;
     }
+    bool local_api_get(int port, const std::string& path, std::string& body) const override {
+        body.clear();
+        if (port != 8097 || (path != "/api/state" && path != "/api/ampr")) return false;
+        auto it = api_.find(std::to_string(port) + path);
+        if (it == api_.end()) return false;
+        body = it->second;
+        return true;
+    }
     PortState local_port_state(int port) const override {
         auto it = ports_.find(port);
         return it == ports_.end() ? PortState::Unknown : it->second;
@@ -142,6 +152,7 @@ private:
     bool have_klog_ = false;
     Thermal thermal_;
     std::map<int, PortState> ports_;
+    std::map<std::string, std::string> api_;
     std::string fw_, model_;
     std::vector<StorageInfo> storage_;
     std::map<std::string, std::map<std::string, std::string>> components_;
