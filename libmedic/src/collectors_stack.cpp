@@ -305,6 +305,12 @@ void collect_etahen(const IFileSystem& fs, Facts& f) {
     if (crashed) f.set("etahen.crashed", true);
 }
 
+std::vector<std::string> fs_list(const IFileSystem& fs, const std::string& dir) {
+    std::vector<std::string> v;
+    for (const auto& e : fs.list_dir(dir)) v.push_back(e.name);
+    return v;
+}
+
 // ---- Installationsdatei der Systemsoftware auf USB ------------------------------------------------------------------
 // Die PS5 installiert von USB aus <Laufwerk>/PS5/UPDATE/PS5UPDATE.PUP (FAT32/exFAT, Anleitung von Sony zum abgesicherten Modus).
 // Liegt die Datei auf einem Stick, der an der Konsole steckt, genuegt ein falscher Tastendruck im abgesicherten Modus. Gesucht wird
@@ -326,6 +332,31 @@ void collect_update_files(const IFileSystem& fs, Facts& f) {
             if (!e.is_dir && lower(e.name) == "ps5update.pup") files.push_back({{"path", join_path(upd, e.name)}, {"dir", upd}, {"size", e.size}});
     }
     f.set("update.pup_files", std::move(files));
+}
+
+// ---- Dateien im Platzhalter eines abgezogenen Laufwerks ---------------------------------------------------------------
+// Ohne Laufwerk ist /mnt/usbN bzw. /mnt/extN nur ein kleiner Platzhalter (tmpfs) auf der Systempartition (getfsstat an der Test-Konsole, 9. Nov. 2026).
+// Was dort hineingeschrieben wird, liegt nicht auf dem Laufwerk und fuellt die kleine Partition (PS5 Cooling Center 1.90.0 sperrt das deshalb).
+// storage.placeholder_files[].{drive,count,desc}; nur bei ausdruecklichem tmpfs, eine fehlende Speicherangabe sagt nichts.
+void collect_placeholder_files(const Platform& p, Facts& f) {
+    json out = json::array();
+    for (const auto& s : p.sys().storage()) {
+        if (s.fstype != "tmpfs") continue;
+        bool drive = false;
+        for (const char* pre : {"/mnt/usb", "/mnt/ext"}) {
+            const std::string pr = pre;
+            if (s.mount.compare(0, pr.size(), pr) != 0 || s.mount.size() == pr.size()) continue;
+            drive = std::all_of(s.mount.begin() + static_cast<long>(pr.size()), s.mount.end(), [](unsigned char c) { return std::isdigit(c); });
+        }
+        if (!drive) continue;
+        const auto entries = fs_list(p.fs(), s.mount);
+        if (entries.empty()) continue;
+        std::string names;
+        for (std::size_t i = 0; i < entries.size() && i < 3; ++i) names += (i ? ", " : "") + entries[i];
+        if (entries.size() > 3) names += ", ...";
+        out.push_back({{"drive", s.mount}, {"count", entries.size()}, {"desc", s.mount + ": " + std::to_string(entries.size()) + " (" + names + ")"}});
+    }
+    f.set("storage.placeholder_files", std::move(out));
 }
 
 }  // namespace
@@ -360,6 +391,7 @@ void collect_helpers(const Platform& p, Facts& f) {
     collect_nanodns(p.fs(), f);
     collect_etahen(p.fs(), f);
     collect_update_files(p.fs(), f);
+    collect_placeholder_files(p, f);
 }
 
 }  // namespace medic

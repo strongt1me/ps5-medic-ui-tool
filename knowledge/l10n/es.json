@@ -456,6 +456,18 @@
   },
   "games.two_mounters": {
    "text": "El mismo juego lo montan Kraken Mount y ShadowMount+ (ver lista). Se estorban: Kraken desmonta el montaje de ShadowMount+ ('not ours, or stale; unmounting it'), los inicios fallan con 'Device busy' y el icono cambia. Deja una sola fuente por juego: los juegos para Kraken Mount solo en la carpeta Kraken-Games, los de ShadowMount+ en homebrew. ShadowMount+ no debe analizar Kraken-Games (la profundidad de análisis 2 en la carpeta principal de una unidad la incluye). Medic no mueve nada aquí."
+  },
+  "kraken.ps4_game": {
+   "text": "En la carpeta Kraken-Games hay un juego de PS4 (ver lista). Kraken Mount solo ejecuta juegos de PS5: ese juego no recibe allí un icono jugable. Pon los juegos de PS4 como .pkg en una unidad exFAT y juégalos con PS4Mount, o instálalos. Medic no mueve nada."
+  },
+  "kraken.old_fpkg_folder": {
+   "text": "Junto a la carpeta Kraken-Games sigue la antigua carpeta FPKG-Games con contenido (ver lista). Desde PS5 Cooling Center 1.98.0 Kraken Mount busca en Kraken-Games; la app solo renombra la carpeta antigua si la nueva aún no existe. Los juegos de la carpeta antigua ya no se encuentran. Mueve el contenido de FPKG-Games a Kraken-Games (apaga antes Kraken Mount). Medic no mueve nada."
+  },
+  "storage.files_in_placeholder": {
+   "text": "Hay archivos en el lugar de una unidad que no está conectada (ver lista). Sin unidad, /mnt/usbN o /mnt/extN es solo un pequeño marcador en la partición del sistema: lo que se escribió ahí no está en la unidad, se pierde al reiniciar y llena la partición pequeña. Vuelve a conectar la unidad o pon los archivos a salvo en /data. Medic no mueve nada."
+  },
+  "kraken.smp_port_taken": {
+   "text": "Kraken Mount (desde 0.4.1) también responde a la interfaz de ShadowMount+ en 127.0.0.1:10101, y ShadowMount+ se ejecuta al lado. Los programas que solo conocen ShadowMount+ pueden hablar entonces con Kraken Mount, y Medic no puede comprobar si la propia interfaz de ShadowMount+ responde. El PS5 Cooling Center traslada esta interfaz en su versión de Kraken Mount; con una versión iniciada por separado, usa Kraken Mount desde el Cooling Center o deja funcionando solo uno de los dos."
   }
  },
  "coverage": {

@@ -496,7 +496,8 @@ bool live_only(const std::string& rule) {
                                                 "kraken.api_game_error", "kraken.api_duplicate", "kraken.api_low_space", "kraken.api_ampr_missing", "kraken.api_ampr_hand",
                                                 // PS5 Cooling Center (28. Nov. 2026): seine config.json gehoert nicht in einen Export, ebenso wenig kraken.log und die Spielordner
                                                 // unter Kraken-Games (der Export spiegelt nur die Scanpfade von ShadowMount+)
-                                                "fan.smp_target_vs_cooling", "games.two_mounters"};
+                                                "fan.smp_target_vs_cooling", "games.two_mounters", "kraken.ps4_game", "kraken.old_fpkg_folder",
+                                                "kraken.smp_port_taken"};  // smp_port_taken: braucht die Antwort der Kraken-API
     return rules.count(rule) != 0;
 }
 

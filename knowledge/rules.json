@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.62",
+  "db_version": "2026.11.63",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -1766,6 +1766,90 @@
       "verified": "doc"
     },
     {
+      "id": "kraken.ps4_game",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.ps4_in_folder[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Im Ordner Kraken-Games liegt ein PS4-Spiel (siehe Liste). Kraken Mount spielt nur PS5-Spiele: Das Spiel bekommt dort keine spielbare Kachel. PS4-Spiele als .pkg auf ein exFAT-Laufwerk legen und über PS4Mount spielen oder installieren. Medic verschiebt nichts.",
+        "en": "A PS4 game is in the Kraken-Games folder (see list). Kraken Mount plays only PS5 games: the game gets no playable tile there. Put PS4 games as .pkg on an exFAT drive and play them through PS4Mount, or install them. Medic moves nothing."
+      },
+      "evidence": "kraken.ps4_in_folder[].path",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-cooling-system-center-pro/blob/main/docs/HANDBUCH.md",
+      "verified": "doc"
+    },
+    {
+      "id": "kraken.old_fpkg_folder",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.old_folder[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Neben dem Ordner Kraken-Games gibt es noch den alten Ordner FPKG-Games mit Inhalt (siehe Liste). Seit PS5 Cooling Center 1.98.0 sucht Kraken Mount in Kraken-Games; die App benennt den alten Ordner nur um, wenn es den neuen noch nicht gibt. Spiele im alten Ordner werden dann nicht mehr gefunden. Den Inhalt von FPKG-Games nach Kraken-Games verschieben (Kraken Mount vorher ausschalten). Medic verschiebt nichts.",
+        "en": "Next to the Kraken-Games folder there is still the old FPKG-Games folder with content (see list). Since PS5 Cooling Center 1.98.0 Kraken Mount looks in Kraken-Games; the app renames the old folder only if the new one does not exist yet. Games in the old folder are then no longer found. Move the content of FPKG-Games into Kraken-Games (switch Kraken Mount off first). Medic moves nothing."
+      },
+      "evidence": "kraken.old_folder[].path",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-cooling-system-center-pro/blob/main/docs/HANDBUCH.md",
+      "verified": "doc"
+    },
+    {
+      "id": "kraken.smp_port_taken",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "kraken.api.version",
+            "gt": "0.4.0"
+          },
+          {
+            "fact": "proc.running",
+            "contains": "shadowmountplus"
+          },
+          {
+            "fact": "smp.api.port",
+            "eq": "10101"
+          },
+          {
+            "fact": "smp.api.state",
+            "eq": "open"
+          },
+          {
+            "any": [
+              {
+                "fact": "fan.cooling.port",
+                "exists": false
+              },
+              {
+                "fact": "fan.cooling.port",
+                "eq": "closed"
+              }
+            ]
+          }
+        ]
+      },
+      "text": {
+        "de": "Kraken Mount (ab 0.4.1) beantwortet auch die Schnittstelle von ShadowMount+ auf 127.0.0.1:10101, und ShadowMount+ läuft daneben. Programme, die nur ShadowMount+ kennen, reden dann womöglich mit Kraken Mount, und Medic kann nicht prüfen, ob die Schnittstelle von ShadowMount+ selbst antwortet. Das PS5 Cooling Center verlegt diese Schnittstelle in seiner Fassung von Kraken Mount; bei einer eigenständig gestarteten Fassung Kraken Mount über das Cooling Center betreiben oder nur einen der beiden laufen lassen.",
+        "en": "Kraken Mount (0.4.1 and newer) also answers the ShadowMount+ interface on 127.0.0.1:10101, and ShadowMount+ runs next to it. Programs that only know ShadowMount+ may then talk to Kraken Mount, and Medic cannot check whether the ShadowMount+ interface itself answers. The PS5 Cooling Center moves this interface in its build of Kraken Mount; with a stand-alone build, run Kraken Mount through the Cooling Center or let only one of the two run."
+      },
+      "evidence": "kraken.api.version",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-cooling-system-center-pro/blob/main/docs/HANDBUCH.md",
+      "verified": "doc"
+    },
+    {
       "id": "smp.fakelib_handoff_stuck",
       "severity": "warning",
       "when": {
@@ -2128,6 +2212,26 @@
           "en": "That the drive is mounted read-only is measured at the mount entry. Medic cannot tell why; the causes listed are common possibilities, not proven."
         }
       }
+    },
+    {
+      "id": "storage.files_in_placeholder",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "storage.placeholder_files[].drive",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "In der Stelle eines nicht angeschlossenen Laufwerks liegen Dateien (siehe Liste). Ohne Laufwerk ist /mnt/usbN bzw. /mnt/extN nur ein kleiner Platzhalter auf der Systempartition: Was dort hineingeschrieben wurde, liegt nicht auf dem Laufwerk, geht beim Neustart verloren und füllt die kleine Partition. Laufwerk wieder anschließen oder die Dateien nach /data retten. Medic verschiebt nichts.",
+        "en": "Files are lying in the place of a drive that is not connected (see list). Without a drive, /mnt/usbN or /mnt/extN is only a small placeholder on the system partition: what was written there is not on the drive, is lost at restart and fills the small partition. Connect the drive again or rescue the files to /data. Medic moves nothing."
+      },
+      "evidence": "storage.placeholder_files[].desc",
+      "fix": null,
+      "source": "https://github.com/strongt1me/ps5-cooling-system-center-pro/blob/main/docs/HANDBUCH.md",
+      "verified": "doc"
     },
     {
       "id": "smp.image_mount_0x60",

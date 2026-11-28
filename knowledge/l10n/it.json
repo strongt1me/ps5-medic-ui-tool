@@ -456,6 +456,18 @@
   },
   "games.two_mounters": {
    "text": "Lo stesso gioco viene montato da Kraken Mount e da ShadowMount+ (vedi elenco). Si ostacolano: Kraken smonta il montaggio di ShadowMount+ ('not ours, or stale; unmounting it'), gli avvii falliscono con 'Device busy', il riquadro cambia. Tieni una sola fonte per gioco: i giochi per Kraken Mount solo nella cartella Kraken-Games, quelli per ShadowMount+ in homebrew. ShadowMount+ non deve analizzare Kraken-Games (la profondità di analisi 2 sulla cartella principale di un'unità la include). Medic qui non sposta nulla."
+  },
+  "kraken.ps4_game": {
+   "text": "Nella cartella Kraken-Games c'è un gioco PS4 (vedi elenco). Kraken Mount avvia solo giochi PS5: lì il gioco non riceve un riquadro giocabile. Metti i giochi PS4 come .pkg su un'unità exFAT e giocali tramite PS4Mount, oppure installali. Medic non sposta nulla."
+  },
+  "kraken.old_fpkg_folder": {
+   "text": "Accanto alla cartella Kraken-Games c'è ancora la vecchia cartella FPKG-Games con contenuti (vedi elenco). Da PS5 Cooling Center 1.98.0 Kraken Mount cerca in Kraken-Games; l'app rinomina la vecchia cartella solo se la nuova non esiste ancora. I giochi nella vecchia cartella non vengono più trovati. Sposta il contenuto di FPKG-Games in Kraken-Games (prima spegni Kraken Mount). Medic non sposta nulla."
+  },
+  "storage.files_in_placeholder": {
+   "text": "Nel posto di un'unità non collegata ci sono dei file (vedi elenco). Senza unità, /mnt/usbN o /mnt/extN è solo un piccolo segnaposto sulla partizione di sistema: ciò che vi è stato scritto non è sull'unità, si perde al riavvio e riempie la piccola partizione. Ricollega l'unità oppure salva i file in /data. Medic non sposta nulla."
+  },
+  "kraken.smp_port_taken": {
+   "text": "Kraken Mount (dalla 0.4.1) risponde anche all'interfaccia di ShadowMount+ su 127.0.0.1:10101, e ShadowMount+ è in esecuzione accanto. I programmi che conoscono solo ShadowMount+ potrebbero quindi parlare con Kraken Mount, e Medic non può verificare se l'interfaccia di ShadowMount+ risponde davvero. Il PS5 Cooling Center sposta questa interfaccia nella sua versione di Kraken Mount; con una versione avviata da sola, usa Kraken Mount tramite il Cooling Center oppure lascia in esecuzione solo uno dei due."
   }
  },
  "coverage": {

@@ -456,6 +456,18 @@
   },
   "games.two_mounters": {
    "text": "Le même jeu est monté par Kraken Mount et par ShadowMount+ (voir la liste). Ils se gênent : Kraken démonte le montage de ShadowMount+ ('not ours, or stale; unmounting it'), les lancements échouent avec 'Device busy', la vignette change. Gardez une seule source par jeu : les jeux pour Kraken Mount uniquement dans le dossier Kraken-Games, ceux pour ShadowMount+ dans homebrew. ShadowMount+ ne doit pas analyser Kraken-Games (une profondeur d'analyse 2 sur le dossier principal d'un lecteur l'inclut). Medic ne déplace rien ici."
+  },
+  "kraken.ps4_game": {
+   "text": "Un jeu PS4 se trouve dans le dossier Kraken-Games (voir la liste). Kraken Mount ne lance que des jeux PS5 : ce jeu n'y obtient pas de vignette jouable. Placez les jeux PS4 en .pkg sur un lecteur exFAT et jouez-y via PS4Mount, ou installez-les. Medic ne déplace rien."
+  },
+  "kraken.old_fpkg_folder": {
+   "text": "À côté du dossier Kraken-Games, l'ancien dossier FPKG-Games existe encore avec du contenu (voir la liste). Depuis PS5 Cooling Center 1.98.0, Kraken Mount cherche dans Kraken-Games ; l'app ne renomme l'ancien dossier que si le nouveau n'existe pas encore. Les jeux de l'ancien dossier ne sont alors plus trouvés. Déplacez le contenu de FPKG-Games dans Kraken-Games (éteignez d'abord Kraken Mount). Medic ne déplace rien."
+  },
+  "storage.files_in_placeholder": {
+   "text": "Des fichiers se trouvent à l'emplacement d'un lecteur qui n'est pas branché (voir la liste). Sans lecteur, /mnt/usbN ou /mnt/extN n'est qu'un petit emplacement réservé sur la partition système : ce qui y a été écrit n'est pas sur le lecteur, se perd au redémarrage et remplit la petite partition. Rebranchez le lecteur ou sauvez les fichiers dans /data. Medic ne déplace rien."
+  },
+  "kraken.smp_port_taken": {
+   "text": "Kraken Mount (à partir de 0.4.1) répond aussi à l'interface de ShadowMount+ sur 127.0.0.1:10101, et ShadowMount+ tourne à côté. Les programmes qui ne connaissent que ShadowMount+ parlent alors peut-être à Kraken Mount, et Medic ne peut pas vérifier si l'interface de ShadowMount+ répond elle-même. Le PS5 Cooling Center déplace cette interface dans sa version de Kraken Mount ; avec une version lancée seule, utilisez Kraken Mount via le Cooling Center ou ne laissez tourner que l'un des deux."
   }
  },
  "coverage": {

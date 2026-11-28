@@ -3,7 +3,7 @@
 
 **Deutsch** · [English](en/RULE_TABLE.md)
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.62, 126 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.63, 130 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -69,9 +69,12 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `kraken.game_crashed` | info | alle | - | todo | Kraken Mount hat für diese Spiele in den letzten 14 Tagen einen Absturz festgehalten (/data/krakenmount/crashes.json, mit Grund wie „kill... |
 | `kraken.kstuff_missing` | warning | alle | - | todo | Kraken Mount konnte ein Spiel nicht starten, weil kstuff nicht lief („kstuff is not running“ in kraken.log). |
 | `kraken.launch_failed` | warning | alle | - | todo | Beim Start eines Spiels konnte Kraken Mount etwas nicht einhängen: Overlay, beschreibbares /app0 oder Backport-Umleitung („… FAILED“ in k... |
+| `kraken.old_fpkg_folder` | warning | alle | - | doc | Neben dem Ordner Kraken-Games gibt es noch den alten Ordner FPKG-Games mit Inhalt (siehe Liste). |
 | `kraken.pkg_sparse_extent` | info | alle | - | community | Kraken Mount hat eine .pkg abgelehnt: Das Layout der Paketdatei hat eine Lücke (sparse extent), und das Paket bekam deshalb keine Kachel;... |
 | `kraken.pkg_truncated` | warning | alle | - | community | Kraken Mount meldet für eine .pkg „truncated?“: Die Datei ist kürzer, als ihr Kopf angibt, etwa nach einem abgebrochenen Download oder ei... |
 | `kraken.pkg_unsupported` | warning | alle | - | community | Kraken Mount lehnt eine .pkg ab, weil sie kein Paket der Art ist, die es lesen kann (Meldung „unsupported package“ oder „not a PS5 packag... |
+| `kraken.ps4_game` | warning | alle | - | doc | Im Ordner Kraken-Games liegt ein PS4-Spiel (siehe Liste). |
+| `kraken.smp_port_taken` | info | alle | - | doc | Kraken Mount (ab 0.4.1) beantwortet auch die Schnittstelle von ShadowMount+ auf 127.0.0.1:10101, und ShadowMount+ läuft daneben. |
 | `kraken.sysex_readonly` | warning | alle | - | community | Kraken Mount konnte einen neuen Titel nicht anmelden: Die Konsole hat /system_ex schreibgeschützt eingehängt (os error 30), die Meldung s... |
 | `kraken.waiting_for_smp` | warning | alle | - | todo | Kraken Mount wartet und hängt nichts ein: Es startet erst, wenn ShadowMount+ beendet ist, und ShadowMount+ läuft gerade (Meldung „waiting... |
 | `nanodns.log_problem` | info | alle | - | doc | Das nanoDNS-Log enthält Fehler: nanoDNS erreicht seine Upstream-DNS-Server nicht (dann scheitert jede Namensauflösung, Apps und Payload M... |
@@ -123,6 +126,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `smp.usb_game_closed_on_rest` | info | alle | - | doc | ShadowMount+ hat beim Ruhemodus ein Spiel von einem USB-Laufwerk beendet (gewollt, kein Fehler). |
 | `smp.v1_config_restored` | critical | alle | - | doc | Die config.ini ist im alten Format (v1), obwohl ShadowMount+ sie schon auf v2 umgestellt hat (config-v1-backup/ready.ini existiert), und... |
 | `smp.v1_keys_in_v2` | warning | alle | `smp_translate_v1_keys` | doc | Die config.ini (Format v2) enthält Zeilen im alten flachen Format, z. |
+| `storage.files_in_placeholder` | warning | alle | - | doc | In der Stelle eines nicht angeschlossenen Laufwerks liegen Dateien (siehe Liste). |
 | `storage.low_space_data` | warning | alle | - | todo | Auf /data sind weniger als 5 % Speicher frei; Mounts, Logs, Backups und Installationen können scheitern. |
 | `storage.oversized_reservation` | info | alle | - | todo | Eine Homebrew-App reserviert mehrere GB Speicher (param.json: downloadDataSize), obwohl ihre Dateien zusammen unter 1 GB bleiben (z. |
 | `storage.scanpath_drive_missing` | info | alle | - | doc | Ein eigener Scanpfad in der config.ini liegt auf einem nicht angeschlossenen Laufwerk (/mnt/usbN oder /mnt/extN): Die Spiele dort werden... |
