@@ -1,0 +1,1 @@
+{"expect": ["smp.emulator_update_replaces_runtime"], "neg_for": ["smp.emulator_update_apr_updater", "apr.updater_present"]}

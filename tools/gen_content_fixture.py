@@ -19,7 +19,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = os.path.join(ROOT, "tests", "fixtures")
 
 PARAM = '{"titleId": "%s", "requiredSystemSoftwareVersion": "0x0900000000000000", "sdkVersion": "0x0900000000000000"}'
-RELEASE_PLUS_5_DAYS = 1795564800  # 2026-11-25 00:00 UTC (Erscheinen 2026-11-20)
+RELEASE_PLUS_5_DAYS = 1795737600  # 2026-11-27 00:00 UTC (Name historisch; muss mindestens einen Tag vor dem Erscheinen dieser Version liegen, 0.6.0: 2026-11-28)
 
 
 def put(path, data=b""):

@@ -6,7 +6,7 @@
 
 **Chequeo, diagnóstico en lenguaje claro y reparación segura para consolas PS5 con jailbreak, como aplicación a pantalla completa para el televisor con DualSense.**
 
-![Versión](https://img.shields.io/badge/Versión-0.5.0-1f6feb)
+![Versión](https://img.shields.io/badge/Versión-0.6.0-1f6feb)
 ![Firmware](https://img.shields.io/badge/FW-1.00%20a%2014.22-2ea44f)
 ![Licencia](https://img.shields.io/badge/Licencia-GPL--3.0--or--later-blue)
 ![Plataforma](https://img.shields.io/badge/Plataforma-PS5%20Payload-003791)

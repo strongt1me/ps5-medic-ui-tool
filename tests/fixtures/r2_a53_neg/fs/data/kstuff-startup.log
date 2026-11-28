@@ -1,0 +1,7 @@
+[0.0] start: 0 ms
+[0.9] A53/PPR total: 900 ms
+
+[0.0] start: 0 ms
+[0.9] A53/PPR total: 800 ms
+[1.0] A53/PPR and loader: 950 ms
+[2.0] total to kstuff ready: 2000 ms
