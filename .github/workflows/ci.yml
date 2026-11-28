@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Host-Build und alle Tests (make test) bei jedem Pull Request und jedem Push auf main. Nur Lesen: keine Geheimnisse, kein Schreibrecht,
+# kein PS5-SDK (die Payloads werden hier nicht gebaut). Alle Abhaengigkeiten liegen unter third_party/; noetig sind nur cmake, g++ und
+# python3, die auf dem Runner vorinstalliert sind.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: make test (Linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Werkzeuge anzeigen
+        run: cmake --version | head -1 && g++ --version | head -1 && python3 --version
+      - name: Host-Build und Tests
+        run: make test

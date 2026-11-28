@@ -41,7 +41,7 @@ Abgrenzung: Es gibt bereits den Windows-„PS5 Jailbreak Doctor“ (MIT, asomiml
 
 ## Build & Test (Zielzustand)
 - `make host` → baut `medic-cli` für Linux/WSL, läuft gegen `tests/fixtures/<fall>/`.
-- `make test` → Unit- + Regel-Tests gegen alle Fixtures.
+- `make test` → Unit- + Regel-Tests gegen alle Fixtures. Läuft auch auf GitHub bei jedem Pull Request und jedem Push auf `main` (`.github/workflows/ci.yml`, ubuntu-24.04, ohne PS5-SDK).
 - `make ps5` → baut den PS5-Payload (ELF, über elfldr/Payload Manager gestartet – kein Sony-Title mit PPSA-Ordner).
 - `make deploy` → per FTP (Port 2121) nach `/data/homebrew/PS5MEDIC/`.
 - `make send-launcher` → Launcher senden (Kachel + UI); `make title` → Ordner-App `FAKE42007`; `make launch-ui` → Ausweichweg über websrv; `make dist` → Release-Ordner und Zip unter `dist/`; `medic-cli report <snapshot> --qr` → Bericht am PC.
