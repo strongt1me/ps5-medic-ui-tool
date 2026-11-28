@@ -1226,6 +1226,8 @@ void collect_shadowmount(const Platform& p, Facts& f) {
             // Ohne erkennbare Titel-ID zaehlt nur ein Image mit echter Endung (die ID steht dann erst im Inneren); ein Spielordner oder eine
             // ".dat"-Datei (z. B. WPSettings.dat aus "System Volume Information") ist kein Spiel.
             if (e.titleid.empty() && (!e.is_image || e.ext == ".dat")) continue;
+            // PS5 Cooling Center legt Sicherungen absichtlich unter <Laufwerk>/PS5-Sicherung/Spiele ab, tiefer als ShadowMount+ sucht (gamecopy.c)
+            if (e.path.find("/PS5-Sicherung/") != std::string::npos) continue;
             deep.push_back({{"path", e.path}, {"level", e.level}, {"titleid", e.titleid}});
             continue;
         }
@@ -1491,7 +1493,7 @@ void collect_system_logs(const Platform& p, Facts& f) {
             std::int64_t last = 0;
         };
         std::map<std::pair<std::string, std::string>, Agg> pairs;
-        int total = 0, seen = 0;
+        int total = 0, seen = 0, payload_msgs = 0;
         static const std::regex code_re("^[A-Za-z0-9]{1,4}-[0-9]{3,6}(-[0-9]{1,2})?$|^0x[0-9A-Fa-f]{8}$"), title_re("^[A-Z]{4}[0-9]{5}$|^NPXS[0-9]{5}$");
         for (const auto& e : fs.list_dir(dir)) {
             if (e.is_dir || e.size > 4096 || e.name.size() < 6 || e.name.compare(e.name.size() - 5, 5, ".json") != 0) continue;
@@ -1503,6 +1505,13 @@ void collect_system_logs(const Platform& p, Facts& f) {
             if (!j.is_object() || !j.contains("shortError") || !j["shortError"].is_string()) continue;
             const std::string code = j["shortError"].get<std::string>();
             if (!std::regex_match(code, code_re)) continue;
+            // CE-108256-2 (intern 0x80BA000D) mit eigenem Text: so zeigen Payloads Meldungen an ("Welcome to NoUpdate", "ZER0DAY: ..."), kein Fehler
+            // des Systems (Fehlerverlauf der Test-Konsole, 28. Nov. 2026). Nur gezaehlt, nicht in errors.pairs.
+            if (code == "CE-108256-2" && (!j.contains("internalErrorCode") || (j["internalErrorCode"].is_number_integer() &&
+                                                                              (j["internalErrorCode"].get<std::int64_t>() & 0xffffffffLL) == 0x80BA000DLL))) {
+                ++payload_msgs;
+                continue;
+            }
             std::string title = j.contains("titleId") && j["titleId"].is_string() ? j["titleId"].get<std::string>() : std::string();
             if (!title.empty() && !std::regex_match(title, title_re)) title.clear();
             std::int64_t when = 0;
@@ -1519,6 +1528,7 @@ void collect_system_logs(const Platform& p, Facts& f) {
                            {"label", key.first + " - " + (key.second.empty() ? std::string("System") : key.second) + " - " + std::to_string(a.count) + "x" + (day.empty() ? std::string() : ", " + day)}});
         }
         f.set("errors.total", total);
+        f.set("errors.payload_messages", payload_msgs);
         f.set("errors.pairs", std::move(arr));
     }
 }

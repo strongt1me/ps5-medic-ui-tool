@@ -462,7 +462,10 @@ nlohmann::json LocalService::console_facts_json() const {
     nlohmann::json out = nlohmann::json::object();
     for (const char* k : {"games.runtime", "games.pack_problems", "games.index_problems", "games.noexec", "games.incomplete", "games.runtime_skipped", "leftovers.files", "games.partial_folders",
                           "games.undo_journals", "games.fakelib_layout", "games.with_fakelib", "games.unsigned_elf", "games.flex_small", "games.playgo_missing", "games.trophy_missing", "nanodns.log.problems",
-                          "kraken.log_present", "kraken.sparse_extent", "kraken.sysex_readonly", "kraken.pkg_other", "kraken.pkg_truncated", "kraken.cache_block", "kraken.ampr_foreign", "kstuff.file", "kstuff.file_version"})
+                          "kraken.log_present", "kraken.sparse_extent", "kraken.sysex_readonly", "kraken.pkg_other", "kraken.pkg_truncated", "kraken.cache_block", "kraken.ampr_foreign", "kraken.kstuff_missing", "kraken.launch_failed",
+                          "kraken.crashes", "kraken.waiting_for_smp", "kraken.old_folder", "kraken.ps4_in_folder", "kraken.api.present", "kraken.api.version", "kraken.api.games_error",
+                          "kraken.api.games_duplicate", "kraken.api.cache_low_space", "kraken.api.ampr_kind", "kraken.api.ampr_version", "ampr.trace_problems", "ampr.stale_cache",
+                          "forge.version", "games.p5z", "games.two_mounters", "smp.deep_sources", "errors.payload_messages", "kstuff.file", "kstuff.file_version"})
         if (const nlohmann::json* v = facts_.get(k)) out[k] = *v;
     return out;
 }

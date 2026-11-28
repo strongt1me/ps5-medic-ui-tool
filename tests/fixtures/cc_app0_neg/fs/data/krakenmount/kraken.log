@@ -1,0 +1,2 @@
+2026-11-28 12:00:38Z [346072] [launch] PPSA00091 overlay MOUNTED (sandbox, nmount 0 ms): /data/krakenmount/caches/PPSA00091/fakelib -> /mnt/sandbox/PPSA00091_000/x/common/lib
+2026-11-28 12:00:38Z [346077] [launch] PPSA00091 sandbox /app0 rw mount FAILED errno=11 (Resource deadlock avoided (os error 11)): /system_ex/app/PPSA00091 -> /mnt/sandbox/PPSA00091_000/app0

@@ -3,7 +3,7 @@
 
 **Deutsch** · [English](en/RULE_TABLE.md)
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.63, 130 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.64, 130 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -68,7 +68,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `kraken.cache_block` | warning | alle | - | community | Kraken Mount erkennt eine .pkg, scheitert aber beim Aufbau des Caches („cache build … short compressed block“): Ein komprimierter Block r... |
 | `kraken.game_crashed` | info | alle | - | todo | Kraken Mount hat für diese Spiele in den letzten 14 Tagen einen Absturz festgehalten (/data/krakenmount/crashes.json, mit Grund wie „kill... |
 | `kraken.kstuff_missing` | warning | alle | - | todo | Kraken Mount konnte ein Spiel nicht starten, weil kstuff nicht lief („kstuff is not running“ in kraken.log). |
-| `kraken.launch_failed` | warning | alle | - | todo | Beim Start eines Spiels konnte Kraken Mount etwas nicht einhängen: Overlay, beschreibbares /app0 oder Backport-Umleitung („… FAILED“ in k... |
+| `kraken.launch_failed` | warning | alle | - | todo | Beim Start eines Spiels konnte Kraken Mount etwas nicht einhängen: das Overlay oder die Backport-Umleitung („… FAILED“ in kraken.log). |
 | `kraken.old_fpkg_folder` | warning | alle | - | doc | Neben dem Ordner Kraken-Games gibt es noch den alten Ordner FPKG-Games mit Inhalt (siehe Liste). |
 | `kraken.pkg_sparse_extent` | info | alle | - | community | Kraken Mount hat eine .pkg abgelehnt: Das Layout der Paketdatei hat eine Lücke (sparse extent), und das Paket bekam deshalb keine Kachel;... |
 | `kraken.pkg_truncated` | warning | alle | - | community | Kraken Mount meldet für eine .pkg „truncated?“: Die Datei ist kürzer, als ihr Kopf angibt, etwa nach einem abgebrochenen Download oder ei... |

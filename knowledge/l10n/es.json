@@ -398,7 +398,7 @@
    "confidence_reason": "Se lee la línea del registro; su significado figura en el código fuente de Kraken Mount 0.4.2 (launch.rs)."
   },
   "kraken.launch_failed": {
-   "text": "Al iniciar un juego, Kraken Mount no pudo montar algo: el overlay, un /app0 con escritura o la redirección del backport («… FAILED» en kraken.log). El juego arranca entonces sin su backport o no arranca. Reinicia la consola y vuelve a intentarlo; si persiste, pasa la línea del registro de la prueba a los desarrolladores de Kraken Mount. Medic no cambia nada.",
+   "text": "Al iniciar un juego, Kraken Mount no pudo montar algo: el overlay o la redirección del backport («… FAILED» en kraken.log). El juego arranca entonces sin su backport o no arranca. Reinicia la consola y vuelve a intentarlo; si persiste, pasa la línea del registro de la prueba a los desarrolladores de Kraken Mount. Medic no cambia nada.",
    "confidence_reason": "Se lee la línea del registro; los mensajes figuran en el código fuente de Kraken Mount 0.4.2 (launch.rs). La causa en cada caso sigue abierta."
   },
   "ampr.trace_problem": {
