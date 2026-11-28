@@ -647,3 +647,7 @@ On the test console (.94) with PS5 Cooling Center Pro 1.99.0 and Kraken Mount 0.
 - **`errors.recurring_system_app`:** Entries CE-108256-2 (internal `0x80BA000D`) with their own text are messages from payloads (on the console “Welcome to NoUpdate”, “ZER0DAY: …”), not system errors. The collector counts them separately (`errors.payload_messages`) and no longer in `errors.pairs`.
 - `last_facts.json` now also holds the new facts about Kraken (log, API), ampr, Dump Forge, `.p5z`, `smp.deep_sources` and `errors.payload_messages`.
 - Fixtures `cc_*` via `tools/gen_tools_fixture.py`; each with a counter-check (a slightly changed copy triggers the finding). **Not yet checked on the console.**
+
+## Addendum: `games.two_mounters` and the Cooling Center's folder hand-over (28 Nov 2026)
+
+PS5 Cooling Center from 1.99 manages Kraken Mount (`/data/PS5-Cooling-Center/kraken/zustand.txt` = “an”) and hands it the folders of ShadowMount+ while that is not running (`src/kraken.c`, `smp_folders_apply`). When taking over, Kraken unmounts ShadowMount+'s old mounts and writes “not ours, or stale; unmounting it” (`register.rs`). With the Cooling Center this log line therefore no longer counts as evidence of two mounters; only titles that really lie in `Kraken-Games` and with ShadowMount+ count. Without the Cooling Center the log line stays evidence. New fact `kraken.cc_managed` (also in `last_facts.json`). Fixtures `cc_two_mount_log_neg` and `cc_two_mount_dup_pos`. Rule file unchanged.

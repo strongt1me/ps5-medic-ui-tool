@@ -21,6 +21,8 @@ Fehlalarme mit PS5 Cooling Center 1.99 (28. Nov. 2026, an der Test-Konsole gefun
   cc_pkg_own_pos              Retail-Paket im Ordner Kraken-Games (dort bleibt es ein Befund)
   cc_backup_depth_neg         Spiel tief im Sicherungsordner PS5-Sicherung/Spiele (absichtlich ausser Reichweite von ShadowMount+)
   cc_payload_msg_neg          vier CE-108256-2 mit eigenem Text (Payload-Meldungen) von NPXS40087, kein Systemfehler
+  cc_two_mount_log_neg        "not ours, or stale" in kraken.log, aber das Cooling Center verwaltet Kraken (Uebergabe der Ordner von ShadowMount+)
+  cc_two_mount_dup_pos        dasselbe, aber der Titel liegt wirklich in Kraken-Games und bei ShadowMount+ (bleibt ein Befund)
 
 Aufruf: python3 tools/gen_tools_fixture.py
 """
@@ -131,6 +133,13 @@ def main():
     make("cc_payload_msg_neg", [], ["errors.recurring_system_app"], files={hist % i: json.dumps(
          {"internalErrorCode": -2135293939, "messageBuffer": t, "shortError": "CE-108256-2", "titleId": "NPXS40087", "tick": 63931317706412000 + i * 1000000, "natType": 2})
          for i, t in enumerate(msgs)})
+    tm = "games.two_mounters"
+    zustand = "data/PS5-Cooling-Center/kraken/zustand.txt"
+    stale = "[12:00:01] scan: PPSA00096 /system_ex/app/PPSA00096 is mounted but not ours, or stale; unmounting it" + nl
+    make("cc_two_mount_log_neg", [], [tm], procs=(), files={log: stale, zustand: "an" + nl})
+    make("cc_two_mount_dup_pos", [tm], procs=("shadowmountplus",), files={log: stale, zustand: "an" + nl,
+         "data/Kraken-Games/PPSA00097-Spiel/sce_sys/param.json": '{"titleId": "PPSA00097"}',
+         "data/homebrew/PPSA00097-Spiel/sce_sys/param.json": '{"titleId": "PPSA00097"}'})
     print("ok")
 
 
