@@ -36,6 +36,9 @@ void collect_ampr_trace(const Platform& p, Facts& f);  // ampr.trace_present, am
 void collect_dumpforge(const Platform& p, Facts& f);   // forge.version, forge.path, forge.before_056 (Marke in der Dump-Forge-Payload)
 void collect_p5z(const Platform& p, Facts& f);         // games.p5z[].{path,name,truncated,desc}: MaxPack-Container in den Scanpfaden
 void collect_kraken_api(const Platform& p, Facts& f);  // kraken.api.*: lokale API von Kraken Mount (nur GET 127.0.0.1:8097 /api/state, /api/ampr)
+void collect_converters(const Platform& p, Facts& f);   // tools.gc_*, games.lz4_*, games.e2a_*, tools.e2a_launch_blocked, tools.alembic_resume (Runde 2)
+void collect_appdb_tools(const Platform& p, Facts& f);  // tools.tabshifter_*, tools.homehider_*, tools.youtube_block_* (nur Dateispuren, D17)
+void collect_tool_traces(const Platform& p, Facts& f);  // devtools.*, apr.updater_present, kstuff.a53_ppr_failed, games.autokstuff_invalid, games.playgo_*
 void collect_kraken(const Platform& p, Facts& f);         // kraken.log_present, kraken.sparse_extent[]: Meldungen aus /data/krakenmount/kraken.log
 void collect_leftovers(const Platform& p, Facts& f);       // leftovers.files[].{path,name,size,is_dir,root}: Reste abgebrochener Kopier-/Packvorgaenge in den Scanpfaden
 

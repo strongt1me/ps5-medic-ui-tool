@@ -24,6 +24,9 @@ Fehlalarme mit PS5 Cooling Center 1.99 (28. Nov. 2026, an der Test-Konsole gefun
   cc_two_mount_log_neg        "not ours, or stale" in kraken.log, aber das Cooling Center verwaltet Kraken (Uebergabe der Ordner von ShadowMount+)
   cc_two_mount_dup_pos        dasselbe, aber der Titel liegt wirklich in Kraken-Games und bei ShadowMount+ (bleibt ein Befund)
 
+Runde 2 (28. Nov. 2026): r2_* je Regel aus Packern/Konvertern, App-Datenbank-Werkzeugen, PS5_DevTools, APR Emu Updater, kstuff-a53, autokstuff, pgo_stub
+(Quellen in docs/RULES.md, Nachtrag Runde 2).
+
 Aufruf: python3 tools/gen_tools_fixture.py
 """
 import json
@@ -44,15 +47,31 @@ def put(path, data=b""):
         f.write(data if isinstance(data, bytes) else data.encode("utf-8"))
 
 
-def make(name, expect, neg_for=(), procs=("shadowmountplus",), files=None, api=None):
+def make(name, expect, neg_for=(), procs=("shadowmountplus",), files=None, api=None, comps=None):
     dst = os.path.join(FIX, name)
     if os.path.isdir(dst):
         shutil.rmtree(dst)
     os.makedirs(dst)
     extra = ', "local_api": %s' % json.dumps(api) if api else ""
+    if comps:
+        extra += ', "components": %s' % json.dumps(comps)
     put(os.path.join(dst, "system.json"), '{"fw": "12.00", "model": "CFI-TEST", "now": %d, %s%s}' % (NOW, STORAGE, extra))
     put(os.path.join(dst, "procs.json"), "[" + ", ".join('"%s"' % p for p in procs) + "]")
     for rel, data in (files or {}).items():
+        put(os.path.join(dst, "fs", rel), data)
+    parts = ['"expect": [%s]' % ", ".join('"%s"' % r for r in expect)]
+    if neg_for:
+        parts.append('"neg_for": [%s]' % ", ".join('"%s"' % r for r in neg_for))
+    put(os.path.join(dst, "expect.json"), "{" + ", ".join(parts) + "}\n")
+
+
+def clone(src, name, expect, neg_for, files):
+    # Kopie eines vorhandenen Fixtures mit zusaetzlichen Dateien und eigener Erwartung
+    dst = os.path.join(FIX, name)
+    if os.path.isdir(dst):
+        shutil.rmtree(dst)
+    shutil.copytree(os.path.join(FIX, src), dst)
+    for rel, data in files.items():
         put(os.path.join(dst, "fs", rel), data)
     parts = ['"expect": [%s]' % ", ".join('"%s"' % r for r in expect)]
     if neg_for:
@@ -140,6 +159,59 @@ def main():
     make("cc_two_mount_dup_pos", [tm], procs=("shadowmountplus",), files={log: stale, zustand: "an" + nl,
          "data/Kraken-Games/PPSA00097-Spiel/sce_sys/param.json": '{"titleId": "PPSA00097"}',
          "data/homebrew/PPSA00097-Spiel/sce_sys/param.json": '{"titleId": "PPSA00097"}'})
+    # Runde 2 (28. Nov. 2026): Packer/Konverter, App-Datenbank-Werkzeuge, DevTools/APR/kstuff
+    hb = "data/homebrew/"
+    smp17 = {"smp": {"version": "1.7beta12"}}
+    smp16 = {"smp": {"version": "1.6beta16"}}
+    make("r2_gc_journal_pos", ["gc.destructive_interrupted"], files={hb + ".Spiel.exfat.gc-compress.tmp.stream-journal": "GCSTRM2"})
+    make("r2_gc_hidden_pos", ["gc.hidden_original"], files={hb + ".gc-hide-move-PPSA00102-ab12-01": "x", hb + "Spiel.exfat.original": "x"})
+    make("r2_gc_hidden_neg", [], ["gc.hidden_original", "gc.destructive_interrupted"], files={hb + "notes.original": "x", hb + ".versteckt": "x"})
+    vdir = "data/GameCompressor/validations/"
+    make("r2_gc_bad_pos", ["gc.bad_blocks"], files={vdir + "PPSA00103.json": '{"status": "bad-blocks-found"}'})
+    make("r2_gc_bad_neg", [], ["gc.bad_blocks"], files={vdir + "PPSA00103.json": '{"status": "compression-stats"}'})
+    gclog = {"data/GameCompressor/logs/log.txt": "[10:00:00] ShadowMountPlus did not remount PPSA00104; mount.lnk=missing" + nl}
+    make("r2_gc_mount_pos", ["gc.smp17_remount_failed"], files=gclog, comps=smp17)
+    make("r2_gc_mount_neg", [], ["gc.smp17_remount_failed"], files=gclog, comps=smp16)
+    make("r2_lz4_inc_pos", ["game.lz4_incomplete_output"], files={hb + "PPSA00105-app_AMPR/INCOMPLETE.txt": "Packing failed or cancelled.", hb + "PPSA00105-app_AMPR/ampr_assets.index": "AMPRPAK4"})
+    make("r2_lz4_unv_pos", ["game.lz4_unverified"], files={hb + "PPSA00105-app_AMPR/UNVERIFIED.txt": "x", hb + "PPSA00105-app_AMPR/.ampr-owned": "AMPRStudio"})
+    make("r2_lz4_neg", [], ["game.lz4_incomplete_output", "game.lz4_unverified"], files={hb + "Notizen/INCOMPLETE.txt": "x", hb + "Notizen/UNVERIFIED.txt": "x"})
+    make("r2_e2a_pos", ["game.e2a_unfinished", "ampr.trace_mode_left_on"], files={hb + "PPSA00106/.e2a-state/state.bin": "x", hb + "PPSA00106/fakelib2/.e2a-trace": ""})
+    e2alog = "data/exfat2ampr/exfat2ampr.log"
+    make("r2_e2a_log_pos", ["e2a.launch_check_failed"], files={e2alog: "launch check /data/homebrew/PPSA00107: would not start: no_emulator, backport_ampr" + nl, hb + "PPSA00107/x.bin": "x"})
+    make("r2_e2a_log_neg", [], ["e2a.launch_check_failed"], files={e2alog: "launch check /data/homebrew/PPSA00199: would not start: no_emulator" + nl})
+    make("r2_alembic_pos", ["game.alembic_resumable"], files={"data/alembic/resume/0011223344556677.json": '{"partial": "/data/homebrew/Aus.exfat.alembic-partial", "state": "paused"}',
+         hb + "Aus.exfat.alembic-partial": "x"})
+    make("r2_alembic_neg", [], ["game.alembic_resumable"], files={"data/alembic/resume/0011223344556677.json": '{"partial": "/data/homebrew/Weg.exfat.alembic-partial"}'})
+    make("r2_tabshifter_pos", ["tools.tabshifter_used", "tools.tabshifter_old"], files={"data/tabshifter/tile_installed": "", "data/payloads/TabShifter.elf": "ELF test PS5 TabShifter v1.3.0 Ready!"})
+    make("r2_tabshifter_neg", [], ["tools.tabshifter_used", "tools.tabshifter_old"], files={"data/payloads/TabShifter.elf": "ELF test PS5 TabShifter v1.4.0 Ready!"})
+    make("r2_homehider_pos", ["tools.homehider_used", "tools.homehider_folder_tile"], files={"data/homehider/state.db": "x", "user/app/HHFD00001/sce_sys/param.json": '{"titleId": "HHFD00001"}'})
+    ytlog = "data/appinfo-block.log"
+    make("r2_youtube_pos", ["tools.youtube_update_blocked"], files={ytlog: "done: YouTube updates blocked. Reboot the console now." + nl, "data/appinfo.db.orig": "SQLite format 3"})
+    make("r2_youtube_err_pos", ["tools.youtube_blocker_write_failed"], files={ytlog: "ERROR: cannot write /system_data/priv/mms/appinfo.db" + nl})
+    make("r2_youtube_err_neg", ["tools.youtube_update_blocked"], ["tools.youtube_blocker_write_failed"], files={ytlog: "ERROR: cannot write /system_data/priv/mms/appinfo.db" + nl + "already blocked, nothing to do" + nl})
+    crash = '{"format": 1, "title_id": "PPSA00108", "signal_name": "SIGSEGV", "where": "libSceAmpr.sprx+0x10 (called from)", "outcome": "crashed"}'
+    make("r2_devtools_pos", ["devtools.title_crashed", "devtools.crash_in_runtime", "devtools.attach_failed"], files={"data/devtools/crashes/20261125-101010-PPSA00108-123.json": crash,
+         "data/devtools/devtools.log": "attach PPSA00109 pid 55 failed: errno 16" + nl})
+    make("r2_devtools_neg", [], ["devtools.title_crashed", "devtools.crash_in_runtime", "devtools.attach_failed"], files={
+         "data/devtools/crashes/20261001-101010-PPSA00108-123.json": crash, "data/devtools/crashes/20261125-101010-PPSA00109-124.json": crash.replace('"crashed"', '"handled"')})
+    make("r2_apr_pos", ["apr.updater_present"], files={"data/apr-emu-updater/apr-emu/builds.json": "{}"})
+    ks = "data/kstuff-startup.log"
+    make("r2_a53_pos", ["kstuff.a53_ppr_failed"], files={ks: nl.join(["[0.0] start: 0 ms", "[0.1] A53 init: 5 ms", "[0.9] A53/PPR total: 900 ms", ""])})
+    make("r2_a53_neg", [], ["kstuff.a53_ppr_failed"], files={ks: nl.join(["[0.0] start: 0 ms", "[0.9] A53/PPR total: 900 ms", "",
+         "[0.0] start: 0 ms", "[0.9] A53/PPR total: 800 ms", "[1.0] A53/PPR and loader: 950 ms", "[2.0] total to kstuff ready: 2000 ms", ""])})
+    make("r2_autokstuff_pos", ["game.autokstuff_delay_invalid"], files={hb + "PPSA00110-Test/autokstuff": b"\xef\xbb\xbf30", "data/autokstuff/PPSA00111": "0"})
+    make("r2_autokstuff_neg", [], ["game.autokstuff_delay_invalid"], files={hb + "PPSA00110-Test/autokstuff": "30" + nl, "data/autokstuff/PPSA00111": " 45"})
+    make("r2_playgo_pos", ["game.playgo_stub_log_build", "game.playgo_stub_dat_example"], files={hb + "PPSA00112-Test/playlgo.log": "x", hb + "PPSA00112-Test/playgo_stub.dat": "80 <---- number of chunks" + nl})
+    make("r2_playgo_neg", [], ["game.playgo_stub_log_build", "game.playgo_stub_dat_example"], files={hb + "PPSA00112-Test/playgo_stub.dat": "80" + nl + "1" + nl})
+    # Medic-Fehler: PlayGo-Stub im Backport-Ordner zaehlt (Kopie von gh14_pos), Emulator-Updates mit APR Emu Updater (Kopie von gi5_pos)
+    clone("gh14_pos", "r2_playgo_backport_neg", [], ["game.playgo_stub_missing"], {"data/homebrew/backports/PPSA00094/fakelib/libScePlayGo.sprx": "x"})
+    clone("gi5_pos", "r2_apr_emu_pos", ["smp.emulator_update_apr_updater", "apr.updater_present"], ["smp.emulator_update_replaces_runtime"], {"data/apr-emu-updater/state.json": "{}"})
+    clone("gi5_pos", "r2_apr_emu_neg", ["smp.emulator_update_replaces_runtime"], ["smp.emulator_update_apr_updater", "apr.updater_present"], {"data/apr-emu-updater.txt": "kein Ordner"})
+    # Gegenstuecke: aehnliche Namen, aber nicht die Spur des Werkzeugs
+    make("r2_tools_neg", [], ["game.e2a_unfinished", "ampr.trace_mode_left_on", "tools.homehider_used", "tools.homehider_folder_tile", "tools.youtube_update_blocked",
+                              "tools.youtube_blocker_write_failed", "apr.updater_present"], files={
+         hb + "PPSA00106/e2a-state/x": "x", hb + "PPSA00106/fakelib2/.trace": "x", "data/homehider/settings.txt": "x", "user/app/HHFD00002/icon0.png": "x",
+         ytlog: "ERROR: patch failed: no YouTube row" + nl, "data/apr-emu-updater.txt": "x"})
     print("ok")
 
 

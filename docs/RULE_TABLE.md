@@ -3,14 +3,16 @@
 
 **Deutsch** · [English](en/RULE_TABLE.md)
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.64, 130 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.65, 155 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
 | `ampr.stale_cache` | info | alle | - | todo | Im Ordner /data/ampr_cache liegen Reste des Plattencaches älterer ampr-emu-ng-Fassungen (bis 0.4.1); nach einem Absturz bleiben sie liege... |
+| `ampr.trace_mode_left_on` | info | alle | - | todo | Der Trace-Modus von exFAT2AMPR ist bei diesem Spiel noch an (fakelib2/.e2a-trace): Es läuft eine Debug-Laufzeit, die Befehle mitschreibt... |
 | `ampr.trace_problem` | warning | alle | - | todo | Das Debug-Protokoll von ampr-emu-ng (/data/ampr_emu_trace.txt, letzter Spielstart) meldet einen Fehler: Index abgelehnt, Packs nicht verb... |
 | `appdb.orphan_entry` | warning | alle | - | todo | Die Datenbank der Systemsoftware (app.db) führt einen Titel, dessen Ordner unter /user/app oder /system_ex/app fehlt (Evidenz: Titel-ID):... |
 | `appdb.unregistered_folder` | info | alle | - | todo | Unter /user/app liegt ein Titelordner (PPSA/CUSA), den die Datenbank der Konsole nicht kennt; das Spiel fehlt in der Bibliothek. |
+| `apr.updater_present` | info | alle | - | todo | APR Emu Updater ist installiert (/data/apr-emu-updater). |
 | `autoload.elfldr_without_delay` | warning | alle | `autoload_insert_delay` | doc | In der Autoload-Liste folgt auf den Loader (elfldr) sofort der nächste Eintrag. |
 | `autoload.entry_duplicate` | info | alle | `autoload_remove_duplicates` | doc | Ein Eintrag steht mehrfach in der Autoload-Liste und wird jedes Mal gesendet (die Loader entfernen Doppelte nicht). |
 | `autoload.entry_missing` | warning | alle | `autoload_fix_missing` | doc | Ein Eintrag der Autoload-Liste hat keine passende Payload-Datei (oder nur die Groß-/Kleinschreibung weicht ab; Namen sind case-sensitiv). |
@@ -22,13 +24,20 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `db.integrity_failed` | warning | alle | - | doc | Eine Datenbank der Systemsoftware ist beschädigt (SQLite integrity_check auf einer Kopie). |
 | `db.journal_pending` | info | alle | - | doc | Neben einer Datenbank der Systemsoftware liegt ein Journal mit offener Transaktion. |
 | `db.truncated` | warning | alle | - | doc | Eine Datenbank der Systemsoftware ist kleiner, als ihr Kopf angibt (abgeschnitten), z. |
+| `devtools.attach_failed` | info | alle | - | todo | PS5 DevTools konnte sich an diese Titel nicht anhängen (devtools.log, „attach … failed“). |
+| `devtools.crash_in_runtime` | warning | alle | - | todo | Laut PS5 DevTools geschah ein Absturz in der Laufzeit-Bibliothek libSceAmpr.sprx, nicht im Spiel selbst. |
+| `devtools.title_crashed` | info | alle | - | todo | PS5 DevTools hat in den letzten 14 Tagen Abstürze festgehalten (/data/devtools/crashes, mit Signal und Stelle). |
+| `e2a.launch_check_failed` | warning | alle | - | todo | exFAT2AMPR hat bei seiner letzten Startprüfung für dieses Spiel Hindernisse gefunden (exfat2ampr.log, „would not start“). |
 | `errors.recurring_system_app` | info | alle | - | todo | Eine Systemanwendung (Titel NPXS…) hat im Fehlerverlauf mehrfach denselben CE-Fehlercode gemeldet. |
 | `errors.recurring_title` | warning | alle | - | todo | Der Fehlerverlauf (/system_data/priv/error/history) enthält denselben CE-Fehlercode mehrfach für denselben Titel: Der Titel startet oder... |
 | `fan.double_controller` | warning | alle | - | todo | Zwei Lüfterregler laufen gleichzeitig (siehe Liste). |
 | `fan.smp_target_vs_cooling` | warning | alle | `smp_set_key` | doc | In der config.ini von ShadowMount+ steht ein festes Lüfterziel ([fan] target_temperature als Zahl), und das PS5 Cooling Center regelt den... |
 | `forge.old_version` | info | alle | - | todo | Installiert ist Dump Forge vor 0.5.6. |
+| `game.alembic_resumable` | info | alle | - | todo | Eine Umwandlung mit Alembic ist pausiert oder wurde abgebrochen und lässt sich fortsetzen (Eintrag in /data/alembic/resume). |
+| `game.autokstuff_delay_invalid` | info | alle | - | todo | Die autokstuff-Datei dieses Spiels enthält keine gültige Wartezeit (leer, 0, Text oder Byte-Order-Mark am Anfang). |
 | `game.backport_incomplete` | warning | alle | - | todo | Bei diesen Spielen ist der Backport nur halb eingebaut: Die eboot.bin trägt schon ein SDK, das zur Konsole passt, aber mindestens ein Mod... |
 | `game.compat_known_bad` | info | alle | - | community | Laut der Kompatibilitätsliste für ZSTD- und LZ4-Sicherungen läuft dieses Spiel bei Testern nicht oder nur mit widersprüchlichen Berichten... |
+| `game.e2a_unfinished` | warning | alle | - | todo | Eine Umwandlung mit exFAT2AMPR ist pausiert oder wurde unterbrochen (Ordner .e2a-state im Spielordner). |
 | `game.eboot_invalid` | warning | alle | - | todo | Die eboot.bin eines Spielordners ist unbrauchbar: kleiner als 64 Byte oder reiner Text (z. |
 | `game.fakelib_layout` | info | alle | - | doc | Ein Spiel hat einen unklaren fakelib-Aufbau (Beleg: Pfad und Art). |
 | `game.flex_memory_small` | info | alle | - | community | In sce_sys/param.json des Spiels steht kernel.flexibleMemorySize unter 429916160 (410 MiB), das Spiel nutzt die ng-Laufzeit ab 0.3.4, und... |
@@ -38,6 +47,8 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `game.incomplete_folder` | warning | alle | - | todo | Ein Ordner in einem Scanpfad sieht wie ein Spiel aus, ist aber unvollständig: es fehlt die eboot.bin oder die sce_sys/param.json, oder di... |
 | `game.index_files_missing` | warning | alle | - | doc | In einem Spielordner fehlen Dateien, die die ampr_emu.index nennt (Beleg: Pfad und Zahl fehlender Dateien von den geprüften; Beispiele st... |
 | `game.leftover_parts` | warning | alle | `quarantine_leftovers` | community | In einem Scanpfad liegen Reste abgebrochener Kopier- oder Packvorgänge (.part, .tmp, .teil, .neu, .unvollstaendig). |
+| `game.lz4_incomplete_output` | warning | alle | - | todo | In diesem Spielordner liegt INCOMPLETE.txt von LZ4 Game Compressor: Das Packen wurde abgebrochen, die Ausgabe ist unbrauchbar. |
+| `game.lz4_unverified` | info | alle | - | todo | LZ4 Game Compressor hat diese Ausgabe nicht geprüft (UNVERIFIED.txt). |
 | `game.needs_backport` | warning | alle | - | todo | Für diese Spiele verlangt die param.json eine höhere Firmware-Version als die der Konsole, und in den Scanpfaden fehlt der Ordner backpor... |
 | `game.ng_index_too_big` | info | alle | - | doc | Ein sehr großes Spiel (ab etwa 200 000 Dateien laut ampr_emu.index) nutzt ampr-emu-ng 0.3.5 oder 0.4.0. |
 | `game.ng_save_risk` | info | alle | - | community | Im Spiel liegt eine ampr-emu-ng-Fassung (0.3.5 oder 0.4.0, Release), bei der Nutzer Probleme beim Speichern melden, und die Konsole hat f... |
@@ -48,12 +59,18 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `game.pack_no_emu_index` | info | alle | - | todo | Ein Spiel mit Packs hat keine ampr_emu.index. |
 | `game.pack_runtime_mismatch` | warning | alle | - | doc | Ein Spiel mit gepackten Dateien (ampr_zstd.index oder ampr_assets.index) hat keine passende Laufzeit-Bibliothek: fakelib/libSceAmpr.sprx... |
 | `game.partial_folder` | warning | alle | `quarantine_partial_folder` | community | In einem Scanpfad liegt ein Packordner mit Volumes (ampr_zstd-NNN.pak), aber ohne ampr_zstd.index. |
+| `game.playgo_stub_dat_example` | info | alle | - | todo | Die Einstellungen des PlayGo-Stubs (pgo_stub) werden ignoriert: playgo_stub.dat enthält noch den Beispieltext („<----“), liegt im fakelib... |
+| `game.playgo_stub_log_build` | info | alle | - | todo | Im Spielordner liegt playlgo.log: Hier steckt die Log-Fassung des PlayGo-Stubs (pgo_stub), die bei jedem Aufruf in den Spielordner schreibt. |
 | `game.playgo_stub_missing` | info | alle | - | community | Das Spiel hat PlayGo-Dateien (sce_sys/playgo-scenario.json oder playgo-chunk.dat), aber weder libScePlayGo.sprx im fakelib noch eine Play... |
 | `game.runtime_debug_build` | info | alle | - | todo | In diesen Spielen steckt die Debug-Fassung von ampr-emu-ng. |
 | `game.runtime_old_version` | info | alle | - | doc | Im Spiel liegt eine alte ampr-emu-ng-Fassung (vor 0.3.4), und die Konsole hat für dieses Spiel einen Fehlercode verzeichnet. |
 | `game.trophy_files_missing` | info | alle | - | community | Im Spielordner gibt es sce_sys/trophy2 mit Dateien, aber mindestens eine der Trophäen-Dateien fehlt (sce_sys/nptitle.dat, sce_sys/uds/npb... |
 | `game.unsigned_elf` | info | alle | - | community | Mindestens eine Programmdatei des Spiels (eboot.bin, sce_module, prx oder fakelib) ist eine reine, nicht signierte ELF-Datei, und die Kon... |
 | `games.two_mounters` | warning | alle | - | doc | Dasselbe Spiel wird von Kraken Mount und ShadowMount+ eingehängt (siehe Liste). |
+| `gc.bad_blocks` | critical | alle | - | todo | Game Compressor hat bei der Prüfung kaputte Blöcke in diesem Image gefunden (validations/*.json). |
+| `gc.destructive_interrupted` | critical | alle | - | todo | Eine Komprimierung von Game Compressor im zerstörenden Modus wurde abgebrochen (Datei .gc-compress.tmp.stream-journal). |
+| `gc.hidden_original` | warning | alle | - | todo | Game Compressor hat ein Original versteckt (Name mit .gc-hide-, .__gc_remount_, .gc-uncompress- oder Endung .original), meist weil ein Au... |
+| `gc.smp17_remount_failed` | warning | alle | - | todo | Game Compressor meldet, dass ShadowMount+ ein Spiel nach Prüfen oder Umwandeln nicht wieder eingehängt hat. |
 | `hen.etahen_crashed` | warning | alle | - | doc | etaHEN meldet einen Absturz seines Hauptdienstes ('main etaHEN has crashed'); Toolbox und Plugins fehlen danach. |
 | `hen.etahen_double_load` | warning | alle | - | doc | Es laufen mehrere etaHEN-Prozesse. |
 | `hen.etahen_game_rest_kill` | info | alle | - | doc | In etaHEN ist 'Game_rest_kill' (oder 'Util_rest_kill') eingeschaltet: Beim Ruhemodus beendet etaHEN das offene Spiel bzw. |
@@ -77,6 +94,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `kraken.smp_port_taken` | info | alle | - | doc | Kraken Mount (ab 0.4.1) beantwortet auch die Schnittstelle von ShadowMount+ auf 127.0.0.1:10101, und ShadowMount+ läuft daneben. |
 | `kraken.sysex_readonly` | warning | alle | - | community | Kraken Mount konnte einen neuen Titel nicht anmelden: Die Konsole hat /system_ex schreibgeschützt eingehängt (os error 30), die Meldung s... |
 | `kraken.waiting_for_smp` | warning | alle | - | todo | Kraken Mount wartet und hängt nichts ein: Es startet erst, wenn ShadowMount+ beendet ist, und ShadowMount+ läuft gerade (Meldung „waiting... |
+| `kstuff.a53_ppr_failed` | critical | alle | - | todo | kstuff-a53 hat beim letzten Start seinen A53/PPR-Schritt nicht geschafft und kstuff deshalb gar nicht gestartet (/data/kstuff-startup.log). |
 | `nanodns.log_problem` | info | alle | - | doc | Das nanoDNS-Log enthält Fehler: nanoDNS erreicht seine Upstream-DNS-Server nicht (dann scheitert jede Namensauflösung, Apps und Payload M... |
 | `payload.elf_invalid` | warning | alle | `quarantine_broken_elf` | doc | Mindestens eine ELF-Datei ist unbrauchbar: zu klein, ohne ELF-Kennung (oft eine gespeicherte HTML-Fehlerseite) oder abgeschnitten (abgebr... |
 | `payload.port_9021_closed` | warning | alle | - | todo | Port 9021 nimmt keine Verbindungen an, und weder elfldr noch etaHEN läuft: Es ist kein ELF-Loader aktiv, Payloads lassen sich nicht an di... |
@@ -98,6 +116,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `smp.custom_scanpath_hides_defaults` | warning | alle | `smp_set_key` | doc | Es sind eigene Scanpfade gesetzt, daher werden die Standardpfade nicht mehr gescannt und ShadowMount+ findet diese Spiele nicht. |
 | `smp.debug_off` | info | alle | `smp_set_key` | doc | debug=0: ohne Debug-Log ist keine Diagnose möglich. |
 | `smp.duplicate_titleid` | warning | alle | `move_duplicate_titleid` | doc | Dieselbe TITLE_ID liegt in mehreren Quellen (z. |
+| `smp.emulator_update_apr_updater` | warning | alle | - | todo | ShadowMount+ hat Emulator-Updates eingeschaltet, ein Spiel hat zstd-Packs, und APR Emu Updater ist installiert. |
 | `smp.emulator_update_replaces_runtime` | warning | alle | `smp_set_key` | doc | ShadowMount+ hat Emulator-Updates eingeschaltet, und ein Spiel hat zstd-Packs. |
 | `smp.exfat_cluster` | info | alle | - | doc | Dieses .exfat-Image hat Cluster kleiner als 64 KB und ist dadurch langsamer. |
 | `smp.fakelib_handoff_stuck` | warning | alle | - | community | Ein beendeter Prozess blockiert die Aufräumschlange der Fakelib: danach starten Backport-Spiele ohne Fakelib und stürzen ab. |
@@ -136,4 +155,10 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `sys.temp_high` | info | alle | - | todo | Die Konsole ist gerade sehr heiß (CPU oder SoC über 85 °C). |
 | `sys.unclean_boot` | warning | alle | - | todo | Der Startverlauf (/system_data/priv/vshlog) zeigt in den letzten 14 Tagen mindestens drei Neustarts, vor denen kein Herunterfahren protok... |
 | `sys.unclean_boot_history` | info | alle | - | todo | Der Startverlauf (/system_data/priv/vshlog) enthält Neustarts ohne protokolliertes Herunterfahren (z. |
+| `tools.homehider_folder_tile` | info | alle | - | todo | Auf der Konsole liegen Ordnerkacheln von HomeHider (/user/app/HHFD…). |
+| `tools.homehider_used` | info | alle | - | todo | HomeHider ändert die Datenbank des Startbildschirms (Ausblenden, Ordner, Namen) und schreibt seinen Stand, solange er läuft, alle paar Se... |
+| `tools.tabshifter_old` | warning | alle | - | todo | Eine alte TabShifter-Fassung (vor 1.4.0) liegt bei den Payloads. |
+| `tools.tabshifter_used` | info | alle | - | todo | TabShifter hat die Datenbank des Startbildschirms geändert (Tabs, Ausblenden, Anheften). |
+| `tools.youtube_blocker_write_failed` | warning | alle | - | todo | Der YouTube-Blocker konnte appinfo.db zuletzt nicht sauber schreiben (/data/appinfo-block.log). |
+| `tools.youtube_update_blocked` | info | alle | - | todo | Die Aktualisierung der YouTube-App ist auf dieser Konsole gesperrt (appinfo.db geändert: Version 99.999.999, Abrufadresse localhost). |
 | `update.pup_on_usb` | warning | alle | `block_update_file` | doc | Auf einem USB-Laufwerk liegt die Datei PS5/UPDATE/PS5UPDATE.PUP. |

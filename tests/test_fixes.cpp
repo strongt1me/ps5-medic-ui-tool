@@ -497,7 +497,15 @@ bool live_only(const std::string& rule) {
                                                 // PS5 Cooling Center (28. Nov. 2026): seine config.json gehoert nicht in einen Export, ebenso wenig kraken.log und die Spielordner
                                                 // unter Kraken-Games (der Export spiegelt nur die Scanpfade von ShadowMount+)
                                                 "fan.smp_target_vs_cooling", "games.two_mounters", "kraken.ps4_game", "kraken.old_fpkg_folder",
-                                                "kraken.smp_port_taken"};  // smp_port_taken: braucht die Antwort der Kraken-API
+                                                "kraken.smp_port_taken",  // smp_port_taken: braucht die Antwort der Kraken-API
+                                                // Runde 2 (28. Nov. 2026): Werkzeug-Dateien, Logs und Ordner ausserhalb der Scanpfade (/data/GameCompressor, /data/devtools,
+                                                // /data/apr-emu-updater, /user/app/HHFD..., kstuff-startup.log) und Dateien in Spielordnern gehoeren nicht in den Export
+                                                "gc.destructive_interrupted", "gc.hidden_original", "gc.bad_blocks", "gc.smp17_remount_failed", "game.lz4_incomplete_output",
+                                                "game.lz4_unverified", "game.e2a_unfinished", "e2a.launch_check_failed", "game.alembic_resumable", "ampr.trace_mode_left_on",
+                                                "tools.tabshifter_used", "tools.tabshifter_old", "tools.homehider_used", "tools.homehider_folder_tile", "tools.youtube_update_blocked",
+                                                "tools.youtube_blocker_write_failed", "devtools.title_crashed", "devtools.crash_in_runtime", "devtools.attach_failed", "apr.updater_present",
+                                                "kstuff.a53_ppr_failed", "game.autokstuff_delay_invalid", "game.playgo_stub_log_build", "game.playgo_stub_dat_example",
+                                                "smp.emulator_update_apr_updater"};
     return rules.count(rule) != 0;
 }
 

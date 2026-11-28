@@ -138,7 +138,7 @@
    "text": "ShadowMount+ 1.7beta12 rifiuta l'intera configurazione se anche una sola riga non è valida: all'avvio il payload termina (il messaggio compare solo sulla console); una modifica a runtime mantiene il vecchio stato. Correggi le righe elencate (on/off o 1/0, profondità di scansione 1 o 2, numeri entro l'intervallo consentito) o rimuovile da config.ini; fai prima una copia del file. La correzione mette un # davanti alle righe non valide del file, così ShadowMount+ usa il valore predefinito (backup e annullamento inclusi)."
   },
   "smp.v1_keys_in_v2": {
-   "text": "Il config.ini (formato v2) contiene righe nel vecchio formato piatto, per esempio scan_depth=2. ShadowMount+ 1.7beta12 le ignora in silenzio in un file v2, quindi l'impostazione non ha effetto. La riparazione sposta le righe con un equivalente noto nella sezione giusta (per esempio scan_depth in [scan] depth); backup e annullamento inclusi."
+   "text": "Il config.ini (formato v2) contiene righe nel vecchio formato piatto, per esempio scan_depth=2. ShadowMount+ 1.7beta12 le ignora in silenzio in un file v2, quindi l'impostazione non ha effetto. La riparazione sposta le righe con un equivalente noto nella sezione giusta (per esempio scan_depth in [scan] depth); backup e annullamento inclusi. Righe simili le scrivono ad esempio vecchie versioni di Game Compressor e Prospack (image_ro=, image_sector=, pfsc_direct_game=)."
   },
   "smp.v1_config_restored": {
    "text": "Il config.ini è nel vecchio formato (v1), anche se ShadowMount+ lo ha già convertito in v2 (config-v1-backup/ready.ini esiste), e differisce da config-v1-backup/config.ini. Per questo ShadowMount+ 1.7beta12 rifiuta di avviarsi (messaggio solo sulla console). Ripristina il file v2 (ad es. dal backup di Medic in /data/ps5medic/backups) oppure convertilo in v2 a mano; quale valga lo decidi tu. Nessuna riparazione automatica."
@@ -223,7 +223,7 @@
    "confidence_reason": "La dimensione viene letta; un file system di certo non sta in meno di 512 byte. Come ShadowMount+ tratti tali file non è stato osservato sulla console di prova."
   },
   "game.no_exec_permission": {
-   "text": "I file di programma di un gioco (eboot.bin, moduli) non hanno il permesso di esecuzione, per esempio 0666 invece di 0777. La console non avvia tali file e segnala CE-107750-0. Succede spesso copiando via FTP, a seconda del server FTP. La correzione imposta il permesso di esecuzione di questi file (0666 diventa 0777); il contenuto resta intatto, annullare ripristina i vecchi permessi. Possono mancare di nuovo alla prossima copia via FTP: imposta 0777 (chmod 777) come predefinito nel programma FTP.",
+   "text": "I file di programma di un gioco (eboot.bin, moduli) non hanno il permesso di esecuzione, per esempio 0666 invece di 0777. La console non avvia tali file e segnala CE-107750-0. Succede spesso copiando via FTP, a seconda del server FTP. La correzione imposta il permesso di esecuzione di questi file (0666 diventa 0777); il contenuto resta intatto, annullare ripristina i vecchi permessi. Possono mancare di nuovo alla prossima copia via FTP: imposta 0777 (chmod 777) come predefinito nel programma FTP. Noto anche per le cartelle di gioco scritte da Alembic fino alla 0.6.5.",
    "confidence_reason": "I permessi vengono letti. Il fatto che la console non avvii un file senza permesso di esecuzione è stato osservato il 13 novembre 2026 sulla console di test con la nostra eboot.bin e confermato da un utente (ampr-emu-ng, issue 41) con una copia FTP."
   },
   "game.leftover_parts": {
@@ -468,6 +468,106 @@
   },
   "kraken.smp_port_taken": {
    "text": "Kraken Mount (dalla 0.4.1) risponde anche all'interfaccia di ShadowMount+ su 127.0.0.1:10101, e ShadowMount+ è in esecuzione accanto. I programmi che conoscono solo ShadowMount+ potrebbero quindi parlare con Kraken Mount, e Medic non può verificare se l'interfaccia di ShadowMount+ risponde davvero. Il PS5 Cooling Center sposta questa interfaccia nella sua versione di Kraken Mount; con una versione avviata da sola, usa Kraken Mount tramite il Cooling Center oppure lascia in esecuzione solo uno dei due."
+  },
+  "gc.destructive_interrupted": {
+   "text": "Una compressione di Game Compressor in modalità distruttiva è stata interrotta (file .gc-compress.tmp.stream-journal). In questa modalità Game Compressor cancella l'originale già durante la scrittura, quindi una parte non c'è più. Non spostare né cancellare nulla e riprendi il lavoro in Game Compressor. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "gc.hidden_original": {
+   "text": "Game Compressor ha nascosto un originale (nome con .gc-hide-, .__gc_remount_, .gc-uncompress- o estensione .original), di solito perché un lavoro è stato interrotto. ShadowMount+ allora non vede il gioco. Avvia Game Compressor (rinomina da solo i resti del rimontaggio) o rinomina il file a mano. Non cancellarlo. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "gc.bad_blocks": {
+   "text": "Game Compressor ha trovato blocchi danneggiati in questa immagine durante la verifica (validations/*.json). Secondo il manutentore, la sola lettura di tali blocchi ha causato kernel panic. Non avviare il gioco; riparalo in Game Compressor o ricomprimilo dall'originale. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "gc.smp17_remount_failed": {
+   "text": "Game Compressor segnala che ShadowMount+ non ha rimontato un gioco dopo la verifica o la conversione. Game Compressor (1.0.4, fork 1.1.1) non è adatto a ShadowMount+ dalla 1.7, che non monta più i giochi in modo permanente; il gioco di solito funziona comunque. Non usare verifica e montaggio in Game Compressor. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "game.lz4_incomplete_output": {
+   "text": "In questa cartella di gioco c'è INCOMPLETE.txt di LZ4 Game Compressor: la compressione è stata interrotta e il risultato è inutilizzabile. Non giocarci, riconvertilo; conserva l'originale. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "game.lz4_unverified": {
+   "text": "LZ4 Game Compressor non ha verificato questo risultato (UNVERIFIED.txt). Conserva l'originale finché il gioco non ha funzionato correttamente una volta.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "game.e2a_unfinished": {
+   "text": "Una conversione con exFAT2AMPR è in pausa o è stata interrotta (cartella .e2a-state nella cartella del gioco). Non avviare né spostare il gioco; riprendi o annulla la conversione in exFAT2AMPR. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "e2a.launch_check_failed": {
+   "text": "Nell'ultimo controllo di avvio per questo gioco, exFAT2AMPR ha trovato ostacoli (exfat2ampr.log, «would not start»). I codici nella prova indicano il motivo: no_emulator (runtime mancante), fakelib2_no_ampr (fakelib2 senza runtime), backport_ampr (il backport porta una propria libSceAmpr.sprx), fakelib_disabled (fakelib disattivato in ShadowMount+). Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "game.alembic_resumable": {
+   "text": "Una conversione con Alembic è in pausa o è stata annullata e si può riprendere (voce in /data/alembic/resume). Non usare il risultato parziale e non eliminarlo, altrimenti la ripresa non funziona più; riprendi o annulla in Alembic. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "ampr.trace_mode_left_on": {
+   "text": "La modalità trace di exFAT2AMPR è ancora attiva per questo gioco (fakelib2/.e2a-trace): gira un runtime di debug che registra i comandi ed è più lento. Disattivala in exFAT2AMPR dopo la raccolta. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "tools.tabshifter_used": {
+   "text": "TabShifter ha modificato il database della schermata Home (schede, nascondere, fissare). Conseguenze note secondo le sue issue: lucchetti sui giochi, riquadri che non si avviano e riquadri nascosti che ritornano. Il backup del primo avvio si trova accanto al database come app.db.tabshifter.bak. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "tools.tabshifter_old": {
+   "text": "Tra i payload c'è una vecchia versione di TabShifter (prima della 1.4.0). Fino alla 1.2.1 cancellava i file WAL dei database di sistema in uso, fino alla 1.3.0 cambiava le categorie (le app nella scheda Media non si avviano) e «Restore» sovrascriveva l'intero database (i riquadri installati dopo sparivano). Passa alla 1.4.0 o successiva oppure non avviarla più. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "tools.homehider_used": {
+   "text": "HomeHider modifica il database della schermata Home (nascondere, cartelle, nomi) e, finché è in esecuzione, riscrive il suo stato ogni pochi secondi. «Ricostruisci database» quindi non aiuta in modo duraturo se HomeHider viene caricato automaticamente. «Restore original backup» sostituisce l'intero app.db: i riquadri dei titoli installati dopo vanno persi. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "tools.homehider_folder_tile": {
+   "text": "Sulla console ci sono riquadri cartella di HomeHider (/user/app/HHFD…). Si aprono solo se HomeHider è in esecuzione (altrimenti «can't connect»). Se HomeHider non si usa più, sono resti che possono ricomparire quando in seguito si registrano di nuovo tutte le app. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "tools.youtube_update_blocked": {
+   "text": "L'aggiornamento dell'app YouTube è bloccato su questa console (appinfo.db modificato: versione 99.999.999, indirizzo di download localhost). Lo Store può quindi mostrare una versione strana e la sua riparazione dell'app potrebbe non funzionare. Si torna indietro solo con la copia completa /data/appinfo.db.orig; è vecchia quanto il blocco. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "tools.youtube_blocker_write_failed": {
+   "text": "Il blocco di YouTube non è riuscito a scrivere correttamente appinfo.db l'ultima volta (/data/appinfo-block.log). Sovrascrive il file direttamente; potrebbe essere modificato a metà. Il controllo dei database di Medic mostra se è danneggiato; il backup è in /data/appinfo.db.orig. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "devtools.title_crashed": {
+   "text": "PS5 DevTools ha registrato crash negli ultimi 14 giorni (/data/devtools/crashes, con segnale e posizione). Il rapporto si può inviare allo sviluppatore del gioco o dell'homebrew. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "devtools.crash_in_runtime": {
+   "text": "Secondo PS5 DevTools un crash è avvenuto nella libreria di runtime libSceAmpr.sprx, non nel gioco stesso. Prova un'altra versione del runtime (ampr-emu-ng o Drakmor, release invece di debug). Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "devtools.attach_failed": {
+   "text": "PS5 DevTools non è riuscito ad agganciarsi a questi titoli (devtools.log, «attach … failed»). Di solito è già in esecuzione un altro debugger (ps5debug, gdbsrv). Per questi titoli mancano quindi i rapporti dei crash. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "apr.updater_present": {
+   "text": "APR Emu Updater è installato (/data/apr-emu-updater). La libSceAmpr.sprx dei giochi può provenire da lui; distribuisce le versioni di Drakmor, che non leggono i pack zstd. Per la scelta per gioco il suo payload deve essere caricato dopo ogni riavvio; per i giochi come cartella sostituisce il file in modo permanente, senza annullamento.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "kstuff.a53_ppr_failed": {
+   "text": "All'ultimo avvio kstuff-a53 non ha superato il passo A53/PPR e quindi non ha avviato affatto kstuff (/data/kstuff-startup.log). Questa versione conosce solo profili fino al FW 11.40 e secondo il manuale è testata solo su 5.00. Usa il normale kstuff-lite. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "game.autokstuff_delay_invalid": {
+   "text": "Il file autokstuff di questo gioco non contiene un'attesa valida (vuoto, 0, testo o byte order mark all'inizio). autokstuff allora non mette in pausa kstuff per questo gioco. Inserisci solo un numero (secondi, maggiore di 0). Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "game.playgo_stub_log_build": {
+   "text": "Nella cartella del gioco c'è playlgo.log: è in uso la versione con log dello stub PlayGo (pgo_stub), che scrive nella cartella del gioco a ogni chiamata. Per l'uso quotidiano usa la versione senza log. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "game.playgo_stub_dat_example": {
+   "text": "Le impostazioni dello stub PlayGo (pgo_stub) vengono ignorate: playgo_stub.dat contiene ancora il testo di esempio («<----»), si trova in fakelib invece che nella cartella del gioco, oppure c'è solo il file .example. Lo stub usa allora 1000 chunk e tutte le lingue. Di solito innocuo; solo se il gioco dà problemi, crea il file correttamente. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
+  },
+  "smp.emulator_update_apr_updater": {
+   "text": "ShadowMount+ ha gli aggiornamenti degli emulatori attivi, un gioco ha pack zstd e APR Emu Updater è installato. Con gli aggiornamenti attivi ShadowMount+ sostituisce la libSceAmpr.sprx del gioco con la versione nella cartella degli emulatori; solo ampr-emu-ng legge i pack zstd. APR Emu Updater però ha bisogno di questa impostazione attiva, quindi qui Medic non la disattiva: scegli ampr-emu-ng per questo gioco in APR Emu Updater o comprimi il gioco senza zstd. Medic non modifica nulla.",
+   "confidence_reason": "Medic legge solo il file o la riga di log che lo strumento scrive secondo il suo codice sorgente o il manuale (fonte collegata); non ancora osservato sulle console di prova."
   }
  },
  "coverage": {

@@ -458,7 +458,13 @@ void collect_kstuff_file(const Platform& p, Facts& f) {
     std::string line;
     while (std::getline(in, line)) {
         while (!line.empty() && (line.back() == '\r' || line.back() == ' ')) line.pop_back();
-        if (line.empty() || line[0] == '!' || lower(line).find("kstuff") == std::string::npos || line.find("..") != std::string::npos) continue;
+        if (line.empty() || line[0] == '!' || line.find("..") != std::string::npos) continue;
+        // "kstuff" nur am Wortanfang: "autokstuff" (sunnyqeen/autokstuff, pausiert kstuff) ist kein kstuff
+        const std::string ll = lower(line);
+        bool word = false;
+        for (std::size_t pos = ll.find("kstuff"); pos != std::string::npos; pos = ll.find("kstuff", pos + 1))
+            if (pos == 0 || !std::isalpha(static_cast<unsigned char>(ll[pos - 1]))) word = true;
+        if (!word) continue;
         for (const auto& e : p.fs().list_dir("/data/pldmgr/payloads/" + line)) {
             const std::string l = lower(e.name);
             if (e.is_dir || l.size() < 5 || l.compare(l.size() - 4, 4, ".elf") != 0) continue;
@@ -667,8 +673,32 @@ void collect_game_hints(const Platform& p, Facts& f) {
         for (const auto& i : *imgs)
             if (i.is_object() && i.contains("path") && i["path"].is_string()) image_paths.insert(i["path"].get<std::string>());
     bool playgo_emu = false;
-    for (const auto& e : fs.list_dir("/data/shadowmount/emus"))
-        if (lower(e.name).find("playgo") != std::string::npos) playgo_emu = true;
+    for (const char* dir : {"/data/shadowmount/emus", "/data/krakenmount/ampr"})  // Kraken legt jede Datei aus ampr/ in jedes Spiel
+        for (const auto& e : fs.list_dir(dir))
+            if (lower(e.name).find("playgo") != std::string::npos) playgo_emu = true;
+    // libScePlayGo.sprx ausserhalb des Spielordners (Runde 2, 28. Nov. 2026): <Scanpfad>/backports/<ID>*/fakelib(2) (ShadowMount+, dlc_emu Issue 3),
+    // /data/krakenmount/caches/<ID>/fakelib (Kraken Mount, pgo_stub), /data/autokstuff/fakelib/<ID> und /data/autokstuff/backport/<ID>/fakelib (autokstuff)
+    std::vector<std::string> backport_dirs;
+    {
+        std::set<std::string> roots_seen;
+        std::vector<std::string> roots = {"/data/homebrew"};
+        if (const json* rs = f.get("smp.scan_roots"); rs && rs->is_array())
+            for (const auto& r : *rs)
+                if (r.is_string()) roots.push_back(r.get<std::string>());
+        for (const auto& r : roots)
+            if (roots_seen.insert(r).second)
+                for (const auto& e : fs.list_dir(join_path(r, "backports")))
+                    if (e.is_dir && backport_dirs.size() < 400) backport_dirs.push_back(join_path(join_path(r, "backports"), e.name));
+    }
+    auto stub_elsewhere = [&](const std::string& id) {
+        const auto has = [&](const std::string& dir) { return fs.exists(join_path(dir, "libScePlayGo.sprx")); };
+        for (const auto& b : backport_dirs) {
+            const std::size_t slash = b.rfind('/');
+            if (b.compare(slash + 1, id.size(), id) != 0) continue;
+            if (has(b + "/fakelib") || has(b + "/fakelib2")) return true;
+        }
+        return has("/data/krakenmount/caches/" + id + "/fakelib") || has("/data/autokstuff/fakelib/" + id) || has("/data/autokstuff/backport/" + id + "/fakelib");
+    };
 
     json unsigned_elf = json::array(), flex = json::array(), playgo = json::array(), trophy = json::array();
     const json* titles = f.get("smp.titles");
@@ -731,7 +761,7 @@ void collect_game_hints(const Platform& p, Facts& f) {
                         tree.list(fd->name, tmp);
                         if (find_item(tmp, "libScePlayGo.sprx", false)) stub = true;
                     }
-                if (!stub) playgo.push_back({{"titleid", id}, {"path", path}, {"desc", id + ": [!] sce_sys/playgo-*, fakelib/libScePlayGo.sprx"}});
+                if (!stub && !stub_elsewhere(id)) playgo.push_back({{"titleid", id}, {"path", path}, {"desc", id + ": [!] sce_sys/playgo-*, fakelib/libScePlayGo.sprx"}});
             }
 
             // S24: Trophaeen-Ordner mit Dateien, aber eine der drei Dateien fehlt
@@ -1157,6 +1187,374 @@ void collect_content_leftovers(const Platform& p, Facts& f) {
     for (const auto& e : fs.list_dir("/user/bgft/task"))
         if (e.is_dir && tasks.size() < 20) tasks.push_back({{"name", e.name}, {"desc", e.name}});
     f.set("content.download_tasks", std::move(tasks));
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Runde 2 (28. Nov. 2026): Spuren weiterer Werkzeuge, nur Namen, Logzeilen und kleine Dateien (Quellen je Fakt; Marc: belegte Vorschlaege bauen, D17 bleibt).
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------------
+namespace {
+
+bool ends_with_l(const std::string& l, const char* s) {
+    const std::size_t n = std::char_traits<char>::length(s);
+    return l.size() >= n && l.compare(l.size() - n, n, s) == 0;
+}
+
+// Die Scanpfade und je Scanpfad die Eintraege direkt darin und eine Ebene darunter (Ordner ohne Punkt). fn(dir, entry).
+template <typename Fn>
+void each_in_roots(const IFileSystem& fs, const Facts& f, Fn fn) {
+    const json* roots = f.get("smp.scan_roots");
+    if (!roots || !roots->is_array()) return;
+    std::set<std::string> seen;
+    for (const auto& r : *roots) {
+        if (!r.is_string()) continue;
+        const std::string root = r.get<std::string>();
+        if (root.empty() || !seen.insert(root).second || !fs.is_dir(root)) continue;
+        for (const auto& e : fs.list_dir(root)) {
+            fn(root, e);
+            if (e.is_dir && !e.name.empty() && e.name[0] != '.')
+                for (const auto& s : fs.list_dir(join_path(root, e.name))) fn(join_path(root, e.name), s);
+        }
+    }
+}
+
+// Spielordner: Ordner direkt in einem Scanpfad (ohne Punkt) und die Ordner aus smp.titles. fn(path, titleid oder leer).
+template <typename Fn>
+void each_game_dir(const IFileSystem& fs, const Facts& f, Fn fn) {
+    std::set<std::string> done;
+    if (const json* t = f.get("smp.titles"); t && t->is_array())
+        for (const auto& e : *t) {
+            if (!e.is_object() || !e.contains("path") || !e["path"].is_string()) continue;
+            const std::string path = e["path"].get<std::string>();
+            if (done.size() >= 300 || !fs.is_dir(path) || !done.insert(path).second) continue;
+            fn(path, e.value("titleid", std::string()));
+        }
+    if (const json* roots = f.get("smp.scan_roots"); roots && roots->is_array())
+        for (const auto& r : *roots) {
+            if (!r.is_string()) continue;
+            const std::string root = r.get<std::string>();
+            for (const auto& e : fs.list_dir(root)) {
+                if (!e.is_dir || e.name.empty() || e.name[0] == '.') continue;
+                const std::string path = join_path(root, e.name);
+                if (done.size() >= 300 || !done.insert(path).second) continue;
+                fn(path, std::string());
+            }
+        }
+}
+
+std::string tid_in(const std::string& s) {
+    static const std::regex re("((?:PPSA|CUSA)[0-9]{5})");
+    std::smatch m;
+    return std::regex_search(s, m, re) ? m[1].str() : std::string();
+}
+
+// Major.Minor aus "1.7beta12", "1.6beta16": true, wenn mindestens 1.7
+bool smp_at_least_17(const Facts& f) {
+    const json* v = f.get("smp.version");
+    if (!v || !v->is_string()) return false;
+    static const std::regex re(R"(^\s*([0-9]+)\.([0-9]+))");
+    std::smatch m;
+    const std::string s = v->get<std::string>();
+    if (!std::regex_search(s, m, re)) return false;
+    const int major = std::stoi(m[1].str()), minor = std::stoi(m[2].str());
+    return major > 1 || (major == 1 && minor >= 7);
+}
+
+}  // namespace
+
+// Packer und Konverter (Quellen: juma-sayeh/gcoding97 PS5-Game-Compressor 1.0.4/1.1.1, gameboy829 PS5-LZ4-Game-Compressor beta.7, exFAT2AMPR 1.104,
+// fthdgn-gh Alembic 0.7.2; je Fakt die Stelle im Quelltext):
+//  tools.gc_stream_journals[]   .<Name>.gc-compress.tmp.stream-journal (pfs_compress.c:94/1062): zerstoerende Komprimierung abgebrochen, Original teils geloescht
+//  tools.gc_hidden[]            .gc-hide-*, .*.__gc_remount_*, .*.gc-uncompress-*source, <Name>.<Image-Endung>.original (gc_api.c:4754/5141/5455/6642)
+//  tools.gc_bad_blocks[]        /data/GameCompressor/validations/*.json mit "status":"bad-blocks-found..." (gc_api.c:2632)
+//  tools.gc_not_mounted[]       log.txt "did not remount" / "but not mounted" (gc_api.c:3111/4116/4125), nur mit ShadowMount+ ab 1.7 (GC-Issues 53, 64)
+//  games.lz4_incomplete[]       INCOMPLETE.txt neben ampr_assets* oder .ampr-owned (LZ4GC main.cpp:213, ampr_backend.cpp:65)
+//  games.lz4_unverified[]       UNVERIFIED.txt neben ampr_assets* oder .ampr-owned (ampr_backend.cpp:74)
+//  games.e2a_unfinished[]       Ordner .e2a-state im Spielordner (exfat2ampr httpd.c:109, ampr_pack.c:259)
+//  games.e2a_trace[]            fakelib2/.e2a-trace (exfat2ampr trace.c:866/915)
+//  tools.e2a_launch_blocked[]   exfat2ampr.log "launch check <dir>: would not start: <codes>" (job.c:1570-1592), nur wenn der Ordner noch da ist
+//  tools.alembic_resume[]       /data/alembic/resume/*.json, deren "partial" noch existiert (resume.hpp:47-50, runner.cpp:251-257)
+void collect_converters(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    json journals = json::array(), hidden = json::array();
+    each_in_roots(fs, f, [&](const std::string& dir, const DirEntry& e) {
+        if (e.name.empty() || (e.name[0] != '.' && !ends_with_l(lower(e.name), ".original"))) return;
+        const std::string l = lower(e.name), path = join_path(dir, e.name);
+        if (!e.is_dir && ends_with_l(l, ".gc-compress.tmp.stream-journal")) {
+            if (journals.size() < 20) journals.push_back({{"path", path}, {"desc", path}});
+            return;
+        }
+        bool hid = l.rfind(".gc-hide-", 0) == 0 || l.find(".__gc_remount_") != std::string::npos || (l.find(".gc-uncompress-") != std::string::npos && ends_with_l(l, "source"));
+        if (!hid && !e.is_dir)
+            for (const char* ext : {".exfat.original", ".ffpfs.original", ".ffpfsc.original", ".ffpkg.original"})
+                if (ends_with_l(l, ext)) hid = true;
+        if (hid && hidden.size() < 20) hidden.push_back({{"path", path}, {"desc", path}});
+    });
+    f.set("tools.gc_stream_journals", std::move(journals));
+    f.set("tools.gc_hidden", std::move(hidden));
+
+    json bad = json::array();
+    int read = 0;
+    for (const auto& e : fs.list_dir("/data/GameCompressor/validations")) {
+        if (e.is_dir || !ends_with_l(lower(e.name), ".json") || e.size > (256u << 10) || ++read > 300 || bad.size() >= 20) continue;
+        std::string text;
+        if (!fs.read_file("/data/GameCompressor/validations/" + e.name, text)) continue;
+        const json j = json::parse(text, nullptr, false);
+        if (!j.is_object() || !j.contains("status") || !j["status"].is_string()) continue;
+        const std::string st = j["status"].get<std::string>();
+        if (st.rfind("bad-blocks-found", 0) != 0) continue;
+        const std::string id = tid_in(e.name);
+        bad.push_back({{"titleid", id}, {"status", st}, {"file", e.name}, {"desc", (id.empty() ? e.name : id) + ": " + st}});
+    }
+    f.set("tools.gc_bad_blocks", std::move(bad));
+
+    json not_mounted = json::array();
+    if (std::string text; smp_at_least_17(f) && read_tail(fs, "/data/GameCompressor/logs/log.txt", 512u << 10, text)) {
+        std::istringstream in(text);
+        std::string line;
+        std::set<std::string> seen;
+        while (std::getline(in, line)) {
+            if (line.find("did not remount") == std::string::npos && line.find("but not mounted") == std::string::npos) continue;
+            cap_line(line);
+            const std::string id = tid_in(line);
+            if (!seen.insert(id.empty() ? line : id).second || not_mounted.size() >= 10) continue;
+            not_mounted.push_back({{"titleid", id}, {"line", line}});
+        }
+    }
+    f.set("tools.gc_not_mounted", std::move(not_mounted));
+
+    json incomplete = json::array(), unverified = json::array(), e2a = json::array(), trace = json::array();
+    each_game_dir(fs, f, [&](const std::string& path, const std::string& tid0) {
+        bool inc = false, unv = false, amp = false, state = false, two = false;
+        for (const auto& k : fs.list_dir(path)) {
+            const std::string l = lower(k.name);
+            if (!k.is_dir && l == "incomplete.txt") inc = true;
+            else if (!k.is_dir && l == "unverified.txt") unv = true;
+            else if (l.rfind("ampr_assets", 0) == 0 || l == ".ampr-owned") amp = true;
+            else if (k.is_dir && l == ".e2a-state") state = true;
+            else if (k.is_dir && l == "fakelib2") two = true;
+        }
+        const std::string id = tid0.empty() ? tid_in(path) : tid0;
+        const json row = {{"titleid", id}, {"path", path}, {"desc", path}};
+        if (inc && amp && incomplete.size() < 20) incomplete.push_back(row);
+        else if (unv && amp && unverified.size() < 20) unverified.push_back(row);
+        if (state && e2a.size() < 20) e2a.push_back(row);
+        if (two && trace.size() < 20 && fs.exists(join_path(path, "fakelib2/.e2a-trace"))) trace.push_back(row);
+    });
+    f.set("games.lz4_incomplete", std::move(incomplete));
+    f.set("games.lz4_unverified", std::move(unverified));
+    f.set("games.e2a_unfinished", std::move(e2a));
+    f.set("games.e2a_trace", std::move(trace));
+
+    json blocked = json::array();
+    if (std::string text; read_tail(fs, "/data/exfat2ampr/exfat2ampr.log", 1u << 20, text)) {
+        static const std::regex re(R"(launch check (/[^:]+): would not start: ([A-Za-z0-9_, ]+))");
+        std::map<std::string, std::string> last;  // Ordner -> Codes der letzten Pruefung
+        std::istringstream in(text);
+        std::string line;
+        while (std::getline(in, line)) {
+            std::smatch m;
+            if (std::regex_search(line, m, re)) last[m[1].str()] = m[2].str();
+        }
+        for (const auto& [dir, codes] : last)
+            if (blocked.size() < 10 && fs.exists(dir)) blocked.push_back({{"path", dir}, {"codes", codes}, {"desc", dir + ": " + codes}});
+    }
+    f.set("tools.e2a_launch_blocked", std::move(blocked));
+
+    json resume = json::array();
+    for (const auto& e : fs.list_dir("/data/alembic/resume")) {
+        if (e.is_dir || !ends_with_l(lower(e.name), ".json") || e.size > (64u << 10) || resume.size() >= 10) continue;
+        std::string text;
+        if (!fs.read_file("/data/alembic/resume/" + e.name, text)) continue;
+        const json j = json::parse(text, nullptr, false);
+        if (!j.is_object() || !j.contains("partial") || !j["partial"].is_string()) continue;
+        const std::string part = j["partial"].get<std::string>();
+        if (part.empty() || part[0] != '/' || !fs.exists(part)) continue;
+        resume.push_back({{"path", part}, {"desc", part}});
+    }
+    f.set("tools.alembic_resume", std::move(resume));
+}
+
+// Werkzeuge fuer die App-Datenbank, nur an ihren Dateien erkannt (D17: Medic liest keine weiteren Spalten von app.db/appinfo.db):
+//  tools.tabshifter_traces[]   /system_data/priv/mms/app.db.tabshifter.bak, /data/tabshifter, /user/app/TBSH00001 (xvvulcanvx/PS5-TabShifter main.c:23-31, 425)
+//  tools.tabshifter_version    "PS5 TabShifter vX.Y.Z Ready!" in TabShifter.elf (/data/pldmgr/payloads, /data/payloads); tools.tabshifter_old: vor 1.4.0
+//  tools.homehider_traces[]    /data/homehider/state.db, /data/homehider/backup/app.db.original (Euphoric-Dev/HomeHider hider.c:216, main.c:84-123)
+//  tools.homehider_folders[]   /user/app/HHFD00001..HHFD00099 mit sce_sys/param.json (folders.c:263-347)
+//  tools.youtube_block_traces[] /data/appinfo-block.log mit Erfolg, /data/appinfo.db.orig (Forte500/ps5-youtube-update-blocker main.c:31-37)
+//  tools.youtube_block_error   letzte Fehlerzeile "ERROR: cannot write" / "on-disk hash mismatch", nach der kein Erfolg mehr kam (main.c:116-138, 310-337)
+void collect_appdb_tools(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    json ts = json::array();
+    for (const char* path : {"/system_data/priv/mms/app.db.tabshifter.bak", "/system_data/priv/mms/appinfo.db.tabshifter.bak", "/data/tabshifter", "/user/app/TBSH00001"})
+        if (fs.exists(path)) ts.push_back({{"path", path}, {"desc", path}});
+    f.set("tools.tabshifter_traces", std::move(ts));
+    std::vector<std::string> elfs = {"/data/pldmgr/payloads/TabShifter.elf", "/data/payloads/TabShifter.elf"};
+    for (const auto& e : fs.list_dir("/data/pldmgr/payloads"))
+        if (e.is_dir)
+            for (const auto& s : fs.list_dir("/data/pldmgr/payloads/" + e.name))
+                if (!s.is_dir && lower(s.name).find("tabshifter") != std::string::npos && ends_with_l(lower(s.name), ".elf"))
+                    elfs.push_back("/data/pldmgr/payloads/" + e.name + "/" + s.name);
+    for (const auto& path : elfs) {
+        std::string b;
+        if (!fs.read_file(path, b) || b.size() > (32u << 20)) continue;
+        static const std::string mark = "PS5 TabShifter v";
+        const std::size_t pos = b.find(mark);
+        if (pos == std::string::npos) continue;
+        std::size_t e = pos + mark.size();
+        while (e < b.size() && e - pos - mark.size() < 16 && (std::isdigit(static_cast<unsigned char>(b[e])) || b[e] == '.')) ++e;
+        const std::string v = b.substr(pos + mark.size(), e - pos - mark.size());
+        if (v.empty() || !std::isdigit(static_cast<unsigned char>(v[0]))) continue;
+        f.set("tools.tabshifter_version", v);
+        f.set("tools.tabshifter_path", path);
+        f.set("tools.tabshifter_old", compare_versions(v, "1.4.0") < 0);
+        break;
+    }
+
+    json hh = json::array();
+    for (const char* path : {"/data/homehider/state.db", "/data/homehider/backup/app.db.original"})
+        if (fs.exists(path)) hh.push_back({{"path", path}, {"desc", path}});
+    f.set("tools.homehider_traces", std::move(hh));
+    json folders = json::array();
+    static const std::regex hhfd("^HHFD[0-9]{5}$");
+    for (const auto& e : fs.list_dir("/user/app"))
+        if (e.is_dir && std::regex_match(e.name, hhfd) && fs.exists("/user/app/" + e.name + "/sce_sys/param.json") && folders.size() < 20)
+            folders.push_back({{"titleid", e.name}, {"desc", "/user/app/" + e.name}});
+    f.set("tools.homehider_folders", std::move(folders));
+
+    json yt = json::array();
+    std::string log;
+    const bool has_log = read_tail(fs, "/data/appinfo-block.log", 256u << 10, log);
+    if (has_log && (log.find("YouTube updates blocked") != std::string::npos || log.find("already blocked") != std::string::npos))
+        yt.push_back({{"path", "/data/appinfo-block.log"}, {"desc", "/data/appinfo-block.log"}});
+    if (fs.exists("/data/appinfo.db.orig")) yt.push_back({{"path", "/data/appinfo.db.orig"}, {"desc", "/data/appinfo.db.orig"}});
+    f.set("tools.youtube_block_traces", std::move(yt));
+    if (has_log) {
+        std::istringstream in(log);
+        std::string line, err;
+        while (std::getline(in, line)) {
+            if (line.find("ERROR: cannot write") != std::string::npos || line.find("on-disk hash mismatch") != std::string::npos) {
+                err = line;
+                cap_line(err);
+            } else if (line.find("YouTube updates blocked") != std::string::npos || line.find("already blocked") != std::string::npos) {
+                err.clear();  // ein spaeterer Lauf war erfolgreich
+            }
+        }
+        if (!err.empty()) f.set("tools.youtube_block_error", err);
+    }
+}
+
+// Absturzberichte, Laufzeit-Updater und kstuff-/PlayGo-Spuren:
+//  devtools.crashes[]           /data/devtools/crashes/*.json mit "outcome":"crashed", letzte 14 Tage (griches/PS5_DevTools payload/main.c:730-903)
+//  devtools.runtime_crashes[]   davon die mit libSceAmpr.sprx in "where" (Absturz in der Laufzeit-Bibliothek, main.c:758-772)
+//  devtools.attach_failed[]     devtools.log "attach <TID> pid N failed: errno" (main.c:933)
+//  apr.updater_present          /data/apr-emu-updater (tsuramatsu1/apr-emu-updater README)
+//  kstuff.a53_ppr_failed        letzter Block in /data/kstuff-startup.log mit "A53/PPR total" ohne "A53/PPR and loader", kstuff laeuft nicht (Soonniicc/kstuff-a53 main.c:577-579)
+//  games.autokstuff_invalid[]   Datei "autokstuff" im Spielordner oder /data/autokstuff/<ID>, ohne Zahl > 0 (sunnyqeen/autokstuff main.c:1001-1021, atoi)
+//  games.playgo_log[]           playlgo.log im Spielordner (drakmor/pgo_stub library.cpp:107-121, Log-Fassung)
+//  games.playgo_dat_bad[]       playgo_stub.dat mit Beispieltext "<----", nur im fakelib oder nur als .example (pgo_stub README)
+void collect_tool_traces(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    json crashes = json::array(), runtime = json::array();
+    const std::int64_t now = p.sys().now_epoch();
+    int read = 0;
+    for (const auto& e : fs.list_dir("/data/devtools/crashes")) {
+        if (e.is_dir || !ends_with_l(lower(e.name), ".json") || e.size > (4u << 20) || crashes.size() >= 20) continue;
+        if (now > 0 && e.name.size() >= 8) {  // Name beginnt mit YYYYMMDD
+            int y = 0, mo = 0, d = 0;
+            if (std::sscanf(e.name.c_str(), "%4d%2d%2d", &y, &mo, &d) == 3 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+                // Tage seit 1970 (Algorithmus von H. Hinnant, wie days_from_civil in collectors.cpp)
+                const int yy = y - (mo <= 2 ? 1 : 0), era = (yy >= 0 ? yy : yy - 399) / 400, yoe = yy - era * 400;
+                const int doy = (153 * (mo + (mo > 2 ? -3 : 9)) + 2) / 5 + d - 1, doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+                const std::int64_t days = static_cast<std::int64_t>(era) * 146097 + doe - 719468;
+                if ((days + 1) * 86400 < now - 14 * 86400) continue;
+            }
+        }
+        if (++read > 60) break;
+        std::string text;
+        if (!fs.read_file("/data/devtools/crashes/" + e.name, text)) continue;
+        const json j = json::parse(text, nullptr, false);
+        if (!j.is_object() || j.value("outcome", std::string()) != "crashed") continue;
+        const std::string id = j.value("title_id", std::string()), sig = j.value("signal_name", std::string()), where = j.value("where", std::string());
+        json row = {{"titleid", id}, {"signal", sig}, {"where", where}, {"file", e.name}, {"desc", (id.empty() ? e.name : id) + ": " + sig + (where.empty() ? "" : " in " + where)}};
+        if (lower(where).find("libsceampr") != std::string::npos) runtime.push_back(row);
+        crashes.push_back(std::move(row));
+    }
+    f.set("devtools.crashes", std::move(crashes));
+    f.set("devtools.runtime_crashes", std::move(runtime));
+    json attach = json::array();
+    if (std::string text; read_tail(fs, "/data/devtools/devtools.log", 512u << 10, text)) {
+        static const std::regex re(R"(attach ([A-Z]{4}[0-9]{5}) pid [0-9]+ failed: errno)");
+        std::set<std::string> seen;
+        std::istringstream in(text);
+        std::string line;
+        while (std::getline(in, line)) {
+            std::smatch m;
+            if (!std::regex_search(line, m, re) || !seen.insert(m[1].str()).second || attach.size() >= 10) continue;
+            cap_line(line);
+            attach.push_back({{"titleid", m[1].str()}, {"line", line}, {"desc", line}});
+        }
+    }
+    f.set("devtools.attach_failed", std::move(attach));
+
+    if (fs.is_dir("/data/apr-emu-updater")) f.set("apr.updater_present", true);
+
+    if (std::string text; read_tail(fs, "/data/kstuff-startup.log", 256u << 10, text)) {
+        const std::size_t start = text.rfind("] start:");
+        const std::string block = start == std::string::npos ? text : text.substr(start);
+        bool kstuff_running = false;
+        if (const json* pr = f.get("proc.running"); pr && pr->is_array())
+            for (const auto& n : *pr)
+                if (n.is_string() && n.get<std::string>().find("kstuff") != std::string::npos && n.get<std::string>().find("autokstuff") == std::string::npos) kstuff_running = true;
+        if (block.find("A53/PPR total") != std::string::npos && block.find("A53/PPR and loader") == std::string::npos && !kstuff_running)
+            f.set("kstuff.a53_ppr_failed", true);
+    }
+
+    json delay = json::array(), plog = json::array(), pdat = json::array();
+    auto delay_ok = [](const std::string& s) {  // wie atoi: Leerraum, Vorzeichen, Ziffern; gueltig nur > 0
+        std::size_t i = 0;
+        while (i < s.size() && std::strchr(" \t\n\r\v\f", s[i])) ++i;
+        bool neg = false;
+        if (i < s.size() && (s[i] == '+' || s[i] == '-')) neg = s[i++] == '-';
+        long v = 0;
+        while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i])) && v < 100000000) v = v * 10 + (s[i++] - '0');
+        return !neg && v > 0;
+    };
+    each_game_dir(fs, f, [&](const std::string& path, const std::string& tid0) {
+        const std::string id = tid0.empty() ? tid_in(path) : tid0;
+        bool ak = false, log = false, dat_root = false, dat_example = false, dat_lib = false;
+        for (const auto& k : fs.list_dir(path)) {
+            const std::string l = lower(k.name);
+            if (!k.is_dir && l == "autokstuff") ak = true;
+            else if (!k.is_dir && l == "playlgo.log") log = true;
+            else if (!k.is_dir && l == "playgo_stub.dat") dat_root = true;
+            else if (!k.is_dir && l == "playgo_stub.dat.example") dat_example = true;
+        }
+        for (const char* d : {"fakelib", "fakelib2"})
+            if (fs.exists(join_path(path, std::string(d) + "/playgo_stub.dat"))) dat_lib = true;
+        if (ak && delay.size() < 20) {
+            std::string s;
+            if (fs.read_range(join_path(path, "autokstuff"), 0, 64, s) && !delay_ok(s)) delay.push_back({{"titleid", id}, {"path", join_path(path, "autokstuff")}, {"desc", join_path(path, "autokstuff")}});
+        }
+        if (log && plog.size() < 20) plog.push_back({{"titleid", id}, {"path", path}, {"desc", join_path(path, "playlgo.log")}});
+        std::string problem;
+        if (dat_root) {
+            std::string s;
+            if (fs.read_range(join_path(path, "playgo_stub.dat"), 0, 4096, s) && s.find("<----") != std::string::npos) problem = "example_text";
+        } else if (dat_lib) {
+            problem = "in_fakelib";
+        } else if (dat_example) {
+            problem = "only_example";
+        }
+        if (!problem.empty() && pdat.size() < 20) pdat.push_back({{"titleid", id}, {"path", path}, {"problem", problem}, {"desc", path + ": " + problem}});
+    });
+    for (const auto& e : fs.list_dir("/data/autokstuff")) {
+        static const std::regex id_re("^[A-Z]{4}[0-9]{5}$");
+        if (e.is_dir || !std::regex_match(e.name, id_re) || delay.size() >= 20) continue;
+        std::string s;
+        if (fs.read_range("/data/autokstuff/" + e.name, 0, 64, s) && !delay_ok(s)) delay.push_back({{"titleid", e.name}, {"path", "/data/autokstuff/" + e.name}, {"desc", "/data/autokstuff/" + e.name}});
+    }
+    f.set("games.autokstuff_invalid", std::move(delay));
+    f.set("games.playgo_log", std::move(plog));
+    f.set("games.playgo_dat_bad", std::move(pdat));
 }
 
 }  // namespace medic
