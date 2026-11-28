@@ -736,3 +736,78 @@ Offene Fragen vor der Umsetzung (Stand vor dem 28. Nov.):
 - Darf Medic Prozesse beenden?
 - Darf Medic aus `/system_data` lesen (DB-Integritätsprüfung)?
 
+
+---
+
+## 7. Aus dem eigenen Projekt: PS5 Cooling & System Center (v1.98.0, Stand 28. Nov. 2026)
+
+Quellen: Release Notes v1.90.0 bis v1.98.0 (https://github.com/strongt1me/ps5-cooling-system-center-pro/releases) und `docs/HANDBUCH.md` des Projekts. Vieles ist dort **an der Konsole bestätigt** (Slim/Pro, FW 12.00). Abgeglichen mit Medic auf dem Stand von PR #2 (124 Regeln); Themen, die Medic schon hat (Kraken-Logs und -API, ampr, Dump Forge, `game.no_exec_permission`, `fan.double_controller`), sind weggelassen.
+
+### 7.1 Korrektur: `smp.launch_busy` gilt auch für 1.7beta12
+- Medic sagt heute „bis 1.7beta11, behoben in 1.7beta12“. Laut Handbuch (an der Konsole nachgestellt am 14.11.2026 mit SMP 1.7beta12): Ein über ShadowMount+ **eingehängtes, aber nicht gestartetes** Spiel hält den einen Einhänge-Platz (`claim_prepared_title` in `sm_shellcore_service.c`). Dann startet kein anderes Spiel und keine Kachel, Log `launch mount unavailable: <ID> status=16 (Device busy)`, Konsole `LaunchFlowError`.
+- Behebung: Spiel aushängen (Seite von SM+ oder Cooling Center) oder ShadowMount+ neu senden.
+- Erkennung zusätzlich: `/data/PS5-Cooling-Center/smp-mounted.txt` listet die vom Cooling Center eingehängten Spiele; läuft das Cooling Center nicht und stehen dort Einträge, halten diese womöglich den Platz.
+- Auto-Fix: nein (Aushängen geht nur über die API von SM+). **Nur Text und Bedingung korrigieren.**
+
+### 7.2 Lüfter: ShadowMount+ und Cooling Center regeln gleichzeitig
+- Steht in der SM+-`config.ini` `[fan] target_temperature` als Zahl (nicht `system`) und läuft im Cooling Center die Automatik, setzt das Cooling Center seine Schwelle binnen ~2 s wieder durch; der Wert von SM+ hält nur kurz (Handbuch „Vergleich mit ShadowMountPlus“). `fan.double_controller` zählt SM+ bisher nicht mit.
+- Erkennung: `smp.config.fan.target_temperature` ist eine Zahl **und** `fan.controller.name` = PS5 Cooling Center mit automatischem Modus (Modusname in der `config.json` noch zu prüfen).
+- Auto-Fix: ja, `smp_set_key` → `[fan] target_temperature=system` (Backup, Rückgängig). Alternative für den Nutzer: im Cooling Center „Beobachten“ wählen.
+
+### 7.3 Derselbe Titel bei zwei Einhängern (Kraken Mount, ShadowMount+, PS4Mount)
+- Liegt dieselbe Title-ID bei Kraken Mount und bei ShadowMount+ (Beispiel 14.11.2026: `.pkg` bei Kraken, Abbild bei SM+), hängt Kraken die Einhängung von SM+ aus (`kraken.log`: „not ours, or stale; unmounting it“), es gibt `Device busy`, die Kachel wechselt.
+- Erkennung: Logzeile in `/data/krakenmount/kraken.log` **oder** Title-ID sowohl in `smp.titles` als auch in den Kraken-Spielen (`/api/state` bzw. Kraken-Ordner).
+- Behebung: nur eine Quelle behalten (Kraken-Spiele nur in `Kraken-Games`, SM+-Spiele in `homebrew`). Auto-Fix: ggf. `move_duplicate_titleid`-artig (nach Rückfrage, welche bleibt).
+
+### 7.4 Kraken Mount durchsucht Ordner von ShadowMount+
+- Stellt man Kraken Mount auf Ordner um, die auch SM+ durchsucht (etwa `/data/homebrew`), wird jedes Ordner-Spiel doppelt angemeldet (Handbuch).
+- Erkennung: Suchordner von Kraken (Einstellungen bzw. `/api/state`) ∩ `smp.scan_roots`. Pfad der Kraken-Einstellungsdatei noch zu klären.
+- Auto-Fix: nein (Einstellung auf der Seite von Kraken, Port 8097).
+
+### 7.5 PS4-Spiel im Ordner `Kraken-Games`
+- Kraken Mount spielt nur PS5-Spiele; ein PS4-Spiel (CUSA…) dort bekommt keine spielbare Kachel.
+- Erkennung: `CUSA`-Title-ID (param.sfo/param.json oder Name) unter `/data/Kraken-Games` bzw. `/mnt/*/Kraken-Games`.
+- Behebung: PS4-Spiele über PS4Mount (`.pkg` auf exFAT-USB) oder installieren. Auto-Fix: nein.
+
+### 7.6 Alter Ordner `FPKG-Games` neben `Kraken-Games`
+- Ab Cooling Center 1.98.0 heißt der Ordner `Kraken-Games`; die App benennt ihn nur um, wenn es sicher ist (Kraken beendet, kein Spiel, nichts aus dem alten Ordner eingehängt), sonst wartet sie. Kraken behält seine alte Ordnerliste bis zum nächsten Start.
+- Erkennung: `FPKG-Games` (intern oder Laufwerk) mit Spielen **und** `Kraken-Games` vorhanden → Spiele im alten Ordner werden nicht gefunden.
+- Behebung: Kraken Mount einmal aus- und einschalten (dann benennt die App um). Auto-Fix: nein (das erledigt das Cooling Center selbst).
+
+### 7.7 Dateien im Platzhalter eines abgezogenen Laufwerks
+- Ist ein Laufwerk weg, ist `/mnt/usbN` nur ein kleiner Platzhalter auf der Systempartition (Medic kennt das schon: fstype `tmpfs`). Was dort hineingeschrieben wird, liegt nicht auf dem Stick und füllt die kleine Partition (Cooling Center 1.90.0 sperrt das deshalb).
+- Erkennung: Einträge unter `/mnt/usbN` bei Speicherart `tmpfs`.
+- Behebung: Dateien nach `/data` retten, Laufwerk wieder anstecken. Auto-Fix: nein (über Dateisystemgrenzen nur kopieren, nicht verschieben).
+
+### 7.8 Kraken-Abbild auf USB hält das Laufwerk
+- Kraken Mount ≥ 0.4.2 hängt Abbilder über `/dev/lvdN` auf `/mnt/krakenmount/…` ein; die Einhängung bleibt auch nach dem Ausschalten von Kraken stehen, und SM+ gibt sie beim Auswerfen nicht frei (Cooling Center: Protokoll `usb_eject_held`). Abziehen zieht dem Spiel das Laufwerk weg.
+- Erkennung: Einhängungen unter `/mnt/krakenmount/` mit Quelle auf `/mnt/usbN`.
+- Behebung: Laufwerk zuerst auf der Seite von Kraken aushängen. Auto-Fix: nein (Hinweis).
+
+### 7.9 Kraken Mount auf dem Port von ShadowMount+ (10101)
+- Kraken Mount ≥ 0.4.1 beantwortet auch die SM+-Schnittstelle auf `127.0.0.1:10101`. Läuft eine eigenständige Kraken-Fassung neben SM+, kann ein Werkzeug (und Medics eigene Prüfung `smp.api_*`) mit Kraken statt SM+ reden. Das Cooling Center verlegt das in seiner Fassung auf 18097 (`smp_port_kraken`).
+- Medic-Nutzen: `smp.api_not_responding` bzw. die API-Fakten gegen diesen Fall absichern (Kraken-Prozess ohne Cooling Center + Port 10101 offen).
+
+### 7.10 PS4Mount: PS4-Spiele auf der M.2-Erweiterung
+- PS4-Spiele auf der M.2-Erweiterung werden nicht angemeldet; die Konsole bricht ihren Start ab (Cooling Center 1.93.0).
+- Erkennung: Kachel `/user/app/CUSA…`, deren Quelle unter `/mnt/ext*` liegt (Layout von PS4Mount zu prüfen).
+- Weitere PS4Mount-Hinweise aus dem Handbuch: vor dem Ruhemodus PS4Mount-Spiele schließen (Laufwerk schaltet ab, Spiel hängt); höchstens ~30 Pakete je Spiel (Grenze der Konsole); zwei Laufwerke/Partitionen können die Oberfläche träge machen.
+
+### 7.11 Beschädigtes Kachelbild
+- `sce_sys/icon0.png`, `pic0.png`, `pic1.png`, `pic2.png` kein gültiges PNG → Bild fehlt auf dem Startbildschirm (Cooling Center 1.92.0 prüft Kopf und Chunks).
+- Erkennung: PNG-Kopf in den Spielordnern aus `smp.titles`. Auto-Fix: nein (Inhalt).
+
+### 7.12 Alte Cooling-Center-Fassungen mit Datenverlust-Fehlern
+- < 1.95.0: „Ersetzen“ verlor die alte Datei, wenn die Kopie scheiterte; abgebrochenes Entpacken ließ Reste liegen. < 1.97.0: Spielstand lesen/zurückspielen konnte die App beenden; Lüfter blieb nach dem Wächter auf voll.
+- Erkennung: Version des Cooling Centers (Quelle zu klären: `config.json`, Datei oder Prozess). Auto-Fix: nein (Hinweis auf neuere Fassung der App, kein Systemupdate).
+
+**Stand 28. Nov. 2026:** Prio 1 (7.1, 7.2, 7.3) ist umgesetzt (Branch `feat/cooling-prio1`, Nachtrag in `docs/RULES.md`).
+
+| Prio | Kandidat | Aufwand |
+|---|---|---|
+| 1 | 7.1 Korrektur `smp.launch_busy` (Text + `smp-mounted.txt`) | klein |
+| 1 | 7.2 SM+-Lüfterziel + Cooling-Center-Automatik, Fix `target_temperature=system` | klein (Modusname prüfen) |
+| 1 | 7.3 Titel bei zwei Einhängern | mittel |
+| 2 | 7.5 PS4-Spiel in `Kraken-Games`, 7.6 alter `FPKG-Games`-Ordner, 7.7 Dateien im Platzhalter | klein |
+| 2 | 7.9 Kraken auf Port 10101 (Absicherung der SM+-API-Prüfung) | klein |
+| 3 | 7.4, 7.8, 7.10, 7.11, 7.12 | Pfade/Layouts erst klären |

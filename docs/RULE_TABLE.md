@@ -3,7 +3,7 @@
 
 **Deutsch** · [English](en/RULE_TABLE.md)
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.61, 124 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.62, 126 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
@@ -25,6 +25,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `errors.recurring_system_app` | info | alle | - | todo | Eine Systemanwendung (Titel NPXS…) hat im Fehlerverlauf mehrfach denselben CE-Fehlercode gemeldet. |
 | `errors.recurring_title` | warning | alle | - | todo | Der Fehlerverlauf (/system_data/priv/error/history) enthält denselben CE-Fehlercode mehrfach für denselben Titel: Der Titel startet oder... |
 | `fan.double_controller` | warning | alle | - | todo | Zwei Lüfterregler laufen gleichzeitig (siehe Liste). |
+| `fan.smp_target_vs_cooling` | warning | alle | `smp_set_key` | doc | In der config.ini von ShadowMount+ steht ein festes Lüfterziel ([fan] target_temperature als Zahl), und das PS5 Cooling Center regelt den... |
 | `forge.old_version` | info | alle | - | todo | Installiert ist Dump Forge vor 0.5.6. |
 | `game.backport_incomplete` | warning | alle | - | todo | Bei diesen Spielen ist der Backport nur halb eingebaut: Die eboot.bin trägt schon ein SDK, das zur Konsole passt, aber mindestens ein Mod... |
 | `game.compat_known_bad` | info | alle | - | community | Laut der Kompatibilitätsliste für ZSTD- und LZ4-Sicherungen läuft dieses Spiel bei Testern nicht oder nur mit widersprüchlichen Berichten... |
@@ -52,6 +53,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `game.runtime_old_version` | info | alle | - | doc | Im Spiel liegt eine alte ampr-emu-ng-Fassung (vor 0.3.4), und die Konsole hat für dieses Spiel einen Fehlercode verzeichnet. |
 | `game.trophy_files_missing` | info | alle | - | community | Im Spielordner gibt es sce_sys/trophy2 mit Dateien, aber mindestens eine der Trophäen-Dateien fehlt (sce_sys/nptitle.dat, sce_sys/uds/npb... |
 | `game.unsigned_elf` | info | alle | - | community | Mindestens eine Programmdatei des Spiels (eboot.bin, sce_module, prx oder fakelib) ist eine reine, nicht signierte ELF-Datei, und die Kon... |
+| `games.two_mounters` | warning | alle | - | doc | Dasselbe Spiel wird von Kraken Mount und ShadowMount+ eingehängt (siehe Liste). |
 | `hen.etahen_crashed` | warning | alle | - | doc | etaHEN meldet einen Absturz seines Hauptdienstes ('main etaHEN has crashed'); Toolbox und Plugins fehlen danach. |
 | `hen.etahen_double_load` | warning | alle | - | doc | Es laufen mehrere etaHEN-Prozesse. |
 | `hen.etahen_game_rest_kill` | info | alle | - | doc | In etaHEN ist 'Game_rest_kill' (oder 'Util_rest_kill') eingeschaltet: Beim Ruhemodus beendet etaHEN das offene Spiel bzw. |

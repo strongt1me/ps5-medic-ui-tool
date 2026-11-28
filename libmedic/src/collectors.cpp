@@ -1835,6 +1835,18 @@ void collect_fan_controller(const Platform& p, Facts& f) {
         f.set("fan.controller.name", std::string("PS5 Cooling Center"));
         if (cooling.contains("mode") && cooling["mode"].is_string()) f.set("fan.controller.mode", cooling["mode"].get<std::string>());
         if (cooling.contains("target_temp_c") && cooling["target_temp_c"].is_number()) f.set("fan.controller.target_c", cooling["target_temp_c"].get<double>());
+        // Laeuft das Cooling Center? Am Prozessnamen nicht erkennbar (payload.elf), aber an seiner Weboberflaeche: http_port aus der config.json, sonst 8086
+        // (PS5TM_DEFAULT_HTTP_PORT, Quelltext ps5tm.h). fan.cooling.port = "open" | "closed"; unbekannt = Fakt fehlt.
+        int port = 8086;
+        if (cooling.contains("http_port") && cooling["http_port"].is_number_integer()) {
+            const long long v = cooling["http_port"].get<long long>();
+            if (v > 0 && v < 65536) port = static_cast<int>(v);
+        }
+        switch (p.sys().local_port_state(port)) {
+            case PortState::Open: f.set("fan.cooling.port", "open"); break;
+            case PortState::Closed: f.set("fan.cooling.port", "closed"); break;
+            default: break;
+        }
     } else if (!running.empty()) {
         f.set("fan.controller.name", running.front());  // nur ein laufender Regler regelt auch; ein installierter allein sagt nichts
     }

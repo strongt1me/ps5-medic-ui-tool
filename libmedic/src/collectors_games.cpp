@@ -758,6 +758,64 @@ void collect_game_hints(const Platform& p, Facts& f) {
     f.set("games.trophy_missing", std::move(trophy));
 }
 
+// games.two_mounters[].{titleid,desc}: dieselbe Title-ID bei Kraken Mount und ShadowMount+ (Handbuch PS5 Cooling Center, an der Konsole am 14. Nov. 2026:
+// Kraken haengt die Einhaengung von ShadowMount+ aus, "not ours, or stale; unmounting it", Starts scheitern mit "Device busy"). Quellen: die Logzeile von Kraken,
+// Title-IDs in den Ordnern Kraken-Games (intern, USB, M.2) gegen smp.titles, und Quellen von ShadowMount+, die selbst in einem Ordner Kraken-Games liegen
+// (scan depth 2 auf dem Hauptordner eines Laufwerks erfasst ihn mit). Nur Namen und param.json, keine Inhalte.
+void collect_two_mounters(const Platform& p, Facts& f, const std::map<std::string, std::string>& from_log) {
+    static const std::regex tid_re("((?:PPSA|CUSA)[0-9]{5})");
+    auto tid_of_dir = [&](const std::string& dir) -> std::string {
+        std::string text;
+        if (!p.fs().read_file(dir + "/sce_sys/param.json", text) || text.size() > (1u << 20)) return {};
+        const json j = json::parse(text, nullptr, false);
+        if (!j.is_object()) return {};
+        for (const char* key : {"titleId", "title_id", "TITLE_ID"})
+            if (j.contains(key) && j[key].is_string()) return j[key].get<std::string>();
+        return {};
+    };
+    std::vector<std::string> roots = {"/data/Kraken-Games"};
+    for (int i = 0; i < 8; ++i) roots.push_back("/mnt/usb" + std::to_string(i) + "/Kraken-Games");
+    for (int i = 0; i < 3; ++i) roots.push_back("/mnt/ext" + std::to_string(i) + "/Kraken-Games");
+    std::map<std::string, std::string> kraken;  // Title-ID -> Pfad im Ordner Kraken-Games
+    for (const auto& r : roots) {
+        if (!p.fs().is_dir(r)) continue;
+        for (const auto& e : p.fs().list_dir(r)) {  // direkt darin oder in einem Unterordner (Handbuch)
+            const std::string path = r + "/" + e.name;
+            std::smatch m;
+            if (!e.is_dir) {
+                if (std::regex_search(e.name, m, tid_re)) kraken.emplace(m[1].str(), path);
+                continue;
+            }
+            if (std::string t = tid_of_dir(path); !t.empty()) {
+                kraken.emplace(t, path);
+                continue;
+            }
+            for (const auto& c : p.fs().list_dir(path)) {
+                const std::string sub = path + "/" + c.name;
+                if (c.is_dir) {
+                    if (std::string t = tid_of_dir(sub); !t.empty()) kraken.emplace(t, sub);
+                } else if (std::regex_search(c.name, m, tid_re)) {
+                    kraken.emplace(m[1].str(), sub);
+                }
+            }
+        }
+    }
+    std::map<std::string, std::string> out = from_log;
+    if (const json* t = f.get("smp.titles"); t && t->is_array())
+        for (const auto& e : *t) {
+            if (!e.is_object() || !e.contains("titleid") || !e["titleid"].is_string() || !e.contains("path") || !e["path"].is_string()) continue;
+            const std::string tid = e["titleid"].get<std::string>(), path = e["path"].get<std::string>();
+            if (path.find("/Kraken-Games/") != std::string::npos) out[tid] = tid + ": ShadowMount+ -> " + path;
+            else if (auto k = kraken.find(tid); k != kraken.end()) out[tid] = tid + ": Kraken Mount " + k->second + " + ShadowMount+ " + path;
+        }
+    json arr = json::array();
+    for (const auto& [tid, desc] : out) {
+        if (arr.size() >= 20) break;
+        arr.push_back({{"titleid", tid}, {"desc", desc}});
+    }
+    f.set("games.two_mounters", std::move(arr));
+}
+
 // kraken.sparse_extent[], kraken.sysex_readonly[], kraken.pkg_other[], kraken.pkg_truncated[], kraken.cache_block[], kraken.ampr_foreign[]: je path (der Paketdatei,
 // wenn die Zeile sie nennt) und line. Kraken Mount schreibt seine Ablehnungen nur in /data/krakenmount/kraken.log (keine Kachel, kein Hinweis). Die Meldung zum
 // Layout mit Luecke nennt als Abhilfe das Neu-Packen mit "--kraken stored"; sie zaehlt nicht zu pkg_other, obwohl sie ebenfalls "unsupported package" sagt.
@@ -781,7 +839,11 @@ void collect_kraken(const Platform& p, Facts& f) {
         f.set("kraken.crashes", std::move(out));
     }
     std::string text;
-    if (!read_tail(p.fs(), "/data/krakenmount/kraken.log", 1u << 20, text)) return;
+    std::map<std::string, std::string> foreign_unmount;  // Title-ID -> Beleg aus kraken.log ("not ours, or stale; unmounting it")
+    if (!read_tail(p.fs(), "/data/krakenmount/kraken.log", 1u << 20, text)) {
+        collect_two_mounters(p, f, foreign_unmount);
+        return;
+    }
     f.set("kraken.log_present", true);
     // seit 0.4.2 haengt Kraken auch Images ein (.exfat, .ffpkg, .ffpfs, .ffpfsc)
     static const std::regex path_re("(/[^\\s\"']+\\.(?:pkg|exfat|ffpkg|ffpfs|ffpfsc))");
@@ -799,6 +861,11 @@ void collect_kraken(const Platform& p, Facts& f) {
     std::istringstream in(text);
     std::string line;
     while (std::getline(in, line)) {
+        if (has(line, "not ours, or stale")) {
+            static const std::regex tid_only("((?:PPSA|CUSA)[0-9]{5})");
+            std::smatch t;
+            if (std::regex_search(line, t, tid_only)) foreign_unmount.emplace(t[1].str(), t[1].str() + ": kraken.log \"not ours, or stale; unmounting it\"");
+        }
         if (has(line, "waiting before start-up: shadowmount")) waiting = true;
         else if (has(line, "shadowmount: ready")) waiting = false;
         Kind* k = nullptr;
@@ -831,6 +898,7 @@ void collect_kraken(const Platform& p, Facts& f) {
         for (const auto& n : *pr)
             if (n.is_string() && n.get<std::string>() == "shadowmountplus") smp = true;
     f.set("kraken.waiting_for_smp", waiting && smp);
+    collect_two_mounters(p, f, foreign_unmount);
 }
 
 // Kraken Mount, lokale API (Marc, 28. Nov. 2026: lesend erlaubt; nur GET 127.0.0.1:8097 /api/state und /api/ampr, Quelltext 0.4.2 web.rs). Laeuft Kraken nicht,

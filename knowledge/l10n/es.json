@@ -153,7 +153,7 @@
    "text": "ShadowMount+ no pudo vigilar una ruta de escaneo (permiso denegado) y detuvo su escáner: ya no se detectan juegos nuevos. Hasta 1.7beta11 bastaba una ruta de escaneo predeterminada ilegible para eso (p. ej. /data/etaHEN/games); corregido en 1.7beta12, actualiza ShadowMount+. Si no, revisa los permisos de la carpeta indicada o define solo tus propias rutas de escaneo ([scan] path)."
   },
   "smp.launch_busy": {
-   "text": "Los juegos ya no arrancan: ShadowMount+ notifica repetidamente 'launch mount unavailable ... status=16 (Device busy)'. Tras un cambio de juego fallido, un título quedó reservado (hasta 1.7beta11, corregido en 1.7beta12). Inicia una vez el título fallido sin un juego en ejecución o envía de nuevo ShadowMount+; actualiza ShadowMount+."
+   "text": "Los juegos ya no arrancan: ShadowMount+ notifica repetidamente 'launch mount unavailable … status=16 (Device busy)'. ShadowMount+ solo tiene un hueco para montar un juego: un juego montado pero no iniciado lo ocupa, también con 1.7beta12 (reproducido en la consola); hasta 1.7beta11, además, un título quedaba reservado tras un cambio de juego fallido. Desmonta ese juego (página de ShadowMount+ o PS5 Cooling Center) o vuelve a enviar ShadowMount+. Los juegos montados por el Cooling Center figuran en /data/PS5-Cooling-Center/smp-mounted.txt."
   },
   "smp.fakelib_handoff_stuck": {
    "text": "Un proceso terminado bloquea la cola de limpieza de fakelib: después los juegos con backport arrancan sin su fakelib y se cierran. Solo lo soluciona reiniciar la consola. Corregido en ShadowMount+ 1.7beta12."
@@ -450,6 +450,12 @@
   },
   "autoload.pldmgr_not_listed": {
    "text": "pldmgr.elf está en /data/ps5_autoloader pero no en autoload.txt. En cuanto existe un autoload.txt, el autoloader ya no inicia el Payload Manager por sí solo: falta tras cada jailbreak. La corrección añade pldmgr.elf al final de la lista (copia de seguridad y deshacer incluidos); si es intencionado, no hacer nada."
+  },
+  "fan.smp_target_vs_cooling": {
+   "text": "La config.ini de ShadowMount+ fija un objetivo del ventilador ([fan] target_temperature como número) y el PS5 Cooling Center regula el ventilador en automático. Ambos escriben el mismo umbral: el Cooling Center vuelve a poner el suyo en unos 2 segundos y el valor de ShadowMount+ dura poco. La corrección pone ShadowMount+ en 'system' (entonces no escribe ningún umbral; copia de seguridad y deshacer incluidos). Para conservar el valor de ShadowMount+, pon el Cooling Center en 'Observar'."
+  },
+  "games.two_mounters": {
+   "text": "El mismo juego lo montan Kraken Mount y ShadowMount+ (ver lista). Se estorban: Kraken desmonta el montaje de ShadowMount+ ('not ours, or stale; unmounting it'), los inicios fallan con 'Device busy' y el icono cambia. Deja una sola fuente por juego: los juegos para Kraken Mount solo en la carpeta Kraken-Games, los de ShadowMount+ en homebrew. ShadowMount+ no debe analizar Kraken-Games (la profundidad de análisis 2 en la carpeta principal de una unidad la incluye). Medic no mueve nada aquí."
   }
  },
  "coverage": {
