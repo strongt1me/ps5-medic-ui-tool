@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.64",
+  "db_version": "2026.11.65",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -1593,8 +1593,8 @@
         ]
       },
       "text": {
-        "de": "Die config.ini (Format v2) enthält Zeilen im alten flachen Format, z. B. scan_depth=2. ShadowMount+ 1.7beta12 ignoriert sie in einer v2-Datei still, die Einstellung wirkt also nicht. Der Fix überträgt Zeilen mit bekannter Entsprechung in die richtige Sektion (z. B. scan_depth nach [scan] depth); Backup und Rückgängig inklusive.",
-        "en": "The config.ini (format v2) contains lines in the old flat format, e.g. scan_depth=2. ShadowMount+ 1.7beta12 silently ignores them in a v2 file, so the setting has no effect. The fix moves lines with a known equivalent into the right section (e.g. scan_depth to [scan] depth); backup and undo included."
+        "de": "Die config.ini (Format v2) enthält Zeilen im alten flachen Format, z. B. scan_depth=2. ShadowMount+ 1.7beta12 ignoriert sie in einer v2-Datei still, die Einstellung wirkt also nicht. Der Fix überträgt Zeilen mit bekannter Entsprechung in die richtige Sektion (z. B. scan_depth nach [scan] depth); Backup und Rückgängig inklusive. Solche Zeilen schreiben z. B. ältere Fassungen von Game Compressor und Prospack (image_ro=, image_sector=, pfsc_direct_game=).",
+        "en": "The config.ini (format v2) contains lines in the old flat format, e.g. scan_depth=2. ShadowMount+ 1.7beta12 silently ignores them in a v2 file, so the setting has no effect. The fix moves lines with a known equivalent into the right section (e.g. scan_depth to [scan] depth); backup and undo included. Such lines are written, for example, by older versions of Game Compressor and Prospack (image_ro=, image_sector=, pfsc_direct_game=)."
       },
       "evidence": "smp.v1_keys[].key",
       "fix": "smp_translate_v1_keys",
@@ -2430,8 +2430,8 @@
         ]
       },
       "text": {
-        "de": "Programmdateien eines Spiels (eboot.bin, Module) haben kein Ausführungsrecht, zum Beispiel 0666 statt 0777. Die Konsole startet solche Dateien nicht und meldet CE-107750-0. Das passiert oft beim Kopieren per FTP, je nach FTP-Server. Der Fix setzt das Ausführungsrecht dieser Dateien (aus 0666 wird 0777); der Inhalt bleibt unberührt, Rückgängig stellt die alten Rechte wieder her. Beim nächsten Kopieren per FTP können sie wieder fehlen: stelle im FTP-Programm 0777 (chmod 777) als Standard ein.",
-        "en": "Program files of a game (eboot.bin, modules) have no execute permission, for example 0666 instead of 0777. The console does not start such files and reports CE-107750-0. This often happens when copying over FTP, depending on the FTP server. The fix sets the execute permission of these files (0666 becomes 0777); the content stays untouched, undo restores the old permissions. They can be missing again the next time you copy over FTP: set 0777 (chmod 777) as the default in your FTP program."
+        "de": "Programmdateien eines Spiels (eboot.bin, Module) haben kein Ausführungsrecht, zum Beispiel 0666 statt 0777. Die Konsole startet solche Dateien nicht und meldet CE-107750-0. Das passiert oft beim Kopieren per FTP, je nach FTP-Server. Der Fix setzt das Ausführungsrecht dieser Dateien (aus 0666 wird 0777); der Inhalt bleibt unberührt, Rückgängig stellt die alten Rechte wieder her. Beim nächsten Kopieren per FTP können sie wieder fehlen: stelle im FTP-Programm 0777 (chmod 777) als Standard ein. Bekannt auch bei Spielordnern, die Alembic bis 0.6.5 geschrieben hat.",
+        "en": "Program files of a game (eboot.bin, modules) have no execute permission, for example 0666 instead of 0777. The console does not start such files and reports CE-107750-0. This often happens when copying over FTP, depending on the FTP server. The fix sets the execute permission of these files (0666 becomes 0777); the content stays untouched, undo restores the old permissions. They can be missing again the next time you copy over FTP: set 0777 (chmod 777) as the default in your FTP program. Also known for game folders written by Alembic up to 0.6.5."
       },
       "evidence": "games.noexec[].path",
       "fix": "chmod_exec",
@@ -2789,6 +2789,12 @@
                 ]
               }
             ]
+          },
+          {
+            "not": {
+              "fact": "apr.updater_present",
+              "eq": true
+            }
           }
         ]
       },
@@ -3948,6 +3954,741 @@
         "reason": {
           "de": "Der Zustand kommt von Kraken Mount selbst (lokale Schnittstelle, Port 8097, Quelltext 0.4.2 web.rs); Medic deutet ihn nicht weiter.",
           "en": "The state comes from Kraken Mount itself (local interface, port 8097, source code 0.4.2 web.rs); Medic does not interpret it further."
+        }
+      }
+    },
+    {
+      "id": "gc.destructive_interrupted",
+      "severity": "critical",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.gc_stream_journals[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Eine Komprimierung von Game Compressor im zerstörenden Modus wurde abgebrochen (Datei .gc-compress.tmp.stream-journal). In diesem Modus löscht Game Compressor das Original schon beim Schreiben; ein Teil ist also weg. Nichts verschieben oder löschen und den Auftrag in Game Compressor fortsetzen. Medic ändert nichts.",
+        "en": "A Game Compressor compression in destructive mode was interrupted (file .gc-compress.tmp.stream-journal). In this mode Game Compressor deletes the original while writing, so part of it is gone. Do not move or delete anything and resume the job in Game Compressor. Medic changes nothing."
+      },
+      "evidence": "tools.gc_stream_journals[].desc",
+      "fix": null,
+      "source": "https://github.com/juma-sayeh/PS5-Game-Compressor",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "gc.hidden_original",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.gc_hidden[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Game Compressor hat ein Original versteckt (Name mit .gc-hide-, .__gc_remount_, .gc-uncompress- oder Endung .original), meist weil ein Auftrag unterbrochen wurde. ShadowMount+ sieht das Spiel dann nicht. Game Compressor starten (es benennt Reste vom Einhängen selbst zurück) oder die Datei von Hand zurückbenennen. Nicht löschen. Medic ändert nichts.",
+        "en": "Game Compressor has hidden an original (name with .gc-hide-, .__gc_remount_, .gc-uncompress- or ending .original), usually because a job was interrupted. ShadowMount+ then does not see the game. Start Game Compressor (it renames remount leftovers back itself) or rename the file back by hand. Do not delete it. Medic changes nothing."
+      },
+      "evidence": "tools.gc_hidden[].desc",
+      "fix": null,
+      "source": "https://github.com/juma-sayeh/PS5-Game-Compressor",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "gc.bad_blocks",
+      "severity": "critical",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.gc_bad_blocks[].status",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Game Compressor hat bei der Prüfung kaputte Blöcke in diesem Image gefunden (validations/*.json). Schon das Lesen solcher Blöcke löste laut Maintainer Kernel-Panics aus. Das Spiel nicht starten; in Game Compressor reparieren oder aus dem Original neu packen. Medic ändert nichts.",
+        "en": "Game Compressor found bad blocks in this image during validation (validations/*.json). According to the maintainer, merely reading such blocks caused kernel panics. Do not start the game; repair it in Game Compressor or repack it from the original. Medic changes nothing."
+      },
+      "evidence": "tools.gc_bad_blocks[].desc",
+      "fix": null,
+      "source": "https://github.com/juma-sayeh/PS5-Game-Compressor",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "gc.smp17_remount_failed",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.gc_not_mounted[].line",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Game Compressor meldet, dass ShadowMount+ ein Spiel nach Prüfen oder Umwandeln nicht wieder eingehängt hat. Game Compressor (1.0.4, Fork 1.1.1) passt nicht zu ShadowMount+ ab 1.7, das Spiele nicht mehr dauerhaft einhängt; das Spiel selbst läuft meist trotzdem. Prüfen und Einhängen in Game Compressor nicht nutzen. Medic ändert nichts.",
+        "en": "Game Compressor reports that ShadowMount+ did not mount a game again after validating or converting it. Game Compressor (1.0.4, fork 1.1.1) does not fit ShadowMount+ from 1.7, which no longer mounts games permanently; the game itself usually still runs. Do not use validating and mounting in Game Compressor. Medic changes nothing."
+      },
+      "evidence": "tools.gc_not_mounted[].line",
+      "fix": null,
+      "source": "https://github.com/juma-sayeh/PS5-Game-Compressor",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "game.lz4_incomplete_output",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.lz4_incomplete[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "In diesem Spielordner liegt INCOMPLETE.txt von LZ4 Game Compressor: Das Packen wurde abgebrochen, die Ausgabe ist unbrauchbar. Nicht spielen, sondern neu konvertieren; das Original behalten. Medic ändert nichts.",
+        "en": "This game folder contains INCOMPLETE.txt from LZ4 Game Compressor: packing was cancelled and the output is unusable. Do not play it, convert again; keep the original. Medic changes nothing."
+      },
+      "evidence": "games.lz4_incomplete[].desc",
+      "fix": null,
+      "source": "https://github.com/gameboy829/PS5-LZ4-Game-Compressor",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "game.lz4_unverified",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.lz4_unverified[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "LZ4 Game Compressor hat diese Ausgabe nicht geprüft (UNVERIFIED.txt). Das Original behalten, bis das Spiel einmal sauber gelaufen ist.",
+        "en": "LZ4 Game Compressor did not verify this output (UNVERIFIED.txt). Keep the original until the game has run cleanly once."
+      },
+      "evidence": "games.lz4_unverified[].desc",
+      "fix": null,
+      "source": "https://github.com/gameboy829/PS5-LZ4-Game-Compressor",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "game.e2a_unfinished",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.e2a_unfinished[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Eine Umwandlung mit exFAT2AMPR ist pausiert oder wurde unterbrochen (Ordner .e2a-state im Spielordner). Das Spiel nicht starten oder verschieben, sondern die Umwandlung in exFAT2AMPR fortsetzen oder abbrechen. Medic ändert nichts.",
+        "en": "A conversion with exFAT2AMPR is paused or was interrupted (folder .e2a-state in the game folder). Do not start or move the game; resume or cancel the conversion in exFAT2AMPR. Medic changes nothing."
+      },
+      "evidence": "games.e2a_unfinished[].desc",
+      "fix": null,
+      "source": "https://github.com/exFAT2AMPR/exfat2ampr",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "e2a.launch_check_failed",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.e2a_launch_blocked[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "exFAT2AMPR hat bei seiner letzten Startprüfung für dieses Spiel Hindernisse gefunden (exfat2ampr.log, „would not start“). Die Codes im Beleg nennen den Grund: no_emulator (Laufzeit fehlt), fakelib2_no_ampr (fakelib2 ohne Laufzeit), backport_ampr (der Backport bringt eine eigene libSceAmpr.sprx mit), fakelib_disabled (fakelib in ShadowMount+ aus). Medic ändert nichts.",
+        "en": "In its last launch check for this game, exFAT2AMPR found obstacles (exfat2ampr.log, “would not start”). The codes in the evidence name the reason: no_emulator (runtime missing), fakelib2_no_ampr (fakelib2 without runtime), backport_ampr (the backport brings its own libSceAmpr.sprx), fakelib_disabled (fakelib off in ShadowMount+). Medic changes nothing."
+      },
+      "evidence": "tools.e2a_launch_blocked[].desc",
+      "fix": null,
+      "source": "https://github.com/exFAT2AMPR/exfat2ampr",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "game.alembic_resumable",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.alembic_resume[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Eine Umwandlung mit Alembic ist pausiert oder wurde abgebrochen und lässt sich fortsetzen (Eintrag in /data/alembic/resume). Die halbe Ausgabe nicht benutzen und nicht wegräumen, sonst geht das Fortsetzen nicht mehr; in Alembic fortsetzen oder abbrechen. Medic ändert nichts.",
+        "en": "A conversion with Alembic is paused or was cancelled and can be resumed (entry in /data/alembic/resume). Do not use the half-finished output and do not clear it away, otherwise resuming no longer works; resume or cancel it in Alembic. Medic changes nothing."
+      },
+      "evidence": "tools.alembic_resume[].desc",
+      "fix": null,
+      "source": "https://github.com/fthdgn-gh/Alembic",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "ampr.trace_mode_left_on",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.e2a_trace[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Der Trace-Modus von exFAT2AMPR ist bei diesem Spiel noch an (fakelib2/.e2a-trace): Es läuft eine Debug-Laufzeit, die Befehle mitschreibt und langsamer ist. Nach dem Sammeln in exFAT2AMPR wieder abschalten. Medic ändert nichts.",
+        "en": "The trace mode of exFAT2AMPR is still on for this game (fakelib2/.e2a-trace): a debug runtime runs that records commands and is slower. Switch it off again in exFAT2AMPR after collecting. Medic changes nothing."
+      },
+      "evidence": "games.e2a_trace[].desc",
+      "fix": null,
+      "source": "https://github.com/exFAT2AMPR/exfat2ampr",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "tools.tabshifter_used",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.tabshifter_traces[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "TabShifter hat die Datenbank des Startbildschirms geändert (Tabs, Ausblenden, Anheften). Bekannte Folgen laut Issues: Schlösser an Spielen, Kacheln, die nicht starten, und ausgeblendete Kacheln, die zurückkehren. Die Sicherung vom ersten Start liegt als app.db.tabshifter.bak neben der Datenbank. Medic ändert nichts.",
+        "en": "TabShifter has changed the home screen database (tabs, hiding, pinning). Known consequences according to its issues: locks on games, tiles that do not start, and hidden tiles that come back. The backup from its first start lies next to the database as app.db.tabshifter.bak. Medic changes nothing."
+      },
+      "evidence": "tools.tabshifter_traces[].desc",
+      "fix": null,
+      "source": "https://github.com/xvvulcanvx/PS5-TabShifter",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "tools.tabshifter_old",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.tabshifter_old",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Eine alte TabShifter-Fassung (vor 1.4.0) liegt bei den Payloads. Bis 1.2.1 löschte sie die WAL-Dateien der laufenden System-Datenbanken, bis 1.3.0 änderte sie Kategorien (Apps im Medien-Tab starten nicht) und „Restore“ überschrieb die ganze Datenbank (danach installierte Kacheln verschwanden). Auf 1.4.0 oder neuer wechseln oder sie nicht mehr starten. Medic ändert nichts.",
+        "en": "An old TabShifter version (before 1.4.0) is among the payloads. Up to 1.2.1 it deleted the WAL files of the running system databases, up to 1.3.0 it changed categories (apps in the media tab do not start) and “Restore” overwrote the whole database (tiles installed afterwards disappeared). Switch to 1.4.0 or newer or stop starting it. Medic changes nothing."
+      },
+      "evidence": "tools.tabshifter_version",
+      "fix": null,
+      "source": "https://github.com/xvvulcanvx/PS5-TabShifter",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "tools.homehider_used",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.homehider_traces[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "HomeHider ändert die Datenbank des Startbildschirms (Ausblenden, Ordner, Namen) und schreibt seinen Stand, solange er läuft, alle paar Sekunden zurück. „Datenbank neu aufbauen“ hilft deshalb nicht dauerhaft, wenn HomeHider automatisch geladen wird. „Restore original backup“ ersetzt die ganze app.db: Kacheln später installierter Titel gehen dabei verloren. Medic ändert nichts.",
+        "en": "HomeHider changes the home screen database (hiding, folders, names) and writes its state back every few seconds while it runs. “Rebuild database” therefore does not help for good if HomeHider is loaded automatically. “Restore original backup” replaces the whole app.db: tiles of titles installed later are lost. Medic changes nothing."
+      },
+      "evidence": "tools.homehider_traces[].desc",
+      "fix": null,
+      "source": "https://github.com/Euphoric-Dev/HomeHider",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "tools.homehider_folder_tile",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.homehider_folders[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Auf der Konsole liegen Ordnerkacheln von HomeHider (/user/app/HHFD…). Sie öffnen nur, wenn HomeHider läuft (sonst „can't connect“). Wird HomeHider nicht mehr benutzt, sind es Überbleibsel, die bei einer späteren Registrierung aller Apps wieder auftauchen können. Medic ändert nichts.",
+        "en": "There are HomeHider folder tiles on the console (/user/app/HHFD…). They only open while HomeHider is running (otherwise “can't connect”). If HomeHider is no longer used, they are leftovers that can reappear when all apps are registered again later. Medic changes nothing."
+      },
+      "evidence": "tools.homehider_folders[].desc",
+      "fix": null,
+      "source": "https://github.com/Euphoric-Dev/HomeHider",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "tools.youtube_update_blocked",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.youtube_block_traces[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Die Aktualisierung der YouTube-App ist auf dieser Konsole gesperrt (appinfo.db geändert: Version 99.999.999, Abrufadresse localhost). Der Store kann deshalb eine seltsame Version anzeigen, und seine Reparatur der App greift eventuell nicht. Der Rückweg geht nur über die Vollkopie /data/appinfo.db.orig; sie ist so alt wie die Sperre. Medic ändert nichts.",
+        "en": "Updating the YouTube app is blocked on this console (appinfo.db changed: version 99.999.999, fetch address localhost). The store may therefore show an odd version, and its repair of the app may not work. The way back is only through the full copy /data/appinfo.db.orig; it is as old as the block. Medic changes nothing."
+      },
+      "evidence": "tools.youtube_block_traces[].desc",
+      "fix": null,
+      "source": "https://github.com/Forte500/ps5-youtube-update-blocker",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "tools.youtube_blocker_write_failed",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "tools.youtube_block_error",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Der YouTube-Blocker konnte appinfo.db zuletzt nicht sauber schreiben (/data/appinfo-block.log). Er überschreibt die Datei direkt; sie kann halb geändert sein. Die Prüfung der Datenbanken in Medic zeigt, ob sie beschädigt ist; die Sicherung liegt unter /data/appinfo.db.orig. Medic ändert nichts.",
+        "en": "The YouTube blocker last could not write appinfo.db cleanly (/data/appinfo-block.log). It overwrites the file directly; it may be half changed. Medic's database check shows whether it is damaged; the backup is /data/appinfo.db.orig. Medic changes nothing."
+      },
+      "evidence": "tools.youtube_block_error",
+      "fix": null,
+      "source": "https://github.com/Forte500/ps5-youtube-update-blocker",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "devtools.title_crashed",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "devtools.crashes[].desc",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "PS5 DevTools hat in den letzten 14 Tagen Abstürze festgehalten (/data/devtools/crashes, mit Signal und Stelle). Den Bericht kann man dem Entwickler des Spiels oder der Homebrew schicken. Medic ändert nichts.",
+        "en": "PS5 DevTools recorded crashes in the last 14 days (/data/devtools/crashes, with signal and location). The report can be sent to the developer of the game or homebrew. Medic changes nothing."
+      },
+      "evidence": "devtools.crashes[].desc",
+      "fix": null,
+      "source": "https://github.com/griches/PS5_DevTools",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "devtools.crash_in_runtime",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "devtools.runtime_crashes[].desc",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Laut PS5 DevTools geschah ein Absturz in der Laufzeit-Bibliothek libSceAmpr.sprx, nicht im Spiel selbst. Eine andere Fassung der Laufzeit testen (ampr-emu-ng oder Drakmor, Release statt Debug). Medic ändert nichts.",
+        "en": "According to PS5 DevTools, a crash happened in the runtime library libSceAmpr.sprx, not in the game itself. Try another runtime version (ampr-emu-ng or Drakmor, release instead of debug). Medic changes nothing."
+      },
+      "evidence": "devtools.runtime_crashes[].desc",
+      "fix": null,
+      "source": "https://github.com/griches/PS5_DevTools",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "devtools.attach_failed",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "devtools.attach_failed[].titleid",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "PS5 DevTools konnte sich an diese Titel nicht anhängen (devtools.log, „attach … failed“). Meist läuft schon ein anderer Debugger (ps5debug, gdbsrv). Für diese Titel fehlen dann Absturzberichte. Medic ändert nichts.",
+        "en": "PS5 DevTools could not attach to these titles (devtools.log, “attach … failed”). Usually another debugger is already running (ps5debug, gdbsrv). Crash reports are then missing for these titles. Medic changes nothing."
+      },
+      "evidence": "devtools.attach_failed[].desc",
+      "fix": null,
+      "source": "https://github.com/griches/PS5_DevTools",
+      "verified": "todo",
+      "confidence": {
+        "level": "low",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "apr.updater_present",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "apr.updater_present",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "APR Emu Updater ist installiert (/data/apr-emu-updater). Die libSceAmpr.sprx der Spiele kann von ihm stammen; er verteilt die Fassungen von Drakmor, die keine zstd-Packs lesen. Für die Auswahl je Spiel muss sein Payload nach jedem Neustart geladen sein; bei Spielen als Ordner ersetzt er die Datei dauerhaft, ohne Rückgängig.",
+        "en": "APR Emu Updater is installed (/data/apr-emu-updater). The games' libSceAmpr.sprx may come from it; it distributes Drakmor's versions, which do not read zstd packs. For the per-game choice its payload must be loaded after every restart; for games as folders it replaces the file permanently, without undo."
+      },
+      "evidence": "apr.updater_present",
+      "fix": null,
+      "source": "https://github.com/tsuramatsu1/apr-emu-updater",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "kstuff.a53_ppr_failed",
+      "severity": "critical",
+      "when": {
+        "all": [
+          {
+            "fact": "kstuff.a53_ppr_failed",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "kstuff-a53 hat beim letzten Start seinen A53/PPR-Schritt nicht geschafft und kstuff deshalb gar nicht gestartet (/data/kstuff-startup.log). Diese Fassung kennt nur Profile bis FW 11.40 und ist laut Anleitung nur auf 5.00 getestet. Die normale kstuff-lite verwenden. Medic ändert nichts.",
+        "en": "kstuff-a53 did not get through its A53/PPR step at its last start and therefore did not start kstuff at all (/data/kstuff-startup.log). This version only knows profiles up to FW 11.40 and according to its manual is only tested on 5.00. Use the normal kstuff-lite. Medic changes nothing."
+      },
+      "evidence": "kstuff.a53_ppr_failed",
+      "fix": null,
+      "source": "https://github.com/Soonniicc/kstuff-a53",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "game.autokstuff_delay_invalid",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.autokstuff_invalid[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Die autokstuff-Datei dieses Spiels enthält keine gültige Wartezeit (leer, 0, Text oder Byte-Order-Mark am Anfang). autokstuff pausiert kstuff bei diesem Spiel dann nicht. Nur eine Zahl eintragen (Sekunden, größer als 0). Medic ändert nichts.",
+        "en": "This game's autokstuff file does not contain a valid delay (empty, 0, text or a byte order mark at the start). autokstuff then does not pause kstuff for this game. Enter only a number (seconds, greater than 0). Medic changes nothing."
+      },
+      "evidence": "games.autokstuff_invalid[].desc",
+      "fix": null,
+      "source": "https://github.com/sunnyqeen/autokstuff",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "game.playgo_stub_log_build",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.playgo_log[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Im Spielordner liegt playlgo.log: Hier steckt die Log-Fassung des PlayGo-Stubs (pgo_stub), die bei jedem Aufruf in den Spielordner schreibt. Für den Alltag die Fassung ohne Log nehmen. Medic ändert nichts.",
+        "en": "The game folder contains playlgo.log: the log build of the PlayGo stub (pgo_stub) is in use and writes to the game folder on every call. For everyday use take the build without log. Medic changes nothing."
+      },
+      "evidence": "games.playgo_log[].desc",
+      "fix": null,
+      "source": "https://github.com/drakmor/pgo_stub",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "game.playgo_stub_dat_example",
+      "severity": "info",
+      "when": {
+        "all": [
+          {
+            "fact": "games.playgo_dat_bad[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Die Einstellungen des PlayGo-Stubs (pgo_stub) werden ignoriert: playgo_stub.dat enthält noch den Beispieltext („<----“), liegt im fakelib statt im Spielordner oder es gibt nur die .example-Datei. Der Stub nimmt dann 1000 Chunks und alle Sprachen. Meist harmlos; nur wenn das Spiel Probleme macht, die Datei richtig anlegen. Medic ändert nichts.",
+        "en": "The settings of the PlayGo stub (pgo_stub) are ignored: playgo_stub.dat still contains the example text (“<----”), lies in fakelib instead of the game folder, or there is only the .example file. The stub then uses 1000 chunks and all languages. Usually harmless; only if the game has problems, create the file properly. Medic changes nothing."
+      },
+      "evidence": "games.playgo_dat_bad[].desc",
+      "fix": null,
+      "source": "https://github.com/drakmor/pgo_stub",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
+        }
+      }
+    },
+    {
+      "id": "smp.emulator_update_apr_updater",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "games.runtime[].pack",
+            "eq": "zstd"
+          },
+          {
+            "any": [
+              {
+                "fact": "smp.config.emulators.update_enabled",
+                "in": [
+                  "1",
+                  "true",
+                  "yes",
+                  "on"
+                ]
+              },
+              {
+                "fact": "smp.config.emulators.auto_update_ampr",
+                "in": [
+                  "1",
+                  "true",
+                  "yes",
+                  "on"
+                ]
+              },
+              {
+                "fact": "smp.config.update_emulators",
+                "in": [
+                  "1",
+                  "true",
+                  "yes",
+                  "on"
+                ]
+              }
+            ]
+          },
+          {
+            "fact": "apr.updater_present",
+            "eq": true
+          }
+        ]
+      },
+      "text": {
+        "de": "ShadowMount+ hat Emulator-Updates eingeschaltet, ein Spiel hat zstd-Packs, und APR Emu Updater ist installiert. Bei eingeschalteten Updates tauscht ShadowMount+ die libSceAmpr.sprx im Spiel gegen die Fassung im Emulator-Ordner; zstd-Packs liest nur ampr-emu-ng. APR Emu Updater braucht diese Einstellung aber eingeschaltet, deshalb schaltet Medic sie hier nicht ab: im APR Emu Updater für dieses Spiel ampr-emu-ng wählen oder das Spiel ohne zstd packen. Medic ändert nichts.",
+        "en": "ShadowMount+ has emulator updates switched on, a game has zstd packs, and APR Emu Updater is installed. With updates on, ShadowMount+ swaps the game's libSceAmpr.sprx for the version in the emulator folder; only ampr-emu-ng reads zstd packs. APR Emu Updater needs this setting switched on, though, so Medic does not switch it off here: choose ampr-emu-ng for this game in APR Emu Updater or pack the game without zstd. Medic changes nothing."
+      },
+      "evidence": "games.runtime[].path",
+      "fix": null,
+      "source": "https://github.com/tsuramatsu1/apr-emu-updater",
+      "verified": "todo",
+      "confidence": {
+        "level": "medium",
+        "basis": "derived",
+        "reason": {
+          "de": "Medic liest nur die Datei oder Logzeile, die das Werkzeug laut seinem Quelltext bzw. seiner Anleitung schreibt (Quelle verlinkt); an den Test-Konsolen noch nicht beobachtet.",
+          "en": "Medic only reads the file or log line that the tool writes according to its source code or manual (source linked); not yet observed on the test consoles."
         }
       }
     }
