@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.63",
+  "db_version": "2026.11.64",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -3624,8 +3624,8 @@
         ]
       },
       "text": {
-        "de": "Beim Start eines Spiels konnte Kraken Mount etwas nicht einhängen: Overlay, beschreibbares /app0 oder Backport-Umleitung („… FAILED“ in kraken.log). Das Spiel startet dann ohne Backport oder gar nicht. Die Konsole neu starten und es erneut versuchen; bleibt es, die Logzeile aus dem Beleg an die Entwickler von Kraken Mount geben. Medic ändert nichts.",
-        "en": "When starting a game, Kraken Mount could not mount something: the overlay, a writable /app0 or the backport redirection (“… FAILED” in kraken.log). The game then starts without its backport or not at all. Restart the console and try again; if it stays, give the log line from the evidence to the Kraken Mount developers. Medic changes nothing."
+        "de": "Beim Start eines Spiels konnte Kraken Mount etwas nicht einhängen: das Overlay oder die Backport-Umleitung („… FAILED“ in kraken.log). Das Spiel startet dann ohne Backport oder gar nicht. Die Konsole neu starten und es erneut versuchen; bleibt es, die Logzeile aus dem Beleg an die Entwickler von Kraken Mount geben. Medic ändert nichts.",
+        "en": "When starting a game, Kraken Mount could not mount something: the overlay or the backport redirection (“… FAILED” in kraken.log). The game then starts without its backport or not at all. Restart the console and try again; if it stays, give the log line from the evidence to the Kraken Mount developers. Medic changes nothing."
       },
       "evidence": "kraken.launch_failed[].line",
       "fix": null,
