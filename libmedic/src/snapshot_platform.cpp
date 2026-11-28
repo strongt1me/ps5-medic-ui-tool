@@ -169,6 +169,7 @@ public:
     bool remove_empty_dir(const std::string& p) override { return rw_.remove_empty_dir(p); }
     bool append_file(const std::string& p, const std::string& c) override { return rw_.append_file(p, c); }
     bool write_range(const std::string& p, std::uint64_t off, const std::string& c, bool sync) override { return rw_.write_range(p, off, c, sync); }
+    bool remove_check_file(const std::string& p) override { return rw_.remove_check_file(p); }
     bool set_mode(const std::string& p, std::uint32_t mode) override {
         if (!fs_.has_mode_table()) return rw_.set_mode(p, mode);
         std::uint32_t cur = 0;

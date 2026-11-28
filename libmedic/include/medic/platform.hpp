@@ -71,7 +71,17 @@ public:
         (void)mode;
         return false;
     }
+    // Loescht eine gespeicherte Check-up-Datei endgueltig: NUR eine regulaere Datei /data/ps5medic/checks/<name>.json (kein Symlink, kein Ordner),
+    // alles andere lehnt jede Umsetzung ab. Ausnahme von "nie loeschen" fuer Medics eigene Check-ups (Marc, 28. Nov. 2026); fuer Fixes nie benutzen.
+    // Standard: nicht unterstuetzt (false).
+    virtual bool remove_check_file(const std::string& path) {
+        (void)path;
+        return false;
+    }
 };
+
+// Pfad, den remove_check_file annimmt: /data/ps5medic/checks/<Name aus Buchstaben, Ziffern, '-', '_'>.json
+bool is_check_file_path(const std::string& path);
 
 struct ProcInfo {
     std::string name;

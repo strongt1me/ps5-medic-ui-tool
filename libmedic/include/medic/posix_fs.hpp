@@ -47,6 +47,7 @@ public:
     bool append_file(const std::string& path, const std::string& content) override;
     bool write_range(const std::string& path, std::uint64_t offset, const std::string& content, bool sync) override;
     bool set_mode(const std::string& path, std::uint32_t mode) override;
+    bool remove_check_file(const std::string& path) override;
 
 private:
     std::filesystem::path base_;

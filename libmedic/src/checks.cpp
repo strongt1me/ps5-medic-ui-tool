@@ -115,7 +115,40 @@ bool from_json(const json& j, StoredCheck& c) {
     return true;
 }
 
+// Alle gueltigen Check-up-ids im Ordner, neueste zuerst (die Zeit steht im Namen)
+std::vector<std::string> all_check_ids(const IFileSystem& fs) {
+    std::vector<std::string> ids;
+    for (const auto& e : fs.list_dir(kChecksDir)) {
+        if (e.is_dir || e.name.size() <= 5 || e.name.compare(e.name.size() - 5, 5, ".json") != 0) continue;
+        const std::string id = e.name.substr(0, e.name.size() - 5);
+        if (valid_id(id)) ids.push_back(id);
+    }
+    std::sort(ids.begin(), ids.end(), std::greater<std::string>());
+    return ids;
+}
+
 }  // namespace
+
+bool delete_check(Platform& p, const std::string& id) {
+    IFileSystemRW* rw = p.fs_rw();
+    if (!rw || !valid_id(id)) return false;
+    return rw->remove_check_file(std::string(kChecksDir) + "/" + id + ".json");
+}
+
+int delete_checks_except_newest(Platform& p, std::size_t keep) {
+    // Es bleiben die juengsten `keep`, die sich lesen lassen (so viele, wie die Liste zeigt); unlesbare Dateien zaehlen nicht mit und gehen mit
+    int n = 0;
+    std::size_t kept = 0;
+    for (const auto& id : all_check_ids(p.fs())) {
+        StoredCheck c;
+        if (kept < keep && load_check(p.fs(), id, c)) {
+            ++kept;
+            continue;
+        }
+        if (delete_check(p, id)) ++n;
+    }
+    return n;
+}
 
 bool save_check(Platform& p, const StoredCheck& c, std::string* id) {
     IFileSystemRW* rw = p.fs_rw();
@@ -127,6 +160,7 @@ bool save_check(Platform& p, const StoredCheck& c, std::string* id) {
     }
     if (!rw->write_file(std::string(kChecksDir) + "/" + name + ".json", dump_safe(to_json(c), 1) + "\n")) return false;
     if (id) *id = name;
+    delete_checks_except_newest(p, kChecksKeepAuto);  // Verlauf begrenzen (Marc, 28. Nov. 2026); scheitert das, bleibt der Check-up trotzdem gespeichert
     return true;
 }
 
@@ -142,13 +176,7 @@ bool load_check(const IFileSystem& fs, const std::string& id, StoredCheck& out) 
 }
 
 std::vector<CheckSummary> list_checks(const IFileSystem& fs) {
-    std::vector<std::string> ids;
-    for (const auto& e : fs.list_dir(kChecksDir)) {
-        if (e.is_dir || e.name.size() <= 5 || e.name.compare(e.name.size() - 5, 5, ".json") != 0) continue;
-        const std::string id = e.name.substr(0, e.name.size() - 5);
-        if (valid_id(id)) ids.push_back(id);
-    }
-    std::sort(ids.begin(), ids.end(), std::greater<std::string>());  // Zeit im Namen: neueste zuerst
+    const std::vector<std::string> ids = all_check_ids(fs);  // Zeit im Namen: neueste zuerst
     std::vector<CheckSummary> out;
     for (const auto& id : ids) {
         if (out.size() >= kChecksListMax) break;
