@@ -118,6 +118,7 @@ Statt den Verlauf zurückzusetzen, wird **jeder Check-up als eigene Datei** `/da
 - **Ansehen und vergleichen, nicht reparieren (Entscheidung von Marc):** Im alten Stand sind Reparatur, Anleitung und Bericht gesperrt; das Detail sagt, dass Reparieren nur im aktuellen Check-up geht, damit nie auf veraltetem Stand repariert wird.
 - Das Zurücksetzen des Verlaufs (kurz zuvor gebaut, Commit `5cda74a`) ist wieder entfernt; `history.jsonl` (Vergleich, Dringlichkeit, Messwert-Niveau) und `journal.jsonl` (Reparaturen) bleiben unverändert.
 - Tests: `checks_archive_tests` in `tests/test_ui.cpp` (Speichern, Laden, Reihenfolge, gleiche Zeit, beschädigte Datei, Vergleich, Bedienung).
+- **Löschen (28. Nov. 2026, Wunsch von Marc):** Im Verlauf löscht **Options** auf einem Check-up genau diesen, auf der Zeile „Frühere Check-ups“ alle bis auf die neuesten 10 (`kChecksKeepManual`); beides nach einer Rückfrage (Kreuz löscht, Kreis bricht ab). Beim Speichern bleiben von selbst nur die neuesten 50 (`kChecksKeepAuto`). Marc hat entschieden, dass diese eigenen Dateien wirklich gelöscht werden (kein Archiv, kein Rückgängig); das geht nur über `IFileSystemRW::remove_check_file`, das ausschließlich `.json`-Dateien in `/data/ps5medic/checks` annimmt. `history.jsonl` bleibt, die Zählung „schon n-mal gesehen“ ändert sich also nicht.
 
 
 ## Nachtrag: Ansicht „Pro Spiel“ (11. Nov. 2026, Wunsch von Marc)

@@ -631,6 +631,8 @@ void App::open_checks() {
     chk_sel_ = chk_top_ = 0;
     chk_expanded_ = false;
     chk_unreadable_ = false;
+    chk_confirm_ = 0;
+    chk_msg_.clear();
     screen_ = Screen::CheckList;
 }
 
@@ -720,6 +722,28 @@ void App::refilter() {
 }
 
 // Den gewaehlten Befund ausblenden (nur Warnungen und Hinweise, nie im Stand eines alten Check-ups)
+// Loescht nach der Rueckfrage (chk_confirm_) und laedt die Liste neu; die Auswahl bleibt moeglichst an derselben Stelle.
+void App::delete_checks_confirmed() {
+    const auto& S = Strings::get(lang_);
+    const int mode = chk_confirm_;
+    chk_confirm_ = 0;
+    if (mode == 1) {
+        if (chk_del_index_ < 0 || chk_del_index_ >= static_cast<int>(chk_.size())) return;
+        chk_msg_ok_ = svc_.delete_check(chk_[static_cast<std::size_t>(chk_del_index_)].id);
+        chk_msg_ = S(chk_msg_ok_ ? "checks.deleted_one" : "checks.delete_failed");
+    } else {
+        const int k = svc_.delete_older_checks(medic::kChecksKeepManual);
+        chk_msg_ok_ = k > 0;
+        chk_msg_ = k > 0 ? S.fmt("checks.deleted_n", {{"n", std::to_string(k)}}) : S("checks.delete_failed");
+    }
+    chk_ = svc_.checks();
+    const int n = static_cast<int>(chk_.size()), rows = chk_row_count(n, chk_expanded_);
+    if (n <= 1) chk_expanded_ = false;
+    chk_sel_ = std::clamp(chk_sel_, 0, std::max(chk_row_count(n, chk_expanded_) - 1, 0));
+    chk_top_ = std::clamp(chk_top_, 0, std::max(rows - 1, 0));
+    if (chk_top_ > chk_sel_) chk_top_ = chk_sel_;
+}
+
 void App::hide_current(bool from_detail) {
     if (viewing_old_ || sel_ < 0 || sel_ >= static_cast<int>(result_.findings.size())) return;
     const medic::Finding f = result_.findings[static_cast<std::size_t>(sel_)];
@@ -1118,6 +1142,21 @@ void App::handle_impl(Button b) {
             break;
         case Screen::CheckList: {
             const int n = static_cast<int>(chk_.size()), rows = chk_row_count(n, chk_expanded_), ent = chk_entry_of_row(chk_sel_, n);
+            if (chk_confirm_) {  // Loeschen bestaetigen: Kreuz loescht, Kreis bricht ab; andere Tasten tun nichts
+                if (b == Button::Cross) delete_checks_confirmed();
+                else if (b == Button::Circle) chk_confirm_ = 0;
+                break;
+            }
+            if (b == Button::Options) {  // auf einem Check-up: diesen loeschen; auf "Fruehere Check-ups": alle bis auf die juengsten loeschen
+                chk_msg_.clear();
+                if (n > 0 && ent >= 0) {
+                    chk_confirm_ = 1;
+                    chk_del_index_ = ent;
+                } else if (n > static_cast<int>(medic::kChecksKeepManual)) {
+                    chk_confirm_ = 2;
+                }
+                break;
+            }
             if (b == Button::Up) move_selection(chk_sel_, chk_top_, rows, kChkRows, -1);
             else if (b == Button::Down) move_selection(chk_sel_, chk_top_, rows, kChkRows, 1);
             else if (b == Button::L1) page_selection(chk_sel_, chk_top_, rows, kChkRows, -1);
@@ -3063,12 +3102,34 @@ void App::draw_checklist(Canvas& c) const {
         c.fill_round_rect(W - 64, thumb_y, 8, thumb_h, 4, kDim);
     }
     if (chk_unreadable_) small().draw(c, M + 8, H - 138, S("checks.unreadable"), kWarn);
+    else if (!chk_msg_.empty()) small().draw(c, M + 8, H - 138, chk_msg_, chk_msg_ok_ ? kOk : kWarn);
     const int sel_entry = chk_entry_of_row(chk_sel_, n);
+    if (chk_confirm_) {  // Rueckfrage vor dem endgueltigen Loeschen
+        const int pw = W - 2 * M - 240, ph = 300, px = (W - pw) / 2, py = 330;
+        c.fill_round_rect(0, 0, W, H, 0, rgba(0, 0, 0, 150));
+        glass_panel(c, px, py, pw, ph, 24);
+        draw_icon_badge(c, Icon::Warning, px + 40, py + 40, 72, kWarn);
+        title().draw(c, px + 140, py + 48, S(chk_confirm_ == 1 ? "checks.confirm_one_title" : "checks.confirm_older_title"), kText);
+        std::string msg;
+        if (chk_confirm_ == 1 && chk_del_index_ >= 0 && chk_del_index_ < n)
+            msg = S.fmt("checks.confirm_one", {{"ts", pretty_ts(chk_[static_cast<std::size_t>(chk_del_index_)].ts, lang_)}});
+        else
+            msg = S.fmt("checks.confirm_older", {{"n", std::to_string(medic::kChecksKeepManual)}, {"k", std::to_string(n - static_cast<int>(medic::kChecksKeepManual))}});
+        int ty = py + 140;
+        for (const auto& l : wrap_text(body(), msg, pw - 80, 4)) {
+            body().draw(c, px + 40, ty, l, kText);
+            ty += body().line_height() + 4;
+        }
+        draw_hints(c, {{PadGlyph::Cross, S("checks.delete")}, {PadGlyph::Circle, S("common.cancel")}});
+        return;
+    }
     std::vector<std::pair<PadGlyph, std::string>> hints = {{PadGlyph::UpDown, S("common.select")}};
     if (chk_expanded_ && rows > kChkRows) hints.emplace_back(PadGlyph::Shoulders, S("common.page"));
     if (sel_entry < 0) hints.emplace_back(PadGlyph::Cross, S(chk_expanded_ ? "checks.collapse" : "checks.expand"));
     else hints.emplace_back(PadGlyph::Cross, S("checks.view"));
     if (sel_entry >= 0 && sel_entry + 1 < n) hints.emplace_back(PadGlyph::Triangle, S("checks.compare"));
+    if (sel_entry >= 0) hints.emplace_back(PadGlyph::Options, S("checks.delete"));
+    else if (n > static_cast<int>(medic::kChecksKeepManual)) hints.emplace_back(PadGlyph::Options, S("checks.delete_older"));
     hints.emplace_back(PadGlyph::Square, S("checks.repairs"));
     hints.emplace_back(PadGlyph::Circle, S("common.back"));
     draw_hints(c, hints);

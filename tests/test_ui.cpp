@@ -3522,6 +3522,48 @@ void checks_archive_tests() {
     CHECK(list_checks(p2->fs()).size() == 4, "Check-ups: beschaedigte Datei wird uebersprungen");
     auto ro = make_snapshot_platform(t.dir.string(), false);
     CHECK(!save_check(*ro, dup), "Check-ups: ohne Schreibzugriff wird nichts gespeichert");
+    {  // Loeschen (Marc, 28. Nov. 2026): einzeln, alle bis auf die juengsten und eine Grenze beim Speichern; nur Check-up-Dateien im eigenen Ordner
+        TempCopy t2("b8_pos");  // eigene Kopie: die Tests danach brauchen die Check-ups von t
+        fs::copy(t.dir / "fs/data/ps5medic", t2.dir / "fs/data/ps5medic", fs::copy_options::recursive | fs::copy_options::overwrite_existing);
+        const fs::path dir = t2.dir / "fs/data/ps5medic/checks";
+        auto p3 = make_snapshot_platform(t2.dir.string(), true);
+        auto ro = make_snapshot_platform(t2.dir.string(), false);
+        const auto before = list_checks(p3->fs());
+        const int files = count_files(dir);
+        CHECK(before.size() == 4 && files == 5, "Check-ups loeschen: Ausgangslage (4 lesbare, 1 beschaedigte Datei)");
+        CHECK(delete_check(*p3, before.back().id) && count_files(dir) == files - 1 && list_checks(p3->fs()).size() == before.size() - 1, "Check-ups loeschen: einzelner Check-up ist weg");
+        CHECK(!delete_check(*p3, before.back().id), "Check-ups loeschen: ein schon geloeschter laesst sich nicht noch einmal loeschen");
+        CHECK(!delete_check(*p3, "../history") && !delete_check(*p3, "") && !delete_check(*p3, "a/b"), "Check-ups loeschen: ungueltige id wird abgelehnt");
+        CHECK(!delete_check(*ro, before.front().id) && count_files(dir) == files - 1, "Check-ups loeschen: ohne Schreibzugriff bleibt alles");
+        std::ofstream(dir / "notiz.txt") << "x";
+        IFileSystemRW* rw = p3->fs_rw();
+        CHECK(rw && !rw->remove_check_file("/data/ps5medic/history.jsonl") && !rw->remove_check_file("/data/ps5medic/checks/../history.jsonl") &&
+                  !rw->remove_check_file("/data/ps5medic/checks/notiz.txt") && !rw->remove_check_file("/data/homebrew/a.json") && !rw->remove_check_file("/data/ps5medic/checks") &&
+                  fs::exists(t2.dir / "fs/data/ps5medic/history.jsonl") && fs::exists(dir / "notiz.txt"),
+              "Check-ups loeschen: nur .json-Dateien im Ordner checks, nichts anderes");
+        CHECK(!is_check_file_path("/data/ps5medic/checks/.json") && is_check_file_path("/data/ps5medic/checks/20261111T110000Z_2.json"), "Check-ups loeschen: Pfadpruefung");
+        const int k = delete_checks_except_newest(*p3, 1);
+        const auto after = list_checks(p3->fs());
+        CHECK(k == files - 2, "Check-ups loeschen: alle bis auf den neuesten geloescht (Zahl) " + std::to_string(k));
+        CHECK(after.size() == 1 && after[0].id == before.front().id, "Check-ups loeschen: der neueste bleibt");
+        CHECK(fs::exists(dir / "notiz.txt") && fs::exists(t2.dir / "fs/data/ps5medic/history.jsonl"), "Check-ups loeschen: fremde Dateien und history.jsonl bleiben");
+        CHECK(delete_checks_except_newest(*p3, 1) == 0, "Check-ups loeschen: nichts mehr zu loeschen");
+        for (std::size_t i = 0; i < kChecksKeepAuto + 3; ++i) {
+            StoredCheck s;
+            char ts[32];
+            std::snprintf(ts, sizeof ts, "20261201T10%04dZ", static_cast<int>(i));
+            s.ts = ts;
+            save_check(*p3, s);
+        }
+        const auto capped = list_checks(p3->fs());
+        CHECK(capped.size() == kChecksKeepAuto && capped.front().ts == "20261201T100052Z" && capped.back().ts == "20261201T100003Z",
+              "Check-ups loeschen: beim Speichern bleiben nur die juengsten kChecksKeepAuto");
+        int tick2 = 0;
+        LocalService svc2(*p3, rules, [&] { return std::string("20261202T1") + std::to_string(10 + tick2++) + "00Z"; });
+        CHECK(svc2.delete_older_checks(kChecksKeepManual) == static_cast<int>(kChecksKeepAuto - kChecksKeepManual) && svc2.checks().size() == kChecksKeepManual &&
+                  svc2.delete_check(svc2.checks().front().id) && svc2.checks().size() == kChecksKeepManual - 1,
+              "Check-ups loeschen: ueber den Dienst (aeltere, dann einzeln)");
+    }
 
     // Vergleich
     StoredCheck a, b;
@@ -3655,6 +3697,19 @@ void checks_archive_tests() {
         CHECK(app.screen() == App::Screen::CheckList, "Check-up-Verlauf: Kreis aus den Reparaturen zurueck zur Liste");
         press(app, {Button::Circle});
         CHECK(app.screen() == App::Screen::Start, "Check-up-Verlauf: Kreis zurueck zum Start");
+        // Loeschen mit Rueckfrage (Options): Kreis bricht ab, Kreuz loescht den gewaehlten Check-up; die Liste bleibt offen
+        start_open(app, 2);
+        const std::size_t n_before = s2.checks().size();
+        press(app, {Button::Options});
+        app.render(cv);
+        press(app, {Button::Down, Button::Triangle, Button::Square});  // waehrend der Rueckfrage tun andere Tasten nichts
+        CHECK(app.screen() == App::Screen::CheckList && s2.checks().size() == n_before, "Check-up-Verlauf: Rueckfrage vor dem Loeschen, andere Tasten tun nichts");
+        press(app, {Button::Circle});
+        CHECK(app.screen() == App::Screen::CheckList && s2.checks().size() == n_before, "Check-up-Verlauf: Kreis bricht das Loeschen ab");
+        press(app, {Button::Options, Button::Cross});
+        app.render(cv);
+        CHECK(app.screen() == App::Screen::CheckList && s2.checks().size() + 1 == n_before, "Check-up-Verlauf: Kreuz loescht den gewaehlten Check-up");
+        press(app, {Button::Circle});
     }
     // leere Liste und unlesbarer Eintrag
     {

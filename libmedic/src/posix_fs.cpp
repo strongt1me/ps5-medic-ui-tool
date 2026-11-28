@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cerrno>
 #include <cstdio>
 #include <fstream>
@@ -306,6 +307,24 @@ bool PosixRw::make_dirs(const std::string& path) {
     if (!map_virtual_path(base_, path, p) || !ancestors_clean(base_, path, true)) return false;
     fs::create_directories(p, ec);
     return !ec;
+}
+
+bool is_check_file_path(const std::string& path) {
+    static const std::string dir = "/data/ps5medic/checks/";
+    if (path.size() <= dir.size() + 5 || path.compare(0, dir.size(), dir) != 0 || path.compare(path.size() - 5, 5, ".json") != 0) return false;
+    const std::string name = path.substr(dir.size(), path.size() - dir.size() - 5);
+    if (name.size() > 48) return false;
+    for (unsigned char ch : name)
+        if (!std::isalnum(ch) && ch != '-' && ch != '_') return false;
+    return true;
+}
+
+bool PosixRw::remove_check_file(const std::string& path) {
+    fs::path p;
+    std::error_code ec;
+    if (!is_check_file_path(path) || !map_virtual_path(base_, path, p) || !ancestors_clean(base_, path, true)) return false;
+    if (fs::is_symlink(p, ec) || !fs::is_regular_file(p, ec)) return false;
+    return fs::remove(p, ec) && !ec;
 }
 
 bool PosixRw::remove_empty_dir(const std::string& path) {

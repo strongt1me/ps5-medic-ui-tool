@@ -97,6 +97,7 @@ private:
     void open_stored(int index);
     void leave_stored();
     void open_compare(int index);
+    void delete_checks_confirmed();
     void open_compare_latest();
     std::vector<medic::RepairLink> cmp_repairs_;  // behobene Regeln des Vergleichs, die eine Reparatur dieser App behoben hat
     bool cmp_from_findings_ = false;  // Vergleich kam direkt aus dem Befund-Bildschirm (Kreis fuehrt dorthin zurueck)
@@ -230,6 +231,10 @@ private:
     int chk_sel_ = 0, chk_top_ = 0;
     bool chk_expanded_ = false;  // Check-up-Verlauf: fruehere Check-ups aufgeklappt
     bool chk_unreadable_ = false;
+    int chk_confirm_ = 0;     // Loeschen bestaetigen: 1 = den gewaehlten Check-up, 2 = alle bis auf die juengsten medic::kChecksKeepManual
+    int chk_del_index_ = -1;  // bei 1: welcher Eintrag
+    std::string chk_msg_;     // Ergebnis des letzten Loeschens (leer = nichts zu melden)
+    bool chk_msg_ok_ = true;
     bool viewing_old_ = false;
     std::string view_ts_;
     CheckResult live_result_;  // der aktuelle Check-up dieser Sitzung, solange ein alter angezeigt wird

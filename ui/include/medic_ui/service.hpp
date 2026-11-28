@@ -98,6 +98,9 @@ public:
         (void)out;
         return false;
     }
+    // Check-ups endgueltig loeschen (Marc, 28. Nov. 2026): einen bzw. alle bis auf die juengsten `keep`. Der Standard loescht nichts.
+    virtual bool delete_check(const std::string& /*id*/) { return false; }
+    virtual int delete_older_checks(std::size_t /*keep*/) { return 0; }
     // Ansicht "Pro Spiel" (libmedic/include/medic/games.hpp): aus den Fakten und Befunden des letzten Check-ups dieser Sitzung; Befund-Indizes
     // gelten fuer dessen Befundliste. Leer, solange noch kein Check-up gelaufen ist. Liest nichts neu und schreibt nichts.
     virtual std::vector<medic::GameInfo> games() { return {}; }
@@ -205,6 +208,8 @@ public:
     std::vector<medic::TxnInfo> history() override;
     std::vector<medic::CheckSummary> checks() override;
     bool load_check(const std::string& id, medic::StoredCheck& out) override;
+    bool delete_check(const std::string& id) override;
+    int delete_older_checks(std::size_t keep) override;
     std::vector<medic::GameInfo> games() override;
     medic::UndoResult undo(const std::string& txn) override;
     ReportResult make_report(medic::ReportLang lang) override;

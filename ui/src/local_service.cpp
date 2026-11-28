@@ -175,6 +175,10 @@ std::vector<medic::CheckSummary> LocalService::checks() { return medic::list_che
 
 bool LocalService::load_check(const std::string& id, medic::StoredCheck& out) { return medic::load_check(p_.fs(), id, out); }
 
+bool LocalService::delete_check(const std::string& id) { return medic::delete_check(p_, id); }
+
+int LocalService::delete_older_checks(std::size_t keep) { return medic::delete_checks_except_newest(p_, keep); }
+
 medic::UndoResult LocalService::undo(const std::string& txn) {
     ensure_facts();
     return medic::undo_txn(p_, medic::policy_from_facts(facts_), txn, clock_());

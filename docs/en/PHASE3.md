@@ -118,6 +118,7 @@ Instead of resetting the history, **every check-up is saved as its own file** `/
 - **View and compare, do not repair (decision by Marc):** In the old state, repair, guide and report are locked; the detail says that repairing is only possible in the current check-up, so that repairs are never made on an outdated state.
 - The reset of the history (built shortly before, commit `5cda74a`) has been removed again; `history.jsonl` (comparison, urgency, measured-value level) and `journal.jsonl` (repairs) remain unchanged.
 - Tests: `checks_archive_tests` in `tests/test_ui.cpp` (saving, loading, order, same time, damaged file, comparison, operation).
+- **Deleting (28 Nov 2026, request from Marc):** In the history, **Options** on a check-up deletes that one, on the row “Earlier check-ups” all but the newest 10 (`kChecksKeepManual`); both after a confirmation (Cross deletes, Circle cancels). When saving, only the newest 50 are kept automatically (`kChecksKeepAuto`). Marc decided that these own files are really deleted (no archive, no undo); this only goes through `IFileSystemRW::remove_check_file`, which accepts nothing but `.json` files in `/data/ps5medic/checks`. `history.jsonl` stays, so the count “seen n times” does not change.
 
 
 ## Addendum: "Per game" view (11 Nov 2026, request from Marc)
