@@ -636,3 +636,14 @@ Continuation of the review of the PS5 Cooling Center (`docs/RESEARCH_2026-11.md`
 - **`storage.files_in_placeholder` (warning):** files under `/mnt/usbN`/`/mnt/extN` whose storage type is explicitly `tmpfs` (placeholder of a drive that is not connected, on the system partition; Cooling Center 1.90.0). Fact `storage.placeholder_files[]`. Fixtures `placeholder_pos`, `placeholder_neg` (a real exFAT drive).
 - **`kraken.smp_port_taken` (info):** Kraken Mount 0.4.1 or newer (version from its API) also answers the ShadowMount+ interface on 127.0.0.1:10101; ShadowMount+ runs, its port 10101 is open, the Cooling Center does not answer (its build moves the interface to 18097). Then `smp.api_not_responding` cannot detect a ShadowMount+ failure either. Fixtures `kraken_port_pos`, `kraken_port_neg_cc`.
 - The `kraken.*` rules are "live only" (Kraken API and `Kraken-Games` do not belong in the export); `storage.files_in_placeholder` survives the export. **None of the rules has run on the console.**
+
+## Addendum: false alarms with PS5 Cooling Center 1.99 (28 Nov 2026)
+
+On the test console (.94) with PS5 Cooling Center Pro 1.99.0 and Kraken Mount 0.4.2, Medic showed four findings that are not errors there. Checked against the source code of both programs, `kraken.log`, `config.toml` and the console's error history. Rules `2026.11.64`.
+
+- **`kraken.launch_failed`:** “sandbox /app0 rw mount FAILED” no longer counts. According to the source code of Kraken Mount 0.4.2 (`launch.rs`) the game starts anyway, it just cannot write to `/app0`; on the console Dirt 5 ran normally with this message. Failures of the overlay and of the backport redirection remain warnings. Text adjusted in five languages.
+- **`kraken.pkg_unsupported`:** Refused packages outside Kraken's own folder `Kraken-Games` no longer count if they are PS4 packages or lie directly in a drive's main folder. While ShadowMount+ is not running, the Cooling Center hands Kraken Mount the folders of ShadowMount+ including the drives' main folders; PS4 packages for PS4Mount and packages of other tools lie there. Paths with spaces are now recognised in full.
+- **`smp.scan_depth`:** Sources under `PS5-Sicherung/` do not count. The Cooling Center deliberately puts backups there, deeper than ShadowMount+ searches (`gamecopy.c`).
+- **`errors.recurring_system_app`:** Entries CE-108256-2 (internal `0x80BA000D`) with their own text are messages from payloads (on the console “Welcome to NoUpdate”, “ZER0DAY: …”), not system errors. The collector counts them separately (`errors.payload_messages`) and no longer in `errors.pairs`.
+- `last_facts.json` now also holds the new facts about Kraken (log, API), ampr, Dump Forge, `.p5z`, `smp.deep_sources` and `errors.payload_messages`.
+- Fixtures `cc_*` via `tools/gen_tools_fixture.py`; each with a counter-check (a slightly changed copy triggers the finding). **Not yet checked on the console.**

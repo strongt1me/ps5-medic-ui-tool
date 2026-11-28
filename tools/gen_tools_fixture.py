@@ -15,6 +15,13 @@ Aufbau: siehe collect_kraken, collect_ampr_trace, collect_dumpforge und collect_
   kraken_api_hand_pos         lokale API: ampr von Hand eingelegt
   kraken_api_neg              lokale API: alles in Ordnung (Status ok, Platz genug, ampr mitgeliefert)
 
+Fehlalarme mit PS5 Cooling Center 1.99 (28. Nov. 2026, an der Test-Konsole gefunden):
+  cc_app0_neg                 nur "sandbox /app0 rw mount FAILED" (harmlos, das Spiel startet)
+  cc_pkg_shared_neg           PS4-Paket (Name mit Leerzeichen) und Retail-Paket im Hauptordner von usb0 (fuer PS4Mount bzw. andere Werkzeuge)
+  cc_pkg_own_pos              Retail-Paket im Ordner Kraken-Games (dort bleibt es ein Befund)
+  cc_backup_depth_neg         Spiel tief im Sicherungsordner PS5-Sicherung/Spiele (absichtlich ausser Reichweite von ShadowMount+)
+  cc_payload_msg_neg          vier CE-108256-2 mit eigenem Text (Payload-Meldungen) von NPXS40087, kein Systemfehler
+
 Aufruf: python3 tools/gen_tools_fixture.py
 """
 import json
@@ -105,6 +112,25 @@ def main():
     make("kraken_api_pos", [ae, ad, al, am], api={"8097/api/state": state(bad, True), "8097/api/ampr": {"kind": "missing", "version": "", "updating": False}})
     make("kraken_api_hand_pos", [ah], api={"8097/api/state": state(good, False), "8097/api/ampr": {"kind": "hand", "version": "0.5.1", "updating": False}})
     make("kraken_api_neg", [], [ae, ad, al, am, ah], api={"8097/api/state": state(good, False), "8097/api/ampr": {"kind": "bundled", "version": "0.5.1", "updating": False}})
+    # Fehlalarme mit PS5 Cooling Center 1.99
+    nl = chr(10)
+    make("cc_app0_neg", [], [lf], files={log: nl.join([
+         "2026-11-28 12:00:38Z [346072] [launch] PPSA00091 overlay MOUNTED (sandbox, nmount 0 ms): /data/krakenmount/caches/PPSA00091/fakelib -> /mnt/sandbox/PPSA00091_000/x/common/lib",
+         "2026-11-28 12:00:38Z [346077] [launch] PPSA00091 sandbox /app0 rw mount FAILED errno=11 (Resource deadlock avoided (os error 11)): /system_ex/app/PPSA00091 -> /mnt/sandbox/PPSA00091_000/app0", ""])})
+    ku = "kraken.pkg_unsupported"
+    ps4 = "mnt/usb0/CUSA00092 - Testspiel - game.pkg"
+    make("cc_pkg_shared_neg", [], [ku], files={ps4: "CNT test", "mnt/usb0/PS5_PPSA00093_v1.00.pkg": "FIH test", log: nl.join([
+         "2026-11-28 09:31:27Z [889175] /%s: not a PS5 package: a PS4 package (x7FCNT at offset 0)" % ps4,
+         "2026-11-28 09:31:28Z [889585] /mnt/usb0/PS5_PPSA00093_v1.00.pkg: unsupported package: a retail package (signed byte 0x80, debug packages carry 0x00)", ""])})
+    make("cc_pkg_own_pos", [ku], files={"mnt/usb0/Kraken-Games/PS5_PPSA00094_v1.00.pkg": "FIH test", log: nl.join([
+         "2026-11-28 09:31:28Z [889585] /mnt/usb0/Kraken-Games/PS5_PPSA00094_v1.00.pkg: unsupported package: a retail package (signed byte 0x80, debug packages carry 0x00)", ""])})
+    make("cc_backup_depth_neg", [], ["smp.scan_depth"], procs=("etaHEN", "kstuff", "shadowmountplus"), files={
+         "data/shadowmount/config.ini": "debug=1" + nl, "data/homebrew/PS5-Sicherung/Spiele/PPSA00095-app/sce_sys/param.json": '{"titleId": "PPSA00095"}'})
+    hist = "system_data/priv/error/history/%08d.json"
+    msgs = ["Welcome to Testpayload", "Testpayload: DNS set", "Testpayload: patch applied", "Testpayload: no games found"]
+    make("cc_payload_msg_neg", [], ["errors.recurring_system_app"], files={hist % i: json.dumps(
+         {"internalErrorCode": -2135293939, "messageBuffer": t, "shortError": "CE-108256-2", "titleId": "NPXS40087", "tick": 63931317706412000 + i * 1000000, "natType": 2})
+         for i, t in enumerate(msgs)})
     print("ok")
 
 

@@ -865,6 +865,9 @@ void collect_kraken(const Platform& p, Facts& f) {
         return;
     }
     f.set("kraken.log_present", true);
+    // abgelehnte Pakete: "<Pfad>: unsupported package ..." bzw. "<Pfad>: not a PS5 package ..."; der Pfad darf Leerzeichen enthalten (Ordnernamen mit Spieltitel)
+    static const std::regex rejected_re(R"RE((/[^:"']+?\.(?:pkg|exfat|ffpkg|ffpfs|ffpfsc)): (?:unsupported package|not a PS5 package))RE");
+    static const std::regex drive_root_re("^/mnt/(?:usb|ext)[0-9]+/[^/]+$");
     // seit 0.4.2 haengt Kraken auch Images ein (.exfat, .ffpkg, .ffpfs, .ffpfsc)
     static const std::regex path_re("(/[^\\s\"']+\\.(?:pkg|exfat|ffpkg|ffpfs|ffpfsc))");
     static const std::regex tid_re("((?:PPSA|CUSA)[0-9]{5})");
@@ -895,12 +898,22 @@ void collect_kraken(const Platform& p, Facts& f) {
         else if (has(line, "cache build:") && has(line, "short compressed block")) k = &cache;
         else if (has(line, "is not a bundled ampr-emu-ng")) k = &foreign;
         else if (has(line, "did not start") && has(line, "kstuff is not running")) k = &kstuff;
-        else if (has(line, "overlay mount FAILED") || has(line, "sandbox /app0 rw mount FAILED") || has(line, "backport redirects FAILED")) k = &launch;
+        // "sandbox /app0 rw mount FAILED" zaehlt nicht: das Spiel startet trotzdem, es kann nur nicht in /app0 schreiben (Quelltext 0.4.2, launch.rs;
+        // an der Konsole am 28. Nov. 2026: Dirt 5 lief mit dieser Meldung normal)
+        else if (has(line, "overlay mount FAILED") || has(line, "backport redirects FAILED")) k = &launch;
         else if (has(line, "unsupported package") || has(line, "not a PS5 package")) k = &other;
         if (!k) continue;
         cap_line(line);
         std::smatch m;
-        const std::string path = std::regex_search(line, m, path_re) ? m[1].str() : std::string();
+        std::string path = std::regex_search(line, m, path_re) ? m[1].str() : std::string();
+        if (k == &other) {
+            if (std::regex_search(line, m, rejected_re)) path = m[1].str();
+            // Ausserhalb des eigenen Ordners Kraken-Games gehoeren Pakete oft anderen Werkzeugen: PS4-Pakete fuer PS4Mount oder Installer, Pakete im
+            // Hauptordner eines Laufwerks (den PS5 Cooling Center 1.99 Kraken Mount uebergibt, solange ShadowMount+ nicht laeuft). Dort ist die
+            // Ablehnung kein Fehler (an der Konsole am 28. Nov. 2026).
+            const bool own = path.find("/Kraken-Games/") != std::string::npos;
+            if (!own && (has(line, "a PS4 package") || std::regex_match(path, drive_root_re))) continue;
+        }
         if (!path.empty() && !p.fs().exists(path)) continue;  // das Paket wurde seither neu gebaut oder entfernt: die alte Logzeile gilt nicht mehr
         // seit 0.3.1 beginnt jede Zeile mit der Uhrzeit: ohne Pfad zaehlt je Titel (bzw. je Text ab der Meldung) nur ein Eintrag
         std::smatch t;
