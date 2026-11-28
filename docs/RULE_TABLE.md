@@ -3,10 +3,12 @@
 
 **Deutsch** · [English](en/RULE_TABLE.md)
 
-Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.60, 109 Regeln). Nicht von Hand aendern.
+Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 2026.11.61, 124 Regeln). Nicht von Hand aendern.
 
 | Regel | Stufe | Firmware | Reparatur | Nachweis | Aussage |
 |---|---|---|---|---|---|
+| `ampr.stale_cache` | info | alle | - | todo | Im Ordner /data/ampr_cache liegen Reste des Plattencaches älterer ampr-emu-ng-Fassungen (bis 0.4.1); nach einem Absturz bleiben sie liege... |
+| `ampr.trace_problem` | warning | alle | - | todo | Das Debug-Protokoll von ampr-emu-ng (/data/ampr_emu_trace.txt, letzter Spielstart) meldet einen Fehler: Index abgelehnt, Packs nicht verb... |
 | `appdb.orphan_entry` | warning | alle | - | todo | Die Datenbank der Systemsoftware (app.db) führt einen Titel, dessen Ordner unter /user/app oder /system_ex/app fehlt (Evidenz: Titel-ID):... |
 | `appdb.unregistered_folder` | info | alle | - | todo | Unter /user/app liegt ein Titelordner (PPSA/CUSA), den die Datenbank der Konsole nicht kennt; das Spiel fehlt in der Bibliothek. |
 | `autoload.elfldr_without_delay` | warning | alle | `autoload_insert_delay` | doc | In der Autoload-Liste folgt auf den Loader (elfldr) sofort der nächste Eintrag. |
@@ -23,6 +25,7 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `errors.recurring_system_app` | info | alle | - | todo | Eine Systemanwendung (Titel NPXS…) hat im Fehlerverlauf mehrfach denselben CE-Fehlercode gemeldet. |
 | `errors.recurring_title` | warning | alle | - | todo | Der Fehlerverlauf (/system_data/priv/error/history) enthält denselben CE-Fehlercode mehrfach für denselben Titel: Der Titel startet oder... |
 | `fan.double_controller` | warning | alle | - | todo | Zwei Lüfterregler laufen gleichzeitig (siehe Liste). |
+| `forge.old_version` | info | alle | - | todo | Installiert ist Dump Forge vor 0.5.6. |
 | `game.backport_incomplete` | warning | alle | - | todo | Bei diesen Spielen ist der Backport nur halb eingebaut: Die eboot.bin trägt schon ein SDK, das zur Konsole passt, aber mindestens ein Mod... |
 | `game.compat_known_bad` | info | alle | - | community | Laut der Kompatibilitätsliste für ZSTD- und LZ4-Sicherungen läuft dieses Spiel bei Testern nicht oder nur mit widersprüchlichen Berichten... |
 | `game.eboot_invalid` | warning | alle | - | todo | Die eboot.bin eines Spielordners ist unbrauchbar: kleiner als 64 Byte oder reiner Text (z. |
@@ -38,11 +41,14 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `game.ng_index_too_big` | info | alle | - | doc | Ein sehr großes Spiel (ab etwa 200 000 Dateien laut ampr_emu.index) nutzt ampr-emu-ng 0.3.5 oder 0.4.0. |
 | `game.ng_save_risk` | info | alle | - | community | Im Spiel liegt eine ampr-emu-ng-Fassung (0.3.5 oder 0.4.0, Release), bei der Nutzer Probleme beim Speichern melden, und die Konsole hat f... |
 | `game.no_exec_permission` | warning | alle | `chmod_exec` | community | Programmdateien eines Spiels (eboot.bin, Module) haben kein Ausführungsrecht, zum Beispiel 0666 statt 0777. |
+| `game.p5z_container` | info | alle | - | todo | In einem Scanpfad liegen .p5z-Dateien. |
+| `game.p5z_truncated` | warning | alle | - | todo | Eine .p5z-Datei ist unvollständig: Der Kopf ist da, das Ende (der Fuß, den MaxPack zuletzt schreibt) fehlt. |
 | `game.pack_incomplete` | warning | alle | - | doc | Die zstd-Pack-Dateien eines Spiels sind unvollständig: ein Teil (ampr_zstd-NNN.pak) fehlt, hat nicht die Größe laut Index, oder die ampr_... |
 | `game.pack_no_emu_index` | info | alle | - | todo | Ein Spiel mit Packs hat keine ampr_emu.index. |
 | `game.pack_runtime_mismatch` | warning | alle | - | doc | Ein Spiel mit gepackten Dateien (ampr_zstd.index oder ampr_assets.index) hat keine passende Laufzeit-Bibliothek: fakelib/libSceAmpr.sprx... |
 | `game.partial_folder` | warning | alle | `quarantine_partial_folder` | community | In einem Scanpfad liegt ein Packordner mit Volumes (ampr_zstd-NNN.pak), aber ohne ampr_zstd.index. |
 | `game.playgo_stub_missing` | info | alle | - | community | Das Spiel hat PlayGo-Dateien (sce_sys/playgo-scenario.json oder playgo-chunk.dat), aber weder libScePlayGo.sprx im fakelib noch eine Play... |
+| `game.runtime_debug_build` | info | alle | - | todo | In diesen Spielen steckt die Debug-Fassung von ampr-emu-ng. |
 | `game.runtime_old_version` | info | alle | - | doc | Im Spiel liegt eine alte ampr-emu-ng-Fassung (vor 0.3.4), und die Konsole hat für dieses Spiel einen Fehlercode verzeichnet. |
 | `game.trophy_files_missing` | info | alle | - | community | Im Spielordner gibt es sce_sys/trophy2 mit Dateien, aber mindestens eine der Trophäen-Dateien fehlt (sce_sys/nptitle.dat, sce_sys/uds/npb... |
 | `game.unsigned_elf` | info | alle | - | community | Mindestens eine Programmdatei des Spiels (eboot.bin, sce_module, prx oder fakelib) ist eine reine, nicht signierte ELF-Datei, und die Kon... |
@@ -52,11 +58,20 @@ Erzeugt von `tools/gen_rule_table.py` aus `knowledge/rules.json` (db_version 202
 | `hen.etahen_with_kstufflite_latest_fw` | critical | >=13.60 | - | community | etaHEN und kstuff-lite laufen gleichzeitig. |
 | `hen.jb_too_early` | info | alle | - | community | Der erste Prozess der Jailbreak-Kette startete weniger als 60 Sekunden nach dem Einschalten. |
 | `kraken.ampr_foreign` | info | alle | - | community | Im Ordner /data/krakenmount/ampr/ liegt eine von Hand abgelegte Datei („is not a bundled ampr-emu-ng: kept“). |
+| `kraken.api_ampr_hand` | info | alle | - | todo | Kraken Mount nutzt eine von Hand eingelegte ampr-emu-ng-Laufzeit (Zustand „hand“) statt der mitgelieferten oder heruntergeladenen. |
+| `kraken.api_ampr_missing` | warning | alle | - | todo | Kraken Mount hat keine brauchbare ampr-emu-ng-Laufzeit (Zustand „missing“ oder „error“). |
+| `kraken.api_duplicate` | warning | alle | - | todo | Kraken Mount findet dieselbe Title-ID mehrfach (Status „duplicate“) und hängt die zusätzlichen Quellen nicht ein. |
+| `kraken.api_game_error` | warning | alle | - | todo | Kraken Mount meldet für diese Spiele einen Fehler (Status „error“, die Meldung steht im Beleg). |
+| `kraken.api_low_space` | warning | alle | - | todo | Kraken Mount meldet zu wenig freien Platz für seinen Cache. |
 | `kraken.cache_block` | warning | alle | - | community | Kraken Mount erkennt eine .pkg, scheitert aber beim Aufbau des Caches („cache build … short compressed block“): Ein komprimierter Block r... |
+| `kraken.game_crashed` | info | alle | - | todo | Kraken Mount hat für diese Spiele in den letzten 14 Tagen einen Absturz festgehalten (/data/krakenmount/crashes.json, mit Grund wie „kill... |
+| `kraken.kstuff_missing` | warning | alle | - | todo | Kraken Mount konnte ein Spiel nicht starten, weil kstuff nicht lief („kstuff is not running“ in kraken.log). |
+| `kraken.launch_failed` | warning | alle | - | todo | Beim Start eines Spiels konnte Kraken Mount etwas nicht einhängen: Overlay, beschreibbares /app0 oder Backport-Umleitung („… FAILED“ in k... |
 | `kraken.pkg_sparse_extent` | info | alle | - | community | Kraken Mount hat eine .pkg abgelehnt: Das Layout der Paketdatei hat eine Lücke (sparse extent), und das Paket bekam deshalb keine Kachel;... |
 | `kraken.pkg_truncated` | warning | alle | - | community | Kraken Mount meldet für eine .pkg „truncated?“: Die Datei ist kürzer, als ihr Kopf angibt, etwa nach einem abgebrochenen Download oder ei... |
 | `kraken.pkg_unsupported` | warning | alle | - | community | Kraken Mount lehnt eine .pkg ab, weil sie kein Paket der Art ist, die es lesen kann (Meldung „unsupported package“ oder „not a PS5 packag... |
 | `kraken.sysex_readonly` | warning | alle | - | community | Kraken Mount konnte einen neuen Titel nicht anmelden: Die Konsole hat /system_ex schreibgeschützt eingehängt (os error 30), die Meldung s... |
+| `kraken.waiting_for_smp` | warning | alle | - | todo | Kraken Mount wartet und hängt nichts ein: Es startet erst, wenn ShadowMount+ beendet ist, und ShadowMount+ läuft gerade (Meldung „waiting... |
 | `nanodns.log_problem` | info | alle | - | doc | Das nanoDNS-Log enthält Fehler: nanoDNS erreicht seine Upstream-DNS-Server nicht (dann scheitert jede Namensauflösung, Apps und Payload M... |
 | `payload.elf_invalid` | warning | alle | `quarantine_broken_elf` | doc | Mindestens eine ELF-Datei ist unbrauchbar: zu klein, ohne ELF-Kennung (oft eine gespeicherte HTML-Fehlerseite) oder abgeschnitten (abgebr... |
 | `payload.port_9021_closed` | warning | alle | - | todo | Port 9021 nimmt keine Verbindungen an, und weder elfldr noch etaHEN läuft: Es ist kein ELF-Loader aktiv, Payloads lassen sich nicht an di... |

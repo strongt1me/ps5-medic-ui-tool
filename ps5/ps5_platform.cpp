@@ -2,6 +2,7 @@
 #include "ps5_platform.hpp"
 
 #include "medic/fwver.hpp"
+#include "medic/http.hpp"
 #include "medic/posix_fs.hpp"
 
 #include <sys/mount.h>
@@ -241,6 +242,18 @@ public:
         return out;
     }
 
+    // Nur GET auf 127.0.0.1:8097 (Kraken Mount) mit den zwei freigegebenen Pfaden; ueber den HTTP-Client des Regel-Downloads (keine Weiterleitungen,
+    // harte Grenzen fuer Groesse und Zeit). Veraendernde Aufrufe (POST) gibt es hier nicht.
+    bool local_api_get(int port, const std::string& path, std::string& body) const override {
+        body.clear();
+        if (port != 8097 || (path != "/api/state" && path != "/api/ampr")) return false;
+        if (local_port_state(port) != PortState::Open) return false;  // laeuft Kraken nicht, nicht erst auf eine Zeitueberschreitung warten
+        auto http = medic::make_posix_http_client();
+        const medic::HttpResponse r = http->get("http://127.0.0.1:" + std::to_string(port) + path, 2u << 20, 2000);
+        if (!r.error.empty() || r.status != 200) return false;
+        body = r.body;
+        return true;
+    }
     bool read_local_stream(int port, std::size_t max_bytes, int timeout_ms, std::string& out) const override {
         out.clear();
         const int s = socket(AF_INET, SOCK_STREAM, 0);

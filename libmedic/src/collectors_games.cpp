@@ -5,6 +5,7 @@
 #include "medic/compat.hpp"
 #include "medic/image_reader.hpp"
 #include "medic/readtail.hpp"
+#include "medic/rules.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -118,7 +119,8 @@ LibInfo classify_lib(const std::string& b) {
     LibInfo li;
     li.elf = b.compare(0, 4, "\x7f" "ELF") == 0;
     li.zstd = b.find("AMPRZPK1") != std::string::npos;
-    li.debug = b.find("debugpack_format") != std::string::npos;
+    // "debugpack_format" ist eine zufaellige Verkettung im Programm und kann wegfallen; ampr_emu_tune.txt und /fsfail stehen nur im Debug-Build (0.5.1 gelesen)
+    li.debug = b.find("debugpack_format") != std::string::npos || b.find("ampr_emu_tune.txt") != std::string::npos || b.find("/fsfail") != std::string::npos;
     const std::string ng = "ampr-emu-ng ";
     for (std::size_t pos = b.find(ng); pos != std::string::npos; pos = b.find(ng, pos + 1)) {
         const std::size_t v = pos + ng.size();
@@ -326,7 +328,9 @@ void inspect_source(const Tree& tree, const std::string& titleid, const std::str
                        // ampr-emu-ng 0.3.5 und 0.4.0 (Release): Speichern/Laden/Beenden haengt oder meldet CE-108255-1 und CE-107112-2 (Issues 60, 63, 64 im Projekt);
                        // laut Projekt erst in einer Beta behoben, deren Versionstext "0.4.0-beta..." lautet. 0.4.0 ist die ausgelieferte Release-Fassung: gemeldet
                        // wird nur mit Beleg, also wenn die Konsole einen dieser Fehler fuer genau diesen Titel verzeichnet hat (save_errors)
-                       {"save_risk", save_errors && li.kind == "ng" && (li.version == "0.3.5" || li.version == "0.4.0")},
+                       // Abgleich 28. Nov. 2026: auch 0.4.1 bis 0.5.0 hatten Speicherfehler (0.5.0 behob zurueckportierte FW-4.xx-Spiele, 0.5.1 den pkg-Modus);
+                       // gemeldet wird weiter nur mit Beleg (save_errors); Beta-Fassungen ("0.4.0-beta...") nicht: die Beta zu 0.4.0 enthielt die Korrektur
+                       {"save_risk", save_errors && li.kind == "ng" && !li.version.empty() && li.version.find('-') == std::string::npos && compare_versions(li.version, "0.3.5") >= 0 && compare_versions(li.version, "0.5.1") < 0},
                        // S03: eine ng-Fassung vor 0.3.4 (alte, spaeter behobene Fehler), nur gemeldet, wenn die Konsole fuer genau diesen Titel einen Fehler verzeichnet hat
                        {"old_version", li.kind == "ng" && ng_older_than_034(li.version)},
                        {"old_risk", any_error && li.kind == "ng" && ng_older_than_034(li.version)},
@@ -759,10 +763,29 @@ void collect_game_hints(const Platform& p, Facts& f) {
 // Layout mit Luecke nennt als Abhilfe das Neu-Packen mit "--kraken stored"; sie zaehlt nicht zu pkg_other, obwohl sie ebenfalls "unsupported package" sagt.
 // Nur Log lesen (Marc, 14. Nov. 2026: Kraken nur ueber kraken.log und config.toml).
 void collect_kraken(const Platform& p, Facts& f) {
+    // kraken.crashes[].{titleid,at,process,status,desc}: letzter Absturz je Titel aus /data/krakenmount/crashes.json (seit 0.3.2; {"<TID>": {at, process, folder, status}}).
+    // Nur Abstuerze der letzten 14 Tage, wenn die Uhr bekannt ist (die Datei behaelt jeden Titel fuer immer).
+    if (std::string cj; p.fs().read_file("/data/krakenmount/crashes.json", cj) && cj.size() < (1u << 20)) {
+        const json m = json::parse(cj, nullptr, false);
+        json out = json::array();
+        const std::int64_t now = p.sys().now_epoch();
+        static const std::regex tid_ok("^(PPSA|CUSA)[0-9]{5}$");
+        if (m.is_object())
+            for (const auto& [tid, c] : m.items()) {
+                if (!c.is_object() || !std::regex_match(tid, tid_ok) || out.size() >= 20) continue;
+                const std::int64_t at = c.value("at", std::int64_t{0});
+                if (now > 0 && at > 0 && at < now - 14 * 86400) continue;
+                const std::string status = c.value("status", std::string()), process = c.value("process", std::string());
+                out.push_back({{"titleid", tid}, {"at", at}, {"process", process}, {"status", status}, {"desc", tid + ": " + (status.empty() ? std::string("?") : status)}});
+            }
+        f.set("kraken.crashes", std::move(out));
+    }
     std::string text;
     if (!read_tail(p.fs(), "/data/krakenmount/kraken.log", 1u << 20, text)) return;
     f.set("kraken.log_present", true);
-    static const std::regex path_re("(/[^\\s\"']+\\.pkg)");
+    // seit 0.4.2 haengt Kraken auch Images ein (.exfat, .ffpkg, .ffpfs, .ffpfsc)
+    static const std::regex path_re("(/[^\\s\"']+\\.(?:pkg|exfat|ffpkg|ffpfs|ffpfsc))");
+    static const std::regex tid_re("((?:PPSA|CUSA)[0-9]{5})");
     struct Kind {
         explicit Kind(const char* name) : fact(name) {}
         const char* fact;
@@ -770,27 +793,190 @@ void collect_kraken(const Platform& p, Facts& f) {
         std::set<std::string> seen;
     };
     Kind sparse("kraken.sparse_extent"), sysex("kraken.sysex_readonly"), other("kraken.pkg_other"), trunc("kraken.pkg_truncated"), cache("kraken.cache_block"),
-        foreign("kraken.ampr_foreign");
+        foreign("kraken.ampr_foreign"), kstuff("kraken.kstuff_missing"), launch("kraken.launch_failed");
+    bool waiting = false;  // letzter Stand im Log: "waiting before start-up: shadowmount" bis "shadowmount: ready"
     const auto has = [](const std::string& l, const char* s) { return l.find(s) != std::string::npos; };
     std::istringstream in(text);
     std::string line;
     while (std::getline(in, line)) {
+        if (has(line, "waiting before start-up: shadowmount")) waiting = true;
+        else if (has(line, "shadowmount: ready")) waiting = false;
         Kind* k = nullptr;
         if (has(line, "the layout has a sparse extent")) k = &sparse;
         else if (has(line, "/system_ex") && has(line, "Read-only filesystem")) k = &sysex;
         else if (has(line, "(truncated?)")) k = &trunc;
         else if (has(line, "cache build:") && has(line, "short compressed block")) k = &cache;
         else if (has(line, "is not a bundled ampr-emu-ng")) k = &foreign;
+        else if (has(line, "did not start") && has(line, "kstuff is not running")) k = &kstuff;
+        else if (has(line, "overlay mount FAILED") || has(line, "sandbox /app0 rw mount FAILED") || has(line, "backport redirects FAILED")) k = &launch;
         else if (has(line, "unsupported package") || has(line, "not a PS5 package")) k = &other;
         if (!k) continue;
         cap_line(line);
         std::smatch m;
         const std::string path = std::regex_search(line, m, path_re) ? m[1].str() : std::string();
         if (!path.empty() && !p.fs().exists(path)) continue;  // das Paket wurde seither neu gebaut oder entfernt: die alte Logzeile gilt nicht mehr
-        if (!k->seen.insert(path.empty() ? line : path).second || k->out.size() >= 20) continue;
-        k->out.push_back({{"path", path}, {"line", line}});
+        // seit 0.3.1 beginnt jede Zeile mit der Uhrzeit: ohne Pfad zaehlt je Titel (bzw. je Text ab der Meldung) nur ein Eintrag
+        std::smatch t;
+        const std::string tid = std::regex_search(line, t, tid_re) ? t[1].str() : std::string();
+        const std::string key = !path.empty() ? path : (!tid.empty() ? tid : line.substr(std::min(line.size(), line.find_first_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ/"))));
+        if (!k->seen.insert(key).second || k->out.size() >= 20) continue;
+        json e = {{"path", path}, {"line", line}};
+        if (!tid.empty()) e["titleid"] = tid;
+        k->out.push_back(std::move(e));
     }
-    for (Kind* k : {&sparse, &sysex, &other, &trunc, &cache, &foreign}) f.set(k->fact, std::move(k->out));
+    for (Kind* k : {&sparse, &sysex, &other, &trunc, &cache, &foreign, &kstuff, &launch}) f.set(k->fact, std::move(k->out));
+    // Kraken wartet, solange ShadowMount+ laeuft (Quelltext 0.4.2, main.rs): nur melden, wenn das Log zuletzt "wartet" sagt UND ShadowMount+ wirklich laeuft
+    bool smp = false;
+    if (const json* pr = f.get("proc.running"); pr && pr->is_array())  // collect_processes laeuft vorher (Namen klein, ohne ".elf")
+        for (const auto& n : *pr)
+            if (n.is_string() && n.get<std::string>() == "shadowmountplus") smp = true;
+    f.set("kraken.waiting_for_smp", waiting && smp);
+}
+
+// Kraken Mount, lokale API (Marc, 28. Nov. 2026: lesend erlaubt; nur GET 127.0.0.1:8097 /api/state und /api/ampr, Quelltext 0.4.2 web.rs). Laeuft Kraken nicht,
+// fehlen alle Fakten. kraken.api.version, kraken.api.games_error[].{titleid,error,desc} (Status "error"), kraken.api.games_duplicate[].{titleid,path,desc}
+// (Status "duplicate": dieselbe Title-ID mehrfach), kraken.api.cache_low_space und kraken.api.cache_free (Byte), kraken.api.ampr_kind
+// (bundled|downloaded|hand|missing|error) und kraken.api.ampr_version. Titelnamen werden bewusst nicht uebernommen (nur Title-IDs).
+void collect_kraken_api(const Platform& p, Facts& f) {
+    std::string body;
+    if (!p.sys().local_api_get(8097, "/api/state", body)) return;
+    const json s = json::parse(body, nullptr, false);
+    if (!s.is_object()) return;
+    f.set("kraken.api.present", true);
+    if (s.contains("version") && s["version"].is_string()) f.set("kraken.api.version", s["version"].get<std::string>());
+    static const std::regex tid_ok("^(PPSA|CUSA)[0-9]{5}$");
+    json err = json::array(), dup = json::array();
+    if (s.contains("games") && s["games"].is_array())
+        for (const auto& g : s["games"]) {
+            if (!g.is_object()) continue;
+            const std::string tid = g.value("title_id", std::string()), status = g.value("status", std::string());
+            if (!std::regex_match(tid, tid_ok)) continue;
+            if (status == "error" && err.size() < 50) {
+                std::string e = g.contains("error") && g["error"].is_string() ? g["error"].get<std::string>() : std::string();
+                if (e.size() > 200) e.resize(200);
+                err.push_back({{"titleid", tid}, {"error", e}, {"desc", tid + ": " + (e.empty() ? std::string("?") : e)}});
+            } else if (status == "duplicate" && dup.size() < 50) {
+                const std::string path = g.contains("path") && g["path"].is_string() ? g["path"].get<std::string>() : std::string();
+                dup.push_back({{"titleid", tid}, {"path", path}, {"desc", tid + ": " + path}});
+            }
+        }
+    f.set("kraken.api.games_error", std::move(err));
+    f.set("kraken.api.games_duplicate", std::move(dup));
+    if (s.contains("cache") && s["cache"].is_object()) {
+        const json& c = s["cache"];
+        if (c.contains("low_space") && c["low_space"].is_boolean()) f.set("kraken.api.cache_low_space", c["low_space"].get<bool>());
+        if (c.contains("free") && c["free"].is_number()) f.set("kraken.api.cache_free", c["free"].get<double>());
+    }
+    std::string ab;
+    if (p.sys().local_api_get(8097, "/api/ampr", ab)) {
+        const json a = json::parse(ab, nullptr, false);
+        if (a.is_object()) {
+            if (a.contains("kind") && a["kind"].is_string()) f.set("kraken.api.ampr_kind", a["kind"].get<std::string>());
+            if (a.contains("version") && a["version"].is_string()) f.set("kraken.api.ampr_version", a["version"].get<std::string>());
+        }
+    }
+}
+
+// ---- Abgleich mit Kraken Mount 0.4.2, ampr-emu-ng 0.5.1 und Dump Forge 0.6.0 (28. Nov. 2026, nur Quelltext und Releases gelesen) -------------------------------
+
+// ampr.trace_problems[].{kind,line}: die "Black Box" der Debug-Laufzeit (/data/ampr_emu_trace.txt, docs/debug-build.md des Projekts). Sie wird bei jedem Spielstart
+// neu geschrieben, gilt also fuer den letzten Start. Gemeldet werden nur Zeilen, die einen Fehler belegen: Index abgelehnt ("idx Invalid|Memory|Unreadable"),
+// Ersatzaufbau oder Verbindung der Packs gescheitert ("idx walk fail", "idx join fail"), /app0 nicht beschreibbar ("rw off errno="), .pkg-Erkennung gescheitert
+// ("pkg badimage|open|notregular|nomanifest|size"). "idx Missing" fehlt absichtlich: ohne Packs hat ein Spiel oft gar keinen Index.
+// ampr.stale_cache: /data/ampr_cache (mmap-Plattencache bis ampr-emu-ng 0.4.1) ist nicht leer, und kein Spiel nutzt ng ab 0.5.0 (das raeumt ihn beim Start selbst auf).
+void collect_ampr_trace(const Platform& p, Facts& f) {
+    std::string text;
+    if (read_tail(p.fs(), "/data/ampr_emu_trace.txt", 1u << 20, text)) {
+        json out = json::array();
+        std::set<std::string> seen;
+        static const std::pair<const char*, const char*> kMarks[] = {
+            {"idx Invalid", "index_invalid"},   {"idx Memory", "index_memory"},  {"idx Unreadable", "index_unreadable"}, {"idx walk fail", "index_walk_fail"},
+            {"idx join fail", "pack_join_fail"}, {"rw off errno=", "app0_readonly"}, {"pkg badimage", "pkg_discovery"},     {"pkg open ", "pkg_discovery"},
+            {"pkg notregular", "pkg_discovery"}, {"pkg nomanifest", "pkg_discovery"}, {"pkg size ", "pkg_discovery"}};
+        std::istringstream in(text);
+        std::string line;
+        while (std::getline(in, line) && out.size() < 20)
+            for (const auto& [mark, kind] : kMarks) {
+                if (line.find(mark) == std::string::npos) continue;
+                cap_line(line);
+                if (seen.insert(kind).second) out.push_back({{"kind", kind}, {"line", line}});
+                break;
+            }
+        f.set("ampr.trace_present", true);
+        f.set("ampr.trace_problems", std::move(out));
+    }
+    bool cache = false;
+    for (const auto& e : p.fs().list_dir("/data/ampr_cache")) {
+        (void)e;
+        cache = true;
+        break;
+    }
+    if (!cache) return;
+    bool new_runtime = false, any_ng = false;
+    if (const json* rt = f.get("games.runtime"); rt && rt->is_array())
+        for (const auto& r : *rt) {
+            if (!r.is_object() || r.value("lib_kind", std::string()) != "ng") continue;
+            any_ng = true;
+            const std::string v = r.value("lib_version", std::string());
+            if (!v.empty() && compare_versions(v, "0.5.0") >= 0) new_runtime = true;
+        }
+    if (any_ng) f.set("ampr.stale_cache", !new_runtime);
+}
+
+// forge.version: Version der installierten Dump-Forge-Payload. Sie kopiert sich nach /data/dumpforge/ps5-dump-forge.elf (aeltere Fassungen nach /data/ps5-dump-forge/)
+// und traegt die Marke "ps5-dump-forge-version:X.Y.Z" (Quelltext 0.6.0, lib.rs und self_copy.rs). Ab welcher Fassung die Marke da ist, ist offen: fehlt sie, fehlt der Fakt.
+void collect_dumpforge(const Platform& p, Facts& f) {
+    static const std::string kMark = "ps5-dump-forge-version:";
+    for (const char* path : {"/data/dumpforge/ps5-dump-forge.elf", "/data/ps5-dump-forge/ps5-dump-forge.elf"}) {
+        std::string b;
+        if (!p.fs().read_file(path, b)) continue;
+        const std::size_t pos = b.find(kMark);
+        if (pos == std::string::npos) continue;
+        std::size_t e = pos + kMark.size();
+        while (e < b.size() && e - pos - kMark.size() < 24 && (std::isdigit(static_cast<unsigned char>(b[e])) || b[e] == '.')) ++e;
+        const std::string v = b.substr(pos + kMark.size(), e - pos - kMark.size());
+        if (v.empty() || !std::isdigit(static_cast<unsigned char>(v[0]))) continue;
+        f.set("forge.version", v);
+        f.set("forge.path", std::string(path));
+        f.set("forge.before_056", compare_versions(v, "0.5.6") < 0);
+        return;
+    }
+}
+
+// games.p5z[].{path,name,truncated,desc}: .p5z-Dateien (Format von MaxPack, docs/p5z-format.md: Kopf "MAXPKP5Z", Fuss "P5ZFOOT1" in den letzten 32 Byte, der Fuss wird
+// zuletzt geschrieben) direkt in einem Scanpfad oder eine Ebene darunter. ShadowMount+, Kraken Mount 0.4.2 und ampr-emu-ng 0.5.1 lesen das Format nicht: Es ist ein
+// Behaelter zum Aufbewahren, vor dem Spielen wird er ausgepackt. truncated: Kopf da, Fuss fehlt (Uebertragung abgebrochen).
+void collect_p5z(const Platform& p, Facts& f) {
+    const IFileSystem& fs = p.fs();
+    const json* roots = f.get("smp.scan_roots");
+    if (!roots || !roots->is_array()) return;
+    json out = json::array();
+    auto ends_p5z = [](const std::string& n) {
+        if (n.size() < 5) return false;
+        std::string t = n.substr(n.size() - 4);
+        for (char& c : t) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        return t == ".p5z";
+    };
+    auto check = [&](const std::string& dir, const DirEntry& e) {
+        if (e.is_dir || !ends_p5z(e.name) || out.size() >= 50) return;
+        const std::string path = join_path(dir, e.name);
+        std::string head, foot;
+        if (!fs.read_range(path, 0, 8, head) || head != "MAXPKP5Z") return;  // keine MaxPack-Datei: nichts behaupten
+        const bool truncated = e.size < 96 || !fs.read_range(path, e.size - 32, 8, foot) || foot != "P5ZFOOT1";
+        out.push_back({{"path", path}, {"name", e.name}, {"truncated", truncated}, {"desc", e.name + (truncated ? " (unvollständig)" : "")}});
+    };
+    for (const auto& r : *roots) {
+        if (!r.is_string()) continue;
+        const std::string root = r.get<std::string>();
+        for (const auto& e : fs.list_dir(root)) {
+            if (e.is_dir && !e.name.empty() && e.name[0] != '.') {
+                for (const auto& s : fs.list_dir(join_path(root, e.name))) check(join_path(root, e.name), s);
+            } else {
+                check(root, e);
+            }
+        }
+    }
+    f.set("games.p5z", std::move(out));
 }
 
 // Verwaiste Inhalte (23. Nov. 2026; Vorbild: orphan-scan in ps5-tools von CreamyG31337, MIT, dort ueber FTP): Medic liest nur Ordner- und Dateinamen, nie Inhalte (D17).

@@ -145,6 +145,14 @@ public:
         (void)timeout_ms;
         return {};
     }
+    // Lesende HTTP-Abfrage an einen Dienst auf derselben Konsole (127.0.0.1): nur GET, nur die freigegebenen Abfragen (CLAUDE.md, Marc 28. Nov. 2026):
+    // Kraken Mount, Port 8097, "/api/state" und "/api/ampr". Alles andere lehnt jede Umsetzung ab. true und `body` nur bei Status 200.
+    virtual bool local_api_get(int port, const std::string& path, std::string& body) const {
+        (void)port;
+        (void)path;
+        body.clear();
+        return false;
+    }
     // Liest hoechstens `max_bytes` Rohdaten von einem lokalen TCP-Port (127.0.0.1), solange Daten kommen, hoechstens `timeout_ms`. Nur lesend:
     // es wird nichts gesendet. true, wenn die Verbindung zustande kam (auch ohne Daten). Gedacht fuer den Kernel-Log-Server (klogsrv, Port 3232):
     // Das Lesen VERBRAUCHT, was sich seit dem letzten Leser angesammelt hat (der Kernel-Log gibt jede Zeile nur einmal heraus).

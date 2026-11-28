@@ -309,6 +309,19 @@ static void new_fact_tests() {
               "Verwaiste Inhalte: Spiel installiert oder als Kraken-Cache bekannt, Lizenz mit Spiel, eine Datei statt eines Auftragsordners: kein Fund");
         CHECK(!facts_of("c1_pos").get("content.dlc_without_game") && !facts_of("c1_pos").get("content.installed_ids"), "Verwaiste Inhalte: ohne lesbares /user/app keine Fakten (kein Beweis)");
     }
+    {  // Kraken-API (28. Nov. 2026): nur GET 127.0.0.1:8097 /api/state und /api/ampr; Titelnamen werden nicht uebernommen
+        auto p = medic::make_snapshot_platform(std::string(MEDIC_SOURCE_DIR) + "/tests/fixtures/kraken_api_pos");
+        std::string b;
+        CHECK(p->sys().local_api_get(8097, "/api/state", b) && !b.empty(), "Kraken-API: /api/state wird gelesen");
+        CHECK(!p->sys().local_api_get(8097, "/api/settings", b) && !p->sys().local_api_get(10101, "/api/v1/games", b) && !p->sys().local_api_get(8097, "/api/state?x", b),
+              "Kraken-API: andere Pfade und Ports werden abgelehnt");
+        const auto api = facts_of("kraken_api_pos");
+        CHECK(api.get("kraken.api.version")->get<std::string>() == "0.4.2" && api.get("kraken.api.games_error")->size() == 1 && api.get("kraken.api.games_duplicate")->size() == 1 &&
+                  api.get("kraken.api.cache_low_space")->get<bool>() && api.get("kraken.api.ampr_kind")->get<std::string>() == "missing",
+              "Kraken-API: Fehler, Doppelte, wenig Platz und ampr-Zustand");
+        CHECK(api.get("kraken.api.games_error")->dump().find("Testspiel") == std::string::npos, "Kraken-API: keine Titelnamen in den Fakten");
+        CHECK(!facts_of("g1_pos").get("kraken.api.present"), "Kraken-API: ohne Antwort keine Fakten");
+    }
     {  // C2: nur Apps mit grosser Reservierung und kleinem Inhalt
         auto f = facts_of("c2_pos");
         const json* v = f.get("apps.oversized");

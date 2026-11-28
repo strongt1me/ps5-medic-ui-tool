@@ -1,0 +1,1 @@
+{"expect": [], "neg_for": ["kraken.api_game_error", "kraken.api_duplicate", "kraken.api_low_space", "kraken.api_ampr_missing", "kraken.api_ampr_hand"]}

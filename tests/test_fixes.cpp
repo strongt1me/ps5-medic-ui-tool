@@ -487,7 +487,13 @@ bool live_only(const std::string& rule) {
     static const std::set<std::string> rules = {"storage.oversized_reservation", "game.pack_runtime_mismatch", "smp.emulator_update_replaces_runtime", "game.pack_no_emu_index",
                                                 "game.ng_save_risk", "game.pack_incomplete", "kraken.pkg_sparse_extent", "game.unsigned_elf", "game.flex_memory_small", "game.playgo_stub_missing", "game.trophy_files_missing", "kraken.sysex_readonly", "kraken.pkg_unsupported", "kraken.pkg_truncated", "kraken.cache_block", "kraken.ampr_foreign", "game.incomplete_folder",  // incomplete_folder: braucht sce_module, das der Export nicht anlegt
                                                 "game.partial_folder", "game.fakelib_layout", "smp.fakelib_off_with_runtime", "game.runtime_old_version", "game.ng_index_too_big",
-                                                "game.index_files_missing"};  // Inhalte der Spielordner (Packdateien, fakelib), der Export legt nur die Namen der ersten Ebene an
+                                                "game.index_files_missing",  // Inhalte der Spielordner (Packdateien, fakelib), der Export legt nur die Namen der ersten Ebene an
+                                                // Abgleich 28. Nov. 2026: Inhalte von kraken.log, crashes.json, der ampr-Black-Box, der Dump-Forge-Payload, der Laufzeit-Bibliothek und
+                                                // der .p5z-Koepfe exportiert der Snapshot nicht
+                                                "kraken.waiting_for_smp", "kraken.game_crashed", "kraken.kstuff_missing", "kraken.launch_failed", "ampr.trace_problem",
+                                                "ampr.stale_cache", "game.runtime_debug_build", "forge.old_version", "game.p5z_container", "game.p5z_truncated",
+                                                // die Antworten der lokalen Kraken-API (system.json "local_api") schreibt der Export nicht
+                                                "kraken.api_game_error", "kraken.api_duplicate", "kraken.api_low_space", "kraken.api_ampr_missing", "kraken.api_ampr_hand"};
     return rules.count(rule) != 0;
 }
 
