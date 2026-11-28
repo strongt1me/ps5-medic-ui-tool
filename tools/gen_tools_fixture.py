@@ -36,7 +36,7 @@ import shutil
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = os.path.join(ROOT, "tests", "fixtures")
 
-NOW = 1795651200  # 2026-11-26 00:00 UTC
+NOW = 1795824000  # 2026-11-28 00:00 UTC (Erscheinen 0.6.0; die Uhr gilt erst ab einen Tag vor dem Erscheinen als plausibel)
 PARAM = '{"titleId": "%s", "requiredSystemSoftwareVersion": "0x0900000000000000", "sdkVersion": "0x0900000000000000"}'
 STORAGE = '"storage": [{"mount": "/data", "total": 900000000000, "free": 500000000000}]'
 

@@ -6,7 +6,7 @@
 
 **Check-up, Klartext-Diagnose und sichere Reparatur für gejailbreakte PS5-Konsolen, als Vollbild-App für den Fernseher mit DualSense.**
 
-![Version](https://img.shields.io/badge/Version-0.5.0-1f6feb)
+![Version](https://img.shields.io/badge/Version-0.6.0-1f6feb)
 ![Firmware](https://img.shields.io/badge/FW-1.00%20bis%2014.22-2ea44f)
 ![Lizenz](https://img.shields.io/badge/Lizenz-GPL--3.0--or--later-blue)
 ![Plattform](https://img.shields.io/badge/Plattform-PS5%20Payload-003791)

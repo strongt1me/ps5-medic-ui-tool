@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased / Unveröffentlicht
+## 0.6.0 (2026-11-28)
 
 - **English:** Brought up to date with Kraken Mount 0.4.2, ampr-emu-ng 0.5.1 and Dump Forge 0.6.0: corrected rules (old Kraken messages, save risk up to ampr 0.5.0, images mounted by Kraken), new hints (Kraken waiting for ShadowMount+, game crashes, kstuff missing at launch, failed mounts, the debug log of ampr-emu-ng, old disk cache, debug runtime in use, old Dump Forge, .p5z containers) and, read only, Kraken Mount's local interface (game errors, duplicate title IDs, low space, ampr runtime missing or put in by hand).
 - **Deutsch:** Auf den Stand von Kraken Mount 0.4.2, ampr-emu-ng 0.5.1 und Dump Forge 0.6.0 gebracht: korrigierte Regeln (alte Kraken-Meldungen, Speicher-Risiko bis ampr 0.5.0, von Kraken eingehängte Images), neue Hinweise (Kraken wartet auf ShadowMount+, Spielabstürze, kstuff fehlt beim Start, gescheiterte Einhängungen, Debug-Protokoll von ampr-emu-ng, alter Plattencache, Debug-Laufzeit im Einsatz, altes Dump Forge, .p5z-Container) und, nur lesend, die lokale Schnittstelle von Kraken Mount (Fehler je Spiel, doppelte Title-IDs, wenig Platz, ampr-Laufzeit fehlt oder von Hand eingelegt).
@@ -18,6 +18,8 @@
 - **Deutsch:** Check-ups lassen sich im Verlauf löschen: Options löscht den gewählten, auf der Zeile der früheren Check-ups alle bis auf die neuesten 10, jeweils nach einer Rückfrage. Medic behält von selbst die neuesten 50.
 - **Deutsch:** Kein Fehlalarm „zwei Einhänger“ mehr, wenn das PS5 Cooling Center die Ordner von ShadowMount+ an Kraken Mount übergibt; echte Doppelte in Kraken-Games und den Ordnern von ShadowMount+ werden weiter gemeldet.
 - **Deutsch:** Runde 2 des Szene-Abgleichs (18 Projekte): neue Hinweise zu Game Compressor, LZ4 Game Compressor, exFAT2AMPR und Alembic (abgebrochene oder unfertige Ausgaben, versteckte Originale, kaputte Blöcke), zu TabShifter, HomeHider und der YouTube-Update-Sperre, zu Absturzberichten von PS5_DevTools, APR Emu Updater, kstuff-a53, autokstuff und dem PlayGo-Stub; behoben: autokstuff galt als kstuff, Fehlalarm „PlayGo-Stub fehlt“, und die Reparatur der Emulator-Updates schaltet APR Emu Updater nicht mehr ab. 155 Regeln.
+- **State of testing:** 9635 checks on the PC. Confirmed on the test console (FW 12.00, PS5 Cooling Center Pro 1.99, Kraken Mount 0.4.2): check-up with 155 rules without false alarms, the four Cooling Center false alarms gone, Kraken Mount's local interface read by the console, deleting check-ups, rule download over https. Most new hints could not be triggered there because the tools are not installed; they are covered by tests on the PC.
+- **Stand der Prüfung:** 9635 Prüfungen am PC. An der Test-Konsole bestätigt (FW 12.00, PS5 Cooling Center Pro 1.99, Kraken Mount 0.4.2): Check-up mit 155 Regeln ohne Fehlalarm, die vier Fehlalarme mit dem Cooling Center behoben, lokale Schnittstelle von Kraken Mount von der Konsole gelesen, Check-ups löschen, Regel-Download über https. Die meisten neuen Hinweise ließen sich dort nicht auslösen, weil die Werkzeuge nicht installiert sind; sie sind durch Tests am PC abgedeckt.
 
 ## 0.5.0 (2026-11-26)
 
