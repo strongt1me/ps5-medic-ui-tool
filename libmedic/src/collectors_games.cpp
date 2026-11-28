@@ -925,6 +925,17 @@ void collect_kraken(const Platform& p, Facts& f) {
         k->out.push_back(std::move(e));
     }
     for (Kind* k : {&sparse, &sysex, &other, &trunc, &cache, &foreign, &kstuff, &launch}) f.set(k->fact, std::move(k->out));
+    // PS5 Cooling Center ab 1.99 verwaltet Kraken Mount ("an" in /data/PS5-Cooling-Center/kraken/zustand.txt) und gibt ihm die Ordner von ShadowMount+,
+    // solange dieses nicht laeuft (src/kraken.c, smp_folders_apply). Beim Uebernehmen haengt Kraken die alten Einhaengungen von ShadowMount+ aus und schreibt
+    // dabei "not ours, or stale; unmounting it" (register.rs). Das ist dann die gewollte Uebergabe, kein Konflikt: die Logzeile allein zaehlt nicht, es
+    // zaehlen nur Titel, die wirklich bei beiden liegen (Kraken-Games gegen die Ordner von ShadowMount+, siehe collect_two_mounters).
+    bool cc = false;
+    if (std::string z; p.fs().read_file("/data/PS5-Cooling-Center/kraken/zustand.txt", z) && z.size() < 64) {
+        z.erase(0, z.find_first_not_of(" \t\r\n"));
+        cc = z.compare(0, 2, "an") == 0;
+    }
+    f.set("kraken.cc_managed", cc);
+    if (cc) foreign_unmount.clear();
     // Kraken wartet, solange ShadowMount+ laeuft (Quelltext 0.4.2, main.rs): nur melden, wenn das Log zuletzt "wartet" sagt UND ShadowMount+ wirklich laeuft
     bool smp = false;
     if (const json* pr = f.get("proc.running"); pr && pr->is_array())  // collect_processes laeuft vorher (Namen klein, ohne ".elf")
