@@ -1119,6 +1119,43 @@ void ignore_tests() {
     }
 }
 
+// Inhalt der drei Fixes aus der Recherche vom 28. Nov. 2026: genau die erwartete Aenderung, sonst nichts.
+void research_fix_content_tests() {
+    {  // ungueltige Zeile wird auskommentiert, gueltige bleiben unveraendert
+        TempCopy tmp("smp1_pos_bad_value");
+        Ctx c = make_ctx(tmp.dir, "smp.config_rejected");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].kind == Change::Kind::WriteFile, "smp_comment_invalid_lines: eine Datei wird geschrieben");
+        if (c.plan.changes.size() == 1) {
+            const std::string& out = c.plan.changes[0].content;
+            CHECK(out.find("# depth = 3") != std::string::npos, "smp_comment_invalid_lines: depth = 3 ist auskommentiert");
+            CHECK(out.find("\ndebug = 1\n") != std::string::npos && out.find("\nquiet_mode = 0\n") != std::string::npos, "smp_comment_invalid_lines: gueltige Zeilen bleiben");
+        }
+    }
+    {  // nur aus dem Log bekannt (keine Zeilennummer): kein Plan, nur Hinweis
+        TempCopy tmp("smp1_pos_log");
+        Ctx c = make_ctx(tmp.dir, "smp.config_rejected");
+        if (c.facts.get("smp.config_problems") && c.facts.get("smp.config_problems")->is_array()) {
+            bool has_line = false;
+            for (const auto& p : *c.facts.get("smp.config_problems")) has_line = has_line || p.value("line", 0) > 0;
+            if (!has_line) CHECK(c.plan.empty() && !c.plan.warnings.empty(), "smp_comment_invalid_lines: Log ohne Zeilennummer ergibt keinen Plan");
+        }
+    }
+    {  // Update-Datei: nur umbenennen, Ziel im selben Ordner
+        TempCopy tmp("upd_pos");
+        Ctx c = make_ctx(tmp.dir, "update.pup_on_usb");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].kind == Change::Kind::Rename &&
+                  c.plan.changes[0].to == "/mnt/usb0/PS5/UPDATE/PS5UPDATE.PUP.blocked",
+              "block_update_file: PS5UPDATE.PUP wird in PS5UPDATE.PUP.blocked umbenannt");
+        CHECK(policy_from_facts(c.facts).allowed("/mnt/usb0/PS5/UPDATE/PS5UPDATE.PUP"), "block_update_file: Ordner der Datei ist erlaubt");
+        CHECK(!PathPolicy({"/system_data/update"}).allowed("/system_data/update/PS5UPDATE.PUP"), "block_update_file: nur USB-Ordner werden erlaubt");
+    }
+    {  // pldmgr.elf wird ans Ende angehaengt, der Rest bleibt
+        TempCopy tmp("al6_pos_pldmgr_unlisted");
+        Ctx c = make_ctx(tmp.dir, "autoload.pldmgr_not_listed");
+        CHECK(c.plan.changes.size() == 1 && c.plan.changes[0].content == "kstuff.elf\npldmgr.elf\n", "autoload_add_pldmgr: pldmgr.elf am Ende angehaengt");
+    }
+}
+
 void fix_tests() {
     backup_preview_tests();
     ignore_tests();
@@ -1140,9 +1177,13 @@ void fix_tests() {
         {"al2_pos_missing_slot", "autoload.entry_missing", true},
         {"al5_pos_disabled", "pldmgr.autoload_disabled", true}, {"elf_pos_pldmgr", "payload.elf_invalid", true},
         {"gc1_neg_exfat", "game.il2cpp_case_latent", true}, {"i2_pos_empty", "smp.image_empty", true},
+        // 28. Nov. 2026 (Recherche docs/RESEARCH_2026-11.md, Prio 1)
+        {"smp1_pos_bad_value", "smp.config_rejected", true}, {"upd_pos", "update.pup_on_usb", true},
+        {"al6_pos_pldmgr_unlisted", "autoload.pldmgr_not_listed", true},
     };
     int i = 0;
     for (auto& fc : cases) roundtrip(fc, i++);
+    research_fix_content_tests();
     safety_tests();
     case_fold_tests();
     rollback_test();

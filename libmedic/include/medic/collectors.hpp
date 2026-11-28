@@ -21,7 +21,7 @@ void collect_apps(const Platform& p, Facts& f);        // apps.oversized[].{titl
 void collect_game_firmware(const Platform& p, Facts& f);  // games.fw[].{titleid,name,required_fw,sdk_fw,eboot_sdk,module_sdk,backport,backport_inline,backport_marker,backport_marker_fw,backport_incomplete,sdk_dir}, games.need_backport[].{titleid,required_fw,desc}, games.backport_incomplete[].{titleid,required_fw,eboot_sdk,module_sdk,desc}
 void collect_autoload(const Platform& p, Facts& f);       // autoload.problems[], pldmgr.autoload_enabled/_entries
 void collect_payload_files(const Platform& p, Facts& f);  // payload.elf_files[], payload.broken_elfs[]
-void collect_helpers(const Platform& p, Facts& f);        // nanodns.log.*, etahen.*
+void collect_helpers(const Platform& p, Facts& f);        // nanodns.log.*, etahen.*, update.pup_files[].{path,dir,size}
 void collect_savedata(const Platform& p, Facts& f);       // savedata.current_account, savedata.foreign[].{uid,titleid,name,title,account,current,path,label}
 void collect_system_logs(const Platform& p, Facts& f);    // boot.log_last, boot.unclean[], boot.unclean_total/_14d, errors.total, errors.pairs[].{code,titleid,count,last,label}
 void collect_databases(const Platform& p, Facts& f);      // db.count, db.integrity_tested, db.files[].{path,name,size,readable,header_bad,truncated,unaligned,page_size,header_pages,journal_hot,journal_size,wal_size,integrity,integrity_note,integrity_skip}

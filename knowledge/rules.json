@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "db_version": "2026.11.59",
+  "db_version": "2026.11.60",
   "metrics": [
     {
       "id": "cpu_temp",
@@ -1519,11 +1519,11 @@
         ]
       },
       "text": {
-        "de": "ShadowMount+ 1.7beta12 verwirft die ganze Konfiguration, wenn auch nur eine Zeile ungültig ist: Beim Start beendet sich der Payload (Meldung nur auf der Konsole), bei einer Änderung zur Laufzeit bleibt der alte Stand. Die genannten Zeilen korrigieren (on/off oder 1/0, scan depth 1 oder 2, Zahlen im erlaubten Bereich) oder aus der config.ini entfernen; vorher eine Kopie der Datei machen.",
-        "en": "ShadowMount+ 1.7beta12 rejects the whole configuration if even one line is invalid: at startup the payload exits (the message appears only on the console), a change at runtime keeps the old state. Correct the listed lines (on/off or 1/0, scan depth 1 or 2, numbers within the allowed range) or remove them from config.ini; make a copy of the file first."
+        "de": "ShadowMount+ 1.7beta12 verwirft die ganze Konfiguration, wenn auch nur eine Zeile ungültig ist: Beim Start beendet sich der Payload (Meldung nur auf der Konsole), bei einer Änderung zur Laufzeit bleibt der alte Stand. Die genannten Zeilen korrigieren (on/off oder 1/0, scan depth 1 oder 2, Zahlen im erlaubten Bereich) oder aus der config.ini entfernen; vorher eine Kopie der Datei machen. Der Fix setzt ein # vor die ungültigen Zeilen der Datei, ShadowMount+ nimmt dann seinen Standardwert (Backup und Rückgängig inklusive).",
+        "en": "ShadowMount+ 1.7beta12 rejects the whole configuration if even one line is invalid: at startup the payload exits (the message appears only on the console), a change at runtime keeps the old state. Correct the listed lines (on/off or 1/0, scan depth 1 or 2, numbers within the allowed range) or remove them from config.ini; make a copy of the file first. The fix puts a # in front of the invalid lines in the file, so ShadowMount+ uses its default value (backup and undo included)."
       },
       "evidence": "smp.config_problems[].text",
-      "fix": null,
+      "fix": "smp_comment_invalid_lines",
       "source": "https://github.com/drakmor/ShadowMountPlus",
       "verified": "doc"
     },
@@ -1836,6 +1836,26 @@
       "evidence": "autoload.problems[].detail",
       "fix": "autoload_fix_missing",
       "source": "https://github.com/itsPLK/ps5-payload-manager",
+      "verified": "doc"
+    },
+    {
+      "id": "autoload.pldmgr_not_listed",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "autoload.problems[].kind",
+            "eq": "pldmgr_not_listed"
+          }
+        ]
+      },
+      "text": {
+        "de": "In /data/ps5_autoloader liegt pldmgr.elf, steht aber nicht in der autoload.txt. Sobald es eine autoload.txt gibt, startet der Autoloader den Payload Manager nicht mehr von selbst: er fehlt nach jedem Jailbreak. Der Fix hängt pldmgr.elf an die Liste an (Backup und Rückgängig inklusive); ist es so gewollt, nichts tun.",
+        "en": "pldmgr.elf is in /data/ps5_autoloader but not in autoload.txt. As soon as an autoload.txt exists, the autoloader no longer starts the Payload Manager on its own: it is missing after every jailbreak. The fix appends pldmgr.elf to the list (backup and undo included); if this is intended, do nothing."
+      },
+      "evidence": "autoload.problems[].detail",
+      "fix": "autoload_add_pldmgr",
+      "source": "https://github.com/itsPLK/ps5-bdjb-autoloader",
       "verified": "doc"
     },
     {
@@ -3309,6 +3329,26 @@
           "en": "Folder and database entries are read. Why the entry is missing cannot be told from that; while ShadowMount+ is registering, the finding can appear briefly."
         }
       }
+    },
+    {
+      "id": "update.pup_on_usb",
+      "severity": "warning",
+      "when": {
+        "all": [
+          {
+            "fact": "update.pup_files[].path",
+            "exists": true
+          }
+        ]
+      },
+      "text": {
+        "de": "Auf einem USB-Laufwerk liegt die Datei PS5/UPDATE/PS5UPDATE.PUP. Steckt das Laufwerk an der Konsole, genügt im abgesicherten Modus ein falscher Tastendruck, und die Konsole installiert sie; danach lässt sich der Jailbreak auf dieser Konsole nicht mehr ausführen. Der Fix benennt die Datei in PS5UPDATE.PUP.blocked um; nichts wird gelöscht, Rückgängig stellt den Namen wieder her.",
+        "en": "A USB drive holds the file PS5/UPDATE/PS5UPDATE.PUP. With the drive connected, one wrong button press in Safe Mode makes the console install it; after that the jailbreak no longer works on this console. The fix renames the file to PS5UPDATE.PUP.blocked; nothing is deleted, undo restores the name."
+      },
+      "evidence": "update.pup_files[].path",
+      "fix": "block_update_file",
+      "source": "https://www.playstation.com/en-us/support/hardware/update-playstation-system-software-safe-mode/",
+      "verified": "doc"
     }
   ]
 }

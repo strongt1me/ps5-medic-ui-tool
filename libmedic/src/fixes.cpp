@@ -767,6 +767,105 @@ void plan_selftest_clear_marker(FixPlan& plan, const IFileSystem& fs) {
     plan.hint_en = "Only the self-test marker file is changed; undo brings it and the hint back. The cause (crash, restart, power loss) stays unknown.";
 }
 
+// ---- smp_comment_invalid_lines --------------------------------------------------------------------------------------
+// ShadowMount+ 1.7beta12 verwirft die ganze config.ini wegen einer einzigen ungueltigen Zeile und beendet sich beim Start ohne
+// Meldung (drakmor/ShadowMountPlus #231, #236). Statt einen Wert zu raten, wird die Zeile mit "# " auskommentiert: SM+ nimmt dann
+// seinen eingebauten Standardwert. Nur Zeilen mit bekannter Nummer (aus der Datei, nicht aus dem Log).
+
+void plan_comment_invalid(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    std::set<long long> bad;
+    for (const auto& pr : array_fact(facts, "smp.config_problems"))
+        if (pr.is_object() && pr.contains("line") && pr["line"].is_number_integer() && pr["line"].get<long long>() > 0) bad.insert(pr["line"].get<long long>());
+    std::string text;
+    if (bad.empty() || !fs.read_file(kDefaultConfig, text)) {
+        plan.warnings.push_back("Keine ungültige Zeile in der config.ini gefunden");
+        return;
+    }
+    std::string out;
+    long long n = 0;
+    for (const auto& l : split_keep_eol(text)) {
+        ++n;
+        std::size_t i = 0;
+        while (i < l.size() && (l[i] == ' ' || l[i] == '\t')) ++i;
+        const bool code = i < l.size() && l[i] != '#' && l[i] != ';' && l[i] != '\r' && l[i] != '\n';
+        out += bad.count(n) && code ? "# " + l : l;
+    }
+    if (out == text) {
+        plan.warnings.push_back("Keine ungültige Zeile in der config.ini gefunden");
+        return;
+    }
+    Change c;
+    c.kind = Change::Kind::WriteFile;
+    c.path = kDefaultConfig;
+    c.content = out;
+    c.check_base = true;
+    c.base_existed = true;
+    c.base_sha = sha256_hex(text);
+    c.note_de = "config.ini: ungültige Zeilen auskommentieren (vorher Backup)";
+    c.note_en = "config.ini: comment out the invalid lines (backup first)";
+    plan.changes.push_back(std::move(c));
+    plan.hint_de = "ShadowMount+ nimmt für diese Einstellungen seinen Standardwert. Danach ShadowMount+ erneut senden, damit es mit der korrigierten Datei startet.";
+    plan.hint_en = "ShadowMount+ uses its default value for these settings. Afterwards send ShadowMount+ again so it starts with the corrected file.";
+}
+
+// ---- block_update_file -------------------------------------------------------------------------------------------------
+// <USB>/PS5/UPDATE/PS5UPDATE.PUP wird nur umbenannt (".blocked" angehaengt): im abgesicherten Modus findet die Konsole sie dann
+// nicht mehr. Nichts wird geloescht; Rueckgaengig stellt den Namen wieder her.
+
+void plan_block_update(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    std::set<std::string> targets;
+    for (const auto& u : array_fact(facts, "update.pup_files")) {
+        const std::string path = str_of(u, "path");
+        if (path.empty()) continue;
+        const std::string to = path + ".blocked";
+        if (fs.exists(to) || !targets.insert(to).second) {
+            plan.warnings.push_back("Übersprungen (Ziel existiert bereits): " + to);
+            continue;
+        }
+        Change c;
+        c.kind = Change::Kind::Rename;
+        c.path = path;
+        c.to = to;
+        c.note_de = "Installationsdatei umbenennen, damit sie nicht versehentlich installiert wird";
+        c.note_en = "Rename the installation file so it cannot be installed by accident";
+        plan.changes.push_back(std::move(c));
+    }
+    plan.hint_de = "Nur der Name wird geändert (gleicher Ordner); Rückgängig stellt den alten Namen wieder her.";
+    plan.hint_en = "Only the name changes (same folder); undo restores the old name.";
+}
+
+// ---- autoload_add_pldmgr -----------------------------------------------------------------------------------------------
+// Mit autoload.txt startet der WebKit-/BD-JB-Autoloader den Payload Manager nur, wenn pldmgr.elf in der Liste steht. Die Zeile
+// kommt ans Ende der Liste; alles andere bleibt, wie es ist.
+
+void plan_add_pldmgr(FixPlan& plan, const Facts& facts, const IFileSystem& fs) {
+    std::string name, file;
+    for (const auto& p : array_fact(facts, "autoload.problems"))
+        if (str_of(p, "kind") == "pldmgr_not_listed") {
+            name = str_of(p, "detail");
+            file = str_of(p, "file");
+        }
+    std::string text;
+    if (name.empty() || name.find_first_of("\r\n#!@/") != std::string::npos || file.empty() || !fs.read_file(file, text)) {
+        plan.warnings.push_back("Keine Autoload-Liste ohne pldmgr.elf gefunden");
+        return;
+    }
+    const std::string eol = text.find("\r\n") != std::string::npos ? "\r\n" : "\n";
+    std::string out = text;
+    if (!out.empty() && out.back() != '\n') out += eol;
+    out += name + eol;
+    Change c;
+    c.kind = Change::Kind::WriteFile;
+    c.path = file;
+    c.content = out;
+    c.check_base = true;
+    c.base_existed = true;
+    c.base_sha = sha256_hex(text);
+    c.note_de = "Autoload-Liste: pldmgr.elf ergänzen, damit der Payload Manager startet (Original im Backup)";
+    c.note_en = "Autoload list: add pldmgr.elf so the Payload Manager starts (original kept in the backup)";
+    plan.changes.push_back(std::move(c));
+}
+
 // ---- pldmgr_enable_autoload ---------------------------------------------------------------------------------------------------
 void plan_pldmgr_enable(FixPlan& plan, const Finding& finding, const Facts& facts, const IFileSystem& fs) {
     Finding f = finding;
@@ -902,6 +1001,12 @@ FixPlan plan_fix(const Finding& finding, const Facts& facts, const IFileSystem& 
         plan_chmod_exec(plan, facts, fs);
     } else if (finding.fix == "selftest_clear_marker") {
         plan_selftest_clear_marker(plan, fs);
+    } else if (finding.fix == "smp_comment_invalid_lines") {
+        plan_comment_invalid(plan, facts, fs);
+    } else if (finding.fix == "block_update_file") {
+        plan_block_update(plan, facts, fs);
+    } else if (finding.fix == "autoload_add_pldmgr") {
+        plan_add_pldmgr(plan, facts, fs);
     } else if (finding.fix == "pldmgr_enable_autoload") {
         plan_pldmgr_enable(plan, finding, facts, fs);
     } else if (finding.fix == "smp_disable_conflicting_backpork") {

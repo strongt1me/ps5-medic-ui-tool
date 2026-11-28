@@ -135,7 +135,7 @@
    "confidence_reason": "Lo spazio libero è misurato. La soglia del 5 % è una nostra ipotesi; a che punto montaggi o installazioni falliscano non è tarato."
   },
   "smp.config_rejected": {
-   "text": "ShadowMount+ 1.7beta12 rifiuta l'intera configurazione se anche una sola riga non è valida: all'avvio il payload termina (il messaggio compare solo sulla console); una modifica a runtime mantiene il vecchio stato. Correggi le righe elencate (on/off o 1/0, profondità di scansione 1 o 2, numeri entro l'intervallo consentito) o rimuovile da config.ini; fai prima una copia del file."
+   "text": "ShadowMount+ 1.7beta12 rifiuta l'intera configurazione se anche una sola riga non è valida: all'avvio il payload termina (il messaggio compare solo sulla console); una modifica a runtime mantiene il vecchio stato. Correggi le righe elencate (on/off o 1/0, profondità di scansione 1 o 2, numeri entro l'intervallo consentito) o rimuovile da config.ini; fai prima una copia del file. La correzione mette un # davanti alle righe non valide del file, così ShadowMount+ usa il valore predefinito (backup e annullamento inclusi)."
   },
   "smp.v1_keys_in_v2": {
    "text": "Il config.ini (formato v2) contiene righe nel vecchio formato piatto, per esempio scan_depth=2. ShadowMount+ 1.7beta12 le ignora in silenzio in un file v2, quindi l'impostazione non ha effetto. La riparazione sposta le righe con un equivalente noto nella sezione giusta (per esempio scan_depth in [scan] depth); backup e annullamento inclusi."
@@ -384,6 +384,12 @@
   "content.download_task_pending": {
    "text": "Attività di download o installazione non terminate: in /user/bgft/task ci sono attività del software di sistema. Se è in corso un'installazione o un download, è normale. Altrimenti le attività interrotte restano (spazio occupato, una scritta «installazione in corso» senza avanzamento). Medic non modifica nulla; le attività si possono annullare in Download/Upload della console.",
    "confidence_reason": "Una cartella in /user/bgft/task è un'attività del software di sistema (secondo lo scanner di orfani di ps5-tools, MIT). Se sia bloccata, Medic non lo vede: un'attività in corso ha lo stesso aspetto."
+  },
+  "update.pup_on_usb": {
+   "text": "Un'unità USB contiene il file PS5/UPDATE/PS5UPDATE.PUP. Con l'unità collegata basta un tasto sbagliato in modalità provvisoria perché la console lo installi; dopo il jailbreak non funziona più su questa console. La correzione rinomina il file in PS5UPDATE.PUP.blocked; non viene eliminato nulla, annullare ripristina il nome."
+  },
+  "autoload.pldmgr_not_listed": {
+   "text": "pldmgr.elf si trova in /data/ps5_autoloader ma non in autoload.txt. Appena esiste un autoload.txt, l'autoloader non avvia più da solo il Payload Manager: manca dopo ogni jailbreak. La correzione aggiunge pldmgr.elf in fondo all'elenco (backup e annullamento inclusi); se è voluto, non fare nulla."
   }
  },
  "coverage": {

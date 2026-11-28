@@ -173,6 +173,13 @@ void collect_loader_autoload(const IFileSystem& fs, json& problems) {
                 if (!e.is_dir && lower(e.name) == lower(l)) case_only = true;
         add_problem(problems, case_only ? "entry_case" : "missing_file", kLoaderList, l);
     }
+    // Mit autoload.txt startet der Autoloader den Payload Manager nicht mehr von selbst; er laeuft nur, wenn pldmgr.elf in der
+    // Liste steht (README itsPLK/ps5-bdjb-autoloader und ps5_lua_autoloader). Liegt pldmgr.elf im Ordner, fehlt aber in der
+    // Liste, war das meist nicht gewollt: der Payload Manager fehlt nach jedem Start.
+    const bool listed = std::any_of(lines.begin(), lines.end(), [](const std::string& l) { return l[0] != '!' && lower(l).find("pldmgr") != std::string::npos; });
+    if (!listed)
+        for (const auto& e : names)
+            if (!e.is_dir && lower(e.name) == "pldmgr.elf") add_problem(problems, "pldmgr_not_listed", kLoaderList, e.name);
 }
 
 // ---- ELF-Dateien ---------------------------------------------------------------------------------------------------
@@ -298,6 +305,29 @@ void collect_etahen(const IFileSystem& fs, Facts& f) {
     if (crashed) f.set("etahen.crashed", true);
 }
 
+// ---- Installationsdatei der Systemsoftware auf USB ------------------------------------------------------------------
+// Die PS5 installiert von USB aus <Laufwerk>/PS5/UPDATE/PS5UPDATE.PUP (FAT32/exFAT, Anleitung von Sony zum abgesicherten Modus).
+// Liegt die Datei auf einem Stick, der an der Konsole steckt, genuegt ein falscher Tastendruck im abgesicherten Modus. Gesucht wird
+// ohne Ruecksicht auf Gross-/Kleinschreibung (exFAT/FAT32 unterscheiden sie nicht), nur auf /mnt/usb0..7.
+std::string find_child(const IFileSystem& fs, const std::string& dir, const char* name, bool want_dir) {
+    for (const auto& e : fs.list_dir(dir))
+        if (e.is_dir == want_dir && lower(e.name) == name) return join_path(dir, e.name);
+    return {};
+}
+
+void collect_update_files(const IFileSystem& fs, Facts& f) {
+    json files = json::array();
+    for (int i = 0; i < 8; ++i) {
+        const std::string ps5 = find_child(fs, "/mnt/usb" + std::to_string(i), "ps5", true);
+        if (ps5.empty()) continue;
+        const std::string upd = find_child(fs, ps5, "update", true);
+        if (upd.empty()) continue;
+        for (const auto& e : fs.list_dir(upd))
+            if (!e.is_dir && lower(e.name) == "ps5update.pup") files.push_back({{"path", join_path(upd, e.name)}, {"dir", upd}, {"size", e.size}});
+    }
+    f.set("update.pup_files", std::move(files));
+}
+
 }  // namespace
 
 // Layout des Payload Managers (ab 0.6: Datei payloads/.layout mit "2") und lose ELF-Dateien direkt in payloads/. Der Entwickler
@@ -329,6 +359,7 @@ void collect_payload_files(const Platform& p, Facts& f) { collect_elfs(p.fs(), f
 void collect_helpers(const Platform& p, Facts& f) {
     collect_nanodns(p.fs(), f);
     collect_etahen(p.fs(), f);
+    collect_update_files(p.fs(), f);
 }
 
 }  // namespace medic

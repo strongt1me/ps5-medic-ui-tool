@@ -135,7 +135,7 @@
    "confidence_reason": "L'espace libre est mesuré. Le seuil de 5 % est notre propre hypothèse ; le moment où montages ou installations échouent n'est pas calibré."
   },
   "smp.config_rejected": {
-   "text": "ShadowMount+ 1.7beta12 rejette toute la configuration dès qu'une seule ligne est invalide : au démarrage, le payload se termine (le message n'apparaît que sur la console) ; une modification en cours d'exécution conserve l'ancien état. Corrigez les lignes listées (on/off ou 1/0, profondeur d'analyse 1 ou 2, nombres dans la plage autorisée) ou retirez-les de config.ini ; faites d'abord une copie du fichier."
+   "text": "ShadowMount+ 1.7beta12 rejette toute la configuration dès qu'une seule ligne est invalide : au démarrage, le payload se termine (le message n'apparaît que sur la console) ; une modification en cours d'exécution conserve l'ancien état. Corrigez les lignes listées (on/off ou 1/0, profondeur d'analyse 1 ou 2, nombres dans la plage autorisée) ou retirez-les de config.ini ; faites d'abord une copie du fichier. Le correctif place un # devant les lignes invalides du fichier ; ShadowMount+ utilise alors sa valeur par défaut (sauvegarde et annulation incluses)."
   },
   "smp.v1_keys_in_v2": {
    "text": "Le config.ini (format v2) contient des lignes dans l'ancien format plat, p. ex. scan_depth=2. ShadowMount+ 1.7beta12 les ignore silencieusement dans un fichier v2, donc le réglage reste sans effet. La réparation déplace les lignes ayant un équivalent connu dans la bonne section (p. ex. scan_depth vers [scan] depth) ; sauvegarde et annulation incluses."
@@ -384,6 +384,12 @@
   "content.download_task_pending": {
    "text": "Tâches de téléchargement ou d'installation inachevées : sous /user/bgft/task se trouvent des tâches du logiciel système. Si une installation ou un téléchargement est en cours, c'est normal. Sinon, des tâches interrompues restent (espace occupé, un affichage « installation en cours » sans progression). Medic ne modifie rien ; les tâches peuvent être annulées dans Téléchargements/Envois de la console.",
    "confidence_reason": "Un dossier sous /user/bgft/task est une tâche du logiciel système (d'après le scanner d'orphelins de ps5-tools, MIT). Medic ne voit pas si elle est bloquée : une tâche en cours a le même aspect."
+  },
+  "update.pup_on_usb": {
+   "text": "Un lecteur USB contient le fichier PS5/UPDATE/PS5UPDATE.PUP. Lecteur branché, une seule mauvaise touche en mode sans échec suffit pour que la console l'installe ; ensuite le jailbreak ne fonctionne plus sur cette console. Le correctif renomme le fichier en PS5UPDATE.PUP.blocked ; rien n'est supprimé, annuler rétablit le nom."
+  },
+  "autoload.pldmgr_not_listed": {
+   "text": "pldmgr.elf se trouve dans /data/ps5_autoloader mais pas dans autoload.txt. Dès qu'un autoload.txt existe, l'autoloader ne lance plus le Payload Manager tout seul : il manque après chaque jailbreak. Le correctif ajoute pldmgr.elf à la fin de la liste (sauvegarde et annulation incluses) ; si c'est voulu, ne rien faire."
   }
  },
  "coverage": {
