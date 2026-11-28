@@ -773,33 +773,53 @@ void collect_two_mounters(const Platform& p, Facts& f, const std::map<std::strin
             if (j.contains(key) && j[key].is_string()) return j[key].get<std::string>();
         return {};
     };
-    std::vector<std::string> roots = {"/data/Kraken-Games"};
-    for (int i = 0; i < 8; ++i) roots.push_back("/mnt/usb" + std::to_string(i) + "/Kraken-Games");
-    for (int i = 0; i < 3; ++i) roots.push_back("/mnt/ext" + std::to_string(i) + "/Kraken-Games");
+    // Basisordner: intern, USB, M.2. Darin "Kraken-Games" (Cooling Center ab 1.98.0) und der alte Name "FPKG-Games".
+    std::vector<std::string> bases = {"/data"};
+    for (int i = 0; i < 8; ++i) bases.push_back("/mnt/usb" + std::to_string(i));
+    for (int i = 0; i < 3; ++i) bases.push_back("/mnt/ext" + std::to_string(i));
     std::map<std::string, std::string> kraken;  // Title-ID -> Pfad im Ordner Kraken-Games
-    for (const auto& r : roots) {
+    json ps4 = json::array(), old_folders = json::array();
+    std::set<std::string> ps4_seen;
+    // Ein PS4-Spiel erkennt man an CUSA in Name bzw. param.json oder an sce_sys/param.sfo ohne param.json (Kraken Mount spielt nur PS5-Spiele).
+    auto note = [&](const std::string& tid, const std::string& path, bool sfo_only) {
+        if ((sfo_only || tid.rfind("CUSA", 0) == 0) && ps4.size() < 20 && ps4_seen.insert(path).second)
+            ps4.push_back({{"titleid", tid}, {"path", path}});
+        if (!tid.empty()) kraken.emplace(tid, path);
+    };
+    auto sfo_only = [&](const std::string& dir) { return !p.fs().exists(dir + "/sce_sys/param.json") && p.fs().exists(dir + "/sce_sys/param.sfo"); };
+    for (const auto& base : bases) {
+        const std::string r = base + "/Kraken-Games";
+        if (const std::string old = base + "/FPKG-Games"; p.fs().is_dir(r) && p.fs().is_dir(old)) {
+            const auto entries = p.fs().list_dir(old);
+            if (!entries.empty() && old_folders.size() < 12) old_folders.push_back({{"path", old}, {"count", entries.size()}});
+        }
         if (!p.fs().is_dir(r)) continue;
         for (const auto& e : p.fs().list_dir(r)) {  // direkt darin oder in einem Unterordner (Handbuch)
             const std::string path = r + "/" + e.name;
             std::smatch m;
             if (!e.is_dir) {
-                if (std::regex_search(e.name, m, tid_re)) kraken.emplace(m[1].str(), path);
+                if (std::regex_search(e.name, m, tid_re)) note(m[1].str(), path, false);
                 continue;
             }
-            if (std::string t = tid_of_dir(path); !t.empty()) {
-                kraken.emplace(t, path);
+            if (std::string t = tid_of_dir(path); !t.empty() || sfo_only(path)) {
+                if (t.empty() && std::regex_search(e.name, m, tid_re)) t = m[1].str();
+                note(t, path, sfo_only(path));
                 continue;
             }
             for (const auto& c : p.fs().list_dir(path)) {
                 const std::string sub = path + "/" + c.name;
                 if (c.is_dir) {
-                    if (std::string t = tid_of_dir(sub); !t.empty()) kraken.emplace(t, sub);
+                    std::string t = tid_of_dir(sub);
+                    if (t.empty() && sfo_only(sub) && std::regex_search(c.name, m, tid_re)) t = m[1].str();
+                    if (!t.empty() || sfo_only(sub)) note(t, sub, sfo_only(sub));
                 } else if (std::regex_search(c.name, m, tid_re)) {
-                    kraken.emplace(m[1].str(), sub);
+                    note(m[1].str(), sub, false);
                 }
             }
         }
     }
+    f.set("kraken.ps4_in_folder", std::move(ps4));
+    f.set("kraken.old_folder", std::move(old_folders));
     std::map<std::string, std::string> out = from_log;
     if (const json* t = f.get("smp.titles"); t && t->is_array())
         for (const auto& e : *t) {

@@ -801,7 +801,7 @@ Quellen: Release Notes v1.90.0 bis v1.98.0 (https://github.com/strongt1me/ps5-co
 - < 1.95.0: „Ersetzen“ verlor die alte Datei, wenn die Kopie scheiterte; abgebrochenes Entpacken ließ Reste liegen. < 1.97.0: Spielstand lesen/zurückspielen konnte die App beenden; Lüfter blieb nach dem Wächter auf voll.
 - Erkennung: Version des Cooling Centers (Quelle zu klären: `config.json`, Datei oder Prozess). Auto-Fix: nein (Hinweis auf neuere Fassung der App, kein Systemupdate).
 
-**Stand 28. Nov. 2026:** Prio 1 (7.1, 7.2, 7.3) ist umgesetzt (Branch `feat/cooling-prio1`, Nachtrag in `docs/RULES.md`).
+**Stand 28. Nov. 2026:** Prio 1 (7.1, 7.2, 7.3) und Prio 2 (7.5, 7.6, 7.7, 7.9) sind umgesetzt (Branch `feat/cooling-prio1`, Nachtrag in `docs/RULES.md`).
 
 | Prio | Kandidat | Aufwand |
 |---|---|---|
